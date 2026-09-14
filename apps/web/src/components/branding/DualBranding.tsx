@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 
-type Size = 'sm' | 'md' | 'lg';
+type Size = 'sm' | 'md' | 'lg' | 'xl';
 
 interface DualBrandingProps {
   /** Tamaño del par de logos. Default: 'md'. */
@@ -49,6 +49,12 @@ export default function DualBranding({
       comecyt: { w: 144, h: 112, cls: 'h-20 md:h-24 w-auto' },
       edomex: { w: 135, h: 90, cls: 'h-20 md:h-24 w-auto' },
       sep: 'h-16 md:h-20',
+    },
+    // Login (14/09/2026): logo protagonista sobre el formulario.
+    xl: {
+      comecyt: { w: 247, h: 192, cls: 'h-32 md:h-40 w-auto' },
+      edomex: { w: 216, h: 144, cls: 'h-28 md:h-32 w-auto' },
+      sep: 'h-24 md:h-28',
     },
   } as const;
 

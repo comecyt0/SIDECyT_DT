@@ -2,23 +2,25 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
+import { ArrowLeft, ArrowRight, Pause, Play, ShieldCheck } from 'lucide-react';
 import { INSTITUTION } from '@/lib/institution';
+import { useT } from '@/i18n/I18nProvider';
 
 interface CarouselSlide {
   id: number;
   titulo: string;
   subtitulo?: string;
   descripcion?: string;
-  imagen_url?: string;
+  imagen_url?: string | null;
   badge_texto?: string;
   orden: number;
   activo: boolean;
 }
 
 /**
- * Slides default — sin imágenes externas. El gradient + decorative mesh
- * dan suficiente impacto visual. El admin sube imágenes reales vía /admin/carrusel.
+ * Slides default — sin imágenes externas. Las manchas de color del fondo dan el
+ * impacto visual. El admin sube imágenes reales vía /admin/carrusel.
  */
 const DEFAULT_SLIDES: CarouselSlide[] = [
   {
@@ -50,12 +52,68 @@ const DEFAULT_SLIDES: CarouselSlide[] = [
   },
 ];
 
+/** Tiempo por diapositiva. Debe coincidir con --auth-slide-ms (globals.css). */
+const SLIDE_MS = 6500;
+
+/** Arrastre horizontal mínimo (px) para cambiar de diapositiva con el dedo o el mouse. */
+const SWIPE_PX = 60;
+
+/**
+ * Posición de las tres manchas de color por diapositiva. El fondo solo se reacomoda
+ * al cambiar de diapositiva: marca el cambio sin moverse por su cuenta.
+ */
+const BLOB_LAYOUTS = [
+  [{ x: '-12%', y: '-18%', s: 1 }, { x: '48%', y: '8%', s: 0.9 }, { x: '8%', y: '52%', s: 1.1 }],
+  [{ x: '40%', y: '-22%', s: 1.1 }, { x: '-8%', y: '30%', s: 1 }, { x: '52%', y: '48%', s: 0.85 }],
+  [{ x: '18%', y: '-10%', s: 0.9 }, { x: '56%', y: '34%', s: 1.15 }, { x: '-16%', y: '44%', s: 1 }],
+  [{ x: '-4%', y: '6%', s: 1.15 }, { x: '44%', y: '-16%', s: 0.9 }, { x: '30%', y: '58%', s: 1 }],
+];
+
+const EASE_OUT: [number, number, number, number] = [0.23, 1, 0.32, 1];
+
+function textVariants(reduceMotion: boolean): Variants {
+  if (reduceMotion) {
+    return {
+      enter: { opacity: 0 },
+      center: { opacity: 1, transition: { duration: 0.15 } },
+      exit: { opacity: 0, transition: { duration: 0.1 } },
+    };
+  }
+  // `transform` completo en vez de x/y: Framer lo acelera por hardware
+  return {
+    enter: (dir: number) => ({ opacity: 0, transform: `translateX(${dir * 24}px)`, filter: 'blur(6px)' }),
+    center: {
+      opacity: 1,
+      transform: 'translateX(0px)',
+      filter: 'blur(0px)',
+      transition: { duration: 0.5, ease: EASE_OUT },
+    },
+    exit: (dir: number) => ({
+      opacity: 0,
+      transform: `translateX(${dir * -16}px)`,
+      filter: 'blur(4px)',
+      transition: { duration: 0.26, ease: EASE_OUT },
+    }),
+  };
+}
+
 export function LoginCarousel() {
+  const { t } = useT();
+  const prefersReducedMotion = useReducedMotion();
+  // En el servidor useReducedMotion da null: la preferencia se aplica después de montar
+  // para que el HTML hidrate igual (mismo caso que E7 en CLAUDE.md)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const reduceMotion = mounted && Boolean(prefersReducedMotion);
   const [slides, setSlides] = useState<CarouselSlide[]>(DEFAULT_SLIDES);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [index, setIndex] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  // null = sin decisión del usuario: con "reducir movimiento" arranca en pausa
+  const [userPaused, setUserPaused] = useState<boolean | null>(null);
+  const [hovered, setHovered] = useState(false);
+  const [keyboardFocus, setKeyboardFocus] = useState(false);
+  const [tabHidden, setTabHidden] = useState(false);
+  const pointerStartX = useRef<number | null>(null);
 
   useEffect(() => {
     // Fetch slides from API (public endpoint, no auth needed)
@@ -64,155 +122,206 @@ export function LoginCarousel() {
       .then((r) => r.json())
       .then((data) => {
         const items = Array.isArray(data) ? data : [];
-        if (items.length > 0) setSlides(items);
+        if (items.length > 0) {
+          setSlides(items);
+          setIndex(0);
+        }
       })
       .catch(() => {
         // Keep defaults if API unavailable
       });
   }, []);
 
+  // No avanzar mientras la pestaña no está visible
+  useEffect(() => {
+    const onVisibility = () => setTabHidden(document.visibilityState === 'hidden');
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
+
+  const count = slides.length;
+  const manualPaused = userPaused ?? reduceMotion;
+  const isPaused = manualPaused || hovered || keyboardFocus || tabHidden;
+
   const goTo = useCallback(
-    (index: number) => {
-      if (isTransitioning || index === currentIndex) return;
-      setIsTransitioning(true);
-      setCurrentIndex(index);
-      setTimeout(() => setIsTransitioning(false), 700);
+    (target: number, dir: 1 | -1) => {
+      if (count === 0) return;
+      setDirection(dir);
+      setIndex(((target % count) + count) % count);
     },
-    [currentIndex, isTransitioning]
+    [count]
   );
 
-  const next = useCallback(() => {
-    goTo((currentIndex + 1) % slides.length);
-  }, [currentIndex, slides.length, goTo]);
+  const next = useCallback(() => goTo(index + 1, 1), [goTo, index]);
+  const prev = useCallback(() => goTo(index - 1, -1), [goTo, index]);
 
-  const prev = useCallback(() => {
-    goTo((currentIndex - 1 + slides.length) % slides.length);
-  }, [currentIndex, slides.length, goTo]);
-
-  // Auto-play
+  // Con "reducir movimiento" la barra no se anima, así que el avance va por temporizador
   useEffect(() => {
-    if (!isPaused && slides.length > 1) {
-      intervalRef.current = setInterval(next, 5000);
-    }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [next, isPaused, slides.length]);
+    if (!reduceMotion || isPaused || count < 2) return;
+    const id = setTimeout(next, SLIDE_MS);
+    return () => clearTimeout(id);
+  }, [reduceMotion, isPaused, count, next]);
 
-  const current = slides[currentIndex];
+  const current = slides[index] ?? slides[0];
   if (!current) return null;
 
+  const layout = BLOB_LAYOUTS[index % BLOB_LAYOUTS.length];
+  const variants = textVariants(reduceMotion);
+
   return (
-    <div
-      className="relative w-full h-full overflow-hidden"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+    <section
+      className="auth-banner h-full w-full select-none"
+      aria-roledescription="carousel"
+      aria-label={t('auth.carousel_label')}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={(e) => {
+        if ((e.target as HTMLElement).matches(':focus-visible')) setKeyboardFocus(true);
+      }}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setKeyboardFocus(false);
+      }}
+      onPointerDown={(e) => {
+        if ((e.target as HTMLElement).closest('button')) return;
+        pointerStartX.current = e.clientX;
+      }}
+      onPointerUp={(e) => {
+        if (pointerStartX.current === null) return;
+        const dx = e.clientX - pointerStartX.current;
+        pointerStartX.current = null;
+        if (Math.abs(dx) < SWIPE_PX || count < 2) return;
+        if (dx < 0) next();
+        else prev();
+      }}
     >
-      {/* Slides */}
-      {slides.map((slide, i) => (
-        <div
-          key={slide.id}
-          className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-            i === currentIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
-          }`}
-        >
-          {/* Background Image */}
-          {slide.imagen_url && (
+      {/* Fondo: imagen opcional del admin + manchas de color + grano */}
+      <div aria-hidden="true" className="absolute inset-0 -z-10">
+        {slides.map((slide, i) =>
+          slide.imagen_url ? (
             <Image
+              key={slide.id}
               src={slide.imagen_url}
-              alt={slide.titulo}
+              alt=""
               fill
               unoptimized
-              sizes="(max-width: 1280px) 100vw, 50vw"
+              sizes="(max-width: 1280px) 55vw, 58vw"
               priority={i === 0}
-              className="absolute inset-0 w-full h-full object-cover scale-105 transition-transform duration-[8000ms] ease-linear"
-              style={{ transform: i === currentIndex ? 'scale(1.05)' : 'scale(1)' }}
+              data-active={i === index}
+              className="auth-banner-image object-cover"
             />
-          )}
-
-          {/* Gradient overlay — brand institucional */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[var(--brand-vino-900)]/90 via-primary/80 to-[var(--brand-vino-800)]/85 z-10" />
-
-          {/* Decorative mesh — usa var(--brand-gold) para que respete cambios de paleta */}
-          <div className="absolute inset-0 z-10 opacity-20"
-            style={{
-              backgroundImage: `radial-gradient(circle at 20% 50%, color-mix(in srgb, var(--brand-gold) 20%, transparent) 0%, transparent 50%),
-                                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.07) 0%, transparent 40%)`,
-            }}
+          ) : null
+        )}
+        {layout.map((blob, i) => (
+          <span
+            key={i}
+            className={`auth-blob auth-blob-${i + 1}`}
+            style={{ transform: `translate(${blob.x}, ${blob.y}) scale(${blob.s})` }}
           />
-        </div>
-      ))}
+        ))}
+        <span className="auth-grain" />
+      </div>
 
-      {/* Content */}
-      <div className="relative z-20 flex flex-col h-full justify-between p-10 xl:p-14 text-white">
-        {/* Top: Logo + Badge */}
-        <div className="animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="flex items-center gap-3 mb-6">
-            <Image src="/logo.png" alt={INSTITUTION.name} width={62} height={48} priority className="h-12 w-auto object-contain drop-shadow-lg brightness-0 invert" />
+      <div className="relative flex h-full flex-col p-8 text-white xl:p-10">
+        {/* Arriba: logo + sello de seguridad (texto con ícono, sin cápsula) */}
+        <div className="auth-reveal flex items-start justify-between gap-6" style={{ '--i': 0 } as React.CSSProperties}>
+          <Image
+            src="/logo.png"
+            alt={INSTITUTION.name}
+            width={401}
+            height={312}
+            priority
+            className="h-28 w-auto object-contain brightness-0 invert xl:h-32"
+          />
+          <p className="flex items-center gap-2 pt-1 text-[13px] font-medium text-white/85">
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+            {INSTITUTION.securityBadge}
+          </p>
+        </div>
+
+        {/* Abajo: texto de la diapositiva. pr deja libre el recorte de los botones */}
+        <div className="auth-reveal mt-auto pr-[152px]" style={{ '--i': 1 } as React.CSSProperties}>
+          <div aria-live={isPaused ? 'polite' : 'off'} aria-atomic="true">
+            <AnimatePresence mode="wait" initial={false} custom={direction}>
+              <motion.div
+                key={current.id}
+                custom={direction}
+                variants={variants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+              >
+                {current.badge_texto && <p className="auth-tag mb-4">{current.badge_texto}</p>}
+                <div className="auth-glass p-7 xl:p-8">
+                  <h2 className="auth-banner-title">{current.titulo}</h2>
+                  {current.subtitulo && (
+                    <p className="mt-3 text-[15px] font-semibold text-white/90">{current.subtitulo}</p>
+                  )}
+                  {current.descripcion && (
+                    <p className="mt-2 max-w-[52ch] text-[15px] leading-relaxed text-white/80">
+                      {current.descripcion}
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
-          {current.badge_texto && (
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/20 border border-accent/40 text-accent text-xs font-semibold tracking-widest uppercase backdrop-blur-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent glow-fade" />
-              {current.badge_texto}
-            </span>
-          )}
-        </div>
 
-        {/* Middle: Slide text */}
-        <div
-          key={currentIndex}
-          className="animate-in fade-in slide-in-from-bottom-6 duration-700 flex-1 flex flex-col justify-end pb-10"
-        >
-          <h2 className="text-3xl xl:text-4xl font-extrabold leading-tight mb-3 drop-shadow-xl">
-            {current.titulo}
-          </h2>
-          {current.subtitulo && (
-            <p className="text-accent font-semibold text-base mb-3 drop-shadow">{current.subtitulo}</p>
-          )}
-          {current.descripcion && (
-            <p className="text-white/80 text-sm leading-relaxed max-w-sm border-l-2 border-accent/60 pl-4">
-              {current.descripcion}
-            </p>
-          )}
-        </div>
-
-        {/* Bottom: Controls */}
-        <div className="flex items-center justify-between">
-          {/* Dot indicators */}
-          <div className="flex items-center gap-2">
-            {slides.map((_, i) => (
+          {count > 1 && (
+            <div className="mt-4 flex items-center gap-3">
               <button
-                key={i}
-                onClick={() => goTo(i)}
-                className={`transition-all duration-300 rounded-full ${
-                  i === currentIndex
-                    ? 'w-6 h-2 bg-accent'
-                    : 'w-2 h-2 bg-white/40 hover:bg-white/70'
-                }`}
-                aria-label={`Ir a slide ${i + 1}`}
-              />
-            ))}
-          </div>
-
-          {/* Arrow navigation */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={prev}
-              className="w-9 h-9 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center transition-all duration-200 hover:scale-110"
-              aria-label="Anterior"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={next}
-              className="w-9 h-9 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center transition-all duration-200 hover:scale-110"
-              aria-label="Siguiente"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+                type="button"
+                className="auth-icon-btn"
+                onClick={() => setUserPaused(!manualPaused)}
+                aria-label={manualPaused ? t('auth.carousel_play') : t('auth.carousel_pause')}
+              >
+                {manualPaused ? (
+                  <Play className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Pause className="h-4 w-4" aria-hidden="true" />
+                )}
+              </button>
+              <div className="auth-progress flex-1" data-paused={isPaused} data-reduced={reduceMotion}>
+                {slides.map((slide, i) => (
+                  <button
+                    key={slide.id}
+                    type="button"
+                    className="auth-progress-seg"
+                    data-state={i < index ? 'done' : i === index ? 'active' : 'idle'}
+                    onClick={() => goTo(i, i >= index ? 1 : -1)}
+                    aria-label={`${t('auth.carousel_go_to')} ${i + 1}: ${slide.titulo}`}
+                    aria-current={i === index ? 'true' : undefined}
+                  >
+                    <span className="auth-progress-track">
+                      {/* key cambia con el índice para reiniciar la animación del segmento activo */}
+                      <span
+                        key={i === index ? `activo-${index}` : 'fijo'}
+                        className="auth-progress-fill"
+                        onAnimationEnd={i === index && !reduceMotion ? next : undefined}
+                      />
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+
+      {count > 1 && (
+        <div className="auth-notch">
+          <button type="button" className="auth-nav-btn" onClick={prev} aria-label={t('auth.carousel_prev')}>
+            <ArrowLeft className="auth-nav-prev h-5 w-5" aria-hidden="true" />
+          </button>
+          <button type="button" className="auth-nav-btn" onClick={next} aria-label={t('auth.carousel_next')}>
+            <ArrowRight className="auth-nav-next h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+    </section>
   );
 }

@@ -325,6 +325,13 @@ export default function MiPagina() {
 - Campos de fecha siempre con null-guard: `field ? new Date(field).toLocaleDateString('es-MX') : '—'`
 - `dangerouslySetInnerHTML` siempre con fallback: `{ __html: field ?? '' }`
 
+### Diseño UI — skills y sistema visual (desde 14/09/2026)
+Todo trabajo de diseño usa las skills `hallmark`, `frontend-design`, `ui-ux-pro-max` y `emil-design-eng`
+(instaladas en `~/.claude/skills`). Sistema, tokens `--auth-*` y decisiones: **`docs/DISENO_UI.md`**.
+Reglas del usuario: **nada de píldoras** (`rounded-full` en etiquetas, sellos o botones), fondos poco
+saturados y translúcidos, logo grande. Toda animación respeta `prefers-reduced-motion` y anima solo
+`transform`/`opacity`.
+
 ### Patrón de descarga de archivos (blob)
 ```typescript
 const response = await api.get('/endpoint', { responseType: 'blob' });
@@ -671,6 +678,9 @@ sudo certbot --nginx -d tudominio.mx
 **Síntoma:** "Hydration failed because the initial UI does not match what was rendered on the server".
 **Causa:** `useState(cookieValue)` en servidor lee vacío; en cliente lee la cookie → valores distintos.
 **Fix:** `useState('')` + `useEffect(() => { setValue(Cookies.get('key') || '') }, [])`.
+**Mismo caso (14/09/2026):** `useReducedMotion()` de Framer Motion da `null` en el servidor. Usarlo directo
+en el render cambió `aria-live`, íconos y variantes del carrusel del login. Aplicarlo solo tras montar
+(`mounted && Boolean(prefersReducedMotion)`), como en `login-carousel.tsx`.
 
 ### E8 — Alias de ruta evaluador eliminado erróneamente
 **Síntoma:** Build roto — `asignaciones/page.tsx` importaba `../evaluaciones/page` que ya no existía.
@@ -863,3 +873,16 @@ servidor"**. Si esa falla, las 9 siguientes fallan por arrastre y **no hay que t
 cambiar **juntos** las 5 condiciones de `web.config` y `TRUSTED_PROXIES` (E22), o habrá bucle.
 **Lección:** antes de tocar configuración por un 404 en el dominio, confirmar **que la petición llega
 al servidor**. Una ruta única por cada VIP y el log de IIS lo resuelven sin ambigüedad.
+**Cerrado el 14/09/2026 por la tarde:** infraestructura corrigió el balanceador; el dominio funciona desde
+Internet (DNS dividido: interno → `.106`, público → `187.189.139.176`/`201.131.40.176`) y el tráfico
+público entra desde `100.127.1.42`, dentro de `100.64.0.0/10`, así que no hubo que tocar `web.config`.
+
+### E24 — El pie del login decía "Estado de MÃ©xico" [resuelto 14-09-2026]
+**Síntoma:** en el login, "© 2026 COMECYT · Estado de MÃ©xico". También afectaba
+`NEXT_PUBLIC_INSTITUTION_FULL_NAME` y `NEXT_PUBLIC_INSTITUTION_SYSTEM_TAGLINE`.
+**Causa:** `apps/web/.env.local` quedó con **doble codificación** al editarlo el 11/09/2026 (UTF-8 leído
+como Windows-1252 y vuelto a guardar como UTF-8). Los `NEXT_PUBLIC_*` se hornean en el build, así que el
+texto roto quedó en el JavaScript servido.
+**Fix:** corregir las líneas en UTF-8 y recompilar. Respaldo: `.env.local.bak-20260914-codificacion`.
+**Lección:** no editar `.env*` con `Set-Content`/`Out-File` de PowerShell 5.1 sin `-Encoding utf8`
+(ni así: agrega BOM). Usar un editor o la herramienta de edición, y buscar `Ã` después de cualquier cambio.

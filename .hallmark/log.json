@@ -1,0 +1,13 @@
+[
+  {
+    "date": "2026-09-14",
+    "macrostructure": "Split auth (banner card + form column)",
+    "theme": "custom",
+    "theme_axes": "light / grotesk-sans (Geist) / warm (vino 358)",
+    "vibe": "institucional, vino suave, vidrio, recorte",
+    "enrichment": "E Tier-A CSS art (manchas difuminadas + grano)",
+    "nav": "none (auth)",
+    "footer": "copyright line",
+    "brief": "COMECYT · rediseño del login: banner con recorte de botones y formulario con etiquetas flotantes; sin píldoras"
+  }
+]

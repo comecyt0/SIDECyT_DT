@@ -247,3 +247,375 @@
     -webkit-text-fill-color: transparent;
   }
 }
+
+/* Hallmark · component: auth-login · genre: modern-minimal · theme: custom (vino institucional COMECYT)
+ * states: default · hover · focus · active · disabled · loading · error · success
+ * motion: entrada escalonada (una vez) · cambio de diapositiva · progreso del autoplay
+ * Documentado en docs/DISENO_UI.md. Prefijo --auth-* para no pisar los --ease-* de Tailwind v4.
+ */
+:root {
+  --auth-paper: oklch(98.4% 0.004 350);
+  --auth-white: oklch(100% 0 0);
+  --auth-field: oklch(95.6% 0.007 350);
+  --auth-field-hover: oklch(93.6% 0.009 350);
+  --auth-ink: oklch(23% 0.035 355);
+  --auth-ink-2: oklch(47% 0.02 355);
+  --auth-rule: oklch(89% 0.01 350);
+  --auth-rule-strong: oklch(80% 0.02 350);
+  --auth-vino: oklch(36% 0.1 358);
+  --auth-vino-strong: oklch(30% 0.09 358);
+  --auth-vino-soft: oklch(36% 0.1 358 / 0.12);
+  --auth-vino-shadow: oklch(36% 0.1 358 / 0.55);
+  --auth-gold: oklch(80% 0.075 82);
+  --auth-success: oklch(45% 0.09 150);
+  --auth-danger: oklch(52% 0.19 27);
+
+  /* Banner: base poco saturada y translúcida; el papel se asoma detrás */
+  --auth-banner-base: oklch(52% 0.055 350 / 0.82);
+  /* Una sola familia de color (vino → rosa → rubor). El dorado queda solo como acento
+     en la etiqueta: mezclado en el fondo con el vino daba un café turbio */
+  --auth-blob-vino: oklch(34% 0.1 358 / 0.8);
+  --auth-blob-blush: oklch(88% 0.035 15 / 0.6);
+  --auth-blob-rose: oklch(66% 0.08 5 / 0.6);
+  --auth-glass: oklch(24% 0.04 355 / 0.42);
+
+  --auth-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --auth-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --auth-radius-card: 28px;
+  --auth-radius-field: 14px;
+  --auth-notch: 22px;
+}
+
+@layer components {
+  /* Entrada: una sola secuencia al cargar, escalonada con --i (60 ms por paso) */
+  .auth-reveal {
+    animation: auth-reveal 560ms var(--auth-ease-out) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+  @keyframes auth-reveal {
+    from { opacity: 0; transform: translateY(10px); }
+  }
+
+  /* Cambio de contenido dentro de un mismo lugar (etiquetas del botón, ícono del ojo, avisos) */
+  .auth-swap {
+    animation: auth-swap 240ms var(--auth-ease-out) both;
+  }
+  @keyframes auth-swap {
+    from { opacity: 0; filter: blur(3px); transform: translateY(3px); }
+  }
+
+  /* ── Banner ─────────────────────────────────────────────── */
+  .auth-banner {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: var(--auth-radius-card);
+    background: var(--auth-banner-base);
+    touch-action: pan-y;
+  }
+  .auth-banner:focus-visible {
+    outline: 2px solid var(--auth-vino);
+    outline-offset: 4px;
+    border-radius: var(--auth-radius-card);
+  }
+  .auth-banner-image {
+    opacity: 0;
+    filter: saturate(0.8);
+    transition: opacity 700ms ease;
+  }
+  .auth-banner-image[data-active="true"] { opacity: 0.55; }
+
+  .auth-blob {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 72%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    filter: blur(70px);
+    pointer-events: none;
+    transition: transform 1600ms var(--auth-ease-in-out);
+  }
+  .auth-blob-1 { background: var(--auth-blob-vino); }
+  .auth-blob-2 { background: var(--auth-blob-blush); }
+  .auth-blob-3 { background: var(--auth-blob-rose); }
+
+  .auth-grain {
+    position: absolute;
+    inset: 0;
+    opacity: 0.07;
+    mix-blend-mode: soft-light;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    pointer-events: none;
+  }
+
+  .auth-glass {
+    background: var(--auth-glass);
+    backdrop-filter: blur(18px) saturate(115%);
+    -webkit-backdrop-filter: blur(18px) saturate(115%);
+    border: 1px solid color-mix(in oklch, var(--auth-white) 14%, transparent);
+    border-radius: 22px;
+  }
+
+  .auth-banner-title {
+    font-size: clamp(1.875rem, 2.4vw, 3rem);
+    line-height: 1.08;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  /* Etiqueta de la diapositiva: línea dorada + texto, sin cápsula */
+  .auth-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: color-mix(in oklch, var(--auth-white) 92%, transparent);
+  }
+  .auth-tag::before {
+    content: '';
+    width: 20px;
+    height: 1.5px;
+    background: var(--auth-gold);
+  }
+
+  /* Recorte inferior derecho: los botones "cortan" el banner.
+     ::before y ::after dibujan las dos esquinas cóncavas con un gradiente radial. */
+  .auth-notch {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    gap: 10px;
+    padding: 12px 0 0 12px;
+    background: var(--auth-paper);
+    border-top-left-radius: var(--auth-notch);
+  }
+  .auth-notch::before,
+  .auth-notch::after {
+    content: '';
+    position: absolute;
+    width: var(--auth-notch);
+    height: var(--auth-notch);
+    background: radial-gradient(circle at 0 0, transparent calc(var(--auth-notch) - 0.5px), var(--auth-paper) var(--auth-notch));
+    pointer-events: none;
+  }
+  .auth-notch::before { top: calc(var(--auth-notch) * -1); right: 0; }
+  .auth-notch::after { bottom: 0; left: calc(var(--auth-notch) * -1); }
+
+  .auth-nav-btn {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: var(--auth-white);
+    color: var(--auth-ink);
+    border: 1px solid var(--auth-rule);
+    transition: background-color 160ms ease, border-color 160ms ease, transform 140ms var(--auth-ease-out);
+  }
+  .auth-nav-btn svg { transition: transform 200ms var(--auth-ease-out); }
+  .auth-nav-btn:active { transform: scale(0.95); }
+  .auth-nav-btn:focus-visible {
+    outline: 2px solid var(--auth-vino);
+    outline-offset: 2px;
+    border-radius: 16px;
+  }
+
+  .auth-icon-btn {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    color: var(--auth-white);
+    background: color-mix(in oklch, var(--auth-white) 10%, transparent);
+    border: 1px solid color-mix(in oklch, var(--auth-white) 16%, transparent);
+    transition: background-color 160ms ease, transform 140ms var(--auth-ease-out);
+  }
+  .auth-icon-btn:active { transform: scale(0.94); }
+
+  /* Progreso del autoplay: un segmento por diapositiva; la animación del segmento activo
+     marca el tiempo y su animationend avanza a la siguiente */
+  .auth-progress { display: flex; gap: 6px; }
+  .auth-progress-seg {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    min-width: 32px;
+    height: 24px;
+    cursor: pointer;
+  }
+  .auth-progress-track {
+    position: relative;
+    width: 100%;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: color-mix(in oklch, var(--auth-white) 28%, transparent);
+  }
+  .auth-progress-fill {
+    position: absolute;
+    inset: 0;
+    background: var(--auth-white);
+    transform-origin: left;
+    transform: scaleX(0);
+  }
+  .auth-progress-seg[data-state="done"] .auth-progress-fill { transform: scaleX(1); }
+  .auth-progress-seg[data-state="active"] .auth-progress-fill {
+    animation: auth-progress var(--auth-slide-ms, 6500ms) linear forwards;
+  }
+  .auth-progress[data-paused="true"] .auth-progress-fill { animation-play-state: paused; }
+  .auth-progress[data-reduced="true"] .auth-progress-seg[data-state="active"] .auth-progress-fill {
+    animation: none;
+    transform: scaleX(1);
+  }
+  @keyframes auth-progress {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  .auth-icon-btn:focus-visible,
+  .auth-progress-seg:focus-visible {
+    outline: 2px solid var(--auth-white);
+    outline-offset: 2px;
+    border-radius: 10px;
+  }
+
+  /* ── Formulario ─────────────────────────────────────────── */
+  .auth-field { position: relative; }
+  .auth-input {
+    width: 100%;
+    height: 58px;
+    padding: 22px 16px 6px 46px;
+    border-radius: var(--auth-radius-field);
+    border: 1.5px solid transparent;
+    background: var(--auth-field);
+    color: var(--auth-ink);
+    font-size: 15px;
+    outline: none;
+    transition: background-color 160ms ease, border-color 160ms ease;
+  }
+  .auth-input::placeholder {
+    color: transparent;
+    transition: color 160ms ease;
+  }
+  .auth-input:focus::placeholder { color: color-mix(in oklch, var(--auth-ink-2) 70%, transparent); }
+  .auth-input:hover { background: var(--auth-field-hover); }
+  /* El anillo de foco aparece sin transición: box-shadow no está en la lista de arriba */
+  .auth-input:focus {
+    background: var(--auth-white);
+    border-color: var(--auth-vino);
+    box-shadow: 0 0 0 4px var(--auth-vino-soft);
+  }
+  .auth-input[aria-invalid="true"] { border-color: var(--auth-danger); }
+  .auth-input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 40px var(--auth-field) inset;
+    -webkit-text-fill-color: var(--auth-ink);
+  }
+
+  .auth-label {
+    position: absolute;
+    top: 19px;
+    left: 46px;
+    font-size: 15px;
+    line-height: 20px;
+    color: var(--auth-ink-2);
+    transform-origin: left top;
+    pointer-events: none;
+    transition: transform 200ms var(--auth-ease-out), color 160ms ease;
+  }
+  .auth-input:focus + .auth-label,
+  .auth-input:not(:placeholder-shown) + .auth-label {
+    transform: translateY(-10px) scale(0.8);
+  }
+  .auth-input:-webkit-autofill + .auth-label { transform: translateY(-10px) scale(0.8); }
+  .auth-input:focus + .auth-label { color: var(--auth-vino); }
+
+  .auth-field-icon {
+    position: absolute;
+    top: 50%;
+    left: 16px;
+    width: 18px;
+    height: 18px;
+    color: var(--auth-ink-2);
+    transform: translateY(-50%);
+    pointer-events: none;
+    transition: color 160ms ease;
+  }
+  .auth-field:focus-within .auth-field-icon { color: var(--auth-vino); }
+
+  .auth-eye {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    color: var(--auth-ink-2);
+    transform: translateY(-50%);
+    transition: color 160ms ease, background-color 160ms ease;
+  }
+
+  .auth-submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 56px;
+    border-radius: var(--auth-radius-field);
+    background: var(--auth-vino);
+    color: var(--auth-white);
+    font-size: 15px;
+    font-weight: 600;
+    box-shadow: inset 0 1px 0 color-mix(in oklch, var(--auth-white) 12%, transparent), 0 10px 22px -12px var(--auth-vino-shadow);
+    transition: background-color 180ms ease, transform 140ms var(--auth-ease-out);
+  }
+  .auth-submit-arrow { transition: transform 200ms var(--auth-ease-out); }
+  .auth-submit:active:not(:disabled) { transform: scale(0.98); }
+  .auth-submit:disabled { cursor: not-allowed; }
+  .auth-submit:disabled[data-state="idle"] { opacity: 0.6; }
+  .auth-submit[data-state="loading"] { cursor: progress; }
+  .auth-submit[data-state="success"] { background: var(--auth-success); }
+  .auth-submit:focus-visible {
+    outline: 2px solid var(--auth-vino);
+    outline-offset: 3px;
+    border-radius: var(--auth-radius-field);
+  }
+
+  .auth-link {
+    color: var(--auth-ink);
+    font-weight: 500;
+    text-decoration: underline;
+    text-decoration-color: var(--auth-rule-strong);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 4px;
+    transition: color 160ms ease, text-decoration-color 160ms ease;
+  }
+  .auth-link:hover {
+    color: var(--auth-vino);
+    text-decoration-color: currentColor;
+  }
+
+  /* Hover solo con puntero fino: en táctil el hover se queda "pegado" tras tocar */
+  @media (hover: hover) and (pointer: fine) {
+    .auth-nav-btn:hover { background: var(--auth-field); border-color: var(--auth-rule-strong); }
+    .auth-nav-btn:hover .auth-nav-prev { transform: translateX(-2px); }
+    .auth-nav-btn:hover .auth-nav-next { transform: translateX(2px); }
+    .auth-icon-btn:hover { background: color-mix(in oklch, var(--auth-white) 20%, transparent); }
+    .auth-eye:hover { color: var(--auth-ink); background: var(--auth-field-hover); }
+    .auth-submit:hover:not(:disabled) { background: var(--auth-vino-strong); }
+    .auth-submit:hover:not(:disabled) .auth-submit-arrow { transform: translateX(3px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .auth-reveal,
+    .auth-swap { animation: none; }
+    .auth-blob { transition: none; }
+  }
+}

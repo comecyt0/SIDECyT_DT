@@ -3,11 +3,8 @@
 import { useState } from 'react';
 import Cookies from 'js-cookie';
 import api from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { Loader2, ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Check, Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { AlertBox } from '@/components/ui/alert-box';
 import { LoginCarousel } from '@/components/ui/login-carousel';
 import DualBranding from '@/components/branding/DualBranding';
@@ -15,12 +12,15 @@ import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import { useT } from '@/i18n/I18nProvider';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
 
+/** Estilos: clases .auth-* en globals.css. Diseño documentado en docs/DISENO_UI.md. */
 export default function LoginPage() {
   const { t } = useT();
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   // 2FA challenge state
   const [challengeId, setChallengeId] = useState<string | null>(null);
@@ -36,6 +36,9 @@ export default function LoginPage() {
       evaluador: '/evaluador/evaluaciones',
       solicitante: '/solicitante/dashboard',
     };
+    // El botón pasa a "Acceso concedido" mientras el navegador carga el panel
+    setSuccess(true);
+    setLoading(false);
     window.location.href = dashboardMap[roleSlug] ?? '/solicitante/dashboard';
   };
 
@@ -89,219 +92,211 @@ export default function LoginPage() {
     setLoginError(null);
   };
 
-  return (
-    <div className="flex min-h-screen bg-neutral-50 dark:bg-neutral-950 overflow-hidden font-sans">
-      {/* ── LEFT PANE: Carousel ── */}
-      <div className="hidden lg:block lg:w-[55%] xl:w-[60%] relative">
-        <LoginCarousel />
+  const detectCapsLock = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    setCapsLock(e.getModifierState('CapsLock'));
+  };
 
-        {/* Bottom strip: security badge */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
-          <div className="flex items-center gap-2.5 bg-black/30 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/20 shadow-lg">
-            <ShieldCheck className="w-4 h-4 text-accent" />
-            <span className="text-xs font-semibold text-white/90 tracking-wide">
-              {INSTITUTION.securityBadge}
-            </span>
-          </div>
-        </div>
+  const submitState = success ? 'success' : loading ? 'loading' : 'idle';
+
+  const submitContent = (idleLabel: string) => (
+    <span key={submitState} className="auth-swap flex items-center gap-2.5">
+      {submitState === 'success' && (
+        <>
+          <Check className="h-4 w-4" aria-hidden="true" />
+          {t('auth.login_success')}
+        </>
+      )}
+      {submitState === 'loading' && (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          {t('auth.authenticating')}
+        </>
+      )}
+      {submitState === 'idle' && (
+        <>
+          {idleLabel}
+          <ArrowRight className="auth-submit-arrow h-4 w-4" aria-hidden="true" />
+        </>
+      )}
+    </span>
+  );
+
+  return (
+    <div className="flex min-h-screen bg-[var(--auth-paper)] font-sans text-[var(--auth-ink)]">
+      {/* ── Izquierda: banner (solo escritorio) ── */}
+      <div className="sticky top-0 hidden h-screen p-4 lg:block lg:w-[55%] xl:w-[58%] xl:p-5">
+        <LoginCarousel />
       </div>
 
-      {/* ── RIGHT PANE: Auth Form ── */}
-      <div className="w-full lg:w-[45%] xl:w-[40%] relative flex flex-col items-center justify-center px-6 md:px-10 xl:px-16 bg-white">
-        {/* Subtle top border accent */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-accent to-primary" />
-
-        {/* Language switcher (top-right) */}
-        <div className="absolute top-4 right-4 z-30">
+      {/* ── Derecha: formulario ── */}
+      <main className="flex min-h-screen w-full flex-col lg:w-[45%] xl:w-[42%]">
+        <div className="flex justify-end px-6 pt-5">
           <LanguageSwitcher />
         </div>
 
-        {/* Ambient glow */}
-        <div className="absolute top-0 right-0 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-56 h-56 bg-accent/8 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="w-full max-w-sm relative z-10 animate-in fade-in slide-in-from-right-8 duration-700">
-
-          {/* Logo institucional dual: COMECYT + Gobierno del Estado de México */}
-          <div className="flex justify-center mb-8">
-            <DualBranding size="lg" />
-          </div>
-
-          {/* Heading */}
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-extrabold text-[#2D1B20] tracking-tight mb-1.5">
-              {t('auth.login_title')}
-            </h1>
-            <p className="text-sm text-neutral-500">
-              {t('auth.login_subtitle')}
-            </p>
-          </div>
-
-          {/* 2FA Challenge — segunda pantalla después del login si user tiene 2FA */}
-          {challengeId && (
-            <form onSubmit={handleTwoFactor} className="space-y-5">
-              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-                <p className="text-sm font-bold text-primary mb-1 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4" />
-                  {t('auth.two_factor_title')}
-                </p>
-                <p className="text-xs text-neutral-600">
-                  {t('auth.two_factor_prompt')}
-                </p>
-                <p className="text-[10px] text-neutral-400 mt-1">
-                  {t('auth.two_factor_recovery_hint')}
-                </p>
-              </div>
-              {loginError && <AlertBox type="error" message={loginError} onClose={() => setLoginError(null)} />}
-              <div className="space-y-1.5">
-                <Label htmlFor="totp" className="text-xs font-bold text-neutral-600 uppercase tracking-widest">
-                  {t('auth.two_factor_code_label')}
-                </Label>
-                <Input
-                  id="totp"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={21}
-                  value={twoFactorCode}
-                  onChange={(e) => setTwoFactorCode(e.target.value)}
-                  placeholder="123456"
-                  className="font-mono text-lg tracking-widest text-center"
-                  autoFocus
-                />
-              </div>
-              <Button type="submit" disabled={loading || twoFactorCode.length < 6} className="w-full bg-primary hover:bg-[var(--brand-vino-700)] text-white font-bold py-3">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ArrowRight className="w-4 h-4 mr-2" />}
-                {t('auth.two_factor_submit')}
-              </Button>
-              <button type="button" onClick={cancelChallenge} className="w-full text-xs text-neutral-400 hover:text-primary">
-                {t('auth.back_to_login')}
-              </button>
-            </form>
-          )}
-
-          {/* Form principal — solo si no hay challenge activo */}
-          {!challengeId && (
-          <form onSubmit={handleLogin} className="space-y-5">
-
-            {/* Email */}
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-bold text-neutral-600 uppercase tracking-widest">
-                {t('auth.email_label_caps')}
-              </Label>
-              <div className="relative group">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 group-focus-within:text-primary transition-colors duration-200" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder={INSTITUTION.emailHint}
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 h-12 bg-neutral-50 border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 hover:border-neutral-300"
-                />
-              </div>
+        <div className="flex flex-1 items-center justify-center px-6 py-10 sm:px-10">
+          <div className="w-full max-w-[400px]">
+            {/* Logo institucional (COMECYT + Edomex si está habilitado) */}
+            <div className="auth-reveal mb-8 flex justify-center" style={{ '--i': 1 } as React.CSSProperties}>
+              <DualBranding size="xl" />
             </div>
 
-            {/* Password */}
-            <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-xs font-bold text-neutral-600 uppercase tracking-widest">
-                {t('auth.password')}
-              </Label>
-              <div className="relative group">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 group-focus-within:text-primary transition-colors duration-200" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••••••"
-                  required
-                  autoComplete="off"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10 h-12 bg-neutral-50 border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 hover:border-neutral-300"
-                />
+            <div className="auth-reveal mb-9 text-center" style={{ '--i': 2 } as React.CSSProperties}>
+              <h1 className="text-[clamp(2rem,3.2vw,2.5rem)] font-bold leading-[1.05] tracking-[-0.035em] [text-wrap:balance]">
+                {t('auth.login_title')}
+              </h1>
+              <p className="mt-3 text-[15px] text-[var(--auth-ink-2)]">{t('auth.login_subtitle')}</p>
+            </div>
+
+            {/* 2FA Challenge — segunda pantalla después del login si user tiene 2FA */}
+            {challengeId && (
+              <form onSubmit={handleTwoFactor} className="auth-swap space-y-4">
+                <div className="rounded-[var(--auth-radius-field)] border border-[var(--auth-rule)] bg-[var(--auth-white)] p-4">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-[var(--auth-vino)]">
+                    <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                    {t('auth.two_factor_title')}
+                  </p>
+                  <p className="mt-1 text-[13px] text-[var(--auth-ink-2)]">{t('auth.two_factor_prompt')}</p>
+                  <p className="mt-1 text-xs text-[var(--auth-ink-2)]">{t('auth.two_factor_recovery_hint')}</p>
+                </div>
+
+                {loginError && <AlertBox type="error" message={loginError} onClose={() => setLoginError(null)} />}
+
+                <div className="auth-field">
+                  <input
+                    id="totp"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={21}
+                    value={twoFactorCode}
+                    onChange={(e) => setTwoFactorCode(e.target.value)}
+                    placeholder="123456"
+                    className="auth-input pl-4 font-mono text-lg tracking-[0.3em]"
+                    aria-invalid={loginError ? true : undefined}
+                    autoFocus
+                  />
+                  <label htmlFor="totp" className="auth-label left-4">
+                    {t('auth.two_factor_code_label')}
+                  </label>
+                </div>
+
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? t('auth.hide_password') : t('auth.show_password')}
-                  aria-pressed={showPassword}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-primary transition-colors duration-200"
-                  tabIndex={-1}
+                  type="submit"
+                  disabled={loading || success || twoFactorCode.length < 6}
+                  data-state={submitState}
+                  className="auth-submit"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {submitContent(t('auth.two_factor_submit'))}
                 </button>
-              </div>
-              {/* DOM después del input para que Tab vaya email → password → submit → link
-                  (WCAG 2.4.3 — focus order). Visualmente alineado a la derecha. */}
-              <div className="flex justify-end pt-0.5">
-                <Link
-                  href="/forgot-password"
-                  className="text-xs text-primary hover:text-[var(--brand-vino-700)] font-semibold hover:underline transition-colors"
-                >
-                  {t('auth.forgot')}
-                </Link>
-              </div>
-            </div>
 
-            {/* Error alert */}
-            {loginError && (
-              <AlertBox type="error" message={loginError} onClose={() => setLoginError(null)} />
+                <button type="button" onClick={cancelChallenge} className="auth-link mx-auto block text-sm">
+                  {t('auth.back_to_login')}
+                </button>
+              </form>
             )}
 
-            {/* Submit */}
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full h-12 text-sm font-bold rounded-xl bg-gradient-to-r from-primary to-[var(--brand-vino-700)] hover:from-[var(--brand-vino-700)] hover:to-[var(--brand-vino-600)] text-white shadow-lg shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md border-0 overflow-hidden relative group"
-            >
-              {/* Shimmer */}
-              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            {/* Form principal — solo si no hay challenge activo */}
+            {!challengeId && (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="auth-reveal space-y-3" style={{ '--i': 3 } as React.CSSProperties}>
+                  {/* Email — etiqueta flotante: sube al enfocar o al tener texto */}
+                  <div className="auth-field">
+                    <input
+                      id="email"
+                      type="email"
+                      placeholder={INSTITUTION.emailHint}
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="auth-input"
+                      aria-invalid={loginError ? true : undefined}
+                      aria-describedby={loginError ? 'login-error' : undefined}
+                    />
+                    <label htmlFor="email" className="auth-label">
+                      {t('auth.email')}
+                    </label>
+                    <Mail className="auth-field-icon" aria-hidden="true" />
+                  </div>
 
-              {loading ? (
-                <span className="flex items-center justify-center gap-2 relative z-10">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t('auth.authenticating')}
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2 relative z-10">
-                  {t('auth.submit_button')}
-                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-                </span>
-              )}
-            </Button>
+                  {/* Password */}
+                  <div className="auth-field">
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••••••"
+                      required
+                      autoComplete="off"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onKeyDown={detectCapsLock}
+                      onKeyUp={detectCapsLock}
+                      onBlur={() => setCapsLock(false)}
+                      className="auth-input pr-14"
+                      aria-invalid={loginError ? true : undefined}
+                      aria-describedby={capsLock ? 'caps-lock-hint' : loginError ? 'login-error' : undefined}
+                    />
+                    <label htmlFor="password" className="auth-label">
+                      {t('auth.password')}
+                    </label>
+                    <Lock className="auth-field-icon" aria-hidden="true" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? t('auth.hide_password') : t('auth.show_password')}
+                      aria-pressed={showPassword}
+                      className="auth-eye"
+                      tabIndex={-1}
+                    >
+                      <span key={showPassword ? 'ocultar' : 'mostrar'} className="auth-swap">
+                        {showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
+                      </span>
+                    </button>
+                  </div>
 
-            {/* Divider */}
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-neutral-100" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-white px-3 text-neutral-400">{t('auth.first_time')}</span>
-              </div>
-            </div>
+                  {capsLock && (
+                    <p id="caps-lock-hint" role="status" className="auth-swap flex items-center gap-2 text-[13px] text-[var(--auth-ink-2)]">
+                      <TriangleAlert className="h-4 w-4 text-[var(--auth-danger)]" aria-hidden="true" />
+                      {t('auth.caps_lock_on')}
+                    </p>
+                  )}
 
-            {/* Register link */}
-            <div className="text-center">
-              <p className="text-sm text-neutral-500">
-                {t('auth.request_access_question')}{' '}
-                <Link
-                  href="/solicitar-acceso"
-                  className="font-bold text-primary hover:text-[var(--brand-vino-700)] hover:underline transition-colors"
+                  {/* DOM después de los campos para que Tab vaya email → password → link → submit
+                      (WCAG 2.4.3 — focus order). Visualmente alineado a la derecha. */}
+                  <div className="flex justify-end">
+                    <Link href="/forgot-password" className="auth-link text-[13px]">
+                      {t('auth.forgot')}
+                    </Link>
+                  </div>
+                </div>
+
+                {loginError && (
+                  <div id="login-error">
+                    <AlertBox type="error" message={loginError} onClose={() => setLoginError(null)} />
+                  </div>
+                )}
+
+                <div className="auth-reveal" style={{ '--i': 4 } as React.CSSProperties}>
+                  <button type="submit" disabled={loading || success} data-state={submitState} className="auth-submit">
+                    {submitContent(t('auth.submit'))}
+                  </button>
+                </div>
+
+                <p
+                  className="auth-reveal pt-2 text-center text-sm text-[var(--auth-ink-2)]"
+                  style={{ '--i': 5 } as React.CSSProperties}
                 >
-                  {t('auth.request_access_link')}
-                </Link>
-              </p>
-            </div>
-          </form>
-          )}
+                  {t('auth.request_access_question')}{' '}
+                  <Link href="/solicitar-acceso" className="auth-link">
+                    {t('auth.request_access')}
+                  </Link>
+                </p>
+              </form>
+            )}
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="absolute bottom-5 left-0 right-0 text-center">
-          <p className="text-[11px] text-neutral-300 tracking-wide">
-            {copyrightLine()}
-          </p>
-        </div>
-      </div>
+        <footer className="px-6 pb-6 text-center text-xs text-[var(--auth-ink-2)]">{copyrightLine()}</footer>
+      </main>
     </div>
   );
 }
