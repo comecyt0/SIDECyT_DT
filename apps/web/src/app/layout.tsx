@@ -29,8 +29,12 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: INSTITUTION.name,
   },
+  // logo.png es el único ícono del sistema: no hay favicon.ico (el archivo no existía y el
+  // navegador caía al ícono por defecto). Metadata en el layout raíz alcanza a todas las
+  // páginas sin excepción — ninguna ruta la sobreescribe (14/09/2026).
   icons: {
-    icon: "/favicon.ico",
+    icon: "/logo.png",
+    shortcut: "/logo.png",
     apple: "/logo.png",
   },
 };

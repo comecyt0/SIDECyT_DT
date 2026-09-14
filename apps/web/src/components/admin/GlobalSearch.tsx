@@ -103,7 +103,7 @@ export default function GlobalSearch({
   const showResults = open && q.trim().length >= 2;
 
   return (
-    <div ref={wrapperRef} className="flex-1 max-w-xs relative">
+    <div ref={wrapperRef} className="flex-1 max-w-sm relative">
       {/* Desktop: input siempre visible */}
       <div className="hidden lg:flex w-full items-center gap-2 bg-neutral-100 dark:bg-neutral-800 px-4 py-2.5 rounded-full ring-1 ring-neutral-200 dark:ring-neutral-700 focus-within:ring-primary/30 focus-within:bg-white dark:focus-within:bg-neutral-900 transition-all duration-300">
         {loading ? (

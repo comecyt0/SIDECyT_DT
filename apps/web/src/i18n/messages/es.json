@@ -116,7 +116,8 @@
     "title": "Notificaciones",
     "unread_count": "{count} sin leer",
     "mark_all_read": "leer todas",
-    "empty": "Sin notificaciones recientes."
+    "empty": "Sin notificaciones recientes.",
+    "view_all": "Ver todas →"
   },
   "theme": {
     "light": "Modo claro",

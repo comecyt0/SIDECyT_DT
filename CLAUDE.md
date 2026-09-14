@@ -327,10 +327,16 @@ export default function MiPagina() {
 
 ### Diseño UI — skills y sistema visual (desde 14/09/2026)
 Todo trabajo de diseño usa las skills `hallmark`, `frontend-design`, `ui-ux-pro-max` y `emil-design-eng`
-(instaladas en `~/.claude/skills`). Sistema, tokens `--auth-*` y decisiones: **`docs/DISENO_UI.md`**.
-Reglas del usuario: **nada de píldoras** (`rounded-full` en etiquetas, sellos o botones), fondos poco
-saturados y translúcidos, logo grande. Toda animación respeta `prefers-reduced-motion` y anima solo
-`transform`/`opacity`.
+(instaladas en `~/.claude/skills`). Sistema, tokens `--auth-*`/`--app-*` y decisiones: **`docs/DISENO_UI.md`**.
+Reglas del usuario: **nada de píldoras** en badges/etiquetas (`rounded-full` sí se conserva en
+afordancias reconocidas: buscador, puntos de paso), fondos poco saturados y translúcidos, logo grande.
+Toda animación respeta `prefers-reduced-motion` y anima solo `transform`/`opacity`.
+Cubierto: login, panel (sidebar + topbar de los 4 roles vía `AppShell.tsx`, ver E26), dashboard de admin,
+"¿Olvidaste tu clave?", "Solicitar acceso" y la pantalla de carga del sistema (`RouteLoadingScreen`, un
+`loading.tsx` por raíz de rol — Next.js la muestra solo, no hace falta togglearla a mano). **Sin cubrir:**
+el contenido interno de las vistas de `/admin/*` y de los otros 3 roles (tablas, formularios) — ver
+`docs/DISENO_UI.md` §7 Pendiente. `logo.png` es el favicon del sistema completo (metadata del layout raíz,
+sin excepciones por ruta).
 
 ### Patrón de descarga de archivos (blob)
 ```typescript
@@ -887,6 +893,19 @@ texto roto quedó en el JavaScript servido.
 **Fix:** corregir las líneas en UTF-8 y recompilar. Respaldo: `.env.local.bak-20260914-codificacion`.
 **Lección:** no editar `.env*` con `Set-Content`/`Out-File` de PowerShell 5.1 sin `-Encoding utf8`
 (ni así: agrega BOM). Usar un editor o la herramienta de edición, y buscar `Ã` después de cualquier cambio.
+
+### E26 — Rediseño del panel: sidebar único para los 4 roles [14-09-2026]
+`AdminTopLayout.tsx` y `RoleTopLayout.tsx` pasaron de menú superior (mega-dropdown) a envolturas delgadas
+sobre **`src/components/layout/AppShell.tsx`** (sidebar + topbar), conservando **el mismo prop-interface
+externo** — ningún `layout.tsx` de rol se tocó. Cambiar `AppShell.tsx` cambia los ~38 paneles de los 4
+roles a la vez. Detalle completo, tokens y qué falta: `docs/DISENO_UI.md` §5-7.
+Dos trampas nuevas al construirlo:
+1. Un componente declarado **dentro** de otro (`const NavList = () => …` dentro de la función de
+   `AppShell`) se re-crea en cada render y pierde estado — eslint lo marca
+   (`react-hooks/static-components`). Sacarlo a nivel de módulo, con sus datos por prop.
+2. Un `<label>` que envuelve visualmente un `<input>` sin `id`/`htmlFor` explícitos no cuenta como
+   asociado para axe (regla `label`). En "Solicitar acceso" se resolvió con un wrapper (`FField`) que
+   clona el hijo (`React.cloneElement`) para inyectarle el `id` recibido por prop.
 
 ### E25 — Migración `institucion` → `empresa` (junio) dejó 3 referencias rotas [resuelto parcial 14-09-2026]
 **Síntoma real:** una solicitud de acceso enviada no aparecía en `/admin/solicitudes-acceso` (institución en

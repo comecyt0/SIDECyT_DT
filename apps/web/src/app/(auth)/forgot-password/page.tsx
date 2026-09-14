@@ -1,17 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import Image from 'next/image';
+import { Check, Loader2, Mail, ArrowLeft, ShieldCheck, Clock, UserCheck } from 'lucide-react';
 import { AlertBox } from '@/components/ui/alert-box';
-import { Loader2, Mail, ArrowLeft, ShieldCheck, CheckCircle } from 'lucide-react';
+import DualBranding from '@/components/branding/DualBranding';
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import api from '@/lib/api';
 import { useT } from '@/i18n/I18nProvider';
-import { INSTITUTION } from '@/lib/institution';
+import { INSTITUTION, copyrightLine } from '@/lib/institution';
 
+/** Mismo sistema --auth-* del login. Ver docs/DISENO_UI.md §Login. */
 export default function ForgotPasswordPage() {
   const { t } = useT();
   const [email, setEmail] = useState('');
@@ -35,113 +35,137 @@ export default function ForgotPasswordPage() {
     }
   };
 
+  const submitState = sent ? 'success' : loading ? 'loading' : 'idle';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--brand-vino-50)] via-white to-[var(--brand-gold-50)] dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950 flex items-center justify-center p-4">
-      {/* Background decorations */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-80 h-80 bg-accent/8 rounded-full blur-3xl translate-x-1/4 translate-y-1/4 pointer-events-none" />
-
-      <div className="w-full max-w-md relative animate-in fade-in slide-in-from-bottom-6 duration-600">
-        {/* Card */}
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl shadow-primary/[8%] border border-neutral-100 dark:border-neutral-700 overflow-hidden">
-          {/* Top accent */}
-          <div className="h-1 bg-gradient-to-r from-primary via-accent to-primary" />
-
-          <div className="p-8">
-            {/* Logo */}
-            <div className="flex justify-center mb-6">
-              <div className="relative">
-                <Image src="/logo.png" alt={INSTITUTION.name} width={82} height={64} priority className="h-16 w-auto object-contain" />
+    <div className="flex min-h-screen bg-[var(--auth-paper)] font-sans text-[var(--auth-ink)]">
+      {/* ── Izquierda: panel institucional (estático) ── */}
+      <div className="sticky top-0 hidden h-screen p-4 lg:block lg:w-[48%] xl:w-[45%] xl:p-5">
+        <section className="auth-banner h-full w-full">
+          <div aria-hidden="true" className="absolute inset-0 -z-10">
+            <span className="auth-blob auth-blob-1" style={{ transform: 'translate(-8%, -14%) scale(1)' }} />
+            <span className="auth-blob auth-blob-2" style={{ transform: 'translate(44%, 10%) scale(0.95)' }} />
+            <span className="auth-blob auth-blob-3" style={{ transform: 'translate(6%, 50%) scale(1.05)' }} />
+            <span className="auth-grain" />
+          </div>
+          <div className="relative flex h-full flex-col p-8 text-white xl:p-10">
+            <div className="auth-reveal" style={{ '--i': 0 } as React.CSSProperties}>
+              <Image src="/logo.png" alt={INSTITUTION.name} width={401} height={312} priority className="h-20 w-auto object-contain brightness-0 invert xl:h-24" />
+            </div>
+            <div className="auth-reveal mt-auto" style={{ '--i': 1 } as React.CSSProperties}>
+              <p className="auth-tag mb-4">
+                <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" /> Recuperación de acceso
+              </p>
+              <div className="auth-glass p-7 xl:p-8">
+                <h2 className="auth-banner-title">Un administrador revisa cada restablecimiento</h2>
+                <p className="mt-3 max-w-[42ch] text-[15px] leading-relaxed text-white/80">
+                  Por seguridad institucional, ninguna contraseña se restablece de forma automática:
+                  un administrador aprueba la solicitud antes de enviar el enlace.
+                </p>
               </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* ── Derecha: formulario ── */}
+      <main className="flex min-h-screen w-full flex-col lg:w-[52%] xl:w-[55%]">
+        <div className="flex justify-end px-6 pt-5">
+          <LanguageSwitcher />
+        </div>
+
+        <div className="flex flex-1 items-center justify-center px-6 py-10 sm:px-10">
+          <div className="w-full max-w-[400px]">
+            <div className="auth-reveal mb-8 flex justify-center lg:hidden" style={{ '--i': 0 } as React.CSSProperties}>
+              <DualBranding size="lg" />
             </div>
 
             {!sent ? (
               <>
-                <div className="text-center mb-7">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/10 text-primary mb-4">
-                    <ShieldCheck className="w-6 h-6" />
-                  </div>
-                  <h1 className="text-2xl font-extrabold text-neutral-900 mb-1.5">{t('auth.forgot_title')}</h1>
-                  <p className="text-sm text-neutral-500 leading-relaxed">
-                    {t('auth.forgot_subtitle')}
-                  </p>
+                <div className="auth-reveal mb-9 text-center" style={{ '--i': 1 } as React.CSSProperties}>
+                  <h1 className="text-[clamp(1.75rem,3vw,2.25rem)] font-bold leading-[1.08] tracking-[-0.03em] [text-wrap:balance]">
+                    {t('auth.forgot_title')}
+                  </h1>
+                  <p className="mt-3 text-[15px] text-[var(--auth-ink-2)] leading-relaxed">{t('auth.forgot_subtitle')}</p>
                 </div>
 
-                {error && <AlertBox type="error" message={error} onClose={() => setError('')} />}
+                {error && (
+                  <div className="mb-5">
+                    <AlertBox type="error" message={error} onClose={() => setError('')} />
+                  </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="email" className="text-xs font-bold text-neutral-600 uppercase tracking-widest">
-                      {t('auth.email_label_caps')}
-                    </Label>
-                    <div className="relative group">
-                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 group-focus-within:text-primary transition-colors" />
-                      <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder={INSTITUTION.emailHint}
-                        required
-                        className="pl-10 h-12 rounded-xl bg-neutral-50 border-neutral-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                      />
-                    </div>
+                  <div className="auth-reveal auth-field" style={{ '--i': 2 } as React.CSSProperties}>
+                    <input
+                      id="email"
+                      type="email"
+                      placeholder={INSTITUTION.emailHint}
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="auth-input"
+                      aria-invalid={error ? true : undefined}
+                    />
+                    <label htmlFor="email" className="auth-label">
+                      {t('auth.email')}
+                    </label>
+                    <Mail className="auth-field-icon" aria-hidden="true" />
                   </div>
 
-                  <Button
-                    type="submit"
-                    disabled={loading || !email}
-                    className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-[var(--brand-vino-700)] hover:from-[var(--brand-vino-700)] hover:to-[var(--brand-vino-600)] text-white font-bold shadow-lg shadow-primary/25 hover:-translate-y-0.5 transition-all duration-200 overflow-hidden relative group"
-                  >
-                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                    {loading ? (
-                      <span className="flex items-center gap-2 relative z-10">
-                        <Loader2 className="h-4 w-4 animate-spin" /> {t('common.loading')}
+                  <div className="auth-reveal" style={{ '--i': 3 } as React.CSSProperties}>
+                    <button type="submit" disabled={loading || !email} data-state={submitState} className="auth-submit">
+                      <span key={submitState} className="auth-swap flex items-center gap-2.5">
+                        {loading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                            {t('common.loading')}
+                          </>
+                        ) : (
+                          t('auth.forgot_submit')
+                        )}
                       </span>
-                    ) : (
-                      <span className="relative z-10">{t('auth.forgot_submit')}</span>
-                    )}
-                  </Button>
+                    </button>
+                  </div>
                 </form>
               </>
             ) : (
-              <div className="text-center py-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mb-5">
-                  <CheckCircle className="w-8 h-8" />
+              <div className="auth-swap text-center">
+                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl" style={{ background: 'var(--tile-emerald-bg)' }}>
+                  <Check className="h-8 w-8" style={{ color: 'var(--tile-emerald-fg)' }} />
                 </div>
-                <h2 className="text-xl font-extrabold text-neutral-900 mb-2">{t('auth.forgot_sent_title')}</h2>
-                <p className="text-sm text-neutral-500 mb-4 leading-relaxed">
-                  {t('auth.forgot_sent_body')}{' '}
-                  <strong className="text-neutral-700">{email}</strong>.
+                <h2 className="text-xl font-bold text-[var(--auth-ink)] mb-2">{t('auth.forgot_sent_title')}</h2>
+                <p className="text-sm text-[var(--auth-ink-2)] mb-6 leading-relaxed">
+                  {t('auth.forgot_sent_body')} <strong className="text-[var(--auth-ink)]">{email}</strong>.
                 </p>
-                <div className="space-y-2">
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-left">
-                    <p className="text-xs text-blue-700 font-medium">
-                      📋 El administrador revisará tu solicitud y te enviará el enlace. Este proceso puede tomar unos minutos.
+                <div className="space-y-2.5 text-left">
+                  <div className="flex items-start gap-3 rounded-[var(--auth-radius-field)] border p-3.5" style={{ borderColor: 'var(--auth-rule)' }}>
+                    <UserCheck className="h-4 w-4 mt-0.5 shrink-0" style={{ color: 'var(--tile-sky-fg)' }} aria-hidden="true" />
+                    <p className="text-xs text-[var(--auth-ink-2)] leading-relaxed">
+                      El administrador revisará tu solicitud y te enviará el enlace. Este proceso puede tomar unos minutos.
                     </p>
                   </div>
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-left">
-                    <p className="text-xs text-amber-700 font-medium">
-                      ⏱️ Una vez que recibas el enlace, tendrás <strong>60 minutos</strong> para usarlo. Revisa también tu carpeta de spam.
+                  <div className="flex items-start gap-3 rounded-[var(--auth-radius-field)] border p-3.5" style={{ borderColor: 'var(--auth-rule)' }}>
+                    <Clock className="h-4 w-4 mt-0.5 shrink-0" style={{ color: 'var(--tile-gold-fg)' }} aria-hidden="true" />
+                    <p className="text-xs text-[var(--auth-ink-2)] leading-relaxed">
+                      Una vez que recibas el enlace, tendrás <strong>60 minutos</strong> para usarlo. Revisa también tu carpeta de spam.
                     </p>
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="mt-6 pt-5 border-t border-neutral-100 text-center">
-              <Link href="/login" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-[var(--brand-vino-700)] transition-colors group">
-                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-200" />
+            <div className="mt-8 pt-6 border-t text-center" style={{ borderColor: 'var(--auth-rule)' }}>
+              <Link href="/login" className="auth-link inline-flex items-center gap-1.5 text-sm">
+                <ArrowLeft className="w-4 h-4" aria-hidden="true" />
                 {t('auth.back_to_login')}
               </Link>
             </div>
           </div>
         </div>
 
-        <p className="text-center text-xs text-neutral-400 mt-4">
-          © {new Date().getFullYear()} {INSTITUTION.name} · {INSTITUTION.state}
-        </p>
-      </div>
+        <footer className="px-6 pb-6 text-center text-xs text-[var(--auth-ink-2)]">{copyrightLine()}</footer>
+      </main>
     </div>
   );
 }

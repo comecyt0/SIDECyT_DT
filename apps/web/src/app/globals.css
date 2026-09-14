@@ -512,6 +512,15 @@
     box-shadow: 0 0 0 4px var(--auth-vino-soft);
   }
   .auth-input[aria-invalid="true"] { border-color: var(--auth-danger); }
+
+  /* Variante sin etiqueta flotante (select, campos con label estático arriba):
+     centra verticalmente el contenido en vez de dejar el hueco de la etiqueta. */
+  .auth-input-static {
+    padding-top: 0;
+    padding-bottom: 0;
+    display: flex;
+    align-items: center;
+  }
   .auth-input:-webkit-autofill {
     -webkit-box-shadow: 0 0 0 40px var(--auth-field) inset;
     -webkit-text-fill-color: var(--auth-ink);
@@ -617,5 +626,185 @@
     .auth-reveal,
     .auth-swap { animation: none; }
     .auth-blob { transition: none; }
+  }
+}
+
+/* Hallmark · component: app-shell (sidebar + topbar) + route-loading screen
+ * genre: modern-minimal · theme: hereda de --auth-* (vino institucional)
+ * Documentado en docs/DISENO_UI.md §"Panel (shell interno)". Prefijo --app-* / --tile-*.
+ */
+:root {
+  --app-sidebar-bg: oklch(99.2% 0.003 350);
+  --app-content-bg: var(--auth-paper);
+  --app-card-bg: var(--auth-white);
+  --app-rule: var(--auth-rule);
+  --app-ink: var(--auth-ink);
+  --app-ink-2: var(--auth-ink-2);
+  --app-active-bg: var(--auth-vino);
+  --app-active-fg: var(--auth-white);
+  --app-hover-bg: oklch(96% 0.008 350);
+
+  /* Paleta de tiles del dashboard — 4 tonos, cada uno con fondo muy tenue (10-14%) y
+     un "chip" sólido para el ícono. Nunca hex sueltos: todo referencia estas variables. */
+  --tile-vino-bg: oklch(36% 0.1 358 / 0.08);
+  --tile-vino-fg: var(--auth-vino);
+  --tile-gold-bg: oklch(80% 0.09 82 / 0.18);
+  --tile-gold-fg: oklch(52% 0.1 75);
+  --tile-sky-bg: oklch(58% 0.14 240 / 0.1);
+  --tile-sky-fg: oklch(52% 0.16 240);
+  --tile-emerald-bg: oklch(60% 0.13 155 / 0.1);
+  --tile-emerald-fg: oklch(48% 0.13 155);
+}
+
+:root:not([data-theme="light"]) {
+  @media (prefers-color-scheme: dark) {
+    --app-sidebar-bg: oklch(20% 0.02 355);
+    --app-content-bg: oklch(17% 0.018 355);
+    --app-card-bg: oklch(22% 0.02 355);
+    --app-rule: oklch(30% 0.025 355);
+    --app-ink: oklch(94% 0.006 350);
+    --app-ink-2: oklch(72% 0.015 350);
+    --app-hover-bg: oklch(26% 0.022 355);
+    --tile-vino-bg: oklch(36% 0.1 358 / 0.22);
+    --tile-gold-bg: oklch(80% 0.09 82 / 0.16);
+    --tile-sky-bg: oklch(58% 0.14 240 / 0.2);
+    --tile-emerald-bg: oklch(60% 0.13 155 / 0.18);
+  }
+}
+:root[data-theme="dark"] {
+  --app-sidebar-bg: oklch(20% 0.02 355);
+  --app-content-bg: oklch(17% 0.018 355);
+  --app-card-bg: oklch(22% 0.02 355);
+  --app-rule: oklch(30% 0.025 355);
+  --app-ink: oklch(94% 0.006 350);
+  --app-ink-2: oklch(72% 0.015 350);
+  --app-hover-bg: oklch(26% 0.022 355);
+  --tile-vino-bg: oklch(36% 0.1 358 / 0.22);
+  --tile-gold-bg: oklch(80% 0.09 82 / 0.16);
+  --tile-sky-bg: oklch(58% 0.14 240 / 0.2);
+  --tile-emerald-bg: oklch(60% 0.13 155 / 0.18);
+}
+
+@layer components {
+  .app-shell { background: var(--app-content-bg); min-height: 100vh; }
+
+  .app-sidebar {
+    background: var(--app-sidebar-bg);
+    border-right: 1px solid var(--app-rule);
+  }
+
+  .app-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 14px;
+    padding: 10px 12px;
+    color: var(--app-ink-2);
+    transition: background-color 160ms ease, color 160ms ease;
+  }
+  .app-nav-item[data-active="true"] {
+    background: var(--app-active-bg);
+    color: var(--app-active-fg);
+    box-shadow: 0 6px 16px -8px var(--auth-vino-shadow);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .app-nav-item:not([data-active="true"]):hover { background: var(--app-hover-bg); color: var(--app-ink); }
+  }
+  .app-nav-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: color-mix(in oklch, currentColor 12%, transparent);
+  }
+  .app-nav-item[data-active="true"] .app-nav-icon { background: color-mix(in oklch, var(--auth-white) 20%, transparent); }
+
+  .app-card {
+    background: var(--app-card-bg);
+    border: 1px solid var(--app-rule);
+    border-radius: 22px;
+    transition: box-shadow 220ms var(--auth-ease-out), transform 220ms var(--auth-ease-out), border-color 220ms ease;
+  }
+  .app-card[data-interactive="true"] {
+    cursor: pointer;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .app-card[data-interactive="true"]:hover {
+      transform: translateY(-3px);
+      border-color: color-mix(in oklch, var(--auth-vino) 25%, var(--app-rule));
+      box-shadow: 0 16px 32px -18px var(--auth-vino-shadow);
+    }
+  }
+
+  .app-tile-icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    color: var(--auth-white);
+  }
+  .app-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--app-ink-2);
+    border-radius: 8px;
+    padding: 3px 8px;
+    background: var(--app-hover-bg);
+  }
+
+  /* ── Pantalla de carga de ruta (loading.tsx + GlobalLoader) ──────────────
+     Transparente y poco saturada a propósito: dos anillos concéntricos en
+     tinta muy tenue que laten hacia afuera (sonar), logo quieto al centro. */
+  .route-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: grid;
+    place-items: center;
+    background: color-mix(in oklch, var(--auth-paper) 72%, transparent);
+    backdrop-filter: blur(6px) saturate(105%);
+    -webkit-backdrop-filter: blur(6px) saturate(105%);
+  }
+  .route-loading-rings {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    display: grid;
+    place-items: center;
+  }
+  .route-loading-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1.5px solid var(--auth-vino);
+    opacity: 0;
+    animation: route-loading-sonar 2.2s var(--auth-ease-out) infinite;
+  }
+  .route-loading-ring:nth-child(2) { border-color: var(--auth-gold); animation-delay: 0.55s; }
+  @keyframes route-loading-sonar {
+    0% { transform: scale(0.55); opacity: 0.5; }
+    80%, 100% { transform: scale(1); opacity: 0; }
+  }
+  .route-loading-logo {
+    position: relative;
+    z-index: 1;
+    animation: route-loading-breathe 2.4s ease-in-out infinite;
+  }
+  @keyframes route-loading-breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .route-loading-ring { animation: route-loading-fade 1.4s ease-in-out infinite; transform: none; }
+    .route-loading-logo { animation: none; }
+    @keyframes route-loading-fade { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.35; } }
   }
 }

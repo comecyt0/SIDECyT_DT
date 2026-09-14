@@ -1,19 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Children, cloneElement, isValidElement, type ReactElement, type InputHTMLAttributes } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { AlertBox } from '@/components/ui/alert-box';
+import DualBranding from '@/components/branding/DualBranding';
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import {
   Loader2, User, Mail, Lock, Building2, Briefcase,
-  Phone, FileText, ArrowLeft, CheckCircle, Eye, EyeOff,
-  Hash, Users, Scale, FileCheck, Wrench, Shield
+  Phone, FileText, ArrowLeft, Check, Eye, EyeOff,
+  Hash, Users, Scale, FileCheck, Wrench, Shield, ClipboardList
 } from 'lucide-react';
 import api from '@/lib/api';
-import { INSTITUTION } from '@/lib/institution';
+import { INSTITUTION, copyrightLine } from '@/lib/institution';
 import { useT } from '@/i18n/I18nProvider';
 
 type TipoPersona = '' | 'fisica' | 'moral' | 'asociacion_civil' | 'otro';
@@ -26,23 +25,18 @@ interface ContactoData {
 }
 
 interface FormData {
-  // Cuenta
   nombre: string;
   email: string;
   password: string;
   password_confirmation: string;
-  // Datos empresa
   empresa_nombre: string;
   empresa_rfc: string;
   empresa_tipo_persona: TipoPersona;
   empresa_rol_supervision: string;
-  // Contactos por rol
   contactos: Record<ContactoRol, ContactoData>;
-  // Resto
   cargo: string;
   telefono: string;
   motivo: string;
-  // Términos
   terminos_aceptados: boolean;
 }
 
@@ -78,6 +72,15 @@ const ROLES_LABELS: Record<ContactoRol, { label: string; icon: typeof User; hint
 
 const TERMS_URL = 'https://apoyoempresarial_comecyt.edomex.gob.mx';
 
+const STEP_BLURB: Record<number, { tag: string; title: string; body: string }> = {
+  0: { tag: 'Paso 1 de 5', title: 'Tu cuenta de acceso', body: 'El correo institucional será tu usuario para entrar al sistema una vez aprobada la solicitud.' },
+  1: { tag: 'Paso 2 de 5', title: 'Datos de tu institución', body: 'Usamos el RFC y el tipo de persona para vincular correctamente tus proyectos y convenios.' },
+  2: { tag: 'Paso 3 de 5', title: 'Contactos por rol', body: 'El Responsable del Proyecto es obligatorio; los demás agilizan trámites administrativos y legales.' },
+  3: { tag: 'Paso 4 de 5', title: 'Cuéntanos más', body: 'Un motivo claro ayuda al administrador a revisar y aprobar tu acceso más rápido.' },
+  4: { tag: 'Paso 5 de 5', title: 'Último paso', body: 'Revisa tu información antes de enviarla. Un administrador la validará manualmente.' },
+};
+
+/** Mismo sistema --auth-* del login. Ver docs/DISENO_UI.md §Login. */
 export default function SolicitarAccesoPage() {
   const { t } = useT();
   const STEPS = ['Cuenta', 'Empresa', 'Contactos', 'Detalles', 'Términos'];
@@ -93,10 +96,7 @@ export default function SolicitarAccesoPage() {
   const setContacto = (rol: ContactoRol, field: keyof ContactoData, value: string) => {
     setForm({
       ...form,
-      contactos: {
-        ...form.contactos,
-        [rol]: { ...form.contactos[rol], [field]: value },
-      },
+      contactos: { ...form.contactos, [rol]: { ...form.contactos[rol], [field]: value } },
     });
   };
 
@@ -113,7 +113,6 @@ export default function SolicitarAccesoPage() {
       if (!form.empresa_nombre.trim()) return t('request_access.institution_required');
     }
     if (step === 2) {
-      // Al menos responsable obligatorio
       const r = form.contactos.responsable;
       if (!r.nombre.trim() || !r.correo.trim()) {
         return 'Los datos del Responsable del Proyecto son requeridos (nombre + correo).';
@@ -164,8 +163,7 @@ export default function SolicitarAccesoPage() {
       const axiosErr = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
       const errData = axiosErr.response?.data;
       if (errData?.errors) {
-        const msgs = Object.values(errData.errors).flat().join(' · ');
-        setError(msgs);
+        setError(Object.values(errData.errors).flat().join(' · '));
       } else {
         setError(errData?.message || t('request_access.generic_error'));
       }
@@ -174,168 +172,219 @@ export default function SolicitarAccesoPage() {
     }
   };
 
+  const blurb = STEP_BLURB[step];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--brand-vino-50)] via-white to-[var(--brand-gold-50)] dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950 flex items-center justify-center p-4">
-      <div className="absolute top-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/6 rounded-full blur-3xl translate-x-1/4 translate-y-1/4 pointer-events-none" />
-
-      <div className="w-full max-w-2xl relative animate-in fade-in slide-in-from-bottom-6 duration-600">
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl shadow-primary/[8%] border border-neutral-100 dark:border-neutral-700 overflow-hidden">
-          {/* Top accent */}
-          <div className="h-1 bg-gradient-to-r from-primary via-accent to-primary" />
-
-          {/* Header */}
-          <div className="px-8 pt-8 pb-6 text-center border-b border-neutral-50 dark:border-neutral-800">
-            <Image src="/logo.png" alt={INSTITUTION.name} width={72} height={56} priority className="h-14 w-auto object-contain mx-auto mb-4" />
-            <h1 className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-50 mb-1">{t('request_access.title')}</h1>
-            <p className="text-sm text-neutral-500 dark:text-neutral-300">
-              {t('request_access.subtitle')}
-            </p>
+    <div className="flex min-h-screen bg-[var(--auth-paper)] font-sans text-[var(--auth-ink)]">
+      {/* ── Izquierda: panel institucional (estático, sigue el paso activo) ── */}
+      <div className="sticky top-0 hidden h-screen p-4 lg:block lg:w-[42%] xl:w-[38%] xl:p-5">
+        <section className="auth-banner h-full w-full">
+          <div aria-hidden="true" className="absolute inset-0 -z-10">
+            <span className="auth-blob auth-blob-1" style={{ transform: 'translate(-10%, -16%) scale(1)' }} />
+            <span className="auth-blob auth-blob-2" style={{ transform: 'translate(42%, 8%) scale(0.95)' }} />
+            <span className="auth-blob auth-blob-3" style={{ transform: 'translate(4%, 48%) scale(1.05)' }} />
+            <span className="auth-grain" />
           </div>
-
-          {/* Step indicator */}
-          {!sent && (
-            <div className="px-6 py-4 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-              {STEPS.map((s, i) => (
-                <div key={s} className="flex items-center gap-1.5 shrink-0">
-                  <div className={`flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold transition-colors duration-300 ${
-                    i < step ? 'bg-primary text-white' :
-                    i === step ? 'bg-primary text-white ring-4 ring-primary/20' :
-                    'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
-                  }`}>
-                    {i < step ? '✓' : i + 1}
-                  </div>
-                  <span className={`text-[11px] font-semibold transition-colors whitespace-nowrap ${i === step ? 'text-primary' : 'text-neutral-400'}`}>
-                    {s}
-                  </span>
-                  {i < STEPS.length - 1 && (
-                    <div className={`h-px w-4 transition-colors duration-500 ${i < step ? 'bg-primary' : 'bg-neutral-200 dark:bg-neutral-700'}`} />
-                  )}
-                </div>
-              ))}
+          <div className="relative flex h-full flex-col p-8 text-white xl:p-10">
+            <div className="auth-reveal" style={{ '--i': 0 } as React.CSSProperties}>
+              <Image src="/logo.png" alt={INSTITUTION.name} width={401} height={312} priority className="h-20 w-auto object-contain brightness-0 invert xl:h-24" />
             </div>
-          )}
-
-          <div className="px-8 pb-8">
-            {sent ? (
-              <div className="text-center py-6">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mb-5">
-                  <CheckCircle className="w-8 h-8" />
+            <div className="mt-auto">
+              <div key={step} className="auth-reveal" style={{ '--i': 1 } as React.CSSProperties}>
+                <p className="auth-tag mb-4">
+                  <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" /> {blurb.tag}
+                </p>
+                <div className="auth-glass p-7 xl:p-8">
+                  <h2 className="auth-banner-title">{blurb.title}</h2>
+                  <p className="mt-3 max-w-[38ch] text-[15px] leading-relaxed text-white/80">{blurb.body}</p>
                 </div>
-                <h2 className="text-xl font-extrabold text-neutral-900 dark:text-neutral-50 mb-2">{t('request_access.sent_title')}</h2>
-                <p className="text-sm text-neutral-500 dark:text-neutral-300 mb-4 leading-relaxed">
+              </div>
+
+              {/* Progreso — 5 segmentos, mismo lenguaje visual que el carrusel del login */}
+              <div className="mt-5 flex items-center gap-2">
+                {STEPS.map((label, i) => (
+                  <div key={label} className="flex-1">
+                    <div className="h-[3px] rounded-full overflow-hidden" style={{ background: 'color-mix(in oklch, var(--auth-white) 25%, transparent)' }}>
+                      <div
+                        className="h-full bg-white transition-all duration-500"
+                        style={{ width: i < step ? '100%' : i === step ? '55%' : '0%' }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-[10px] font-semibold text-white/70 truncate">{label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* ── Derecha: formulario ── */}
+      <main className="flex min-h-screen w-full flex-col lg:w-[58%] xl:w-[62%]">
+        <div className="flex justify-end px-6 pt-5">
+          <LanguageSwitcher />
+        </div>
+
+        <div className="flex flex-1 items-center justify-center px-6 py-10 sm:px-10">
+          <div className="w-full max-w-[560px]">
+            <div className="mb-8 flex justify-center lg:hidden">
+              <DualBranding size="lg" />
+            </div>
+
+            {sent ? (
+              <div className="auth-swap text-center py-4">
+                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl" style={{ background: 'var(--tile-emerald-bg)' }}>
+                  <Check className="h-8 w-8" style={{ color: 'var(--tile-emerald-fg)' }} />
+                </div>
+                <h2 className="text-xl font-bold text-[var(--auth-ink)] mb-2">{t('request_access.sent_title')}</h2>
+                <p className="text-sm text-[var(--auth-ink-2)] mb-5 leading-relaxed">
                   {t('request_access.sent_body', { email: form.email })}
                 </p>
-                <div className="p-4 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-xl text-left mb-6">
-                  <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">
+                <div className="mb-7 rounded-[var(--auth-radius-field)] border p-3.5 text-left" style={{ borderColor: 'var(--auth-rule)' }}>
+                  <p className="text-xs text-[var(--auth-ink-2)] leading-relaxed">
                     {t('request_access.sent_eta', { institution: INSTITUTION.name })}
                   </p>
                 </div>
-                <Link href="/login">
-                  <Button className="bg-gradient-to-r from-primary to-[var(--brand-vino-700)] text-white rounded-xl px-8">
-                    {t('request_access.back_to_login')}
-                  </Button>
+                <Link href="/login" className="auth-submit inline-flex w-auto px-8">
+                  {t('request_access.back_to_login')}
                 </Link>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-5 mt-4">
-                {error && <AlertBox type="error" message={error} onClose={() => setError('')} />}
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="text-center mb-2">
+                  <h1 className="text-[clamp(1.5rem,2.6vw,1.875rem)] font-bold tracking-[-0.03em]">{t('request_access.title')}</h1>
+                  <p className="mt-2 text-sm text-[var(--auth-ink-2)]">{t('request_access.subtitle')}</p>
+                </div>
 
-                {/* Step 0: Cuenta */}
-                {step === 0 && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <Field icon={User} label="Nombre Completo *">
-                      <Input value={form.nombre} onChange={(e) => f('nombre', e.target.value)} placeholder="Ej: Juan Pérez García" className={inputCls} />
-                    </Field>
-                    <Field icon={Mail} label="Correo Electrónico Institucional *">
-                      <Input type="email" value={form.email} onChange={(e) => f('email', e.target.value)} placeholder={INSTITUTION.emailHint} className={inputCls} />
-                    </Field>
-                    <Field icon={Lock} label="Contraseña *" rightAction={
-                      <button type="button" onClick={() => setShowPass(!showPass)}
-                        aria-label={showPass ? t('auth.hide_password') : t('auth.show_password')}
-                        aria-pressed={showPass}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-primary transition-colors" tabIndex={-1}>
-                        {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    }>
-                      <Input type={showPass ? 'text' : 'password'} value={form.password}
-                        onChange={(e) => f('password', e.target.value)}
-                        autoComplete="off"
-                        placeholder="Mínimo 8 caracteres" className={`${inputCls} pr-10`} />
-                    </Field>
-                    <Field icon={Lock} label="Confirmar Contraseña *">
-                      <Input type={showPass ? 'text' : 'password'} value={form.password_confirmation}
-                        onChange={(e) => f('password_confirmation', e.target.value)}
-                        autoComplete="off"
-                        placeholder="Repite la contraseña" className={inputCls} />
-                    </Field>
+                {/* Stepper compacto (móvil / referencia rápida) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                  {STEPS.map((s, i) => (
+                    <div key={s} className="flex items-center gap-1.5 shrink-0">
+                      <div
+                        className="flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold transition-colors duration-300"
+                        style={
+                          i < step
+                            ? { background: 'var(--auth-vino)', color: 'var(--auth-white)' }
+                            : i === step
+                              ? { background: 'var(--auth-vino)', color: 'var(--auth-white)', boxShadow: '0 0 0 4px var(--auth-vino-soft)' }
+                              : { background: 'var(--auth-field)', color: 'var(--auth-ink-2)' }
+                        }
+                      >
+                        {i < step ? '✓' : i + 1}
+                      </div>
+                      <span className="text-[11px] font-semibold whitespace-nowrap" style={{ color: i === step ? 'var(--auth-vino)' : 'var(--auth-ink-2)' }}>
+                        {s}
+                      </span>
+                      {i < STEPS.length - 1 && <div className="h-px w-4" style={{ background: i < step ? 'var(--auth-vino)' : 'var(--auth-rule)' }} />}
+                    </div>
+                  ))}
+                </div>
+
+                {error && (
+                  <div id="request-error">
+                    <AlertBox type="error" message={error} onClose={() => setError('')} />
                   </div>
                 )}
 
-                {/* Step 1: Datos de la empresa */}
+                {/* Step 0: Cuenta */}
+                {step === 0 && (
+                  <div className="space-y-3 auth-swap">
+                    <FField id="nombre" icon={User} label="Nombre Completo *">
+                      <input value={form.nombre} onChange={(e) => f('nombre', e.target.value)} placeholder=" " className="auth-input" />
+                    </FField>
+                    <FField id="email-solicitud" icon={Mail} label="Correo Electrónico Institucional *">
+                      <input type="email" value={form.email} onChange={(e) => f('email', e.target.value)} placeholder=" " className="auth-input" />
+                    </FField>
+                    <FField id="password-solicitud" icon={Lock} label="Contraseña *">
+                      <input
+                        type={showPass ? 'text' : 'password'}
+                        value={form.password}
+                        onChange={(e) => f('password', e.target.value)}
+                        autoComplete="off"
+                        placeholder=" "
+                        className="auth-input pr-12"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPass(!showPass)}
+                        aria-label={showPass ? t('auth.hide_password') : t('auth.show_password')}
+                        aria-pressed={showPass}
+                        className="auth-eye"
+                        tabIndex={-1}
+                      >
+                        {showPass ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
+                      </button>
+                    </FField>
+                    <FField id="password-confirm" icon={Lock} label="Confirmar Contraseña *">
+                      <input
+                        type={showPass ? 'text' : 'password'}
+                        value={form.password_confirmation}
+                        onChange={(e) => f('password_confirmation', e.target.value)}
+                        autoComplete="off"
+                        placeholder=" "
+                        className="auth-input"
+                      />
+                    </FField>
+                  </div>
+                )}
+
+                {/* Step 1: Empresa */}
                 {step === 1 && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <Field icon={Building2} label="Nombre Completo de la Empresa *">
-                      <Input value={form.empresa_nombre} onChange={(e) => f('empresa_nombre', e.target.value)}
-                        placeholder="Ej: Tecnología e Innovación S.A. de C.V." className={inputCls} />
-                    </Field>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Field icon={Hash} label="RFC">
-                        <Input value={form.empresa_rfc} onChange={(e) => f('empresa_rfc', e.target.value.toUpperCase())}
-                          maxLength={13} placeholder="Ej: XAXX010101000" className={inputCls} />
-                      </Field>
-                      <Field icon={Users} label="Tipo de Persona">
-                        <select value={form.empresa_tipo_persona}
+                  <div className="space-y-3 auth-swap">
+                    <FField id="empresa-nombre" icon={Building2} label="Nombre Completo de la Empresa *">
+                      <input value={form.empresa_nombre} onChange={(e) => f('empresa_nombre', e.target.value)} placeholder=" " className="auth-input" />
+                    </FField>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <FField id="empresa-rfc" icon={Hash} label="RFC">
+                        <input value={form.empresa_rfc} onChange={(e) => f('empresa_rfc', e.target.value.toUpperCase())} maxLength={13} placeholder=" " className="auth-input" />
+                      </FField>
+                      <StaticField id="empresa-tipo-persona" icon={Users} label="Tipo de Persona">
+                        <select
+                          value={form.empresa_tipo_persona}
                           onChange={(e) => f('empresa_tipo_persona', e.target.value as TipoPersona)}
-                          className={`${inputCls} appearance-none cursor-pointer`}>
-                          <option value="">Selecciona...</option>
+                          className="auth-input auth-input-static pl-10 appearance-none cursor-pointer"
+                        >
+                          <option value="">Selecciona…</option>
                           <option value="fisica">Persona Física</option>
                           <option value="moral">Persona Moral</option>
                           <option value="asociacion_civil">Asociación Civil</option>
                           <option value="otro">Otra</option>
                         </select>
-                      </Field>
+                      </StaticField>
                     </div>
-                    <Field icon={Shield} label="Rol de Supervisión">
-                      <Input value={form.empresa_rol_supervision} onChange={(e) => f('empresa_rol_supervision', e.target.value)}
-                        placeholder="Ej: Director General, Gerente de Proyectos" className={inputCls} />
-                    </Field>
+                    <FField id="empresa-rol-supervision" icon={Shield} label="Rol de Supervisión">
+                      <input value={form.empresa_rol_supervision} onChange={(e) => f('empresa_rol_supervision', e.target.value)} placeholder=" " className="auth-input" />
+                    </FField>
                   </div>
                 )}
 
                 {/* Step 2: Contactos por rol */}
                 {step === 2 && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <p className="text-xs text-neutral-500 dark:text-neutral-300 leading-relaxed">
-                      Registra los contactos relevantes de tu empresa. <strong className="text-primary">Responsable del Proyecto</strong> es obligatorio; los demás puedes dejarlos en blanco si <em>no aplica</em>.
+                  <div className="space-y-3 auth-swap">
+                    <p className="text-xs text-[var(--auth-ink-2)] leading-relaxed">
+                      Registra los contactos relevantes de tu empresa. <strong className="text-[var(--auth-vino)]">Responsable del Proyecto</strong> es obligatorio; los demás puedes dejarlos en blanco si <em>no aplica</em>.
                     </p>
                     {(Object.keys(ROLES_LABELS) as ContactoRol[]).map((rol) => {
                       const meta = ROLES_LABELS[rol];
                       const Icon = meta.icon;
                       const isRequired = rol === 'responsable';
                       return (
-                        <div key={rol} className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50/40 dark:bg-neutral-800/30 p-4 space-y-3">
+                        <div key={rol} className="rounded-[var(--auth-radius-field)] border p-4 space-y-2.5" style={{ borderColor: 'var(--auth-rule)', background: 'var(--auth-field)' }}>
                           <div className="flex items-center gap-2">
-                            <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                            <span className="app-tile-icon !w-8 !h-8 !rounded-lg" style={{ background: 'var(--auth-vino)' }}>
                               <Icon className="w-3.5 h-3.5" />
-                            </div>
+                            </span>
                             <div>
-                              <p className="text-sm font-bold text-neutral-800 dark:text-neutral-100">
-                                {meta.label} {isRequired && <span className="text-red-500">*</span>}
+                              <p className="text-sm font-bold text-[var(--auth-ink)]">
+                                {meta.label} {isRequired && <span style={{ color: 'var(--auth-danger)' }}>*</span>}
                               </p>
-                              <p className="text-[11px] text-neutral-400 dark:text-neutral-500">{meta.hint}</p>
+                              <p className="text-[11px] text-[var(--auth-ink-2)]">{meta.hint}</p>
                             </div>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            <Input value={form.contactos[rol].nombre}
-                              onChange={(e) => setContacto(rol, 'nombre', e.target.value)}
-                              placeholder="Nombre" className="h-10 text-sm rounded-lg bg-white dark:bg-neutral-900" />
-                            <Input value={form.contactos[rol].telefono}
-                              onChange={(e) => setContacto(rol, 'telefono', e.target.value)}
-                              placeholder="Teléfono" className="h-10 text-sm rounded-lg bg-white dark:bg-neutral-900" />
-                            <Input value={form.contactos[rol].correo} type="email"
-                              onChange={(e) => setContacto(rol, 'correo', e.target.value)}
-                              placeholder="Correo" className="h-10 text-sm rounded-lg bg-white dark:bg-neutral-900" />
+                            <input value={form.contactos[rol].nombre} onChange={(e) => setContacto(rol, 'nombre', e.target.value)} placeholder="Nombre" aria-label={`${meta.label} — nombre`} className="auth-input pl-4 h-11 bg-[var(--auth-white)]" />
+                            <input value={form.contactos[rol].telefono} onChange={(e) => setContacto(rol, 'telefono', e.target.value)} placeholder="Teléfono" aria-label={`${meta.label} — teléfono`} className="auth-input pl-4 h-11 bg-[var(--auth-white)]" />
+                            <input value={form.contactos[rol].correo} type="email" onChange={(e) => setContacto(rol, 'correo', e.target.value)} placeholder="Correo" aria-label={`${meta.label} — correo`} className="auth-input pl-4 h-11 bg-[var(--auth-white)]" />
                           </div>
                         </div>
                       );
@@ -343,36 +392,36 @@ export default function SolicitarAccesoPage() {
                   </div>
                 )}
 
-                {/* Step 3: Detalles personales + motivo */}
+                {/* Step 3: Detalles + motivo */}
                 {step === 3 && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Field icon={Briefcase} label="Tu Cargo / Puesto">
-                        <Input value={form.cargo} onChange={(e) => f('cargo', e.target.value)}
-                          placeholder="Ej: Investigador Titular A" className={inputCls} />
-                      </Field>
-                      <Field icon={Phone} label="Teléfono de Contacto">
-                        <Input value={form.telefono} onChange={(e) => f('telefono', e.target.value)}
-                          placeholder="Ej: 722 123 4567" className={inputCls} />
-                      </Field>
+                  <div className="space-y-3 auth-swap">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <FField id="cargo" icon={Briefcase} label="Tu Cargo / Puesto">
+                        <input value={form.cargo} onChange={(e) => f('cargo', e.target.value)} placeholder=" " className="auth-input" />
+                      </FField>
+                      <FField id="telefono" icon={Phone} label="Teléfono de Contacto">
+                        <input value={form.telefono} onChange={(e) => f('telefono', e.target.value)} placeholder=" " className="auth-input" />
+                      </FField>
                     </div>
-                    <div>
-                      <Label className="text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase tracking-widest flex items-center gap-1.5 mb-2">
-                        <FileText className="w-3.5 h-3.5" /> Motivo de la Solicitud
-                      </Label>
-                      <textarea value={form.motivo} onChange={(e) => f('motivo', e.target.value)} maxLength={500}
-                        placeholder="Describe brevemente para qué necesitas acceso al sistema y los proyectos que planeas gestionar..."
-                        className="w-full px-4 py-3 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm resize-none h-28 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-neutral-50 dark:bg-neutral-800 transition-all" />
-                      <p className="text-xs text-neutral-400 mt-1">{form.motivo.length}/500 caracteres</p>
-                    </div>
+                    <StaticField id="motivo" icon={FileText} label="Motivo de la Solicitud">
+                      <textarea
+                        value={form.motivo}
+                        onChange={(e) => f('motivo', e.target.value)}
+                        maxLength={500}
+                        placeholder="Describe brevemente para qué necesitas acceso al sistema y los proyectos que planeas gestionar…"
+                        className="w-full pl-10 pr-4 py-3 rounded-[var(--auth-radius-field)] border-1.5 text-sm resize-none h-28 outline-none transition-colors"
+                        style={{ borderColor: 'var(--auth-rule)', background: 'var(--auth-field)', color: 'var(--auth-ink)' }}
+                      />
+                    </StaticField>
+                    <p className="text-xs text-[var(--auth-ink-2)] text-right">{form.motivo.length}/500 caracteres</p>
                   </div>
                 )}
 
                 {/* Step 4: Resumen + términos */}
                 {step === 4 && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <div className="p-4 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-700 rounded-xl space-y-2">
-                      <p className="text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase tracking-wider mb-2">Resumen de tu solicitud</p>
+                  <div className="space-y-4 auth-swap">
+                    <div className="rounded-[var(--auth-radius-field)] border p-4 space-y-2" style={{ borderColor: 'var(--auth-rule)', background: 'var(--auth-field)' }}>
+                      <p className="text-xs font-bold text-[var(--auth-ink-2)] uppercase tracking-wider mb-1">Resumen de tu solicitud</p>
                       <SummaryRow label="Nombre" value={form.nombre} />
                       <SummaryRow label="Correo" value={form.email} />
                       <SummaryRow label="Empresa" value={form.empresa_nombre} />
@@ -382,64 +431,71 @@ export default function SolicitarAccesoPage() {
                       {form.cargo && <SummaryRow label="Tu cargo" value={form.cargo} />}
                     </div>
 
-                    <label className="flex items-start gap-3 p-4 bg-primary/5 border border-primary/20 rounded-xl cursor-pointer hover:bg-primary/10 transition-colors">
-                      <input type="checkbox" checked={form.terminos_aceptados}
+                    <label
+                      className="flex items-start gap-3 p-4 rounded-[var(--auth-radius-field)] border cursor-pointer transition-colors"
+                      style={{ borderColor: 'var(--auth-rule)', background: form.terminos_aceptados ? 'var(--auth-vino-soft)' : 'var(--auth-field)' }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.terminos_aceptados}
                         onChange={(e) => f('terminos_aceptados', e.target.checked)}
-                        className="mt-0.5 w-4 h-4 rounded border-primary/30 text-primary focus:ring-primary/20 cursor-pointer" />
-                      <div className="text-xs text-neutral-700 dark:text-neutral-200 leading-relaxed">
+                        className="mt-0.5 w-4 h-4 rounded cursor-pointer accent-[var(--auth-vino)]"
+                      />
+                      <span className="text-xs text-[var(--auth-ink)] leading-relaxed">
                         He leído y acepto los{' '}
-                        <a href={TERMS_URL} target="_blank" rel="noopener noreferrer"
-                          className="font-bold text-primary hover:text-[var(--brand-vino-700)] underline underline-offset-2">
+                        <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" className="auth-link">
                           términos y condiciones
                         </a>{' '}
                         del programa de apoyo empresarial de {INSTITUTION.name}, así como el aviso de privacidad y el uso de los datos para fines de evaluación y seguimiento.
-                      </div>
+                      </span>
                     </label>
                   </div>
                 )}
 
-                {/* Navigation buttons */}
+                {/* Navigation */}
                 <div className="flex gap-3 pt-2">
                   {step > 0 && (
-                    <Button type="button" variant="outline" onClick={prevStep} className="flex-1 h-12 rounded-xl">
-                      <ArrowLeft className="w-4 h-4 mr-1.5" /> Anterior
-                    </Button>
+                    <button type="button" onClick={prevStep} className="flex-1 h-12 rounded-[var(--auth-radius-field)] border font-bold text-sm transition-colors hover:bg-[var(--auth-field)]" style={{ borderColor: 'var(--auth-rule)', color: 'var(--auth-ink)' }}>
+                      <span className="flex items-center justify-center gap-1.5">
+                        <ArrowLeft className="w-4 h-4" /> Anterior
+                      </span>
+                    </button>
                   )}
                   {step < STEPS.length - 1 ? (
-                    <Button type="button" onClick={nextStep} className="flex-1 h-12 rounded-xl bg-gradient-to-r from-primary to-[var(--brand-vino-700)] hover:from-[var(--brand-vino-700)] hover:to-[var(--brand-vino-600)] text-white font-bold transition-all duration-200 hover:-translate-y-0.5">
-                      Siguiente →
-                    </Button>
+                    <button type="button" onClick={nextStep} className="auth-submit flex-1">
+                      Siguiente
+                    </button>
                   ) : (
-                    <Button type="submit" disabled={loading || !form.terminos_aceptados}
-                      className="btn-shimmer overflow-hidden flex-1 h-12 rounded-xl bg-gradient-to-r from-primary to-[var(--brand-vino-700)] hover:from-[var(--brand-vino-700)] hover:to-[var(--brand-vino-600)] text-white font-bold shadow-lg shadow-primary/25 hover:-translate-y-0.5 transition-all duration-200 relative">
-                      {loading ? (
-                        <span className="flex items-center gap-2 relative z-10">
-                          <Loader2 className="h-4 w-4 animate-spin" /> {t('request_access.sending')}
-                        </span>
-                      ) : (
-                        <span className="relative z-10">{t('request_access.submit')}</span>
-                      )}
-                    </Button>
+                    <button type="submit" disabled={loading || !form.terminos_aceptados} data-state={loading ? 'loading' : 'idle'} className="auth-submit flex-1">
+                      <span key={loading ? 'loading' : 'idle'} className="auth-swap flex items-center gap-2.5">
+                        {loading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" /> {t('request_access.sending')}
+                          </>
+                        ) : (
+                          t('request_access.submit')
+                        )}
+                      </span>
+                    </button>
                   )}
                 </div>
               </form>
             )}
 
-            <div className="mt-6 pt-5 border-t border-neutral-100 dark:border-neutral-800 text-center">
-              <Link href="/login" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-[var(--brand-vino-700)] transition-colors group">
-                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <div className="mt-8 pt-6 border-t text-center" style={{ borderColor: 'var(--auth-rule)' }}>
+              <Link href="/login" className="auth-link inline-flex items-center gap-1.5 text-sm">
+                <ArrowLeft className="w-4 h-4" />
                 {t('request_access.already_have_account')}
               </Link>
             </div>
           </div>
         </div>
-        <p className="text-center text-xs text-neutral-400 mt-4">© {new Date().getFullYear()} {INSTITUTION.name} · {INSTITUTION.state}</p>
-      </div>
+
+        <footer className="px-6 pb-6 text-center text-xs text-[var(--auth-ink-2)]">{copyrightLine()}</footer>
+      </main>
     </div>
   );
 }
-
-const inputCls = "pl-10 h-12 rounded-xl bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-primary/20 focus:border-primary";
 
 function tipoPersonaLabel(t: string): string {
   switch (t) {
@@ -451,19 +507,61 @@ function tipoPersonaLabel(t: string): string {
   }
 }
 
-function Field({ icon: Icon, label, children, rightAction }: {
+/** Campo con etiqueta flotante — mismo patrón que el login (auth-field/auth-input/auth-label).
+ * Clona el <input> hijo para inyectarle `id` — así el label queda asociado (WCAG 1.3.1 /
+ * axe "label"), sin repetir id={} y htmlFor={} iguales en cada punto de uso. */
+function FField({
+  id,
+  icon: Icon,
+  label,
+  children,
+}: {
+  id: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   children: React.ReactNode;
-  rightAction?: React.ReactNode;
 }) {
+  const kids = Children.map(children, (child) =>
+    isValidElement(child) && child.type === 'input'
+      ? cloneElement(child as ReactElement<InputHTMLAttributes<HTMLInputElement>>, { id })
+      : child
+  );
+  return (
+    <div className="auth-field">
+      {kids}
+      <label htmlFor={id} className="auth-label">
+        {label}
+      </label>
+      <Icon className="auth-field-icon" aria-hidden="true" />
+    </div>
+  );
+}
+
+/** Campo con etiqueta estática arriba — para select / textarea, donde flotar no aplica. */
+function StaticField({
+  id,
+  icon: Icon,
+  label,
+  children,
+}: {
+  id: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  children: React.ReactNode;
+}) {
+  const kids = Children.map(children, (child) =>
+    isValidElement(child) && (child.type === 'select' || child.type === 'textarea')
+      ? cloneElement(child as ReactElement<{ id?: string }>, { id })
+      : child
+  );
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase tracking-widest">{label}</Label>
-      <div className="relative group">
-        <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 group-focus-within:text-primary transition-colors z-10" />
-        {children}
-        {rightAction}
+      <label htmlFor={id} className="text-xs font-bold text-[var(--auth-ink-2)] uppercase tracking-widest flex items-center gap-1.5">
+        <Icon className="w-3.5 h-3.5" /> {label}
+      </label>
+      <div className="relative">
+        <Icon className="absolute left-3.5 top-[18px] w-4 h-4 text-[var(--auth-ink-2)] pointer-events-none" aria-hidden="true" />
+        {kids}
       </div>
     </div>
   );
@@ -472,8 +570,8 @@ function Field({ icon: Icon, label, children, rightAction }: {
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span className="text-neutral-400 dark:text-neutral-500 w-28 shrink-0">{label}:</span>
-      <span className="text-neutral-700 dark:text-neutral-200 font-medium truncate">{value}</span>
+      <span className="text-[var(--auth-ink-2)] w-28 shrink-0">{label}:</span>
+      <span className="text-[var(--auth-ink)] font-medium truncate">{value}</span>
     </div>
   );
 }
