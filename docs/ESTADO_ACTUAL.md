@@ -17,6 +17,9 @@
 > público. El repositorio anterior `comecyt0/Desarrollo-Tecnol-gico` también es público y su README
 > publicaba las contraseñas del seeder. **Las 4 contraseñas se rotaron el 14/09/2026** (20 caracteres,
 > entregadas al usuario, no escritas en ningún archivo); la del seeder ya no entra en ninguna cuenta.
+> **2FA del admin desactivado el 14/09/2026** a pedido del usuario (no tenía la app autenticadora y sin
+> SMTP no hay recuperación). Ninguna cuenta tiene 2FA hoy: reactivarlo desde el perfil del admin
+> (`POST /auth/2fa/setup` + `confirm`) en cuanto haya SMTP y un dispositivo asignado.
 >
 > 🔴 **14/09/2026 (mañana) — El dominio respondía `404` desde el balanceador** (resuelto, arriba). Infraestructura publicó el sitio
 > hacia Internet (IP pública `187.189.139.176` / `201.131.40.176`, EIP `10.200.41.131`) y con eso el
