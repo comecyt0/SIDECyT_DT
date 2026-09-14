@@ -354,6 +354,7 @@ Un usuario por rol (admin, revisor, evaluador, solicitante). Correos y contrase�
 
 > ⚠️ **Verificado el 11/09/2026: estas 4 cuentas EXISTEN en producción** (`comecyt_prod`) y son las únicas
 > del sistema. **3 seguían con la contraseña del seeder.** Se crearon el 15 y el 25/06/2026, durante el despliegue.
+> **14/09/2026: contraseñas de las 4 rotadas** (la del seeder ya no entra en producción). Falta crear las cuentas reales.
 > Con el dominio publicado es un riesgo crítico: crear las cuentas reales y cambiar la contraseña o
 > desactivar estas antes de abrir pruebas. Ver `docs/ESTADO_ACTUAL.md`, Pendientes.
 
@@ -625,7 +626,7 @@ sudo certbot --nginx -d tudominio.mx
 | `Cross-Origin-Resource-Policy` en `/storage/*` | Bajo | Excluido de `CorpSiFalta` hasta poder probar la vista previa con un archivo real subido por la aplicación. Confirmado eso, incluirlo es cambiar el `negate="true"` por su preCondition en pareja |
 | CSP con `script-src 'unsafe-inline'` | Medio | El front permite scripts embebidos, que es justo lo que aprovecha un XSS. **No es hallazgo de ADEM hoy, pero es el candidato más probable del próximo escaneo.** Solución de fondo: nonces o hashes, toca código de la app |
 | **Licencia de Windows Server (Evaluation)** | **Crítico** | Al 11/09/2026 quedan **7 días** de gracia (vence ~18/09/2026). Al vencer, el servidor se apaga solo cada hora. Activar Standard con la clave institucional (`DISM /online /Set-Edition:ServerStandard /ProductKey:<clave> /AcceptEula`, reinicia) o, como puente, `slmgr /rearm` + reinicio (quedan 4 rearmes al 11/09/2026). Ver `docs/ESTADO_ACTUAL.md` |
-| **Cuentas de prueba en producción** | **Crítico** | Las 4 cuentas de "Usuarios de Prueba" existen en `comecyt_prod` y son las únicas; 3 con la contraseña del seeder. Crear cuentas reales y cambiar la contraseña o desactivar estas **antes** de que infraestructura pruebe el dominio |
+| **Cuentas de prueba en producción** | **Crítico** | Las 4 cuentas de "Usuarios de Prueba" existen en `comecyt_prod` y son las únicas; contraseñas rotadas el 14/09/2026. Crear cuentas reales y cambiar la contraseña o desactivar estas **antes** de que infraestructura pruebe el dominio |
 | `comecyt:backup-db` falla cada noche | Alto | `BackupDatabase.php` arma `pg_dump ... \| gzip -9 > archivo` y en Windows ninguno está en el PATH (`'pg_dump' is not recognized`). El respaldo real lo hace la tarea `COMECYT-Backup-Diario` (`backup.ps1`, con `C:\pgsql\bin\pg_dump.exe -Fc`), que sí funciona. Corregir el comando o quitarlo de `routes/console.php` |
 | Respaldos sin copia fuera del servidor | Alto | Todos los dumps están en `F:\Desarrollo Tecnologico\backups\`. Si se pierde el servidor, se pierden los respaldos |
 | Windows Update detenido | Alto | Servicio `wuauserv` detenido; último parche el 27/03/2026; 3 pendientes (incluida la acumulativa 2026-09). Aplicar en ventana junto con la licencia |

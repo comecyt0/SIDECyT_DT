@@ -13,9 +13,10 @@
 >
 > 🔐 **14/09/2026 — Repositorio git.** El proyecto ya tiene git (`main`, commits `e993228` base y
 > `fecb5eb` login) con remoto `https://github.com/comecyt0/SIDECyT_DT.git`, **que es público**. No se
-> ha hecho push: primero se cambian las contraseñas de las 4 cuentas. El repositorio anterior
-> `comecyt0/Desarrollo-Tecnol-gico` también es público y su README publicaba las contraseñas del seeder.
-> La contraseña del admin **ya no** es la del seeder (401 al probarla el 14/09/2026).
+> ha hecho push: falta la confirmación del usuario y revisar qué de `CLAUDE.md`/`docs/` no debe ser
+> público. El repositorio anterior `comecyt0/Desarrollo-Tecnol-gico` también es público y su README
+> publicaba las contraseñas del seeder. **Las 4 contraseñas se rotaron el 14/09/2026** (20 caracteres,
+> entregadas al usuario, no escritas en ningún archivo); la del seeder ya no entra en ninguna cuenta.
 >
 > 🔴 **14/09/2026 (mañana) — El dominio respondía `404` desde el balanceador** (resuelto, arriba). Infraestructura publicó el sitio
 > hacia Internet (IP pública `187.189.139.176` / `201.131.40.176`, EIP `10.200.41.131`) y con eso el
@@ -202,7 +203,7 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 | Ítem | Prioridad | Acción requerida |
 |---|---|---|
 | **Licencia de Windows Server** | **Crítica — 7 días** | Vence alrededor del 18/09/2026. **Solución definitiva:** convertir Evaluation → Standard con la clave institucional: `DISM /online /Set-Edition:ServerStandard /ProductKey:<clave> /AcceptEula` (reinicia el servidor; programar ventana). **Puente:** `slmgr /rearm` y reinicio. Al 11/09/2026 quedan **4 rearmes**; cada uno da otro periodo de evaluación. Comprobar antes y después con `slmgr /dlv` |
-| **Cuentas de prueba en producción** | **Crítica** | Las 4 cuentas del sistema son las de prueba de `UsuariosPruebaSeeder` y **3 siguen con la contraseña de ese seeder**, que además estuvo publicada en el README del repositorio anterior (público). Con el dominio publicado, cualquiera que la conozca entra. **Antes de que infraestructura pruebe:** crear las cuentas reales y cambiar la contraseña o desactivar estas. Decidir primero quién administra el sistema |
+| **Cuentas de prueba en producción** | **Crítica** | Las 4 cuentas del sistema son las de prueba de `UsuariosPruebaSeeder` **Contraseñas rotadas el 14/09/2026** en las 4 (la del seeder estuvo publicada en el README del repositorio anterior, que es público). **Falta:** crear las cuentas reales y desactivar estas. Decidir primero quién administra el sistema |
 | **Correo (SMTP)** | **Crítica** | `MAIL_MAILER=smtp` → `127.0.0.1:2525`, sin usuario ni contraseña, y **nada escucha en el 2525**: no sale ningún correo (enlace de restablecimiento que aprueba el admin, aprobación de accesos, notificaciones). Faltan los datos del SMTP institucional (`MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_ENCRYPTION`) |
 | **Ruta del balanceador nuevo** | **Crítica — el sitio no se ve por el dominio.** En espera de infraestructura | El VIP `10.200.41.131` (el que resuelve desde la publicación externa del 14/09/2026) devuelve `404`: no tiene registrada la entrega hacia `10.250.36.241:80`. **Solo lo puede hacer infraestructura; correo enviado el 14/09/2026.** Al responder: correr `VerificarDominio.ps1`, y si el origen **no** está en `100.64.0.0/10`, ajustar **el mismo día** las 5 apariciones del patrón en `web.config` (en dos formas distintas) y `TRUSTED_PROXIES` **juntas**, o habrá bucle de redirección. [DOMINIO_BALANCEADOR.md §12 y §9](DOMINIO_BALANCEADOR.md) · `Desktop\ADEM\_v5_publicacion_sep14\LEEME.md` |
 | **Confirmaciones de infraestructura** | Alta | Rango de IPs del balanceador, HTTP→HTTPS en el balanceador, health check, 50 MB, timeouts. Incorporadas al correo del 14/09 (`_v5_publicacion_sep14\`); el original sigue en `Desktop\ADEM\_v4_dominio_sep11\`. [DOMINIO_BALANCEADOR.md §8](DOMINIO_BALANCEADOR.md#8-qué-necesita-hacer-o-confirmar-infraestructura) |
