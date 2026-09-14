@@ -29,6 +29,9 @@ pgpass.conf
 # Respaldos de builds anteriores (.next.bak-AAAAMMDD-motivo) y de archivos sueltos (*.bak-motivo)
 /apps/web/.next.bak*/
 *.bak-*
+*.tsbuildinfo
+/.claude/
+/.agents/
 /apps/web/out/
 /apps/web/build/
 

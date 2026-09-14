@@ -2,7 +2,22 @@
 
 **Fecha de actualización:** 14 de septiembre de 2026 (versión anterior: 11/09/2026)
 
-> 🔴 **14/09/2026 — El dominio responde `404` desde el balanceador.** Infraestructura publicó el sitio
+> ✅ **14/09/2026 (tarde) — El dominio funciona desde Internet.** Infraestructura corrigió el balanceador.
+> `VerificarDominio.ps1` da exit 0. DNS dividido: interno → `10.200.41.106`, público →
+> `187.189.139.176`/`201.131.40.176`. El tráfico público entra desde `100.127.1.42` (dentro de
+> `100.64.0.0/10`), sin cambios en `web.config`.
+>
+> 🎨 **14/09/2026 — Login rediseñado y publicado** (build 14:33–14:34, 53 s sin servicio). Sistema y
+> verificación en [DISENO_UI.md](DISENO_UI.md). Respaldo del build anterior:
+> `apps\web\.next.bak-20260914-prelogin`. Corregido además el pie "Estado de MÃ©xico" (E24).
+>
+> 🔐 **14/09/2026 — Repositorio git.** El proyecto ya tiene git (`main`, commits `e993228` base y
+> `fecb5eb` login) con remoto `https://github.com/comecyt0/SIDECyT_DT.git`, **que es público**. No se
+> ha hecho push: primero se cambian las contraseñas de las 4 cuentas. El repositorio anterior
+> `comecyt0/Desarrollo-Tecnol-gico` también es público y su README publicaba las contraseñas del seeder.
+> La contraseña del admin **ya no** es la del seeder (401 al probarla el 14/09/2026).
+>
+> 🔴 **14/09/2026 (mañana) — El dominio respondía `404` desde el balanceador** (resuelto, arriba). Infraestructura publicó el sitio
 > hacia Internet (IP pública `187.189.139.176` / `201.131.40.176`, EIP `10.200.41.131`) y con eso el
 > dominio pasó a un **balanceador nuevo que no tiene registrada la ruta al servidor**. El `404` lo
 > genera el balanceador: las peticiones **no llegan** a este servidor (cero registros del rango
