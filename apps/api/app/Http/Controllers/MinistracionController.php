@@ -11,7 +11,7 @@ class MinistracionController extends Controller
 {
     public function index()
     {
-        return response()->json(Ministracion::with(['solicitud.user.institucion', 'solicitud.convocatoria', 'banco'])->orderBy('id', 'desc')->get());
+        return response()->json(Ministracion::with(['solicitud.user.empresa', 'solicitud.convocatoria', 'banco'])->orderBy('id', 'desc')->get());
     }
 
     public function store(Request $request)

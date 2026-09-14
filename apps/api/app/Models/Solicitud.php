@@ -58,9 +58,14 @@ class Solicitud extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Alias histórico de empresa(): el FK de esta tabla se llama `empresa_id` desde la
+     * migración 2026_06_02_120000 (instituciones → empresas). Sin el FK explícito,
+     * Eloquent infiere `institucion_id`, que ya no existe — ver E25 en CLAUDE.md.
+     */
     public function institucion()
     {
-        return $this->belongsTo(Empresa::class);
+        return $this->belongsTo(Empresa::class, 'empresa_id');
     }
 
     public function areaConocimiento()

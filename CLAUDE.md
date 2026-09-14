@@ -887,3 +887,26 @@ texto roto quedó en el JavaScript servido.
 **Fix:** corregir las líneas en UTF-8 y recompilar. Respaldo: `.env.local.bak-20260914-codificacion`.
 **Lección:** no editar `.env*` con `Set-Content`/`Out-File` de PowerShell 5.1 sin `-Encoding utf8`
 (ni así: agrega BOM). Usar un editor o la herramienta de edición, y buscar `Ã` después de cualquier cambio.
+
+### E25 — Migración `institucion` → `empresa` (junio) dejó 3 referencias rotas [resuelto parcial 14-09-2026]
+**Síntoma real:** una solicitud de acceso enviada no aparecía en `/admin/solicitudes-acceso` (institución en
+blanco, buscador roto). Al buscar el mismo patrón aparecieron dos más, sin datos aún para dispararlas:
+`GET /admin/ministraciones` habría lanzado `BadMethodCallException` en cuanto existiera una ministración
+(`User` no tiene `institucion()`, solo `empresa()`), y los PDF de convenio/dictamen habrían mostrado la
+institución vacía o fallado, porque `Solicitud::institucion()` sin FK explícito apuntaba a la columna
+`institucion_id`, que la migración `2026_06_02_120000_rename_instituciones_to_empresas.php` renombró a
+`empresa_id`.
+**Causa:** `2026_06_02_140000_rename_institucion_nombre_in_solicitudes_acceso.php` y la migración anterior
+renombraron columnas, pero el código que las usaba (frontend, plantilla de correo, relación Eloquent,
+`with()` de otro controller) no se actualizó junto. Como el sistema tenía 0 solicitudes/ministraciones
+reales, nadie lo notó hasta hoy.
+**Fix:** `SolicitudesAccesoClient.tsx` y `nueva-solicitud-acceso.blade.php` usan `empresa_nombre`;
+`MinistracionController::index()` carga `solicitud.user.empresa`; `Solicitud::institucion()` usa
+`belongsTo(Empresa::class, 'empresa_id')` explícito (se conserva el nombre del método: lo consumen
+`convenio.blade.php` y `dictamen.blade.php`).
+**Pendiente:** no se hizo un barrido general de columnas renombradas fuera de este patrón. Si aparece un
+campo en blanco o un endpoint que nunca se probó con datos reales, sospechar primero de una migración de
+renombrado (`grep renameColumn` en `database/migrations/`) antes de otra causa.
+**Lección:** una migración que renombra una columna es una búsqueda de texto completa pendiente, no una
+tarea terminada. Los endpoints sin cobertura de datos reales (0 filas) no lanzan error en desarrollo ni en
+CI — solo al usarse en producción.
