@@ -40,8 +40,10 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
+      // 14/09/2026: mismo lenguaje que el <select> nativo global (globals.css) y los .auth-input —
+      // relleno suave, radio 14 px, chevron que gira al abrir, anillo de foco vino.
       className={cn(
-        "flex w-fit items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex w-fit items-center justify-between gap-2 rounded-[var(--auth-radius-field)] border-[1.5px] border-transparent bg-[var(--auth-field)] py-2 pr-3 pl-4 text-sm font-medium text-[var(--auth-ink)] whitespace-nowrap transition-[background-color,border-color,box-shadow] duration-160 outline-none select-none hover:bg-[var(--auth-field-hover)] focus-visible:bg-[var(--auth-white)] focus-visible:border-[var(--auth-vino)] focus-visible:ring-4 focus-visible:ring-[var(--auth-vino-soft)] data-[popup-open]:bg-[var(--auth-white)] data-[popup-open]:border-[var(--auth-vino)] disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-[var(--auth-ink-2)] data-[size=default]:h-11 data-[size=sm]:h-9 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:transition-transform [&_svg]:duration-200 data-[popup-open]:[&_svg]:rotate-180",
         className
       )}
       {...props}
@@ -49,7 +51,7 @@ function SelectTrigger({
       {children}
       <SelectPrimitive.Icon
         render={
-          <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+          <ChevronDownIcon className="pointer-events-none size-4 text-[var(--auth-ink-2)]" />
         }
       />
     </SelectPrimitive.Trigger>
@@ -83,7 +85,7 @@ function SelectContent({
         <SelectPrimitive.Popup
           data-slot="select-content"
           data-align-trigger={alignItemWithTrigger}
-          className={cn("relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
+          className={cn("relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-40 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-2xl bg-[var(--app-card-bg)] p-1.5 text-[var(--auth-ink)] shadow-[0_18px_40px_-16px_oklch(30%_0.06_355/0.35)] ring-1 ring-black/5 duration-150 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
           {...props}
         >
           <SelectScrollUpButton />
@@ -117,7 +119,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "relative flex w-full cursor-pointer items-center gap-2 rounded-xl py-2.5 pr-9 pl-3 text-sm outline-hidden select-none transition-colors duration-120 data-highlighted:bg-[var(--auth-field)] focus:bg-[var(--auth-field)] data-selected:font-semibold data-selected:text-[var(--auth-vino)] data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className
       )}
       {...props}

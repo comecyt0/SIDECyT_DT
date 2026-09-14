@@ -113,11 +113,11 @@ export function DataCardGrid<T>({
             variants={item}
             whileHover={{ y: -3, transition: { type: 'spring', stiffness: 380, damping: 24 } }}
             onClick={onCardClick ? () => onCardClick(it) : undefined}
+            data-interactive={onCardClick ? 'true' : undefined}
             className={cn(
-              'relative bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800',
-              'shadow-sm transition-[shadow,border-color] duration-300',
+              'app-card relative',
+              'shadow-sm hover:border-primary/20',
               glowCls,
-              'hover:border-primary/20',
               'before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[3px] before:rounded-r-full',
               accentCls,
               compact ? 'p-4' : 'p-5',

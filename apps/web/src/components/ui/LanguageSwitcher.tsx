@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Languages } from 'lucide-react';
+import { Languages, Check } from 'lucide-react';
 import { useT, type Locale } from '@/i18n/I18nProvider';
 
-const LOCALES: Array<{ code: Locale; label: string; flag: string }> = [
-  { code: 'es', label: 'Español', flag: '🇲🇽' },
-  { code: 'en', label: 'English', flag: '🇺🇸' },
+// Sin banderas emoji (regla del sistema: íconos, no emojis): el código de idioma basta.
+const LOCALES: Array<{ code: Locale; label: string; short: string }> = [
+  { code: 'es', label: 'Español', short: 'ES' },
+  { code: 'en', label: 'English', short: 'EN' },
 ];
 
 export default function LanguageSwitcher() {
@@ -51,9 +52,9 @@ export default function LanguageSwitcher() {
                       : 'text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800'
                   }`}
                 >
-                  <span aria-hidden="true">{l.flag}</span>
+                  <span aria-hidden="true" className="text-[10px] font-bold tracking-wider w-6">{l.short}</span>
                   <span className="flex-1">{l.label}</span>
-                  {locale === l.code && <span className="text-xs">✓</span>}
+                  {locale === l.code && <Check className="w-3.5 h-3.5" aria-hidden="true" />}
                 </button>
               </li>
             ))}

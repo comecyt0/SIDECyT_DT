@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   ArrowLeft, Loader2, Send,
   Brain, FlaskConical, Globe2, CheckSquare,
-  Building2, FileText
+  Building2, FileText, Check, X
 } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/api';
@@ -277,7 +277,7 @@ export default function RubricaEvaluacionPage() {
     setConfirmState({
       open: true,
       title: 'Emitir Dictamen',
-      description: `¿Confirmas emitir el dictamen con un puntaje de ${total}/${maxTotal}? Resultado: ${aprobado ? 'APROBADO ✓' : 'RECHAZADO ✗'}`,
+      description: `¿Confirmas emitir el dictamen con un puntaje de ${total}/${maxTotal}? Resultado: ${aprobado ? 'APROBADO' : 'RECHAZADO'}`,
       onConfirm: async () => {
         setSubmitting(true);
         try {
@@ -387,7 +387,7 @@ export default function RubricaEvaluacionPage() {
               </div>
               <div className="flex flex-col items-center gap-1">
                 <div className={`text-5xl font-bold ${scoreColors.textCheck}`}>
-                  {total === 0 ? '—' : aprobado ? '✓' : '✗'}
+                  {total === 0 ? '—' : aprobado ? <Check className="inline w-12 h-12" aria-label="Aprobado" /> : <X className="inline w-12 h-12" aria-label="Rechazado" />}
                 </div>
                 <span className={`text-sm font-semibold px-4 py-1.5 rounded-full border ${scoreColors.badgeBg} ${scoreColors.badgeBorder} ${scoreColors.badgeText}`}>
                   {total === 0 ? 'Sin calificar' : aprobado ? `APROBADO (≥${puntajeMinimo})` : `RECHAZADO (<${puntajeMinimo})`}

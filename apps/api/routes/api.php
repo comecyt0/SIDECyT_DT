@@ -193,6 +193,7 @@ Route::middleware([
 
             // Carousel management
             Route::get('carousel', [CarouselController::class, 'index']);
+            Route::post('carousel/upload', [CarouselController::class, 'upload']);
             Route::post('carousel', [CarouselController::class, 'store']);
             Route::put('carousel/{carouselSlide}', [CarouselController::class, 'update']);
             Route::delete('carousel/{carouselSlide}', [CarouselController::class, 'destroy']);

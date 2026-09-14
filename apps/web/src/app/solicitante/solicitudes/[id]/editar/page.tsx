@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Send, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { colorMap } from '@/lib/color-mapper';
@@ -173,11 +173,17 @@ export default function EditarSolicitudPage() {
           <CardTitle className="text-blue-900 text-base">Próximos Pasos</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-blue-800 space-y-2">
-          <p>✓ Revisa todas las observaciones anteriores</p>
-          <p>✓ Realiza los cambios necesarios en tu solicitud</p>
-          <p>✓ Sube o actualiza los documentos requeridos</p>
-          <p>✓ Haz clic en &quot;Reenviar Solicitud&quot; para continuar</p>
-          <p>{`✓ ${INSTITUTION.name} revisará nuevamente tu solicitud corregida`}</p>
+          {[
+            'Revisa todas las observaciones anteriores',
+            'Realiza los cambios necesarios en tu solicitud',
+            'Sube o actualiza los documentos requeridos',
+            'Haz clic en "Reenviar Solicitud" para continuar',
+            `${INSTITUTION.name} revisará nuevamente tu solicitud corregida`,
+          ].map((paso) => (
+            <p key={paso} className="flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" /> <span>{paso}</span>
+            </p>
+          ))}
         </CardContent>
       </Card>
 

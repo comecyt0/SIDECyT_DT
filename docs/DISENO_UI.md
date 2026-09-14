@@ -100,75 +100,90 @@ Archivos: `src/app/(auth)/login/page.tsx`, `src/components/ui/login-carousel.tsx
 
 ---
 
-## 5. Panel (shell interno: sidebar + topbar)
+## 5. Panel — contenido de las vistas (el menú NO se toca)
 
 **14/09/2026.** Mismo sistema de colores del login, extendido con tokens `--app-*` / `--tile-*` en
-`globals.css`. Antes el panel usaba un menú superior en mega-dropdown; ahora es un sidebar fijo, siguiendo
-las referencias que dio el usuario (paneles con sidebar claro, tiles de color, saludo grande).
+`globals.css`. Las referencias del usuario (Mindnest / Ziferblat / Skillex) se aplican al **contenido**:
+héroe con saludo, tiles de color accionables, anillo de avance, lista de actividad.
 
-### Arquitectura — un solo componente para los 4 roles
+> **Corrección del usuario (E26 en `CLAUDE.md`):** en una primera pasada se cambió el menú superior por un
+> sidebar. No lo quería: "el menú debía permanecer igual, solo rediseñar los paneles". `AdminTopLayout.tsx`
+> y `RoleTopLayout.tsx` volvieron **byte a byte** al original y `AppShell.tsx` se borró. **El menú, la barra
+> superior y el pie del panel están fuera del rediseño.** Todo lo de abajo vive dentro de `<main>`.
 
-- **`src/components/layout/AppShell.tsx`** — el shell real (sidebar + topbar + notificaciones + footer).
-  Recibe `groups: AppNavGroup[]` (con o sin `label`), no roles hardcodeados.
-- **`AdminTopLayout.tsx`** y **`RoleTopLayout.tsx`** (revisor/evaluador/solicitante) son ahora envolturas
-  delgadas sobre `AppShell` — **mismo prop-interface externo que antes**, así que ningún `layout.tsx` de
-  rol se tocó. Cambiar `AppShell.tsx` cambia los ~38 paneles de los 4 roles a la vez.
-- Esto es lo que "aplica a todo el sistema, no solo a admin": el nav, el header, el pie y el fondo de
-  **cada** vista de los 4 roles ya usan el shell nuevo. El **contenido interno** de cada vista (tablas,
-  formularios) no se rediseñó vista por vista — ver §7 Pendiente.
+### Primitivas compartidas (cambian muchas vistas a la vez)
 
-### Sidebar
+- **`Badge`** (`components/ui/badge.tsx`): `rounded-4xl` → `rounded-md`. Lo usan **27 vistas** de los 4
+  roles: quita la píldora de todas las insignias de estado sin tocar cada archivo.
+- **`DataCardGrid`** (6 vistas de admin: usuarios, empresas, convenios, ministraciones, solicitudes, lista
+  negra): base `.app-card` (papel/regla por tokens) + la barra lateral de acento y el resplandor por color
+  que ya tenía. `data-interactive` solo cuando hay `onCardClick` (si no, `cursor: pointer` mentiría).
+- Patrón de campo de formulario en modales: `.auth-input.auth-input-static.pl-10` con ícono a la izquierda y
+  label fijo arriba, envuelto en un `FField` local que clona el hijo para inyectar `id`/`aria-invalid`/
+  `aria-describedby` (ver `UsuariosClient.tsx`). Mismo lenguaje que el login, sin duplicar tokens.
 
-- Escritorio (`lg+`): fijo, 272 px, `position: sticky`, logo + nombre arriba, grupos con encabezado en
-  mayúsculas (admin tiene 4 grupos; los demás roles, uno solo sin encabezado), tarjeta de usuario + botón
-  de salir abajo.
-- Item activo: bloque lleno vino (`.app-nav-item[data-active="true"]`), no una franja ni un punto.
-- Item con hover: fondo tenue + `translateX(3px)` con resorte (solo con `hover: hover`).
-- Móvil (`< lg`): drawer que entra desde la izquierda (`x: -100% → 0`, 220 ms) con scrim; el botón
-  hamburguesa vive en el topbar compacto.
+### Dashboard de administrador (`/admin/dashboard`) — segunda versión
 
-### Topbar
+Estructura (escritorio, 3 columnas):
 
-- Título de la sección activa (en vez de la migaja de pan con cápsula que había antes), buscador global
-  (`GlobalSearch`, solo si el rol lo define), idioma, tema, campana de notificaciones.
-- El contador de no leídas y la campana de notificaciones se movieron a `.app-tag` (`rounded-md`), no al
-  círculo rojo `rounded-full` de aviso (ese sigue siendo un punto de estado, no una insignia con texto).
+1. **Héroe** (2/3) — saludo por hora + primer nombre de la cookie, fecha larga, convocatoria activa y su
+   cierre (`/admin/convocatorias`), dos CTA. Fondo: dos manchas del sistema `.auth-blob` al 45-50 % sobre
+   papel — el guiño a Mindnest, sin saturar. **Anillo de avance** (1/3): SVG con `strokeDashoffset`
+   animado una vez (1.1 s, `--auth-ease-out`; 0 s con reducir-movimiento). Dato real: solicitudes en
+   `aprobada/convenio/ministracion/seguimiento/cerrada` ÷ total, de `/admin/charts`. Con 0 solicitudes
+   dice "Aún no hay solicitudes registradas", no un 0 % decorativo.
+2. **Pendientes ahora** — 4 tiles del "Due now" de Mindnest, **cada uno es un `Link`**: solicitudes de
+   acceso pendientes (`/admin/solicitudes-acceso`, `estado === 'pendiente'`), restablecimientos
+   (`/admin/reset-requests`, `status === 'pending'`), solicitudes en revisión y ministraciones pendientes
+   (de `/admin/stats`). Tono por tile, flecha que avanza al hover, "Al día" cuando vale 0.
+3. **Indicadores generales** — los 7 de `/admin/stats` en tiles compactos (7 columnas en `xl`).
+4. **Gráficas** (2/3, recharts intactas, re-vestidas) + columna derecha: **Actividad reciente**
+   (`/admin/audit-logs?per_page=6`, inicial del usuario, acción humanizada, fecha), **Alertas**
+   (`/admin/alerts`; el texto llega con `<strong>` y un título capturado por un admin → se quitan las
+   etiquetas y se pinta como texto, no como HTML) y **Estado del sistema** con el widget de Reverb.
 
-### Dashboard de administrador (`/admin/dashboard`)
+Reglas que se respetaron: cada número sale de un endpoint (nada inventado); una sola coreografía de
+entrada (stagger 50 ms); hover solo con puntero fino; `IconMap` ahora incluye `Clock`.
 
-- Saludo real: hora del navegador (mañana/tarde/noche) + primer nombre de la cookie `userName` — nunca
-  texto inventado.
-- Los 7 indicadores de `/admin/stats` rotan por 4 tonos institucionales (`--tile-vino/gold/sky/emerald`):
-  fondo muy tenue (8-14 %) + chip sólido con el ícono. Con `data-interactive="true"` (`.app-card`): se
-  eleva 3 px y se le nota el borde vino al pasar el mouse.
-  - `IconMap` no tenía `Clock` (el ícono de "Ministraciones Pendientes" caía a `Bookmark` por defecto):
-    corregido de paso.
-- Gráficas (recharts) intactas, solo re-vestidas con `.app-card` y `var(--app-rule)` en vez de grises fijos.
-- Alertas: tono vino o cielo según si es error, sin la insignia `rounded-full` que tenían antes.
+### Usuarios (`/admin/usuarios`)
 
-### Pantalla de carga (`RouteLoadingScreen`, `.route-loading-*`)
+Encabezado con los tokens del sistema; tarjetas de `DataCardGrid` (heredan lo de arriba); **modal
+reescrito**: `app-card` con cabecera (chip vino + título + correo del usuario que se edita), scrim
+translúcido (`--auth-ink` al 40 % + blur, no negro), campos con `FField` (nombre, correo, contraseña, rol,
+institución, **cargo y teléfono — estaban en el estado del formulario pero nunca se mostraban**) y un
+**interruptor "Cuenta activa"** (checkbox real `role="switch"` debajo, `sr-only`). Botón principal
+`.auth-submit` con estado cargando; cierre con Esc/clic fuera/botón ×.
 
-Referencia del usuario: logo centrado, anillos concéntricos muy tenues, fondo transparente — nada
-saturado. Implementación:
+### Carrusel (`/admin/carrusel`) — imágenes locales
 
-- **`src/components/ui/GlobalLoader.tsx`** exporta `RouteLoadingScreen` (logo + dos anillos "sonar" que
-  laten hacia afuera, `--auth-vino` y `--auth-gold` al 100 %→0 % de opacidad) y sigue exportando
-  `GlobalLoaderProvider`/`useGlobalLoader` con la **misma API** de antes — solo cambió el dibujo, no cómo
-  se usa. La versión anterior (velo negro, doble anillo giratorio, mensaje, puntitos) quedó reemplazada.
-- **`loading.tsx`** en `app/`, `app/(auth)/`, `app/admin/`, `app/revisor/`, `app/evaluador/` y
-  `app/solicitante/` — el mecanismo nativo de Next.js App Router: se muestra solo mientras Next resuelve
-  la navegación a una ruta (primera carga de cualquier página, y cambio de página cuando el segmento de
-  esa ruta todavía no está en caché). **No hace falta togglearlo a mano.**
-- **Decisión de diseño — no se puso en cada botón.** El usuario pidió la pantalla también "al pulsar
-  botones... realizar alguna interacción con el sistema". Se dejó fuera a propósito: casi todos los
-  botones del sistema ya tienen su propio spinner local (`isLoading` en `Button`), y una pantalla completa
-  en cada clic — incluidas acciones frecuentes como búsquedas o filtros — iría en contra de "interactivo y
-  rápido" (ver `emil-design-eng/SKILL.md` — nunca una pantalla completa para algo que pasa cientos de
-  veces al día) y duplicaría el spinner que ya existe. Para una acción puntual que sí bloquea toda la
-  página (ninguna hoy lo hace), está `useGlobalLoader()` — ya construido — para activarla ahí.
-- **Verificado en producción** (no en un mock): con los chunks de JS retardados artificialmente y un clic
-  real de navegación, la pantalla aparece exactamente como el anillo concéntrico de la referencia,
-  encima del sidebar ya resuelto (blur + el 72 % de opacidad del papel).
+A pedido del usuario: **zona de arrastrar/soltar** (o clic) en el modal del slide, con vista previa
+inmediata, botón "Quitar imagen" y errores en línea. Sube por `POST /admin/carousel/upload` (detalle del
+backend en `CLAUDE.md` § Carrusel) y rellena `imagen_url` con la ruta relativa `/storage/carousel/…`. La
+URL externa sigue como alternativa. La previsualización del slide usa la misma composición que el banner
+del login (`.auth-banner` + `.auth-glass` + `.auth-tag`), así el admin ve exactamente lo que verá el
+visitante.
+
+### Pantalla de carga (`RouteLoadingScreen`, `.route-loading-*`) — versión 2
+
+Referencia del usuario: logo centrado, anillos concéntricos tenues, fondo transparente. Tras probarla pidió
+**logo más grande, que dure ~1 s más y que también aparezca en el login.** Tres mecanismos, mismo dibujo:
+
+- **`RouteChangeOverlay`** (`components/ui/RouteChangeOverlay.tsx`, montado una vez en `app/layout.tsx`):
+  un listener global de `click` en `document`. Si el clic cae en un `<a href>` interno (no `_blank`, no
+  `download`, sin modificadores, distinto de la URL actual), muestra la pantalla **1.4 s**. Cubre el menú,
+  la paginación, los enlaces del pie, "Volver al login"… **sin tocar ningún archivo del menú.** Es lo que
+  garantiza la duración: `loading.tsx` desaparece en cuanto Next termina, y en este sistema (rutas
+  'use client' sin fetch en servidor, chunks pre-cargados) eso es casi instantáneo — por eso "casi no
+  duraba".
+- **`loading.tsx`** por raíz (`app/`, `(auth)/`, `admin/`, `revisor/`, `evaluador/`, `solicitante/`):
+  se conserva para la **primera carga / recarga** de cualquier página, donde no hay clic que interceptar.
+- **`useGlobalLoader()`** con **mínimo visible de 1 s** en el provider (`MIN_VISIBLE_MS`): si algo la enciende
+  y apaga en 80 ms, igual se ve 1 s. El **login** la enciende 500 ms después de "Acceso concedido" y antes
+  de `window.location.href`, así la recarga completa hacia el panel no deja la pantalla en blanco.
+- Tamaño: logo `h-28` (112 px, antes 56) y contenedor de anillos de 200 px (antes 120).
+- **Decisión que se mantiene — no en cada botón.** Los botones tienen spinner local; una pantalla completa
+  por clic en búsquedas o filtros iría contra "interactivo y rápido" (`emil-design-eng`). Para una acción
+  larga concreta, `useGlobalLoader()`.
 
 ---
 
@@ -196,14 +211,46 @@ derecha.
 
 ---
 
+## 6b. Reglas globales de la tarde del 14/09/2026 (se aplican a TODO el sistema)
+
+Cada una vive en un solo lugar y por eso alcanza a todas las vistas sin tocarlas una por una:
+
+| Regla del usuario | Dónde vive | Alcance |
+|---|---|---|
+| **Íconos sin fondo sólido, vidrio líquido sin blur** | `globals.css` → `.app-tile-icon`, `.app-nav-icon`, `.auth-icon-btn`, `.icon-glass` (gradiente + borde de luz + sombras internas; **nunca** `backdrop-filter`). El ícono toma el color con `color:`, no con `background:` | Dashboard, usuarios, carrusel, solicitar-acceso, Reverb, botones `soft`/`destructive` |
+| **Cero emojis** | Reemplazados por íconos de lucide en 12 archivos (banderas del idioma → código `ES`/`EN`; `✓`/`✗`/`📄`/`💾`/`✅`/`❌`/`←`/`→` en UI). Los `→` de comentarios de código y de `i18n` no visibles quedan | Sistema completo (grep de rangos emoji en `src/` sin resultados en UI) |
+| **`<select>` con el mismo dibujo** (referencia: disparador redondeado + chevron) | `globals.css` `@layer base` → `select:not([multiple])` (relleno suave, radio 14 px, chevron SVG propio, anillo de foco vino). `select.auth-input` conserva el chevron. La lista propia (`components/ui/select.tsx`) tiene disparador igual y lista redondeada con banda de hover | Los 13 `<select>` nativos y los 6 usos de `Select` de base-ui |
+| **Botones de crear / ver / editar / eliminar unificados, hover "líquido"** | `components/ui/button.tsx` (radio 14 px, `.btn-liquid` = gota de luz que se expande al pasar el mouse — `globals.css`) con variantes: `default` crear, `soft` ver/editar (vidrio vino), `destructive` eliminar (vidrio rojo, nunca rojo sólido), `outline` borde de 1.5 px, `ghost` discreto | Todo `<Button>`; usuarios y carrusel ya usan `soft`/`destructive` para editar/eliminar |
+| **Listas de registros** (referencia: contenedor redondeado, filas con banda de hover) | `components/ui/table.tsx` (contenedor 22 px con filo de luz y sombra, encabezado discreto en mayúsculas pequeñas, filas con separador tenue y hover) y `DataCardGrid` (tarjetas `app-card`) | Todas las tablas y las 6 vistas con tarjetas |
+| **Bento suave, no saturado** (referencia "Marketer") | `.app-card`: radio 28 px, sin borde duro (filo de luz), sombra suave, veladura superior de vidrio; `data-tone="solid"` = tarjeta ciruela protagonista | Dashboard, modales, Reverb, carrusel, usuarios |
+| **Sin jerga técnica a la vista** | Dashboard ("Quién hizo qué, y cuándo", "Buenas prácticas"), usuarios (sin "Soft delete"), carrusel (sin rutas `/storage/…`), Reverb ("Notificaciones al instante · Funcionando con normalidad"; host/latencia plegados en "Información para soporte") | Lo rediseñado. **Pendiente** en el resto de vistas (§7) |
+| **Responsive, móvil primero** | Regla permanente. El menú (sin cambiar su diseño) en `< md` pasa a `position: fixed` con márgenes de 12 px y scroll propio; el panel de notificaciones se limita a `100vw - 1.5rem`; el pie apila. Verificado a 390 px sin scroll horizontal | Menú de los 4 roles, dashboard, auth |
+
+### Pantalla de carga v3 — "en cualquier recarga y al pulsar botones"
+
+- **Recarga de cualquier página:** `app/layout.tsx` imprime `#boot-splash` (mismo dibujo, con `<img>` plano)
+  **en el HTML del servidor**, así se ve antes de que cargue el JS. `RouteChangeOverlay` lo retira cuando la
+  app montó y pasaron ≥ 1.1 s desde el inicio de la navegación (`performance.now()`), con un fundido de 200 ms.
+- **Botones:** `lib/api.ts` avisa por `lib/loading-bus.ts` en toda petición que **escribe** (POST/PUT/PATCH/
+  DELETE) o **descarga** (`responseType: 'blob'`); `RouteChangeOverlay` la muestra mientras dura, con mínimo
+  de 1 s. Los GET normales no (búsquedas y filtros seguirían "lentos" a propósito). Excepciones: refresh
+  silencioso del JWT, logout, marcar notificaciones como leídas.
+- **Enlaces:** listener global de clic, 1.4 s. **No** filtrar por `e.defaultPrevented`: el `<Link>` de
+  Next.js siempre lo hace y por eso la primera versión nunca aparecía.
+- **Login:** "Acceso concedido" → 450 ms → pantalla → 350 ms → recarga hacia el panel.
+- Logo `h-36` (144 px), anillos de 260 px.
+
+---
+
 ## 7. Pendiente (no cubierto en esta pasada)
 
-- **Contenido interno de las ~24 vistas de `/admin/*`** (tablas, tarjetas, formularios de creación/edición)
-  sigue con el estilo anterior a la píldora, salvo lo que ya comparte componentes (`Card`, `Button`,
-  `Input`, `DataCardGrid`) y por tanto heredó los estados de foco/hover mejorados. Rediseñar cada vista de
-  contenido es una tarea aparte, vista por vista.
-- El resto del sistema (revisor/evaluador/solicitante) heredó el shell nuevo pero, igual que admin, su
-  contenido interno no se tocó.
+- **Contenido interno del resto de `/admin/*`** (programas, convocatorias, solicitudes, ministraciones,
+  convenios, informes, empresas, evaluadores, notificaciones, solicitudes-acceso, reset-requests,
+  lista-negra, audit-logs) y de **revisor / evaluador / solicitante**: ya heredaron `Badge` sin píldora y,
+  donde aplica, `DataCardGrid` con tokens; el resto (encabezados, modales, tablas, formularios) sigue con
+  el estilo anterior. Hechos en esta pasada: **dashboard, usuarios, carrusel**. El patrón a repetir está en
+  `UsuariosClient.tsx` (encabezado + modal `FField`) y `CarruselClient.tsx`.
+- El menú, la barra superior y el pie del panel **no entran** en el rediseño (E26).
 - `GlobalSearch.tsx`: el placeholder "Buscar folio, usuario, institución…" se cortaba a medio carácter en
   el buscador del topbar (`max-w-xs` = 320 px, insuficiente). Ensanchado a `max-w-sm` (384 px) — no se
   rediseñó el resto del componente (resultados, atajos).

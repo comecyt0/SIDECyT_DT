@@ -1,6 +1,24 @@
-import axios from 'axios';
+import axios, { type InternalAxiosRequestConfig } from 'axios';
 import Cookies from 'js-cookie';
 import * as Sentry from '@sentry/nextjs';
+import { beginLoading, endLoading } from '@/lib/loading-bus';
+
+/**
+ * Pantalla de carga del sistema "al pulsar botones" (14/09/2026): toda petición que ESCRIBE
+ * (POST/PUT/PATCH/DELETE) o descarga un archivo (blob) enciende la pantalla global mientras dura.
+ * Los GET normales no — encenderla en cada búsqueda o filtro haría lento el sistema en vez de
+ * interactivo. Excepciones: marcar notificaciones como leídas y el refresh silencioso del JWT.
+ */
+const LOADING_EXCLUDE = [/\/auth\/refresh$/, /\/auth\/logout$/, /\/leer(-todas)?$/, /\/mis-notificaciones/, /\/notificaciones\//];
+type LoadingConfig = InternalAxiosRequestConfig & { __loading?: boolean };
+
+function shouldShowLoading(config: InternalAxiosRequestConfig): boolean {
+  const method = (config.method ?? 'get').toUpperCase();
+  const url = config.url ?? '';
+  if (LOADING_EXCLUDE.some((re) => re.test(url))) return false;
+  if (config.responseType === 'blob') return true;
+  return method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
+}
 
 // En dev, si el env apunta a localhost/127.0.0.1 pero el navegador está en el otro,
 // las cookies no propagan entre los dos hosts. Alineamos el hostname al de la página
@@ -114,8 +132,20 @@ function maybeBreadcrumb(method: string, url: string, status?: number, statusTex
 
 api.interceptors.request.use((config) => {
   maybeBreadcrumb(config.method ?? 'GET', config.url ?? '');
+  if (typeof window !== 'undefined' && shouldShowLoading(config)) {
+    (config as LoadingConfig).__loading = true;
+    beginLoading();
+  }
   return config;
 });
+
+function settleLoading(config?: InternalAxiosRequestConfig) {
+  const c = config as LoadingConfig | undefined;
+  if (c?.__loading) {
+    c.__loading = false;
+    endLoading();
+  }
+}
 
 // Endpoints que NO deben dispararon auto-refresh (evita bucle infinito)
 const NO_REFRESH_PATHS = ['/auth/login', '/auth/refresh', '/auth/logout', '/auth/forgot-password', '/auth/reset-password'];
@@ -132,10 +162,12 @@ function redirectToLogin() {
 
 api.interceptors.response.use(
   (response) => {
+    settleLoading(response.config);
     maybeBreadcrumb(response.config.method ?? 'GET', response.config.url ?? '', response.status, response.statusText);
     return response;
   },
   async (error) => {
+    settleLoading(error.config);
     if (error.config) {
       maybeBreadcrumb(error.config.method ?? 'GET', error.config.url ?? '', error.response?.status, error.response?.statusText);
     }

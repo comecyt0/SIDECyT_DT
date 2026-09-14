@@ -389,8 +389,8 @@ export default function NuevaSolicitud() {
                           <span className="text-xs font-bold text-red-500">Obligatorio</span>
                         )}
                         {selectedFile && (
-                          <span className="text-xs font-medium text-emerald-600 truncate max-w-[200px]">
-                            ✓ {selectedFile.name}
+                          <span className="text-xs font-medium text-emerald-600 truncate max-w-[200px] inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> {selectedFile.name}
                           </span>
                         )}
                       </div>

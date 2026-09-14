@@ -11,10 +11,12 @@ import DualBranding from '@/components/branding/DualBranding';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import { useT } from '@/i18n/I18nProvider';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
+import { useGlobalLoader } from '@/components/ui/GlobalLoader';
 
 /** Estilos: clases .auth-* en globals.css. Diseño documentado en docs/DISENO_UI.md. */
 export default function LoginPage() {
   const { t } = useT();
+  const { setIsLoading: setRouteLoading, setMessage: setRouteMessage } = useGlobalLoader();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [email, setEmail] = useState('');
@@ -36,10 +38,19 @@ export default function LoginPage() {
       evaluador: '/evaluador/evaluaciones',
       solicitante: '/solicitante/dashboard',
     };
-    // El botón pasa a "Acceso concedido" mientras el navegador carga el panel
+    // El botón pasa a "Acceso concedido" y, medio segundo después, entra la pantalla de carga
+    // del sistema — cubre el hueco de la recarga completa (window.location.href) con la misma
+    // marca en vez de dejar la pantalla en blanco. Ver docs/DISENO_UI.md §Pantalla de carga.
     setSuccess(true);
     setLoading(false);
-    window.location.href = dashboardMap[roleSlug] ?? '/solicitante/dashboard';
+    const destino = dashboardMap[roleSlug] ?? '/solicitante/dashboard';
+    setTimeout(() => {
+      setRouteMessage('Ingresando…');
+      setRouteLoading(true);
+      // Un tick aparte para que React pinte la pantalla de carga antes de descargar el documento;
+      // la pantalla sigue visible mientras el navegador espera el HTML del panel.
+      setTimeout(() => { window.location.href = destino; }, 350);
+    }, 450);
   };
 
   const handleLogin = async (e: React.FormEvent) => {

@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { History } from 'lucide-react';
+import { History, Check, X } from 'lucide-react';
 import type { AsignacionEvaluador } from '@/types/api';
 
 interface Props {
@@ -14,9 +14,9 @@ export default function HistoricoClient({ asignaciones }: Props) {
   const resultadoBadge = (dictamen: any) => {
     if (!dictamen) return <Badge variant="secondary" className="shadow-none">Sin dictamen</Badge>;
     if (dictamen.resultado === 'aprobado') {
-      return <Badge variant="default" className="shadow-none">Aprobado ✓</Badge>;
+      return <Badge variant="default" className="shadow-none">Aprobado <Check aria-hidden="true" /></Badge>;
     }
-    return <Badge variant="destructive" className="shadow-none">Rechazado ✗</Badge>;
+    return <Badge variant="destructive" className="shadow-none">Rechazado <X aria-hidden="true" /></Badge>;
   };
 
   return (

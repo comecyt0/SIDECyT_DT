@@ -270,7 +270,7 @@ export default function SolicitarAccesoPage() {
                               : { background: 'var(--auth-field)', color: 'var(--auth-ink-2)' }
                         }
                       >
-                        {i < step ? '✓' : i + 1}
+                        {i < step ? <Check className="w-3 h-3" aria-label="Completado" /> : i + 1}
                       </div>
                       <span className="text-[11px] font-semibold whitespace-nowrap" style={{ color: i === step ? 'var(--auth-vino)' : 'var(--auth-ink-2)' }}>
                         {s}
@@ -371,7 +371,7 @@ export default function SolicitarAccesoPage() {
                       return (
                         <div key={rol} className="rounded-[var(--auth-radius-field)] border p-4 space-y-2.5" style={{ borderColor: 'var(--auth-rule)', background: 'var(--auth-field)' }}>
                           <div className="flex items-center gap-2">
-                            <span className="app-tile-icon !w-8 !h-8 !rounded-lg" style={{ background: 'var(--auth-vino)' }}>
+                            <span className="app-tile-icon !w-8 !h-8 !rounded-lg" style={{ color: 'var(--auth-vino)' }}>
                               <Icon className="w-3.5 h-3.5" />
                             </span>
                             <div>

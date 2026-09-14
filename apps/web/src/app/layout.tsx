@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { GlobalLoaderProvider } from "@/components/ui/GlobalLoader";
+import RouteChangeOverlay from "@/components/ui/RouteChangeOverlay";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import PWAInit from "@/components/pwa/PWAInit";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
@@ -62,6 +63,17 @@ export default function RootLayout({
         <meta name="color-scheme" content="light dark" />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
+        {/* Splash de arranque: mismo dibujo que RouteLoadingScreen, pero impreso por el servidor
+            para que se vea al recargar CUALQUIER página antes de que cargue el JS.
+            RouteChangeOverlay lo retira cuando la app montó (mínimo ~1.1 s). */}
+        <div id="boot-splash" className="route-loading" role="status" aria-live="polite" aria-label="Cargando">
+          <div className="route-loading-rings">
+            <span className="route-loading-ring" aria-hidden="true" />
+            <span className="route-loading-ring" aria-hidden="true" />
+            {/* eslint-disable-next-line @next/next/no-img-element -- splash previo a la hidratación */}
+            <img src="/logo.png" alt="" width={185} height={144} className="route-loading-logo h-36 w-auto object-contain" />
+          </div>
+        </div>
         <PWAInit />
         <InstallPrompt />
         <ThemeProvider>
@@ -70,6 +82,9 @@ export default function RootLayout({
               <ErrorBoundary>
                 {children}
               </ErrorBoundary>
+              {/* Un solo listener global de clics — ver RouteChangeOverlay.tsx.
+                  No toca el menú ni ninguna otra vista. */}
+              <RouteChangeOverlay />
             </GlobalLoaderProvider>
           </I18nProvider>
         </ThemeProvider>

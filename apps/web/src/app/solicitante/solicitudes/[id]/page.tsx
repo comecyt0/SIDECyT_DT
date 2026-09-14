@@ -378,7 +378,7 @@ export default function DetalleSolicitudPage() {
                     active ? 'bg-white dark:bg-neutral-900 border-primary text-primary ring-4 ring-primary/20' :
                     'bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-600 text-neutral-400 dark:text-neutral-500'
                   }`}>
-                    {done ? '✓' : i + 1}
+                    {done ? <CheckCircle2 className="w-4 h-4" aria-label="Completado" /> : i + 1}
                   </div>
                   <span className={`text-xs font-medium hidden md:block ${active ? 'text-primary' : done ? 'text-neutral-700 dark:text-neutral-200' : 'text-neutral-400 dark:text-neutral-500'}`}>
                     {step.label}

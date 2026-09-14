@@ -31,6 +31,10 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+vi.mock('@/components/ui/GlobalLoader', () => ({
+  useGlobalLoader: () => ({ isLoading: false, setIsLoading: vi.fn(), message: undefined, setMessage: vi.fn() }),
+}));
+
 describe('LoginPage — accesibilidad', () => {
   // El botón de show/hide password ahora tiene aria-label dinámico y aria-pressed.
   it('no tiene violaciones axe (form principal)', async () => {

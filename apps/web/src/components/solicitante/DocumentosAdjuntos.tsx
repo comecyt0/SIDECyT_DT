@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Upload, Check, Loader2, Download, Trash2, Eye, X } from 'lucide-react';
+import { Upload, Check, Loader2, Download, Trash2, Eye, X, FileText, HardDrive, CheckCircle2 } from 'lucide-react';
 import api from '@/lib/api';
 import { colorMap } from '@/lib/color-mapper';
 
@@ -342,10 +342,10 @@ export function DocumentosAdjuntos({
             </div>
 
             <div className="text-sm text-neutral-600 space-y-1 pt-2 border-t">
-              <p>📄 <strong>Formato:</strong> Solo PDF</p>
-              <p>💾 <strong>Tamaño máximo:</strong> 5 MB</p>
+              <p className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> <strong>Formato:</strong> Solo PDF</p>
+              <p className="flex items-center gap-1.5"><HardDrive className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> <strong>Tamaño máximo:</strong> 5 MB</p>
               {tiposDocumento.length > 0 && (
-                <p>✅ <strong>Requeridos:</strong> {tiposDocumento.filter(t => t.obligatorio).map(t => t.nombre).join(', ')}</p>
+                <p className="flex items-start gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5 text-emerald-600" aria-hidden="true" /> <span><strong>Requeridos:</strong> {tiposDocumento.filter(t => t.obligatorio).map(t => t.nombre).join(', ')}</span></p>
               )}
             </div>
           </>

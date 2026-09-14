@@ -2,8 +2,8 @@
 
 namespace App\Http\Traits;
 
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Validation\Validator;
 
 /**
  * Trait para validar tipos MIME binarios (no solo extensión)
@@ -17,6 +17,10 @@ use Illuminate\Validation\Validator;
  */
 trait ValidatesBinaryMimeTypes
 {
+    // 14/09/2026: importaba `Illuminate\Validation\Validator` (la clase) y llamaba `::make()`, que solo
+    // existe en la fachada `Illuminate\Support\Facades\Validator`. Toda ruta de error de este trait
+    // terminaba en un 500 "Call to undefined method" en vez del 422 con mensaje. Pasar siempre
+    // `$file->getPathname()`, no `getRealPath()` (en Windows/IIS puede devolver `false`).
     /**
      * Valida que el contenido REAL del archivo coincida con el MIME type esperado
      * Utiliza finfo_file para detectar MIME type real, ignorando extensión

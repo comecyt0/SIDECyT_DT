@@ -141,6 +141,40 @@
     border-radius: 2px;
   }
 
+  /* <select> nativo del sistema completo (14/09/2026, referencia del usuario): disparador
+     redondeado, relleno suave, chevron propio y anillo de foco vino. Aplica a TODOS los <select>
+     sin tocar cada archivo. La lista desplegada la pinta el sistema operativo (no se puede
+     estilizar en un <select> nativo); la versión con lista propia es components/ui/select.tsx. */
+  select:not([multiple]) {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: var(--auth-field);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b5a60' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px 16px;
+    border: 1.5px solid transparent;
+    border-radius: var(--auth-radius-field);
+    padding: 0 42px 0 14px;
+    min-height: 44px;
+    color: var(--auth-ink);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  }
+  select:not([multiple]):hover { background-color: var(--auth-field-hover); }
+  select:not([multiple]):focus,
+  select:not([multiple]):focus-visible {
+    outline: none;
+    background-color: var(--auth-white);
+    border-color: var(--auth-vino);
+    box-shadow: 0 0 0 4px var(--auth-vino-soft);
+  }
+  select:not([multiple]):disabled { opacity: 0.6; cursor: not-allowed; }
+  select option { color: var(--auth-ink); background: var(--auth-white); }
+
   /* Respetar preferencia del SO de reducir movimiento (motion-safe). */
   @media (prefers-reduced-motion: reduce) {
     *,
@@ -204,6 +238,30 @@
     0%, 100% { transform: translateY(0); }
     50%      { transform: translateY(-2px); }
   }
+
+  /* Hover "líquido" (14/09/2026): una gota de luz que se expande desde el centro al pasar el
+     mouse y se recoge al salir. Solo transform/opacity; sin blur. Lo usa el Button compartido. */
+  .btn-liquid {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .btn-liquid::before {
+    content: '';
+    position: absolute;
+    inset: -45%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, color-mix(in oklch, var(--auth-white) 42%, transparent), transparent 72%);
+    transform: scale(0);
+    opacity: 0;
+    transition: transform 520ms var(--auth-ease-out), opacity 260ms ease;
+    pointer-events: none;
+    z-index: -1;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-liquid:hover::before { transform: scale(1); opacity: 1; }
+  }
+  .btn-liquid:active::before { transform: scale(1.1); opacity: 0.8; transition-duration: 120ms; }
 
   /* Shimmer en botones — luz diagonal que cruza al hover. */
   .btn-shimmer {
@@ -432,11 +490,10 @@
     width: 36px;
     height: 36px;
     border-radius: 10px;
-    color: var(--auth-white);
-    background: color-mix(in oklch, var(--auth-white) 10%, transparent);
-    border: 1px solid color-mix(in oklch, var(--auth-white) 16%, transparent);
     transition: background-color 160ms ease, transform 140ms var(--auth-ease-out);
   }
+  /* Sobre el banner oscuro el vidrio es blanco: el ícono en blanco y el brillo más contenido. */
+  .auth-banner .auth-icon-btn { color: var(--auth-white); }
   .auth-icon-btn:active { transform: scale(0.94); }
 
   /* Progreso del autoplay: un segmento por diapositiva; la animación del segmento activo
@@ -520,6 +577,15 @@
     padding-bottom: 0;
     display: flex;
     align-items: center;
+  }
+  /* `.auth-input` usa el shorthand `background`, que borraría el chevron del <select> global. */
+  select.auth-input {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b5a60' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px 16px;
+    padding-right: 42px;
+    cursor: pointer;
   }
   .auth-input:-webkit-autofill {
     -webkit-box-shadow: 0 0 0 40px var(--auth-field) inset;
@@ -710,6 +776,22 @@
   @media (hover: hover) and (pointer: fine) {
     .app-nav-item:not([data-active="true"]):hover { background: var(--app-hover-bg); color: var(--app-ink); }
   }
+  /* Íconos "liquid glass" (14/09/2026, regla del usuario): sin fondo sólido, sin blur. Vidrio
+     translúcido con brillo superior y borde de luz; el ícono toma el color del tono (`color`).
+     El brillo se logra con gradiente + sombras internas, NUNCA con backdrop-filter. */
+  .app-nav-icon,
+  .app-tile-icon,
+  .auth-icon-btn,
+  .icon-glass {
+    color: var(--auth-vino);
+    background:
+      linear-gradient(160deg, color-mix(in oklch, var(--auth-white) 62%, transparent) 0%, color-mix(in oklch, var(--auth-white) 18%, transparent) 55%, color-mix(in oklch, currentColor 10%, transparent) 100%);
+    border: 1px solid color-mix(in oklch, var(--auth-white) 75%, currentColor 25%);
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklch, var(--auth-white) 85%, transparent),
+      inset 0 -1px 0 color-mix(in oklch, currentColor 12%, transparent),
+      0 1px 2px color-mix(in oklch, currentColor 14%, transparent);
+  }
   .app-nav-icon {
     display: grid;
     place-items: center;
@@ -717,14 +799,21 @@
     width: 34px;
     height: 34px;
     border-radius: 10px;
-    background: color-mix(in oklch, currentColor 12%, transparent);
   }
   .app-nav-item[data-active="true"] .app-nav-icon { background: color-mix(in oklch, var(--auth-white) 20%, transparent); }
 
+  /* Tarjeta base del panel — referencia "Marketer" (14/09/2026): radio grande, sin borde duro
+     (un filo de luz), sombra suave y una veladura superior de vidrio sin blur. Bento: las tarjetas
+     de tono usan `background-color` (no el shorthand) para conservar esa veladura. */
   .app-card {
-    background: var(--app-card-bg);
-    border: 1px solid var(--app-rule);
-    border-radius: 22px;
+    background-color: var(--app-card-bg);
+    background-image: linear-gradient(180deg, color-mix(in oklch, var(--auth-white) 55%, transparent) 0%, transparent 42%);
+    border: 1px solid color-mix(in oklch, var(--auth-white) 70%, var(--app-rule));
+    border-radius: 28px;
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklch, var(--auth-white) 80%, transparent),
+      0 1px 2px oklch(20% 0.02 355 / 0.04),
+      0 14px 34px -24px oklch(30% 0.06 355 / 0.28);
     transition: box-shadow 220ms var(--auth-ease-out), transform 220ms var(--auth-ease-out), border-color 220ms ease;
   }
   .app-card[data-interactive="true"] {
@@ -733,10 +822,21 @@
   @media (hover: hover) and (pointer: fine) {
     .app-card[data-interactive="true"]:hover {
       transform: translateY(-3px);
-      border-color: color-mix(in oklch, var(--auth-vino) 25%, var(--app-rule));
-      box-shadow: 0 16px 32px -18px var(--auth-vino-shadow);
+      border-color: color-mix(in oklch, var(--auth-vino) 22%, var(--app-rule));
+      box-shadow:
+        inset 0 1px 0 color-mix(in oklch, var(--auth-white) 80%, transparent),
+        0 22px 40px -22px var(--auth-vino-shadow);
     }
   }
+  /* Tarjeta "protagonista" del bento: ciruela sólida pero suave, texto blanco, chip de vidrio claro */
+  .app-card[data-tone="solid"] {
+    background-color: var(--auth-vino);
+    background-image: linear-gradient(160deg, color-mix(in oklch, var(--auth-white) 16%, transparent) 0%, transparent 50%, color-mix(in oklch, black 12%, transparent) 100%);
+    border-color: color-mix(in oklch, var(--auth-white) 18%, transparent);
+    color: var(--auth-white);
+  }
+  .app-card[data-tone="solid"] .app-tile-icon,
+  .app-card[data-tone="solid"] .app-nav-icon { color: var(--auth-white); }
 
   .app-tile-icon {
     display: grid;
@@ -744,7 +844,6 @@
     width: 44px;
     height: 44px;
     border-radius: 14px;
-    color: var(--auth-white);
   }
   .app-tag {
     display: inline-flex;
@@ -775,11 +874,13 @@
   }
   .route-loading-rings {
     position: relative;
-    width: 120px;
-    height: 120px;
+    width: 260px;
+    height: 260px;
     display: grid;
     place-items: center;
   }
+  /* Salida del splash del servidor (RouteChangeOverlay le agrega la clase antes de quitarlo) */
+  .route-loading-out { opacity: 0; transition: opacity 200ms ease; pointer-events: none; }
   .route-loading-ring {
     position: absolute;
     inset: 0;

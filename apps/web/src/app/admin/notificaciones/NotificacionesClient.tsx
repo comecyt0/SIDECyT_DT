@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bell, CheckCheck, Loader2, BellOff, Check } from 'lucide-react';
+import { Bell, CheckCheck, Loader2, BellOff, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '@/lib/api';
 import { colorMap } from '@/lib/color-mapper';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -147,11 +147,11 @@ export default function NotificacionesClient({ notifs, pagination }: Props) {
           {lastPage > 1 && (
             <div className="flex items-center justify-center gap-4 p-4 border-t border-neutral-100 dark:border-neutral-700">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
-                ← Anterior
+                <ChevronLeft className="w-4 h-4" /> Anterior
               </Button>
               <span className="text-sm text-neutral-500 dark:text-neutral-400">Página {page} de {lastPage}</span>
               <Button variant="outline" size="sm" disabled={page >= lastPage} onClick={() => goToPage(page + 1)}>
-                Siguiente →
+                Siguiente <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
           )}

@@ -3,12 +3,61 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\ValidatesBinaryMimeTypes;
 use App\Models\CarouselSlide;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class CarouselController extends Controller
 {
+    use ValidatesBinaryMimeTypes;
+
+    /** Carpeta dentro de Storage::disk('public') donde viven las imágenes subidas del carrusel. */
+    private const UPLOAD_DIR = 'carousel';
+
+    /**
+     * POST /admin/carousel/upload  (multipart: `imagen`)
+     *
+     * Sube una imagen local del administrador y devuelve la ruta RELATIVA `/storage/carousel/<hash>.<ext>`
+     * para pegarla en `imagen_url`. Relativa a propósito: la misma URL sirve por el dominio y por la IP
+     * interna, y la CSP `img-src 'self'` la cubre sin abrir orígenes. Se valida el MIME real con
+     * finfo (no la extensión) y se renombra con un hash — nunca se conserva el nombre original.
+     * 14/09/2026, a pedido del usuario. Ver docs/DISENO_UI.md §Carrusel.
+     */
+    public function upload(Request $request)
+    {
+        $request->validate([
+            'imagen' => 'required|file|max:8192|mimes:jpg,jpeg,png,webp',
+        ]);
+
+        $file = $request->file('imagen');
+        // getPathname(), no getRealPath(): en Windows/IIS realpath del temporal puede devolver false.
+        $mime = $this->validateBinaryMimeType($file->getPathname(), ['image/jpeg', 'image/png', 'image/webp']);
+
+        $ext = match ($mime) {
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+        };
+        $name = Str::lower(Str::random(24)).'.'.$ext;
+
+        // No usar putFileAs(): por dentro hace fopen($file->getRealPath()) y en este IIS realpath()
+        // del temporal devuelve false → "Path must not be empty" (E28). Se escribe el contenido directo.
+        $contenido = file_get_contents($file->getPathname());
+        if ($contenido === false || $contenido === '') {
+            return response()->json(['message' => 'No se pudo leer el archivo subido.'], 422);
+        }
+        Storage::disk('public')->put(self::UPLOAD_DIR.'/'.$name, $contenido);
+
+        return response()->json([
+            'message' => 'Imagen subida.',
+            'imagen_url' => '/storage/'.self::UPLOAD_DIR.'/'.$name,
+            'mime' => $mime,
+            'size' => $file->getSize(),
+        ], 201);
+    }
+
     /**
      * SEV-1 — Allowlist de hostnames permitidos en `imagen_url`.
      * Mitiga SSRF y abuso del carrusel público (login) como vector de tracking
@@ -37,9 +86,16 @@ class CarouselController extends Controller
             $required ? 'required' : 'nullable',
             'string',
             'max:500',
-            'url',
             function ($attr, $value, $fail) {
                 if (! $value) {
+                    return;
+                }
+                // Imagen subida desde el panel: ruta relativa propia, sin host → no hay SSRF posible.
+                if (preg_match('#^/storage/'.self::UPLOAD_DIR.'/[a-z0-9]+\.(jpg|png|webp)$#', $value)) {
+                    return;
+                }
+                if (! filter_var($value, FILTER_VALIDATE_URL)) {
+                    $fail('Debe ser una URL http(s) o una imagen subida desde el panel.');
                     return;
                 }
                 $parsed = parse_url($value);

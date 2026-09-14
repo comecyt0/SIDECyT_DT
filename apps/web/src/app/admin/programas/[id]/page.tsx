@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, Edit, Trash2, ArrowLeft } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, ArrowLeft, Check } from 'lucide-react';
 import api from '@/lib/api';
 import { NestedCRUDModal } from '@/components/admin/NestedCRUDModal';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -313,7 +313,7 @@ export default function ProgramaDetailPage() {
                     <>
                       <TableCell>{item.nombre_campo}</TableCell>
                       <TableCell><Badge variant="outline">{item.tipo_campo}</Badge></TableCell>
-                      <TableCell>{item.requerido ? '✓' : '—'}</TableCell>
+                      <TableCell>{item.requerido ? <Check className="w-4 h-4 text-emerald-600" aria-label="Requerido" /> : '—'}</TableCell>
                       <TableCell>{item.orden}</TableCell>
                     </>
                   )}

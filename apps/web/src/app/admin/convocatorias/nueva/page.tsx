@@ -32,6 +32,7 @@ import {
   Edit2,
   Loader2,
   CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -1491,7 +1492,10 @@ export default function ConvocatoriasNuevaPage() {
 
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-900">
-                  <strong>Ponderación Total:</strong> {totalPonderacion}% {totalPonderacion === 100 ? '✅' : '❌'}
+                  <strong>Ponderación Total:</strong> {totalPonderacion}%{' '}
+                  {totalPonderacion === 100
+                    ? <CheckCircle className="inline w-4 h-4 text-emerald-600 align-text-bottom" aria-label="Correcto" />
+                    : <XCircle className="inline w-4 h-4 text-red-500 align-text-bottom" aria-label="Debe sumar 100" />}
                 </p>
               </div>
 

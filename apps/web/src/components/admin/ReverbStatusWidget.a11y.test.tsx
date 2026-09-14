@@ -30,7 +30,7 @@ describe('ReverbStatusWidget — accesibilidad', () => {
     const { container } = render(<ReverbStatusWidget />);
 
     await waitFor(() => {
-      expect(container.textContent ?? '').toMatch(/Daemon/);
+      expect(container.textContent ?? '').toMatch(/Funcionando/);
     });
 
     const results = await axe(container);

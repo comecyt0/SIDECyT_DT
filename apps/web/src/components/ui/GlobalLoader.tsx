@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -13,13 +13,43 @@ interface LoaderContextType {
 
 const LoaderContext = createContext<LoaderContextType | undefined>(undefined);
 
+/** Una vez visible, no desaparece antes de esto — evita el parpadeo de un spinner que se
+ * alcanza a ver 80 ms. Ver docs/DISENO_UI.md §Pantalla de carga. */
+const MIN_VISIBLE_MS = 1000;
+
 /**
  * Global Loader Provider
  * Proporciona un loading screen global para la aplicación
  */
 export function GlobalLoaderProvider({ children }: { children: React.ReactNode }) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoadingState] = useState(false);
   const [message, setMessage] = useState<string | undefined>();
+  const shownAtRef = useRef<number | null>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const setIsLoading = useCallback((loading: boolean) => {
+    if (loading) {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+      shownAtRef.current = Date.now();
+      setIsLoadingState(true);
+      return;
+    }
+    const elapsed = shownAtRef.current ? Date.now() - shownAtRef.current : MIN_VISIBLE_MS;
+    const remaining = Math.max(0, MIN_VISIBLE_MS - elapsed);
+    if (remaining === 0) {
+      shownAtRef.current = null;
+      setIsLoadingState(false);
+    } else {
+      hideTimerRef.current = setTimeout(() => {
+        shownAtRef.current = null;
+        hideTimerRef.current = null;
+        setIsLoadingState(false);
+      }, remaining);
+    }
+  }, []);
 
   return (
     <LoaderContext.Provider value={{ isLoading, setIsLoading, message, setMessage }}>
@@ -56,10 +86,10 @@ export function RouteLoadingScreen({ message }: { message?: string }) {
         <Image
           src="/logo.png"
           alt={message ?? 'Cargando'}
-          width={72}
-          height={56}
+          width={185}
+          height={144}
           priority
-          className="route-loading-logo h-14 w-auto object-contain"
+          className="route-loading-logo h-36 w-auto object-contain"
         />
       </div>
       {message && <p className="sr-only">{message}</p>}

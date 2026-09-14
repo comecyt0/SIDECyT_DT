@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import ReverbStatusWidget from './ReverbStatusWidget';
 
 vi.mock('@/lib/api', () => ({
@@ -36,11 +36,13 @@ describe('ReverbStatusWidget', () => {
 
     render(<ReverbStatusWidget />);
     await waitFor(() => {
-      expect(screen.getByText(/Daemon escuchando/i)).toBeInTheDocument();
+      expect(screen.getByText(/Funcionando con normalidad/i)).toBeInTheDocument();
     });
+    // 14/09/2026: sin jerga a la vista — host y latencia solo dentro de "Información para soporte"
+    expect(screen.queryByText('127.0.0.1:8080')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Información para soporte/i }));
     expect(screen.getByText(/42 ms/)).toBeInTheDocument();
     expect(screen.getByText('127.0.0.1:8080')).toBeInTheDocument();
-    expect(screen.getByText('reverb')).toBeInTheDocument();
   });
 
   it('muestra estado no-reachable con hint de error', async () => {
@@ -60,8 +62,9 @@ describe('ReverbStatusWidget', () => {
 
     render(<ReverbStatusWidget />);
     await waitFor(() => {
-      expect(screen.getByText(/Daemon no responde/i)).toBeInTheDocument();
+      expect(screen.getByText(/Sin conexión en este momento/i)).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByRole('button', { name: /Información para soporte/i }));
     expect(screen.getByText(/Connection refused/i)).toBeInTheDocument();
   });
 
@@ -69,7 +72,7 @@ describe('ReverbStatusWidget', () => {
     mockedGet.mockRejectedValue(new Error('500'));
     render(<ReverbStatusWidget />);
     await waitFor(() => {
-      expect(screen.getByText(/Sin datos/i)).toBeInTheDocument();
+      expect(screen.getByText(/No se pudo comprobar/i)).toBeInTheDocument();
     });
   });
 });

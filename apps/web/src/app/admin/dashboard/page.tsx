@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   Users,
   FileText,
@@ -13,16 +14,21 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowUpRight,
+  ArrowRight,
   FileSpreadsheet,
+  UserCheck,
+  KeyRound,
+  Banknote,
+  Activity,
+  BookOpen,
   Sparkles,
 } from 'lucide-react';
 import api from '@/lib/api';
-import { motion } from 'framer-motion';
-import Link from 'next/link';
 import { AlertBox } from '@/components/ui/alert-box';
 import type { DashboardStat, AlertItem } from '@/types/api';
 import ReverbStatusWidget from '@/components/admin/ReverbStatusWidget';
 import { INSTITUTION } from '@/lib/institution';
+import { formatDate } from '@/lib/format';
 import {
   ResponsiveContainer,
   BarChart,
@@ -57,6 +63,14 @@ interface ChartsResponse {
   distribucion_estado: DistribucionEstado[];
 }
 
+interface AuditRow {
+  id: number;
+  action: string;
+  subject_type?: string | null;
+  created_at: string;
+  user?: { id: number; name: string; email: string } | null;
+}
+
 const ESTADO_COLORS: Record<string, string> = {
   borrador: '#94a3b8',
   enviada: '#f59e0b',
@@ -85,6 +99,9 @@ const ESTADO_LABEL: Record<string, string> = {
   cancelada: 'Cancelada',
 };
 
+/** Estados que cuentan como "avanzó": ya pasó la aprobación. */
+const ESTADOS_AVANZADOS = new Set(['aprobada', 'convenio', 'ministracion', 'seguimiento', 'cerrada']);
+
 const currencyFmt = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
@@ -96,7 +113,7 @@ const IconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Clock,
 };
 
-/** Rotación de 4 tonos institucionales para los tiles del dashboard — ver globals.css §--tile-*. */
+/** Rotación de 4 tonos institucionales — ver globals.css §--tile-*. */
 const TILE_TONES = [
   { bg: 'var(--tile-vino-bg)', fg: 'var(--tile-vino-fg)' },
   { bg: 'var(--tile-gold-bg)', fg: 'var(--tile-gold-fg)' },
@@ -111,14 +128,30 @@ function greeting(): string {
   return 'Buenas noches';
 }
 
+function todayLabel(): string {
+  const s = new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** "user.2fa_disabled" → "2fa disabled" legible; conserva el sujeto si viene. */
+function humanizeAction(row: AuditRow): string {
+  const raw = row.action.replace(/^[a-z]+\./, '').replace(/[._]+/g, ' ');
+  const subject = row.subject_type ? row.subject_type.split('\\').pop() : null;
+  return subject ? `${raw} · ${subject}` : raw;
+}
+
 export default function AdminDashboard() {
+  const reduceMotion = useReducedMotion();
   const [userName, setUserName] = useState('');
   const [stats, setStats] = useState<DashboardStat[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [charts, setCharts] = useState<ChartsResponse | null>(null);
+  const [accesosPendientes, setAccesosPendientes] = useState<number | null>(null);
+  const [resetsPendientes, setResetsPendientes] = useState<number | null>(null);
+  const [actividad, setActividad] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
-  const [convActiva, setConvActiva] = useState<string | null>(null);
+  const [convActiva, setConvActiva] = useState<{ nombre: string; cierre?: string | null } | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -144,324 +177,416 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
+    const safe = <T,>(p: Promise<{ data: T }>, fallback: T) => p.then((r) => r.data).catch(() => fallback);
     Promise.all([
-      api.get('/admin/stats'),
-      api.get('/admin/alerts'),
-      api.get('/admin/convocatorias'),
-      api.get<ChartsResponse>('/admin/charts'),
+      safe(api.get<DashboardStat[]>('/admin/stats'), []),
+      safe(api.get<AlertItem[]>('/admin/alerts'), []),
+      safe(api.get<Array<{ estado?: string; nombre?: string; fecha_cierre?: string | null }>>('/admin/convocatorias'), []),
+      safe(api.get<ChartsResponse | null>('/admin/charts'), null),
+      safe(api.get<Array<{ estado?: string }>>('/admin/solicitudes-acceso'), []),
+      safe(api.get<Array<{ status?: string }>>('/admin/reset-requests'), []),
+      safe(api.get<{ data?: AuditRow[] } | AuditRow[]>('/admin/audit-logs?per_page=6'), { data: [] }),
     ])
-      .then(([{ data: statsData }, { data: alertsData }, { data: convData }, { data: chartsData }]) => {
-        const stats = Array.isArray(statsData) ? statsData : [];
-        const alerts = Array.isArray(alertsData) ? alertsData : [];
-        const convocatorias = Array.isArray(convData) ? convData : [];
-
-        setStats(stats);
-        setAlerts(alerts);
+      .then(([statsData, alertsData, convData, chartsData, accesos, resets, audit]) => {
+        setStats(Array.isArray(statsData) ? statsData : []);
+        setAlerts(Array.isArray(alertsData) ? alertsData : []);
         setCharts(chartsData ?? null);
-
-        const activa = convocatorias.find((c: { estado?: string; nombre?: string }) => c.estado === 'activa');
-        setConvActiva(activa ? (activa.nombre ?? null) : null);
-      })
-      .catch((err) => {
-        console.error('Error fetching admin data:', err?.response?.data || err);
-        setStats([]);
-        setAlerts([]);
-        setCharts(null);
-        setConvActiva(null);
+        const activa = (Array.isArray(convData) ? convData : []).find((c) => c.estado === 'activa');
+        setConvActiva(activa?.nombre ? { nombre: activa.nombre, cierre: activa.fecha_cierre ?? null } : null);
+        setAccesosPendientes((Array.isArray(accesos) ? accesos : []).filter((a) => a.estado === 'pendiente').length);
+        setResetsPendientes((Array.isArray(resets) ? resets : []).filter((r) => r.status === 'pending').length);
+        const rows = Array.isArray(audit) ? audit : (audit?.data ?? []);
+        setActividad(rows);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.06 } },
+  const statValue = (title: string): number | null => {
+    const s = stats.find((x) => x.title === title);
+    return s ? Number(s.value) || 0 : null;
   };
+
+  const pipelineTotal = charts?.distribucion_estado.reduce((a, b) => a + b.total, 0) ?? 0;
+  const pipelineAvanzadas = charts?.distribucion_estado.filter((d) => ESTADOS_AVANZADOS.has(d.estado)).reduce((a, b) => a + b.total, 0) ?? 0;
+  const pipelinePct = pipelineTotal > 0 ? pipelineAvanzadas / pipelineTotal : 0;
+
+  const pendientes = [
+    { key: 'accesos', label: 'Solicitudes de acceso', hint: 'Cuentas por aprobar', value: accesosPendientes, href: '/admin/solicitudes-acceso', icon: UserCheck, tone: TILE_TONES[0] },
+    { key: 'resets', label: 'Restablecimientos', hint: 'Contraseñas por autorizar', value: resetsPendientes, href: '/admin/reset-requests', icon: KeyRound, tone: TILE_TONES[1] },
+    { key: 'revision', label: 'Solicitudes en revisión', hint: 'Enviadas u observadas', value: statValue('Solicitudes en Revisión'), href: '/admin/solicitudes', icon: FileText, tone: TILE_TONES[2] },
+    { key: 'ministraciones', label: 'Ministraciones pendientes', hint: 'Pagos por liberar', value: statValue('Ministraciones Pendientes'), href: '/admin/ministraciones', icon: Banknote, tone: TILE_TONES[3] },
+  ];
+
+  const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } };
   const itemVariants = {
-    hidden: { opacity: 0, y: 16 },
+    hidden: { opacity: 0, y: reduceMotion ? 0 : 14 },
     show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 320, damping: 26 } },
   };
 
+  const RING_R = 52;
+  const RING_C = 2 * Math.PI * RING_R;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {exportError && <AlertBox type="error" message={exportError} onClose={() => setExportError(null)} />}
 
-      {/* Encabezado — saludo real (hora del cliente + nombre de la cookie de sesión) */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-        <div>
-          <p className="app-tag mb-2">
-            <Sparkles className="w-3 h-3" /> {INSTITUTION.name} · {INSTITUTION.state}
+      {/* ── Fila 1: héroe + anillo de avance ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        <section className="app-card relative overflow-hidden xl:col-span-2 p-7 md:p-8" style={{ isolation: 'isolate' }}>
+          {/* Manchas suaves del mismo sistema del login, muy tenues sobre papel */}
+          <div aria-hidden="true" className="absolute inset-0 -z-10 pointer-events-none">
+            <span className="auth-blob auth-blob-2" style={{ transform: 'translate(55%, -45%) scale(0.9)', opacity: 0.5 }} />
+            <span className="auth-blob auth-blob-3" style={{ transform: 'translate(70%, 20%) scale(0.7)', opacity: 0.45 }} />
+          </div>
+          <p className="app-tag mb-3">
+            <Sparkles className="w-3 h-3" /> {todayLabel()}
           </p>
-          <h1 className="text-[clamp(1.75rem,2.6vw,2.25rem)] font-bold tracking-tight text-[var(--app-ink)]">
+          <h1 className="text-[clamp(1.875rem,3vw,2.5rem)] font-bold tracking-tight text-[var(--app-ink)] leading-[1.05]">
             {greeting()}{userName ? `, ${userName}` : ''}
           </h1>
-          <p className="text-[var(--app-ink-2)] mt-1">
+          <p className="mt-3 max-w-[52ch] text-[15px] text-[var(--app-ink-2)] leading-relaxed">
             {convActiva ? (
-              <>Convocatoria activa: <span className="font-semibold text-[var(--app-ink)]">{convActiva}</span></>
+              <>
+                Convocatoria activa: <span className="font-semibold text-[var(--app-ink)]">{convActiva.nombre}</span>
+                {convActiva.cierre && <> · cierra el <span className="font-semibold text-[var(--app-ink)]">{formatDate(convActiva.cierre)}</span></>}
+              </>
             ) : (
-              'Sin convocatoria activa en este momento.'
+              'No hay ninguna convocatoria activa en este momento.'
             )}
           </p>
-        </div>
-        <div className="flex items-center gap-2.5 shrink-0">
-          <motion.button
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleExportExcel}
-            disabled={exporting}
-            className="flex items-center gap-2 border border-[var(--app-rule)] text-[var(--app-ink)] px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-[var(--app-hover-bg)] transition-colors disabled:opacity-50"
-          >
-            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
-            Exportar Excel
-          </motion.button>
-          <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }}>
-            <Link
-              href="/admin/convocatorias"
-              className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-[0_8px_20px_-10px_var(--auth-vino-shadow)] hover:bg-[var(--brand-vino-700)] transition-colors"
+          <div className="mt-6 flex flex-wrap items-center gap-2.5">
+            <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }}>
+              <Link href="/admin/convocatorias" className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-[0_8px_20px_-10px_var(--auth-vino-shadow)] hover:bg-[var(--brand-vino-700)] transition-colors">
+                <BookOpen className="h-4 w-4" /> Gestionar convocatorias
+              </Link>
+            </motion.div>
+            <motion.button
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleExportExcel}
+              disabled={exporting}
+              className="inline-flex items-center gap-2 border border-[var(--app-rule)] bg-[var(--app-card-bg)] text-[var(--app-ink)] px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-[var(--app-hover-bg)] transition-colors disabled:opacity-50"
             >
-              Gestionar Convocatorias
-            </Link>
-          </motion.div>
-        </div>
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+              Exportar Excel
+            </motion.button>
+          </div>
+        </section>
+
+        {/* Anillo de avance — datos reales de /admin/charts */}
+        <section className="app-card p-6 flex flex-col">
+          <p className="text-sm font-bold text-[var(--app-ink)]">Avance de solicitudes</p>
+          <p className="text-xs text-[var(--app-ink-2)] mt-0.5">Cuántas ya pasaron la aprobación</p>
+          <div className="flex-1 flex items-center justify-center py-4">
+            {loading ? (
+              <div className="skeleton h-32 w-32 rounded-full" />
+            ) : (
+              <div className="relative h-36 w-36">
+                <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90" aria-hidden="true">
+                  <circle cx="64" cy="64" r={RING_R} fill="none" stroke="var(--app-hover-bg)" strokeWidth="10" />
+                  <motion.circle
+                    cx="64"
+                    cy="64"
+                    r={RING_R}
+                    fill="none"
+                    stroke="var(--auth-vino)"
+                    strokeWidth="10"
+                    strokeLinecap="round"
+                    strokeDasharray={RING_C}
+                    initial={{ strokeDashoffset: RING_C }}
+                    animate={{ strokeDashoffset: RING_C * (1 - pipelinePct) }}
+                    transition={{ duration: reduceMotion ? 0 : 1.1, ease: [0.23, 1, 0.32, 1] }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-3xl font-extrabold text-[var(--app-ink)] tracking-tight">{Math.round(pipelinePct * 100)}%</span>
+                  <span className="text-[11px] text-[var(--app-ink-2)]">{pipelineAvanzadas} de {pipelineTotal}</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-[var(--app-ink-2)] text-center">
+            {pipelineTotal === 0 ? 'Aún no hay solicitudes registradas.' : 'Aprobadas, en convenio, ministración, seguimiento o cerradas.'}
+          </p>
+        </section>
       </div>
 
-      {/* Tiles de estadísticas — 4 tonos institucionales en rotación, datos reales de /admin/stats */}
-      <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {loading ? (
-          Array(4).fill(0).map((_, i) => <div key={i} className="skeleton h-32 rounded-[22px]" />)
-        ) : stats.length === 0 ? (
-          <div className="app-card sm:col-span-2 xl:col-span-4 p-8 text-center text-sm text-[var(--app-ink-2)]">
-            No se pudieron cargar las estadísticas.
+      {/* ── Fila 2: pendientes ahora (tiles accionables) ── */}
+      <section>
+        <div className="flex items-end justify-between mb-3">
+          <div>
+            <h2 className="text-base font-bold text-[var(--app-ink)]">Pendientes ahora</h2>
+            <p className="text-xs text-[var(--app-ink-2)]">Lo que espera una decisión tuya. Cada tarjeta abre su sección.</p>
           </div>
-        ) : (
-          stats.map((stat, i) => {
-            const Icon = IconMap[stat.icon] || Bookmark;
-            const tone = TILE_TONES[i % TILE_TONES.length];
-            const trendUp = stat.trend?.trim().startsWith('-') !== true;
+        </div>
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {pendientes.map((p, i) => {
+            const Icon = p.icon;
+            const n = loading ? null : p.value;
+            // Bento: la primera tarjeta es la "protagonista" ciruela; el resto, pastel con veladura.
+            const solid = i === 0;
             return (
-              <motion.div key={stat.title} variants={itemVariants}>
-                <div className="app-card p-5" data-interactive="true" style={{ background: tone.bg }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="app-tile-icon" style={{ background: tone.fg }}>
+              <motion.div key={p.key} variants={itemVariants}>
+                <Link
+                  href={p.href}
+                  className="app-card block p-5 group outline-none focus-visible:ring-4"
+                  data-interactive="true"
+                  data-tone={solid ? 'solid' : undefined}
+                  style={solid ? undefined : { backgroundColor: p.tone.bg }}
+                >
+                  <div className="flex items-start justify-between">
+                    <span className="app-tile-icon" style={solid ? undefined : { color: p.tone.fg }}>
                       <Icon className="h-5 w-5" />
                     </span>
+                    <span className="app-nav-icon !w-8 !h-8 !rounded-lg transition-transform duration-200 group-hover:translate-x-0.5" style={solid ? undefined : { color: p.tone.fg }}>
+                      <ArrowRight className="h-4 w-4" />
+                    </span>
+                  </div>
+                  <p className={`mt-5 text-4xl font-extrabold tracking-tight ${solid ? 'text-white' : 'text-[var(--app-ink)]'}`}>
+                    {n === null ? <span className="skeleton inline-block h-9 w-14 rounded-md align-middle" /> : n}
+                  </p>
+                  <p className={`text-sm font-semibold mt-1 ${solid ? 'text-white' : 'text-[var(--app-ink)]'}`}>{p.label}</p>
+                  <p className={`text-xs ${solid ? 'text-white/75' : 'text-[var(--app-ink-2)]'}`}>{n === 0 ? 'Al día' : p.hint}</p>
+                </Link>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </section>
+
+      {/* ── Fila 3: indicadores ── */}
+      <section>
+        <h2 className="text-base font-bold text-[var(--app-ink)] mb-3">Indicadores generales</h2>
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
+          {loading ? (
+            Array(7).fill(0).map((_, i) => <div key={i} className="skeleton h-24 rounded-[22px]" />)
+          ) : stats.length === 0 ? (
+            <div className="app-card col-span-full p-6 text-center text-sm text-[var(--app-ink-2)]">No se pudieron cargar los indicadores.</div>
+          ) : (
+            stats.map((stat, i) => {
+              const Icon = IconMap[stat.icon] || Bookmark;
+              const tone = TILE_TONES[i % TILE_TONES.length];
+              const trendUp = stat.trend?.trim().startsWith('-') !== true;
+              return (
+                <motion.div key={stat.title} variants={itemVariants} className="app-card p-4" data-interactive="true">
+                  <div className="flex items-center justify-between">
+                    <span className="app-tile-icon !w-9 !h-9 !rounded-lg" style={{ color: tone.fg }}>
+                      <Icon className="h-4 w-4" />
+                    </span>
                     {stat.trend && (
-                      <span className="flex items-center gap-1 text-xs font-bold" style={{ color: tone.fg }}>
-                        {trendUp ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                      <span className="flex items-center gap-1 text-[11px] font-bold" style={{ color: tone.fg }}>
+                        {trendUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                         {stat.trend}
                       </span>
                     )}
                   </div>
-                  <p className="text-3xl font-extrabold text-[var(--app-ink)] tracking-tight">{stat.value}</p>
-                  <p className="text-xs font-semibold text-[var(--app-ink-2)] mt-1">{stat.title}</p>
-                </div>
-              </motion.div>
-            );
-          })
-        )}
-      </motion.div>
+                  <p className="mt-3 text-2xl font-extrabold text-[var(--app-ink)] tracking-tight">{stat.value}</p>
+                  <p className="text-[11px] font-semibold text-[var(--app-ink-2)] leading-snug mt-0.5">{stat.title}</p>
+                </motion.div>
+              );
+            })
+          )}
+        </motion.div>
+      </section>
 
-      {/* Operación en tiempo real */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <ReverbStatusWidget />
-        <div className="md:col-span-2 app-card px-6 py-5 text-xs text-[var(--app-ink-2)]">
-          <p className="font-bold text-[var(--app-ink)] text-sm mb-2">Estado del sistema</p>
-          <ul className="space-y-1.5">
-            <li>· Respaldo diario programado a las 02:00 hrs.</li>
-            <li>
-              · Bitácora de auditoría disponible en{' '}
-              <Link href="/admin/audit-logs" className="font-semibold text-primary hover:underline">
-                /admin/audit-logs
-              </Link>
-              .
-            </li>
-            <li>· Si las notificaciones en tiempo real no responden, contactar al equipo de soporte técnico.</li>
-          </ul>
-        </div>
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="lg:col-span-2">
-          <Card className="app-card border-0 h-full overflow-hidden bg-transparent">
-            <CardHeader className="flex flex-row items-center justify-between border-b p-6" style={{ borderColor: 'var(--app-rule)' }}>
+      {/* ── Fila 4: gráficas + columna derecha ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        <div className="xl:col-span-2 space-y-5">
+          <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="app-card overflow-hidden">
+            <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: 'var(--app-rule)' }}>
               <div>
-                <CardTitle className="text-base font-bold text-[var(--app-ink)]">Solicitudes por Mes</CardTitle>
+                <p className="text-base font-bold text-[var(--app-ink)]">Solicitudes por mes</p>
                 <p className="text-xs text-[var(--app-ink-2)] mt-0.5">Últimos 12 meses</p>
               </div>
               <Link href="/admin/solicitudes" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
                 Ver detalle <ArrowUpRight className="h-3 w-3" />
               </Link>
-            </CardHeader>
-            <CardContent className="p-5 pt-4">
+            </div>
+            <div className="p-5 pt-4">
               {loading ? (
-                <div className="h-72 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
-                </div>
+                <div className="h-64 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary/30" /></div>
               ) : !charts || charts.series_mensual.length === 0 ? (
-                <div className="h-72 flex flex-col items-center justify-center text-[var(--app-ink-2)] border-2 border-dashed rounded-2xl" style={{ borderColor: 'var(--app-rule)' }}>
-                  <FileText className="h-10 w-10 mb-2 opacity-20" />
-                  <p className="text-xs">Sin datos suficientes</p>
-                </div>
+                <EmptyChart icon={FileText} text="Sin datos suficientes" />
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={charts.series_mensual} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--app-rule)" vertical={false} />
                     <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={28} />
-                    <Tooltip
-                      formatter={(v) => [String(v ?? 0), 'Solicitudes']}
-                      labelFormatter={(l) => `Mes: ${String(l ?? '')}`}
-                      contentStyle={{ borderRadius: 12, fontSize: 12, border: '1px solid var(--app-rule)' }}
-                    />
+                    <Tooltip formatter={(v) => [String(v ?? 0), 'Solicitudes']} labelFormatter={(l) => `Mes: ${String(l ?? '')}`} contentStyle={{ borderRadius: 12, fontSize: 12, border: '1px solid var(--app-rule)' }} />
                     <Bar dataKey="solicitudes" fill="var(--brand-vino)" radius={[6, 6, 0, 0]} maxBarSize={36} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
-            </CardContent>
-          </Card>
-        </motion.div>
+            </div>
+          </motion.section>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="app-card border-0 h-full overflow-hidden bg-transparent">
-            <CardHeader className="border-b p-6" style={{ borderColor: 'var(--app-rule)' }}>
-              <CardTitle className="text-base font-bold text-[var(--app-ink)]">Distribución por Estado</CardTitle>
-              <p className="text-xs text-[var(--app-ink-2)] mt-0.5">Snapshot actual</p>
-            </CardHeader>
-            <CardContent className="p-4">
-              {loading ? (
-                <div className="h-72 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
-                </div>
-              ) : !charts || charts.distribucion_estado.length === 0 ? (
-                <div className="h-72 flex flex-col items-center justify-center text-[var(--app-ink-2)] border-2 border-dashed rounded-2xl" style={{ borderColor: 'var(--app-rule)' }}>
-                  <FileText className="h-10 w-10 mb-2 opacity-20" />
-                  <p className="text-xs">Sin datos</p>
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <PieChart>
-                    <Pie data={charts.distribucion_estado} dataKey="total" nameKey="estado" cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={2}>
-                      {charts.distribucion_estado.map((entry) => (
-                        <Cell key={entry.estado} fill={ESTADO_COLORS[entry.estado] ?? '#94a3b8'} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(v, _name, p) => {
-                        const estado = (p as { payload?: { estado?: string } } | undefined)?.payload?.estado ?? '';
-                        return [String(v ?? 0), ESTADO_LABEL[estado] ?? estado];
-                      }}
-                      contentStyle={{ borderRadius: 12, fontSize: 12, border: '1px solid var(--app-rule)' }}
-                    />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} formatter={(value: string) => ESTADO_LABEL[value] ?? value} />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Monto solicitado vs aprobado (Line) + Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.35 }} className="lg:col-span-2">
-          <Card className="app-card border-0 overflow-hidden bg-transparent">
-            <CardHeader className="flex flex-row items-center justify-between border-b p-6" style={{ borderColor: 'var(--app-rule)' }}>
-              <div>
-                <CardTitle className="text-base font-bold text-[var(--app-ink)]">Monto Solicitado vs Aprobado</CardTitle>
-                <p className="text-xs text-[var(--app-ink-2)] mt-0.5">Comparativo mensual MXN</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="app-card overflow-hidden">
+              <div className="border-b px-6 py-4" style={{ borderColor: 'var(--app-rule)' }}>
+                <p className="text-base font-bold text-[var(--app-ink)]">Distribución por estado</p>
+                <p className="text-xs text-[var(--app-ink-2)] mt-0.5">Foto actual</p>
               </div>
-              <Link href="/admin/convenios" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
-                Ver convenios <ArrowUpRight className="h-3 w-3" />
-              </Link>
-            </CardHeader>
-            <CardContent className="p-5 pt-4">
-              {loading ? (
-                <div className="h-72 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
-                </div>
-              ) : !charts || charts.series_mensual.length === 0 ? (
-                <div className="h-72 flex flex-col items-center justify-center text-[var(--app-ink-2)] border-2 border-dashed rounded-2xl" style={{ borderColor: 'var(--app-rule)' }}>
-                  <TrendingUp className="h-10 w-10 mb-2 opacity-20" />
-                  <p className="text-xs">Sin montos suficientes</p>
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={charts.series_mensual} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--app-rule)" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <YAxis
-                      tickFormatter={(v) => {
-                        const n = Number(v ?? 0);
-                        return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(0)}k` : String(n);
-                      }}
-                      tick={{ fontSize: 11, fill: '#94a3b8' }}
-                      axisLine={false}
-                      tickLine={false}
-                      width={48}
-                    />
-                    <Tooltip formatter={(v) => currencyFmt(Number(v ?? 0))} contentStyle={{ borderRadius: 12, fontSize: 12, border: '1px solid var(--app-rule)' }} />
-                    <Legend iconType="line" wrapperStyle={{ fontSize: 11 }} />
-                    <Line type="monotone" dataKey="monto_solicitado" name="Solicitado" stroke="var(--brand-vino)" strokeWidth={2.5} dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="monto_aprobado" name="Aprobado" stroke="#22c55e" strokeWidth={2.5} dot={{ r: 3 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+              <div className="p-4">
+                {loading ? (
+                  <div className="h-64 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary/30" /></div>
+                ) : !charts || charts.distribucion_estado.length === 0 ? (
+                  <EmptyChart icon={FileText} text="Sin datos" />
+                ) : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <PieChart>
+                      <Pie data={charts.distribucion_estado} dataKey="total" nameKey="estado" cx="50%" cy="50%" innerRadius={48} outerRadius={84} paddingAngle={2}>
+                        {charts.distribucion_estado.map((entry) => (
+                          <Cell key={entry.estado} fill={ESTADO_COLORS[entry.estado] ?? '#94a3b8'} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(v, _name, p) => {
+                          const estado = (p as { payload?: { estado?: string } } | undefined)?.payload?.estado ?? '';
+                          return [String(v ?? 0), ESTADO_LABEL[estado] ?? estado];
+                        }}
+                        contentStyle={{ borderRadius: 12, fontSize: 12, border: '1px solid var(--app-rule)' }}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} formatter={(value: string) => ESTADO_LABEL[value] ?? value} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </motion.section>
 
-        <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
-          <Card className="app-card border-0 h-full flex flex-col bg-transparent">
-            <CardHeader className="border-b p-6" style={{ borderColor: 'var(--app-rule)' }}>
-              <CardTitle className="text-base font-bold text-[var(--app-ink)]">Alertas Críticas</CardTitle>
-              <p className="text-xs text-[var(--app-ink-2)] mt-0.5">Pendientes que requieren atención</p>
-            </CardHeader>
-            <CardContent className="space-y-3 p-5 flex-1">
+            <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="app-card overflow-hidden">
+              <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: 'var(--app-rule)' }}>
+                <div>
+                  <p className="text-base font-bold text-[var(--app-ink)]">Solicitado vs aprobado</p>
+                  <p className="text-xs text-[var(--app-ink-2)] mt-0.5">Mensual, MXN</p>
+                </div>
+                <Link href="/admin/convenios" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                  Convenios <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              </div>
+              <div className="p-4">
+                {loading ? (
+                  <div className="h-64 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary/30" /></div>
+                ) : !charts || charts.series_mensual.length === 0 ? (
+                  <EmptyChart icon={TrendingUp} text="Sin montos suficientes" />
+                ) : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <LineChart data={charts.series_mensual} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--app-rule)" vertical={false} />
+                      <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                      <YAxis
+                        tickFormatter={(v) => {
+                          const n = Number(v ?? 0);
+                          return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(0)}k` : String(n);
+                        }}
+                        tick={{ fontSize: 11, fill: '#94a3b8' }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={44}
+                      />
+                      <Tooltip formatter={(v) => currencyFmt(Number(v ?? 0))} contentStyle={{ borderRadius: 12, fontSize: 12, border: '1px solid var(--app-rule)' }} />
+                      <Legend iconType="line" wrapperStyle={{ fontSize: 11 }} />
+                      <Line type="monotone" dataKey="monto_solicitado" name="Solicitado" stroke="var(--brand-vino)" strokeWidth={2.5} dot={{ r: 3 }} />
+                      <Line type="monotone" dataKey="monto_aprobado" name="Aprobado" stroke="#22c55e" strokeWidth={2.5} dot={{ r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </motion.section>
+          </div>
+        </div>
+
+        {/* Columna derecha: actividad + alertas + sistema */}
+        <div className="space-y-5">
+          <motion.section initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }} className="app-card overflow-hidden">
+            <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: 'var(--app-rule)' }}>
+              <div>
+                <p className="text-base font-bold text-[var(--app-ink)]">Actividad reciente</p>
+                <p className="text-xs text-[var(--app-ink-2)] mt-0.5">Quién hizo qué, y cuándo</p>
+              </div>
+              <Link href="/admin/audit-logs" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                Ver todo <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <ul className="divide-y" style={{ ['--tw-divide-opacity' as string]: 1 }}>
               {loading ? (
-                Array(3).fill(0).map((_, i) => <div key={i} className="skeleton h-16 rounded-2xl" />)
+                Array(4).fill(0).map((_, i) => <li key={i} className="p-4"><div className="skeleton h-10 rounded-xl" /></li>)
+              ) : actividad.length === 0 ? (
+                <li className="p-8 text-center text-sm text-[var(--app-ink-2)]">
+                  <Activity className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  Sin actividad registrada.
+                </li>
+              ) : (
+                actividad.map((row) => {
+                  const initial = (row.user?.name || 'Sistema').charAt(0).toUpperCase();
+                  return (
+                    <li key={row.id} className="flex items-start gap-3 px-5 py-3.5 border-t first:border-t-0 hover:bg-[var(--app-hover-bg)] transition-colors" style={{ borderColor: 'var(--app-rule)' }}>
+                      <span className="h-9 w-9 rounded-xl flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: 'var(--auth-vino)' }}>
+                        {initial}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-[var(--app-ink)] truncate">{row.user?.name || 'Sistema'}</p>
+                        <p className="text-xs text-[var(--app-ink-2)] truncate capitalize">{humanizeAction(row)}</p>
+                      </div>
+                      <span className="text-[11px] text-[var(--app-ink-2)] shrink-0 whitespace-nowrap">{formatDate(row.created_at)}</span>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </motion.section>
+
+          <motion.section initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="app-card overflow-hidden">
+            <div className="border-b px-6 py-4" style={{ borderColor: 'var(--app-rule)' }}>
+              <p className="text-base font-bold text-[var(--app-ink)]">Alertas</p>
+              <p className="text-xs text-[var(--app-ink-2)] mt-0.5">Plazos e informes que requieren atención</p>
+            </div>
+            <div className="p-4 space-y-2.5">
+              {loading ? (
+                Array(2).fill(0).map((_, i) => <div key={i} className="skeleton h-14 rounded-2xl" />)
               ) : alerts.length === 0 ? (
-                <div className="text-center py-10 px-4">
-                  <div className="h-14 w-14 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ background: 'var(--tile-emerald-bg)' }}>
-                    <CheckCircle2 className="h-7 w-7" style={{ color: 'var(--tile-emerald-fg)' }} />
+                <div className="text-center py-6">
+                  <div className="h-12 w-12 rounded-2xl flex items-center justify-center mx-auto mb-2" style={{ background: 'var(--tile-emerald-bg)' }}>
+                    <CheckCircle2 className="h-6 w-6" style={{ color: 'var(--tile-emerald-fg)' }} />
                   </div>
                   <p className="text-sm font-bold text-[var(--app-ink)]">Sistema al día</p>
-                  <p className="text-xs text-[var(--app-ink-2)] mt-1">No hay alertas de prioridad alta.</p>
+                  <p className="text-xs text-[var(--app-ink-2)]">No hay alertas de prioridad alta.</p>
                 </div>
               ) : (
                 alerts.map((alert, i) => {
                   const isError = alert.type === 'error';
                   return (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.5 + i * 0.06 }}
-                      className="flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-colors duration-200 hover:border-primary/30"
-                      style={{ borderColor: 'var(--app-rule)', background: isError ? 'var(--tile-vino-bg)' : 'var(--tile-sky-bg)' }}
-                    >
-                      <span className="mt-1 h-2 w-2 rounded-full shrink-0" style={{ background: isError ? 'var(--tile-vino-fg)' : 'var(--tile-sky-fg)' }} />
-                      <div className="space-y-1">
-                        <p className="text-xs text-[var(--app-ink)] leading-relaxed font-medium">{alert.message ?? alert.mensaje}</p>
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--app-ink-2)] uppercase tracking-widest">
-                          <Clock className="h-3 w-3" />
-                          Tiempo Real
-                        </div>
-                      </div>
-                    </motion.div>
+                    <div key={i} className="flex items-start gap-3 p-3.5 rounded-2xl border" style={{ borderColor: 'var(--app-rule)', background: isError ? 'var(--tile-vino-bg)' : 'var(--tile-sky-bg)' }}>
+                      <span className="mt-1.5 h-2 w-2 rounded-full shrink-0" style={{ background: isError ? 'var(--tile-vino-fg)' : 'var(--tile-sky-fg)' }} />
+                      {/* El backend arma el texto con <strong>; el título de la convocatoria lo captura un admin,
+                          así que no se inyecta como HTML: se quitan las etiquetas y se muestra como texto. */}
+                      <p className="text-xs text-[var(--app-ink)] leading-relaxed">{(alert.message ?? alert.mensaje ?? '').replace(/<[^>]+>/g, '')}</p>
+                    </div>
                   );
                 })
               )}
-            </CardContent>
-            <div className="p-5 pt-0">
-              <Link href="/admin/notificaciones">
-                <div className="w-full py-3.5 text-xs font-bold text-[var(--app-ink-2)] hover:text-primary rounded-xl transition-all border text-center cursor-pointer" style={{ borderColor: 'var(--app-rule)' }}>
-                  Historial de Alertas
-                </div>
-              </Link>
             </div>
-          </Card>
-        </motion.div>
+          </motion.section>
+
+          <motion.section initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.35 }} className="space-y-3">
+            <ReverbStatusWidget />
+            <div className="app-card px-5 py-4 text-xs text-[var(--app-ink-2)] space-y-1">
+              <p className="font-bold text-[var(--app-ink)] text-sm">Buenas prácticas</p>
+              <p>· La información se respalda automáticamente cada noche.</p>
+              <p>· Si algo no responde como esperas, escribe a soporte: no hace falta reintentar varias veces.</p>
+            </div>
+          </motion.section>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function EmptyChart({ icon: Icon, text }: { icon: React.ComponentType<{ className?: string }>; text: string }) {
+  return (
+    <div className="h-64 flex flex-col items-center justify-center text-[var(--app-ink-2)] border-2 border-dashed rounded-2xl" style={{ borderColor: 'var(--app-rule)' }}>
+      <Icon className="h-10 w-10 mb-2 opacity-20" />
+      <p className="text-xs">{text}</p>
     </div>
   );
 }

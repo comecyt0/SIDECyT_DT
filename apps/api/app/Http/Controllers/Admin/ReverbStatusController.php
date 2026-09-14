@@ -19,6 +19,14 @@ class ReverbStatusController extends Controller
         $configured = (bool) config('reverb.apps.apps.0.key', null) || env('REVERB_APP_KEY');
         $host = (string) config('reverb.servers.reverb.host', '127.0.0.1');
         $port = (int) config('reverb.servers.reverb.port', 8080);
+
+        // `reverb.servers.reverb.host` es la dirección de *bind* del daemon (0.0.0.0 por defecto).
+        // En Linux conectar a 0.0.0.0 cae a localhost, pero en Windows falla con WSAEADDRNOTAVAIL
+        // ("The requested address is not valid in its context") y el widget decía que el daemon no
+        // respondía aunque estuviera vivo (E27, 14/09/2026). Para el chequeo, conectar a loopback.
+        if (in_array($host, ['0.0.0.0', '::', '[::]', ''], true)) {
+            $host = '127.0.0.1';
+        }
         $publicHost = (string) env('REVERB_HOST', $host);
         $scheme = (string) env('REVERB_SCHEME', 'http');
 

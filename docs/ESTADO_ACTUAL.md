@@ -11,12 +11,15 @@
 > verificación en [DISENO_UI.md](DISENO_UI.md). Respaldo del build anterior:
 > `apps\web\.next.bak-20260914-prelogin`. Corregido además el pie "Estado de MÃ©xico" (E24).
 >
-> 🎨 **14/09/2026 (misma tarde) — Panel rediseñado y publicado** (dos builds: 16:33 y 16:38, ~1 min sin
-> servicio cada uno). Sidebar único para los 4 roles (`AppShell.tsx`, E26 en `CLAUDE.md`), dashboard de
-> admin con tiles de datos reales, pantalla de carga del sistema, "¿Olvidaste tu clave?" y "Solicitar
-> acceso" con el mismo sistema del login. `logo.png` como favicon en todo el sitio (antes no había
-> `favicon.ico`, caía al ícono por defecto). Detalle y qué falta en [DISENO_UI.md](DISENO_UI.md) §5-7.
-> Respaldos: `apps\web\.next.bak-20260914-prepanel` y `-prepanel2`.
+> 🎨 **14/09/2026 (tarde) — Panel: contenido rediseñado, menú intacto.** Una primera versión cambió el menú
+> por un sidebar; **el usuario lo rechazó** y se restauró el menú original byte a byte (E26). Lo que sí
+> quedó: dashboard de admin v2 (héroe, "Pendientes ahora" accionables, anillo de avance, actividad
+> reciente — todo con datos reales), modal de usuarios, carrusel con **subida de imágenes locales**
+> (`POST /admin/carousel/upload`), `Badge` sin píldora en 27 vistas, "¿Olvidaste tu clave?" y "Solicitar
+> acceso" con el sistema del login, pantalla de carga v2 (logo grande, 1.4 s por clic en cualquier enlace,
+> también en el login) y `logo.png` como favicon. **Reverb:** el widget decía "Daemon no responde" por un
+> connect a `0.0.0.0` en Windows (E27) — corregido en PHP, el daemon siempre estuvo bien.
+> Detalle y qué falta en [DISENO_UI.md](DISENO_UI.md) §5-7.
 >
 > 🔐 **14/09/2026 — Repositorio git.** El proyecto ya tiene git (`main`, commits `e993228` base y
 > `fecb5eb` login) con remoto `https://github.com/comecyt0/SIDECyT_DT.git`, **que es público**. No se

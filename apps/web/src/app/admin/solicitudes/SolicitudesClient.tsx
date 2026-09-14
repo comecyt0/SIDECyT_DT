@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertBox } from '@/components/ui/alert-box';
-import { FileText, Loader2, FileSignature, Search, Download, CheckCheck, XCircle, Ban, PlayCircle } from 'lucide-react';
+import { FileText, Loader2, FileSignature, Search, Download, CheckCheck, XCircle, Ban, PlayCircle, Check } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import PaginationControls from '@/components/ui/pagination-controls';
 import api from '@/lib/api';
@@ -332,7 +332,7 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
                       <FileSignature className="h-3.5 w-3.5 mr-1" /> Convenio
                     </Button>
                   )}
-                  {sol.convenio && <Badge variant="outline" className="text-[10px]">✓ Convenio</Badge>}
+                  {sol.convenio && <Badge variant="outline" className="text-[10px]"><Check aria-hidden="true" /> Convenio</Badge>}
                   {sol.estado === 'ministracion' && (
                     <Button size="sm" variant="outline" className="h-7 text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
                       disabled={actionLoading === sol.id} onClick={() => setConfirmSeguimiento({ open: true, solicitudId: sol.id })}>

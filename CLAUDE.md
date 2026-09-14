@@ -331,12 +331,13 @@ Todo trabajo de diseño usa las skills `hallmark`, `frontend-design`, `ui-ux-pro
 Reglas del usuario: **nada de píldoras** en badges/etiquetas (`rounded-full` sí se conserva en
 afordancias reconocidas: buscador, puntos de paso), fondos poco saturados y translúcidos, logo grande.
 Toda animación respeta `prefers-reduced-motion` y anima solo `transform`/`opacity`.
-Cubierto: login, panel (sidebar + topbar de los 4 roles vía `AppShell.tsx`, ver E26), dashboard de admin,
-"¿Olvidaste tu clave?", "Solicitar acceso" y la pantalla de carga del sistema (`RouteLoadingScreen`, un
-`loading.tsx` por raíz de rol — Next.js la muestra solo, no hace falta togglearla a mano). **Sin cubrir:**
-el contenido interno de las vistas de `/admin/*` y de los otros 3 roles (tablas, formularios) — ver
-`docs/DISENO_UI.md` §7 Pendiente. `logo.png` es el favicon del sistema completo (metadata del layout raíz,
-sin excepciones por ruta).
+Cubierto: login, dashboard de admin (héroe, tiles accionables, anillo de avance, actividad), usuarios,
+carrusel, "¿Olvidaste tu clave?", "Solicitar acceso", insignias sin píldora en las 27 vistas que usan
+`Badge`, tarjetas de `DataCardGrid` (6 vistas) y la pantalla de carga del sistema (`RouteLoadingScreen`:
+`RouteChangeOverlay` global por clic en cualquier enlace interno, ~1.4 s; `loading.tsx` por raíz para la
+primera carga; y `useGlobalLoader()` con mínimo visible de 1 s para acciones explícitas como el login).
+**El menú/nav del panel NO se toca (E26).** **Sin cubrir:** el resto del contenido interno de `/admin/*`
+y de los otros 3 roles — ver `docs/DISENO_UI.md` §7. `logo.png` es el favicon del sistema completo.
 
 ### Patrón de descarga de archivos (blob)
 ```typescript
@@ -894,18 +895,63 @@ texto roto quedó en el JavaScript servido.
 **Lección:** no editar `.env*` con `Set-Content`/`Out-File` de PowerShell 5.1 sin `-Encoding utf8`
 (ni así: agrega BOM). Usar un editor o la herramienta de edición, y buscar `Ã` después de cualquier cambio.
 
-### E26 — Rediseño del panel: sidebar único para los 4 roles [14-09-2026]
-`AdminTopLayout.tsx` y `RoleTopLayout.tsx` pasaron de menú superior (mega-dropdown) a envolturas delgadas
-sobre **`src/components/layout/AppShell.tsx`** (sidebar + topbar), conservando **el mismo prop-interface
-externo** — ningún `layout.tsx` de rol se tocó. Cambiar `AppShell.tsx` cambia los ~38 paneles de los 4
-roles a la vez. Detalle completo, tokens y qué falta: `docs/DISENO_UI.md` §5-7.
-Dos trampas nuevas al construirlo:
+### E26 — El menú del panel NO se rediseña [14-09-2026, corrección del usuario]
+En la primera pasada del rediseño se cambió el menú superior (mega-dropdown) de `AdminTopLayout.tsx` y
+`RoleTopLayout.tsx` por un sidebar (`AppShell.tsx`). **El usuario lo rechazó:** "el menú debía permanecer
+igual, solo rediseñar los paneles". Se restauraron ambos archivos **byte a byte** desde el commit base
+`e993228` (`git restore --source=e993228 -- <archivos>`; no reconstruir a mano con PowerShell:
+`Out-File -NoNewline` colapsa las líneas y `Out-File -Encoding utf8` mete BOM) y se borró `AppShell.tsx`.
+**Regla:** el rediseño aplica al *contenido* de cada vista (encabezado, tarjetas, tablas, modales) y a las
+páginas de auth; **el menú/nav, la barra superior y el pie de `AdminTopLayout`/`RoleTopLayout` no se
+tocan.** Detalle en `docs/DISENO_UI.md` §5-7.
+Dos trampas que sí quedaron de esa pasada (aplican a cualquier componente):
 1. Un componente declarado **dentro** de otro (`const NavList = () => …` dentro de la función de
    `AppShell`) se re-crea en cada render y pierde estado — eslint lo marca
    (`react-hooks/static-components`). Sacarlo a nivel de módulo, con sus datos por prop.
 2. Un `<label>` que envuelve visualmente un `<input>` sin `id`/`htmlFor` explícitos no cuenta como
    asociado para axe (regla `label`). En "Solicitar acceso" se resolvió con un wrapper (`FField`) que
    clona el hijo (`React.cloneElement`) para inyectarle el `id` recibido por prop.
+
+### E27 — El widget de Reverb decía "Daemon no responde" con el daemon vivo [resuelto 14-09-2026]
+**Síntoma:** en `/admin/dashboard`, "WebSockets (Reverb) · Daemon no responde · The requested address is
+not valid in its context", aunque `comecyt-reverb` corría y `127.0.0.1:8080` tenía conexiones.
+**Causa:** `ReverbStatusController` hacía `fsockopen(config('reverb.servers.reverb.host'))`, y ese valor
+es la dirección de **bind** (`REVERB_SERVER_HOST`, default `0.0.0.0`). En Linux conectar a `0.0.0.0` cae a
+localhost; en Windows falla con WSAEADDRNOTAVAIL. Nunca se vio en desarrollo (Linux/Mac).
+**Fix:** si el host es `0.0.0.0`/`::`, el chequeo conecta a `127.0.0.1`. PHP puro: aplicó sin build ni
+reinicio (`GET /api/admin/reverb/status` → `reachable: true`, 3 ms).
+**Lección:** *bind address* ≠ *connect address*. Cualquier health-check que lea la config del servidor
+debe traducir `0.0.0.0` a loopback antes de conectar.
+
+### E28 — `getRealPath()` devuelve `false` en este IIS: la subida de archivos fallaba [resuelto 14-09-2026]
+**Síntoma:** `POST /admin/carousel/upload` → 500 "Path must not be empty" (dentro de `putFileAs()` de Laravel)
+y antes "Call to undefined method Illuminate\Validation\Validator::make()" (trait `ValidatesBinaryMimeTypes`).
+**Causa:** con el app pool `ApplicationPoolIdentity` (sin perfil cargado), `realpath()` del archivo temporal
+de PHP devuelve `false`; `putFileAs()` hace `fopen($file->getRealPath())` por dentro. El trait, además,
+importaba la clase `Illuminate\Validation\Validator` en vez de la fachada, así que **toda** su ruta de error
+terminaba en 500 — la subida de documentos de solicitudes lo hereda (nunca se había ejercitado: 0 solicitudes).
+**Fix:** el trait usa `Illuminate\Support\Facades\Validator`; el controlador lee con
+`file_get_contents($file->getPathname())` y escribe con `Storage::put()`. Probado de punta a punta (201 y la
+imagen se sirve por `/storage/carousel/...`).
+**Lección:** en Windows/IIS **nunca** `getRealPath()` sobre un `UploadedFile`; usar `getPathname()` y
+`Storage::put()`/`writeStream()`. Cualquier otro upload del sistema que use `putFileAs()` o `store()` (que
+también usa realpath) debe revisarse antes de que alguien suba su primer documento.
+
+### Reglas de UI vigentes (14/09/2026, ver `docs/DISENO_UI.md` §6b)
+Íconos de vidrio sin blur (`.icon-glass`, color por `color:`), cero emojis (íconos de lucide), `<select>`
+global estilizado en `globals.css`, botones unificados con hover líquido (`Button` variantes `soft` /
+`destructive` para ver-editar / eliminar), tablas con `components/ui/table.tsx`, tarjetas `.app-card` bento
+suave, sin jerga técnica a la vista, **responsive móvil primero en todo**. El menú/nav no se rediseña, pero sí
+se corrige (responsive). Pantalla de carga v3: splash en el HTML del servidor + bus de `lib/api.ts` para
+peticiones que escriben + clics en enlaces.
+
+### Carrusel del login — imágenes subidas desde el panel [14-09-2026]
+`POST /admin/carousel/upload` (multipart `imagen`, JPG/PNG/WebP ≤ 8 MB, MIME real con finfo, nombre
+aleatorio) guarda en `Storage::disk('public')` → `storage/app/public/carousel/` y devuelve la ruta
+**relativa** `/storage/carousel/<hash>.<ext>`. Relativa a propósito: sirve igual por el dominio y por la
+IP, y la CSP `img-src 'self'` la cubre. `imageUrlRules` acepta esa ruta además de las URLs http(s) del
+allowlist. Depende del junction `public/storage` (E21). UI: zona de arrastrar/soltar en
+`CarruselClient.tsx`; la URL externa sigue disponible como alternativa.
 
 ### E25 — Migración `institucion` → `empresa` (junio) dejó 3 referencias rotas [resuelto parcial 14-09-2026]
 **Síntoma real:** una solicitud de acceso enviada no aparecía en `/admin/solicitudes-acceso` (institución en
