@@ -1,0 +1,39 @@
+# ── Dependencias ─────────────────────────────────────────────
+/apps/api/vendor/
+/apps/web/node_modules/
+node_modules/
+vendor/
+
+# ── Entorno / secretos (NUNCA commitear) ─────────────────────
+.env
+.env.*
+!.env.example
+/apps/web/.env.local
+SECRETS_GENERADOS.txt
+admin_2fa_qr.svg
+/backups/
+*.dump
+pgpass.conf
+*.pgpass
+
+# ── Laravel (runtime) ────────────────────────────────────────
+/apps/api/storage/logs/*
+/apps/api/storage/framework/cache/*
+/apps/api/storage/framework/sessions/*
+/apps/api/storage/framework/views/*
+/apps/api/bootstrap/cache/*.php
+/apps/api/public/storage
+
+# ── Next.js (build) ──────────────────────────────────────────
+/apps/web/.next/
+# Respaldos de builds anteriores (.next.bak-AAAAMMDD-motivo) y de archivos sueltos (*.bak-motivo)
+/apps/web/.next.bak*/
+*.bak-*
+/apps/web/out/
+/apps/web/build/
+
+# ── Misc ─────────────────────────────────────────────────────
+*.log
+/logs/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+============================================================================
+Reverse Proxy en IIS para COMECYT
+----------------------------------------------------------------------------
+Coloca este archivo como `C:\inetpub\comecyt\web.config` en el sitio web
+bindeado a https://dominio.edomex.gob.mx
+
+PREREQUISITOS:
+- IIS 10+
+- Módulo URL Rewrite v2 (https://www.iis.net/downloads/microsoft/url-rewrite)
+- Módulo Application Request Routing (ARR) v3 (https://www.iis.net/downloads/microsoft/application-request-routing)
+- Habilitar proxy global en ARR:
+    appcmd.exe set config -section:system.webServer/proxy /enabled:"True" /commit:apphost
+
+Arquitectura:
+  Cliente → IIS (puerto 443, TLS) → reverse proxy a:
+    /api/*           → http://127.0.0.1:8000   (Laravel artisan serve, o php-cgi)
+    /broadcasting/*  → http://127.0.0.1:8000
+    /storage/*       → http://127.0.0.1:8000
+    /reverb/*        → http://127.0.0.1:8080   (Laravel Reverb WebSockets)
+    /*               → http://127.0.0.1:3000   (Next.js)
+============================================================================
+-->
+<configuration>
+  <system.webServer>
+    <rewrite>
+      <rules>
+
+        <!-- HTTPS enforce — descomenta cuando el certificado esté listo -->
+        <!--
+        <rule name="Force HTTPS" stopProcessing="true">
+          <match url="(.*)" />
+          <conditions>
+            <add input="{HTTPS}" pattern="off" />
+          </conditions>
+          <action type="Redirect" url="https://{HTTP_HOST}/{R:1}" redirectType="Permanent" />
+        </rule>
+        -->
+
+        <!-- WebSockets de Reverb -->
+        <rule name="Reverb WS" stopProcessing="true">
+          <match url="^app/(.*)" />
+          <action type="Rewrite" url="http://127.0.0.1:8080/app/{R:1}" />
+        </rule>
+
+        <!-- API Laravel -->
+        <rule name="Laravel API" stopProcessing="true">
+          <match url="^api/(.*)" />
+          <action type="Rewrite" url="http://127.0.0.1:8000/api/{R:1}" />
+          <serverVariables>
+            <set name="HTTP_X_FORWARDED_HOST" value="{HTTP_HOST}" />
+            <set name="HTTP_X_FORWARDED_PROTO" value="https" />
+            <set name="HTTP_X_FORWARDED_FOR" value="{REMOTE_ADDR}" />
+          </serverVariables>
+        </rule>
+
+        <!-- Broadcasting auth (Laravel) -->
+        <rule name="Broadcasting" stopProcessing="true">
+          <match url="^broadcasting/(.*)" />
+          <action type="Rewrite" url="http://127.0.0.1:8000/broadcasting/{R:1}" />
+        </rule>
+
+        <!-- Archivos subidos (Storage::disk('public')) -->
+        <rule name="Storage uploads" stopProcessing="true">
+          <match url="^storage/(.*)" />
+          <action type="Rewrite" url="http://127.0.0.1:8000/storage/{R:1}" />
+        </rule>
+
+        <!-- Frontend Next.js — todo lo demás -->
+        <rule name="Next.js app" stopProcessing="true">
+          <match url="(.*)" />
+          <action type="Rewrite" url="http://127.0.0.1:3000/{R:1}" />
+          <serverVariables>
+            <set name="HTTP_X_FORWARDED_HOST" value="{HTTP_HOST}" />
+            <set name="HTTP_X_FORWARDED_PROTO" value="https" />
+          </serverVariables>
+        </rule>
+
+      </rules>
+    </rewrite>
+
+    <!-- WebSockets soporte (necesario para Reverb) -->
+    <webSocket enabled="true" />
+
+    <!-- Compresión -->
+    <httpCompression>
+      <staticTypes>
+        <add mimeType="application/javascript" enabled="true" />
+        <add mimeType="application/json" enabled="true" />
+        <add mimeType="text/css" enabled="true" />
+        <add mimeType="text/html" enabled="true" />
+      </staticTypes>
+    </httpCompression>
+  </system.webServer>
+</configuration>

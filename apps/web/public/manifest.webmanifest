@@ -1,0 +1,17 @@
+{
+  "name": "COMECYT Sistema",
+  "short_name": "COMECYT",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6B1F3A",
+  "description": "Sistema Integral de Gestión Científica COMECYT",
+  "lang": "es-MX",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "401x312",
+      "type": "image/png"
+    }
+  ]
+}
