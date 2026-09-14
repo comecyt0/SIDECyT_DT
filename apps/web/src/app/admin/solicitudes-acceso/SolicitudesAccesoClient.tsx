@@ -19,7 +19,7 @@ export interface SolicitudAcceso {
   id: number;
   nombre: string;
   email: string;
-  institucion_nombre: string;
+  empresa_nombre: string;
   cargo?: string;
   telefono?: string;
   motivo?: string;
@@ -93,7 +93,7 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
   const filtered = solicitudes.filter((s) => {
     const matchesFilter = filter === 'all' || s.estado === filter;
     const q = search.toLowerCase();
-    const matchesSearch = !q || s.nombre.toLowerCase().includes(q) || s.email.toLowerCase().includes(q) || s.institucion_nombre.toLowerCase().includes(q);
+    const matchesSearch = !q || s.nombre.toLowerCase().includes(q) || s.email.toLowerCase().includes(q) || s.empresa_nombre.toLowerCase().includes(q);
     return matchesFilter && matchesSearch;
   });
 
@@ -198,7 +198,7 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
                       </div>
                       <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate flex items-center gap-3">
                         <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{sol.email}</span>
-                        <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{sol.institucion_nombre}</span>
+                        <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{sol.empresa_nombre}</span>
                       </p>
                     </div>
 
@@ -259,7 +259,7 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <DetailItem icon={User} label="Nombre" value={viewingSolicitud.nombre} />
                 <DetailItem icon={Mail} label="Correo" value={viewingSolicitud.email} />
-                <DetailItem icon={Building2} label="Institución" value={viewingSolicitud.institucion_nombre} />
+                <DetailItem icon={Building2} label="Institución" value={viewingSolicitud.empresa_nombre} />
                 {viewingSolicitud.cargo && <DetailItem icon={Briefcase} label="Cargo" value={viewingSolicitud.cargo} />}
                 {viewingSolicitud.telefono && <DetailItem icon={Phone} label="Teléfono" value={viewingSolicitud.telefono} />}
                 <DetailItem icon={Calendar} label="Fecha" value={new Date(viewingSolicitud.created_at).toLocaleDateString('es-MX')} />

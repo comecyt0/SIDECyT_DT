@@ -131,7 +131,7 @@
                 </tr>
                 <tr>
                     <td>Institución</td>
-                    <td>{{ $solicitud->institucion_nombre }}</td>
+                    <td>{{ $solicitud->empresa_nombre }}</td>
                 </tr>
                 @if ($solicitud->cargo)
                 <tr>
