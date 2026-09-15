@@ -17,11 +17,11 @@ import {
 } from '@/components/ui/select';
 import { Zap, Plus, Edit, Eye, Trash2 } from 'lucide-react';
 import StepFrame from '@/components/ui/step-frame';
+import PageHeader from '@/components/ui/page-header';
 import api from '@/lib/api';
 import Link from 'next/link';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { INSTITUTION } from '@/lib/institution';
 import { formatCurrency } from '@/lib/format';
 
 export interface TipoPrograma {
@@ -103,12 +103,12 @@ export default function ProgramasClient({ programas }: Props) {
 
   const handleSave = async () => {
     if (!form.clave.trim() || !form.nombre.trim()) {
-      setFeedback({ type: 'error', message: 'Clave y nombre son requeridos' });
+      setFeedback({ type: 'error', message: 'Escribe la clave y el nombre del programa.' });
       return;
     }
 
     if (form.tiene_etapas && form.num_etapas < 1) {
-      setFeedback({ type: 'error', message: 'Número de etapas debe ser mayor a 0' });
+      setFeedback({ type: 'error', message: 'El número de etapas debe ser al menos 1.' });
       return;
     }
 
@@ -122,7 +122,7 @@ export default function ProgramasClient({ programas }: Props) {
       setShowModal(false);
       router.refresh();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Error al guardar';
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo guardar el programa. Inténtalo de nuevo.';
       setFeedback({ type: 'error', message: msg });
     } finally {
       setSaving(false);
@@ -133,13 +133,13 @@ export default function ProgramasClient({ programas }: Props) {
     setConfirmState({
       open: true,
       title: 'Eliminar programa',
-      description: '¿Seguro que deseas eliminar este programa?',
+      description: 'El programa dejará de estar disponible para nuevas convocatorias. Esta acción no se puede deshacer.',
       action: async () => {
         try {
           await api.delete(`/admin/programas/${id}`);
           router.refresh();
         } catch (err: unknown) {
-          const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Error al eliminar';
+          const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo eliminar el programa. Inténtalo de nuevo.';
           setFeedback({ type: 'error', message: msg });
         }
       },
@@ -158,51 +158,54 @@ export default function ProgramasClient({ programas }: Props) {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {feedback && <AlertBox type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-dark">Gestión de Programas</h1>
-          <p className="text-neutral-500 dark:text-neutral-400">{`Administra los tipos de programa ${INSTITUTION.name} (100% dinámico, sin código).`}</p>
-        </div>
-        <Button className="bg-primary hover:bg-primary-light text-white shadow-md" onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" /> Nuevo Programa
-        </Button>
-      </div>
+      <PageHeader
+        title="Gestión de programas"
+        description="Los programas definen qué apoyo se da y cómo se evalúa. Crea uno o ajusta los que ya existen."
+        icon={<Zap className="h-5 w-5" />}
+        actions={
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Nuevo programa
+          </Button>
+        }
+      />
 
-      <Card className="border-0 shadow-md">
-        <CardHeader className="bg-white dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700">
-          <CardTitle className="text-lg text-primary flex items-center gap-2">
-            <Zap className="w-5 h-5" /> Programas Registrados
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <Zap className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Programas registrados
           </CardTitle>
-          <CardDescription>Lista de todos los programas del sistema. Haz clic en &quot;Ver detalles&quot; para gestionar campos, rubros, criterios y etapas.</CardDescription>
+          <CardDescription>Entra a la ficha de cada programa para ajustar sus preguntas, documentos, conceptos de gasto, etapas y criterios.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {programas.length === 0 ? (
-            <div className="p-12 text-center text-neutral-500 dark:text-neutral-400">
-              <p>No hay programas registrados aún. ¡Crea uno nuevo!</p>
+            <div className="text-center py-14">
+              <Zap className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+              <p className="font-semibold text-[var(--app-ink)]">Sin programas todavía</p>
+              <p className="text-sm text-[var(--app-ink-2)]">Crea el primero con el botón «Nuevo programa».</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-primary font-semibold">Clave</TableHead>
-                  <TableHead className="text-primary font-semibold">Nombre</TableHead>
-                  <TableHead className="text-primary font-semibold">Tipo Apoyo</TableHead>
-                  <TableHead className="text-primary font-semibold">Monto Máx</TableHead>
-                  <TableHead className="text-primary font-semibold">Etapas</TableHead>
-                  <TableHead className="text-primary font-semibold">Equipo</TableHead>
-                  <TableHead className="text-primary font-semibold">Estado</TableHead>
-                  <TableHead className="text-right text-primary font-semibold">Acciones</TableHead>
+                  <TableHead>Clave</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Forma del apoyo</TableHead>
+                  <TableHead>Monto máximo</TableHead>
+                  <TableHead>Etapas</TableHead>
+                  <TableHead>Equipo</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {programas.map((prog) => (
-                  <TableRow key={prog.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
-                    <TableCell className="font-mono text-sm text-neutral-600 dark:text-neutral-300">{prog.clave}</TableCell>
-                    <TableCell className="font-medium text-neutral-900 dark:text-neutral-50">{prog.nombre}</TableCell>
+                  <TableRow key={prog.id}>
+                    <TableCell className="font-mono text-sm">{prog.clave}</TableCell>
+                    <TableCell className="font-medium">{prog.nombre}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{tipoApoyoLabel(prog.tipo_apoyo)}</Badge>
                     </TableCell>
-                    <TableCell className="text-neutral-600 dark:text-neutral-300">{formatCurrency(prog.monto_maximo || 0)}</TableCell>
+                    <TableCell>{formatCurrency(prog.monto_maximo || 0)}</TableCell>
                     <TableCell>
                       <Badge variant={prog.tiene_etapas ? 'default' : 'secondary'}>
                         {prog.tiene_etapas ? 'Sí' : 'No'}
@@ -218,32 +221,20 @@ export default function ProgramasClient({ programas }: Props) {
                         {prog.activo ? 'Activo' : 'Inactivo'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Link href={`/admin/programas/${prog.id}`}>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-neutral-600 dark:text-neutral-300 hover:text-primary"
-                        >
-                          <Eye className="h-4 w-4" />
+                    <TableCell className="text-right">
+                      <div className="inline-flex items-center gap-1.5">
+                        <Link href={`/admin/programas/${prog.id}`} aria-label="Ver ficha" title="Ver ficha">
+                          <Button variant="soft" size="icon-sm" aria-label="Ver ficha" title="Ver ficha">
+                            <Eye />
+                          </Button>
+                        </Link>
+                        <Button variant="soft" size="icon-sm" onClick={() => openEdit(prog)} aria-label="Editar" title="Editar">
+                          <Edit />
                         </Button>
-                      </Link>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openEdit(prog)}
-                        className="text-neutral-600 dark:text-neutral-300 hover:text-primary"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDelete(prog.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        <Button variant="destructive" size="icon-sm" onClick={() => handleDelete(prog.id)} aria-label="Eliminar" title="Eliminar">
+                          <Trash2 />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -3,11 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import PageHeader from '@/components/ui/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Activity, Search, ChevronLeft, ChevronRight, RefreshCcw } from 'lucide-react';
+
+const filterLabelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
+const filterInputCls = 'auth-input auth-input-static pl-4 !h-11';
 
 export interface AuditLogRow {
   id: number;
@@ -106,57 +109,55 @@ export default function AuditLogsClient({ logs, initialFilters }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[clamp(1.5rem,2.4vw,1.875rem)] font-bold tracking-tight text-[var(--app-ink)] flex items-center gap-2">
-            <span className="app-tile-icon !w-9 !h-9 !rounded-lg"><Activity className="w-4 h-4" /></span>
-            Historial de acciones
-          </h1>
-          <p className="text-sm text-[var(--app-ink-2)] mt-1">
-            Quién hizo qué, cuándo y desde dónde. Nada de aquí se puede borrar.
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => router.refresh()}>
-          <RefreshCcw className="w-4 h-4" /> Actualizar
-        </Button>
-      </div>
+      <PageHeader
+        title="Historial de acciones"
+        description="Quién hizo qué, cuándo y desde dónde. Nada de aquí se puede borrar."
+        icon={<Activity className="h-5 w-5" />}
+        actions={
+          <Button variant="outline" onClick={() => router.refresh()}>
+            <RefreshCcw className="h-4 w-4" /> Actualizar
+          </Button>
+        }
+      />
 
-      <Card className="border-0 shadow-md">
-        <CardHeader className="bg-white dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700">
-          <CardTitle className="text-base text-primary flex items-center gap-2">
-            <Search className="w-4 h-4" /> Filtros
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <Search className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Filtros
           </CardTitle>
           <CardDescription>Busca por tipo de acción, por persona o por fechas.</CardDescription>
         </CardHeader>
-        <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-5 gap-3">
-          <div className="md:col-span-2 space-y-1.5">
-            <Label htmlFor="al-action">Qué se hizo</Label>
-            <Input
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="sm:col-span-2 space-y-1.5">
+            <Label htmlFor="al-action" className={filterLabelCls}>Qué se hizo</Label>
+            <input
               id="al-action"
               placeholder="Ej. aprobó, rechazó, usuario…"
               value={filters.action}
               onChange={(e) => setFilters({ ...filters, action: e.target.value })}
+              className={filterInputCls}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="al-user">Número de usuario</Label>
-            <Input
+            <Label htmlFor="al-user" className={filterLabelCls}>Número de usuario</Label>
+            <input
               id="al-user"
               type="number"
               placeholder="Ej. 1"
               value={filters.user_id}
               onChange={(e) => setFilters({ ...filters, user_id: e.target.value })}
+              className={filterInputCls}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="al-from">Desde</Label>
-            <Input id="al-from" type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} />
+            <Label htmlFor="al-from" className={filterLabelCls}>Desde</Label>
+            <input id="al-from" type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className={filterInputCls} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="al-to">Hasta</Label>
-            <Input id="al-to" type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} />
+            <Label htmlFor="al-to" className={filterLabelCls}>Hasta</Label>
+            <input id="al-to" type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className={filterInputCls} />
           </div>
-          <div className="md:col-span-5 flex justify-end gap-2 pt-2">
+          <div className="sm:col-span-2 lg:col-span-5 flex flex-col sm:flex-row sm:justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => apply({ action: '', user_id: '', from: '', to: '', page: 1 })}>
               Limpiar
             </Button>
@@ -165,16 +166,17 @@ export default function AuditLogsClient({ logs, initialFilters }: Props) {
         </CardContent>
       </Card>
 
-      <Card className="border-0 shadow-md">
-        <CardHeader className="bg-white dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700">
-          <CardTitle className="text-base text-primary">
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <Activity className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
             {logs.total.toLocaleString('es-MX')} {logs.total === 1 ? 'acción registrada' : 'acciones registradas'}
           </CardTitle>
           <CardDescription>Página {logs.current_page} de {logs.last_page}. Las más recientes primero.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-neutral-50 dark:bg-neutral-800">
+            <TableHeader>
               <TableRow>
                 <TableHead className="w-44">Cuándo</TableHead>
                 <TableHead>Qué se hizo</TableHead>
@@ -186,8 +188,12 @@ export default function AuditLogsClient({ logs, initialFilters }: Props) {
             <TableBody>
               {logs.data.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-neutral-500 dark:text-neutral-300">
-                    Sin eventos para los filtros actuales.
+                  <TableCell colSpan={5}>
+                    <div className="text-center py-14">
+                      <Activity className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+                      <p className="font-semibold text-[var(--app-ink)]">Sin eventos para los filtros actuales.</p>
+                      <p className="text-sm text-[var(--app-ink-2)]">Amplía las fechas o limpia los filtros para ver más.</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -223,12 +229,12 @@ export default function AuditLogsClient({ logs, initialFilters }: Props) {
             </TableBody>
           </Table>
         </CardContent>
-        <div className="px-4 py-3 border-t border-neutral-100 dark:border-neutral-700 flex items-center justify-end gap-2">
+        <div className="px-4 py-3 border-t border-[var(--app-rule)] flex items-center justify-end gap-2">
           <Button variant="outline" size="sm" disabled={logs.current_page <= 1} onClick={() => goPage(logs.current_page - 1)}>
             <ChevronLeft className="w-3.5 h-3.5" /> Anterior
           </Button>
-          <span className="text-xs text-neutral-500 dark:text-neutral-400 mx-3">
-            {logs.current_page} / {logs.last_page}
+          <span className="text-xs text-[var(--app-ink-2)] mx-3">
+            Página {logs.current_page} de {logs.last_page}
           </span>
           <Button variant="outline" size="sm" disabled={logs.current_page >= logs.last_page} onClick={() => goPage(logs.current_page + 1)}>
             Siguiente <ChevronRight className="w-3.5 h-3.5" />

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
+import { ShieldCheck } from 'lucide-react';
 import { INSTITUTION } from '@/lib/institution';
+import PageHeader from '@/components/ui/page-header';
 
 export const metadata: Metadata = {
   title: `Aviso de Privacidad — ${INSTITUTION.name}`,
@@ -9,14 +11,28 @@ export const metadata: Metadata = {
 export default function PrivacidadPage() {
   return (
     <>
-      <h1>Aviso de Privacidad Integral</h1>
-      <p className="text-sm text-neutral-500 dark:text-neutral-400">
-        Sistema {INSTITUTION.systemTagline}<br />
-        <strong>Vigente desde:</strong> 12 de junio de 2026<br />
-        <strong>Última actualización:</strong> 12 de junio de 2026
-      </p>
-
-      <hr />
+      <div className="not-prose space-y-4 mb-8">
+        <PageHeader
+          eyebrow="Documento legal"
+          title="Aviso de privacidad integral"
+          description={`Cómo cuida ${INSTITUTION.name} los datos personales que registras en el sistema.`}
+          icon={<ShieldCheck className="h-5 w-5" />}
+        />
+        <div className="app-card rounded-[22px] px-5 py-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--app-ink-2)]">Sistema</p>
+            <p className="font-semibold text-[var(--app-ink)]">{INSTITUTION.systemTagline}</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--app-ink-2)]">Vigente desde</p>
+            <p className="font-semibold text-[var(--app-ink)]">12 de junio de 2026</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--app-ink-2)]">Última actualización</p>
+            <p className="font-semibold text-[var(--app-ink)]">12 de junio de 2026</p>
+          </div>
+        </div>
+      </div>
 
       <h2>1. Identidad y domicilio del Responsable</h2>
       <p>
@@ -209,14 +225,14 @@ export default function PrivacidadPage() {
 
       <hr />
 
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+      <p className="text-xs text-[var(--app-ink-2)]">
         <em>
           Este aviso de privacidad cumple con los artículos 16 y 17 de la LFPDPPP. Para más
           información sobre el tratamiento de sus datos personales, contacte a{' '}
           <a href={`mailto:${INSTITUTION.contactEmail}`}>{INSTITUTION.contactEmail}</a>.
         </em>
       </p>
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+      <p className="text-xs text-[var(--app-ink-2)]">
         <strong>Nota institucional:</strong> Este documento es una plantilla técnica. El texto definitivo
         debe ser revisado y aprobado por la Unidad de Transparencia del COMECYT antes de su publicación
         formal.

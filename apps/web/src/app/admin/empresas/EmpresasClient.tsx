@@ -7,10 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Building, Plus, Edit, Eye, X, MapPin } from 'lucide-react';
 import StepFrame from '@/components/ui/step-frame';
+import PageHeader from '@/components/ui/page-header';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { AlertBox } from '@/components/ui/alert-box';
-import { INSTITUTION } from '@/lib/institution';
 import { DataCardGrid } from '@/components/ui/DataCardGrid';
 
 export interface EmpresaRow {
@@ -55,7 +55,7 @@ export default function EmpresasClient({ empresas }: Props) {
 
   const handleSave = async () => {
     if (!form.nombre.trim()) {
-      setFeedback({ type: 'error', message: 'El nombre es requerido' });
+      setFeedback({ type: 'error', message: 'Escribe el nombre de la empresa.' });
       return;
     }
     setSaving(true);
@@ -69,7 +69,7 @@ export default function EmpresasClient({ empresas }: Props) {
       // Invalida el cache del Server Component padre y vuelve a renderizar
       router.refresh();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Error al guardar';
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo guardar la empresa. Inténtalo de nuevo.';
       setFeedback({ type: 'error', message: msg });
     } finally {
       setSaving(false);
@@ -79,15 +79,16 @@ export default function EmpresasClient({ empresas }: Props) {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {feedback && <AlertBox type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-dark">Catálogo de Empresas</h1>
-          <p className="text-neutral-500 dark:text-neutral-400">{`Administra las empresas permitidas en el sistema ${INSTITUTION.name}.`}</p>
-        </div>
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" /> Nueva Empresa
-        </Button>
-      </div>
+      <PageHeader
+        title="Empresas"
+        description="Las empresas son las organizaciones que presentan proyectos. Da de alta una nueva o corrige los datos de las que ya existen."
+        icon={<Building className="h-5 w-5" />}
+        actions={
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Nueva empresa
+          </Button>
+        }
+      />
 
       <DataCardGrid
         items={empresas}
@@ -95,28 +96,28 @@ export default function EmpresasClient({ empresas }: Props) {
         columns={3}
         accentColor={(e) => (e.activa !== false ? 'emerald' : 'red')}
         emptyState={
-          <div className="text-center py-16 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50/40 dark:bg-neutral-900/40">
-            <Building className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto mb-3" />
-            <p className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">Sin empresas registradas</p>
-            <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">Haz clic en &quot;Nueva Empresa&quot; para comenzar.</p>
+          <div className="text-center py-14">
+            <Building className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+            <p className="font-semibold text-[var(--app-ink)]">Sin empresas todavía</p>
+            <p className="text-sm text-[var(--app-ink-2)]">Crea la primera con el botón «Nueva empresa».</p>
           </div>
         }
         renderCard={(inst) => (
           <div className="pl-3">
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Building className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{inst.acronimo || `Empresa #${inst.id}`}</span>
+                <div className="flex items-center gap-2 mb-1" style={{ color: 'var(--auth-vino)' }}>
+                  <Building className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">{inst.acronimo || `Empresa nº ${inst.id}`}</span>
                 </div>
-                <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-50 leading-tight line-clamp-2">{inst.nombre}</h3>
+                <h3 className="text-sm font-bold text-[var(--app-ink)] leading-tight line-clamp-2">{inst.nombre}</h3>
               </div>
-              <Badge variant={inst.activa !== false ? 'default' : 'destructive'} className="shrink-0 text-[10px]">
+              <Badge variant={inst.activa !== false ? 'default' : 'destructive'} className="shrink-0">
                 {inst.activa !== false ? 'Activa' : 'Inactiva'}
               </Badge>
             </div>
             {inst.municipio?.nombre && (
-              <p className="text-xs text-neutral-500 dark:text-neutral-300 flex items-center gap-1 mb-3">
+              <p className="text-xs text-[var(--app-ink-2)] flex items-center gap-1 mb-3">
                 <MapPin className="h-3 w-3" />
                 {inst.municipio.nombre}
               </p>
@@ -133,46 +134,45 @@ export default function EmpresasClient({ empresas }: Props) {
         )}
       />
 
-      {/* Preview Modal */}
       {showPreview && previewInst && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md border-0 shadow-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b">
-              <CardTitle className="text-lg text-neutral-800 dark:text-neutral-100 flex items-center gap-2">
-                <Building className="h-5 w-5 text-primary" /> Detalle de Empresa
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Detalle de la empresa">
+          <Card className="w-full max-w-md animate-in zoom-in-95 duration-200">
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
+              <CardTitle>
+                <Building className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Detalle de la empresa
               </CardTitle>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPreview(false)}>
-                <X className="h-4 w-4" />
+              <Button variant="ghost" size="icon-sm" onClick={() => setShowPreview(false)} aria-label="Cerrar" title="Cerrar">
+                <X />
               </Button>
             </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">ID</p>
-                  <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 mt-1">{previewInst.id}</p>
+                  <p className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-wider">Número</p>
+                  <p className="text-sm font-semibold text-[var(--app-ink)] mt-1">{previewInst.id}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Acrónimo</p>
-                  <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 mt-1">{previewInst.acronimo || '—'}</p>
+                  <p className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-wider">Siglas</p>
+                  <p className="text-sm font-semibold text-[var(--app-ink)] mt-1">{previewInst.acronimo || '—'}</p>
                 </div>
-                <div className="col-span-2">
-                  <p className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Nombre Oficial</p>
-                  <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 mt-1">{previewInst.nombre}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Municipio</p>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">{previewInst.municipio?.nombre || '—'}</p>
+                <div className="sm:col-span-2">
+                  <p className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-wider">Nombre oficial</p>
+                  <p className="text-sm font-semibold text-[var(--app-ink)] mt-1">{previewInst.nombre}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Estado</p>
+                  <p className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-wider">Municipio</p>
+                  <p className="text-sm text-[var(--app-ink)] mt-1">{previewInst.municipio?.nombre || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-wider">Estado</p>
                   <Badge variant={previewInst.activa !== false ? 'default' : 'destructive'} className="mt-1">
                     {previewInst.activa !== false ? 'Activa' : 'Inactiva'}
                   </Badge>
                 </div>
               </div>
-              <div className="pt-4 flex gap-3">
+              <div className="pt-4 flex flex-col sm:flex-row gap-3">
                 <Button className="flex-1" onClick={() => openEdit(previewInst)}>
-                  <Edit className="h-4 w-4 mr-2" /> Editar
+                  <Edit className="h-4 w-4" /> Editar
                 </Button>
                 <Button variant="outline" className="flex-1" onClick={() => setShowPreview(false)}>Cerrar</Button>
               </div>

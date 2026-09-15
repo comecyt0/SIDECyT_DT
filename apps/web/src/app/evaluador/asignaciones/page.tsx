@@ -5,11 +5,14 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   FileSignature, Loader2, ArrowRight, Download, Search,
-  Calendar, Award, CheckCircle2, ClipboardList,
+  Calendar, Building2, CheckCircle2, ClipboardList,
 } from 'lucide-react';
 import api from '@/lib/api';
 import type { AsignacionEvaluador } from '@/types/api';
 import { AlertBox } from '@/components/ui/alert-box';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import PageHeader from '@/components/ui/page-header';
 import SavedFiltersBar from '@/components/filters/SavedFiltersBar';
 
 const container = {
@@ -21,11 +24,11 @@ const item = {
   show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
 };
 
-const estadoConfig: Record<string, { label: string; bg: string; text: string }> = {
-  asignado:  { label: 'Por Iniciar', bg: 'bg-primary/10', text: 'text-primary' },
-  notificado: { label: 'Por Iniciar', bg: 'bg-primary/10', text: 'text-primary' },
-  evaluando: { label: 'En Progreso', bg: 'bg-amber-50',     text: 'text-amber-700' },
-  concluido: { label: 'Concluida',   bg: 'bg-emerald-50',   text: 'text-emerald-700' },
+const estadoConfig: Record<string, { label: string; badge: string }> = {
+  asignado:   { label: 'Por iniciar', badge: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' },
+  notificado: { label: 'Por iniciar', badge: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' },
+  evaluando:  { label: 'En evaluación', badge: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
+  concluido:  { label: 'Dictamen emitido', badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
 };
 
 export default function AsignacionesPage() {
@@ -73,7 +76,7 @@ export default function AsignacionesPage() {
       link.click();
       link.remove();
     } catch {
-      setDownloadError('Error al descargar el dictamen. Intenta nuevamente.');
+      setDownloadError('No se pudo descargar el dictamen. Intenta de nuevo.');
     }
   };
 
@@ -83,76 +86,75 @@ export default function AsignacionesPage() {
         <AlertBox type="error" message={downloadError} onClose={() => setDownloadError(null)} />
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-neutral-900 tracking-tight">Evaluaciones Técnicas</h1>
-          <p className="text-sm text-neutral-500 mt-0.5">
-            Proyectos asignados para revisión académica especializada.
-          </p>
-        </div>
-
-        {/* Search + filter */}
-        {!loading && asignaciones.length > 0 && (
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-              <input
-                type="search"
-                placeholder="Buscar proyecto..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-4 py-2.5 text-sm bg-neutral-100 border-0 rounded-xl ring-1 ring-neutral-200 focus:outline-none focus:ring-2 focus:ring-primary/30 w-56 placeholder:text-neutral-400"
-              />
-            </div>
-            <select
-              value={filterEstado}
-              onChange={(e) => setFilterEstado(e.target.value)}
-              className="px-3 py-2.5 text-sm bg-neutral-100 border-0 rounded-xl ring-1 ring-neutral-200 focus:outline-none focus:ring-2 focus:ring-primary/30 text-neutral-700 font-medium"
-            >
-              <option value="">Todos</option>
-              <option value="asignado">Por Iniciar</option>
-              <option value="evaluando">En Progreso</option>
-              <option value="concluido">Concluidas</option>
-            </select>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title="Mis asignaciones"
+        description="Proyectos que te asignaron para evaluar. Abre uno para llenar la rúbrica o descarga el dictamen de los que ya concluiste."
+        icon={<ClipboardList className="h-5 w-5" />}
+      />
 
       {!loading && asignaciones.length > 0 && (
-        <SavedFiltersBar
-          scope="evaluador.asignaciones"
-          currentFilters={{ search: searchTerm, estado: filterEstado }}
-          onApply={(f) => {
-            setSearchTerm(String(f.search ?? ''));
-            setFilterEstado(String(f.estado ?? ''));
-          }}
-        />
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--app-ink-2)] pointer-events-none" aria-hidden="true" />
+              <input
+                type="search"
+                aria-label="Buscar por folio, proyecto o institución"
+                placeholder="Buscar por folio, proyecto o institución"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="auth-input auth-input-static pl-10"
+              />
+            </div>
+            <div className="sm:w-56">
+              <select
+                aria-label="Filtrar por estado"
+                value={filterEstado}
+                onChange={(e) => setFilterEstado(e.target.value)}
+                className="auth-input auth-input-static pl-4"
+              >
+                <option value="">Todos los estados</option>
+                <option value="asignado">Por iniciar</option>
+                <option value="evaluando">En evaluación</option>
+                <option value="concluido">Dictamen emitido</option>
+              </select>
+            </div>
+          </div>
+          <SavedFiltersBar
+            scope="evaluador.asignaciones"
+            currentFilters={{ search: searchTerm, estado: filterEstado }}
+            onApply={(f) => {
+              setSearchTerm(String(f.search ?? ''));
+              setFilterEstado(String(f.estado ?? ''));
+            }}
+          />
+        </div>
       )}
 
-      {/* Content */}
       {loading ? (
         <div className="py-16 flex justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary/20" />
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--auth-vino)]" />
         </div>
       ) : asignaciones.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm py-16 text-center">
-          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-            <ClipboardList className="w-5 h-5 text-primary" />
-          </div>
-          <p className="text-sm font-semibold text-neutral-700">No hay proyectos asignados</p>
-          <p className="text-xs text-neutral-400 mt-1">
-            Cuando el comité técnico te asigne una evaluación, aparecerá aquí.
-          </p>
-        </div>
+        <Card>
+          <CardContent>
+            <div className="text-center py-14">
+              <ClipboardList className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+              <p className="font-semibold text-[var(--app-ink)]">Nada pendiente por ahora</p>
+              <p className="text-sm text-[var(--app-ink-2)]">Cuando el comité técnico te asigne un proyecto, aparecerá aquí.</p>
+            </div>
+          </CardContent>
+        </Card>
       ) : filteredAsignaciones.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm py-16 text-center">
-          <div className="w-12 h-12 bg-neutral-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-neutral-100">
-            <Search className="w-5 h-5 text-neutral-300" />
-          </div>
-          <p className="text-sm font-semibold text-neutral-600">Sin resultados</p>
-          <p className="text-xs text-neutral-400 mt-1">Intenta con otros términos de búsqueda o estado.</p>
-        </div>
+        <Card>
+          <CardContent>
+            <div className="text-center py-14">
+              <Search className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+              <p className="font-semibold text-[var(--app-ink)]">No encontramos proyectos con esos filtros</p>
+              <p className="text-sm text-[var(--app-ink-2)]">Prueba con otro texto o cambia el estado.</p>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <motion.div
           variants={container}
@@ -161,97 +163,84 @@ export default function AsignacionesPage() {
           className="grid grid-cols-1 lg:grid-cols-2 gap-4"
         >
           {filteredAsignaciones.map((asig) => {
-            const cfg = estadoConfig[asig.estado] ?? { label: asig.estado, bg: 'bg-neutral-100', text: 'text-neutral-600' };
+            const cfg = estadoConfig[asig.estado] ?? { label: asig.estado, badge: 'bg-neutral-100 text-neutral-500' };
             const esConcluido = asig.estado === 'concluido';
             const esNuevo = asig.estado === 'asignado' || asig.estado === 'notificado';
 
             return (
-              <motion.div
-                key={asig.id}
-                variants={item}
-                className="bg-white rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-all duration-300 hover:border-primary/20 overflow-hidden group"
-              >
-                {/* Card header */}
-                <div className="px-6 pt-5 pb-4 border-b border-neutral-50">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${cfg.bg} ${cfg.text} uppercase tracking-tight`}>
+              <motion.div key={asig.id} variants={item}>
+                <Card className="h-full">
+                  <CardContent className="flex flex-col gap-4 h-full">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${cfg.badge}`}>
                           {cfg.label}
                         </span>
-                        <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-md font-mono">
-                          {asig.solicitud?.folio || 'S/F'}
+                        <span className="font-mono text-xs font-semibold" style={{ color: 'var(--auth-vino)' }}>
+                          {asig.solicitud?.folio || 'Sin folio'}
                         </span>
                       </div>
-                      <p className="text-sm font-bold text-neutral-900 line-clamp-2 group-hover:text-primary transition-colors">
+                      <p className="text-sm font-bold text-[var(--app-ink)] line-clamp-2">
                         {asig.solicitud?.titulo_proyecto || 'Sin título'}
                       </p>
                     </div>
-                  </div>
-                </div>
 
-                {/* Card body */}
-                <div className="px-6 py-4 space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs text-neutral-500">
-                    <Award className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                    <span className="truncate">
-                      {asig.solicitud?.empresa?.nombre || 'Institución no especificada'}
-                    </span>
-                  </div>
-                  {asig.fecha_limite && (
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-red-500">
-                      <Calendar className="w-3.5 h-3.5 shrink-0" />
-                      Límite: {new Date(asig.fecha_limite).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </div>
-                  )}
-                  {asig.solicitud?.modalidad && (
-                    <div className="flex items-center gap-1.5 text-xs text-neutral-400">
-                      <FileSignature className="w-3.5 h-3.5 shrink-0" />
-                      {asig.solicitud.modalidad}
-                    </div>
-                  )}
-                </div>
-
-                {/* Card footer */}
-                <div className="px-6 pb-5 flex items-center justify-between">
-                  {esConcluido ? (
-                    <>
-                      <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Dictamen emitido
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5 text-xs text-[var(--app-ink-2)]">
+                        <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        <span className="truncate">
+                          {asig.solicitud?.empresa?.nombre || 'Institución sin especificar'}
+                        </span>
                       </div>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleDownloadDictamen(
-                          asig.dictamen?.id ?? asig.id,
-                          asig.solicitud?.folio ?? `SOL-${asig.id}`
-                        )}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-primary bg-primary/[8%] hover:bg-primary hover:text-white rounded-lg transition-all"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        Descargar Dictamen
-                      </motion.button>
-                    </>
-                  ) : (
-                    <>
-                      <span />
-                      <motion.button
-                        whileHover={{ x: 2 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => router.push(`/evaluador/asignaciones/${asig.id}/rubrica`)}
-                        className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                          esNuevo
-                            ? 'bg-primary text-white hover:bg-[var(--brand-vino-700)] shadow-sm'
-                            : 'text-primary bg-primary/[8%] hover:bg-primary hover:text-white'
-                        }`}
-                      >
-                        {esNuevo ? 'Iniciar Evaluación' : 'Continuar'}
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </motion.button>
-                    </>
-                  )}
-                </div>
+                      {asig.fecha_limite && (
+                        <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--auth-danger)' }}>
+                          <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          Vence el {new Date(asig.fecha_limite).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </div>
+                      )}
+                      {asig.solicitud?.modalidad && (
+                        <div className="flex items-center gap-1.5 text-xs text-[var(--app-ink-2)]">
+                          <FileSignature className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          {asig.solicitud.modalidad}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-auto pt-3 border-t border-[var(--app-rule)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      {esConcluido ? (
+                        <>
+                          <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--tile-emerald-fg)' }}>
+                            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                            Dictamen emitido
+                          </div>
+                          <Button
+                            variant="soft"
+                            size="sm"
+                            onClick={() => handleDownloadDictamen(
+                              asig.dictamen?.id ?? asig.id,
+                              asig.solicitud?.folio ?? `SOL-${asig.id}`
+                            )}
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            Descargar dictamen
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <span />
+                          <Button
+                            variant={esNuevo ? 'default' : 'soft'}
+                            size="sm"
+                            onClick={() => router.push(`/evaluador/asignaciones/${asig.id}/rubrica`)}
+                          >
+                            {esNuevo ? 'Iniciar evaluación' : 'Continuar'}
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </motion.div>
             );
           })}

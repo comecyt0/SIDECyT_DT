@@ -1,15 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Upload, Check, Loader2, Download, Trash2, Eye, X, FileText, HardDrive, CheckCircle2 } from 'lucide-react';
+import { Upload, Check, Loader2, Download, Trash2, Eye, X, FileText, HardDrive, CheckCircle2, Paperclip } from 'lucide-react';
 import api from '@/lib/api';
-import { colorMap } from '@/lib/color-mapper';
 
 export interface Documento {
   id: number;
@@ -146,8 +144,8 @@ export function DocumentosAdjuntos({
   const handleDelete = (docId: number) => {
     setConfirmState({
       open: true,
-      title: 'Eliminar Documento',
-      description: '¿Deseas eliminar este documento?',
+      title: 'Quitar el documento',
+      description: '¿Quieres quitar este documento? Después podrás subir otro en su lugar.',
       onConfirm: async () => {
         setDeleteLoading(docId);
         try {
@@ -175,14 +173,14 @@ export function DocumentosAdjuntos({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Documentos Adjuntos
+          <CardTitle>
+            <Paperclip className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
+            Documentos de la solicitud
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex justify-center items-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--auth-vino)' }} />
           </div>
         </CardContent>
       </Card>
@@ -192,10 +190,13 @@ export function DocumentosAdjuntos({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          Documentos Adjuntos
+        <CardTitle>
+          <Paperclip className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
+          Documentos de la solicitud
         </CardTitle>
+        <CardDescription>
+          {readonly ? 'Estos son los documentos que acompañan tu solicitud.' : 'Sube en PDF cada documento que pide la convocatoria. Puedes verlos, descargarlos o quitarlos.'}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {feedback && <AlertBox type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
@@ -211,15 +212,15 @@ export function DocumentosAdjuntos({
           <AlertBox
             type="info"
             title="Documentos"
-            message="No hay documentos requeridos para este programa."
+            message="Esta convocatoria no pide documentos adicionales."
           />
         ) : (
           <>
             {documentosFaltantes.length > 0 && !readonly && (
               <AlertBox
                 type="warning"
-                title="Documentos Requeridos"
-                message={`Faltan por subir: ${documentosFaltantes.map(d => d.nombre).join(', ')}`}
+                title="Documentos que faltan"
+                message={`Todavía falta subir: ${documentosFaltantes.map(d => d.nombre).join(', ')}.`}
               />
             )}
 
@@ -231,68 +232,65 @@ export function DocumentosAdjuntos({
             return (
               <div
                 key={tipo.clave}
-                className={`p-4 border rounded-lg transition ${
-                  doc
-                    ? 'border-green-200 bg-green-50'
-                    : 'border-neutral-200 bg-neutral-50'
-                }`}
+                className={`p-4 rounded-[16px] border border-[var(--app-rule)] transition-colors ${doc ? '' : 'bg-[var(--auth-field)]'}`}
+                style={doc ? { backgroundColor: 'var(--tile-emerald-bg)' } : undefined}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-neutral-900">{tipo.nombre}</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-[var(--app-ink)]">{tipo.nombre}</p>
                       {tipo.obligatorio && (
-                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                          Requerido
-                        </Badge>
+                        <span className="inline-flex h-5 items-center rounded-md px-2 text-[11px] font-semibold" style={{ backgroundColor: 'var(--tile-gold-bg)', color: 'var(--tile-gold-fg)' }}>
+                          Obligatorio
+                        </span>
                       )}
                       {doc && (
-                        <Badge variant="outline" className={`${colorMap.states.success.background} ${colorMap.states.success.text} border-green-200`}>
-                          <Check className="h-3 w-3 mr-1" />
+                        <span className="inline-flex h-5 items-center gap-1 rounded-md px-2 text-[11px] font-semibold" style={{ backgroundColor: 'var(--tile-emerald-bg)', color: 'var(--tile-emerald-fg)' }}>
+                          <Check className="h-3 w-3" aria-hidden="true" />
                           Subido
-                        </Badge>
+                        </span>
                       )}
                     </div>
                     {tipo.descripcion && (
-                      <p className="text-xs text-neutral-500 mt-1">{tipo.descripcion}</p>
+                      <p className="text-xs text-[var(--app-ink-2)] mt-1">{tipo.descripcion}</p>
                     )}
                     {doc && (
-                      <p className="text-sm text-neutral-600 mt-1">
-                        {doc.nombre_original} • {new Date(doc.created_at).toLocaleDateString()}
+                      <p className="text-sm text-[var(--app-ink-2)] mt-1 break-all">
+                        {doc.nombre_original} · {new Date(doc.created_at).toLocaleDateString('es-MX')}
                       </p>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     {doc ? (
                       <>
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          variant="soft"
+                          size="icon-sm"
                           onClick={() => setPreviewingDoc(doc)}
-                          title="Vista previa del documento"
+                          title="Ver el documento"
+                          aria-label="Ver el documento"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <a href={getAbsoluteUrl(doc.url)} target="_blank" rel="noopener noreferrer">
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            title="Descargar documento"
+                            variant="soft"
+                            size="icon-sm"
+                            title="Descargar el documento"
+                            aria-label="Descargar el documento"
                           >
                             <Download className="h-4 w-4" />
                           </Button>
                         </a>
                         {!readonly && (
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            variant="destructive"
+                            size="icon-sm"
                             disabled={deleteLoading === doc.id}
                             onClick={() => handleDelete(doc.id)}
-                            title="Eliminar documento"
+                            title="Quitar el documento"
+                            aria-label="Quitar el documento"
                           >
                             {deleteLoading === doc.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -315,10 +313,8 @@ export function DocumentosAdjuntos({
                           className="hidden"
                         />
                         <Button
-                          variant="outline"
                           size="sm"
                           disabled={isUploading}
-                          className="cursor-pointer gap-2"
                           type="button"
                           onClick={() => {
                             const input = fileInputRefs.current[tipo.clave];
@@ -341,27 +337,26 @@ export function DocumentosAdjuntos({
               })}
             </div>
 
-            <div className="text-sm text-neutral-600 space-y-1 pt-2 border-t">
-              <p className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> <strong>Formato:</strong> Solo PDF</p>
-              <p className="flex items-center gap-1.5"><HardDrive className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> <strong>Tamaño máximo:</strong> 5 MB</p>
+            <div className="text-sm text-[var(--app-ink-2)] space-y-1 pt-3 border-t border-[var(--app-rule)]">
+              <p className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> <strong className="text-[var(--app-ink)]">Formato:</strong> solo PDF</p>
+              <p className="flex items-center gap-1.5"><HardDrive className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> <strong className="text-[var(--app-ink)]">Tamaño máximo:</strong> 5 MB</p>
               {tiposDocumento.length > 0 && (
-                <p className="flex items-start gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5 text-emerald-600" aria-hidden="true" /> <span><strong>Requeridos:</strong> {tiposDocumento.filter(t => t.obligatorio).map(t => t.nombre).join(', ')}</span></p>
+                <p className="flex items-start gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" style={{ color: 'var(--tile-emerald-fg)' }} /> <span><strong className="text-[var(--app-ink)]">Obligatorios:</strong> {tiposDocumento.filter(t => t.obligatorio).map(t => t.nombre).join(', ')}</span></p>
               )}
             </div>
           </>
         )}
       </CardContent>
 
-      {/* Preview Modal */}
       <Dialog open={!!previewingDoc} onOpenChange={(open) => !open && setPreviewingDoc(null)}>
         <DialogContent className="max-w-4xl w-full h-[80vh] flex flex-col p-0">
-          <DialogHeader className="px-6 py-4 border-b flex-row items-center justify-between">
-            <DialogTitle>{previewingDoc?.nombre_original || 'Vista Previa del Documento'}</DialogTitle>
+          <DialogHeader className="px-6 py-4 border-b border-[var(--app-rule)] flex-row items-center justify-between">
+            <DialogTitle className="truncate">{previewingDoc?.nombre_original || 'Vista previa del documento'}</DialogTitle>
             <Button
               variant="ghost"
-              size="icon"
-              className="h-6 w-6"
+              size="icon-sm"
               onClick={() => setPreviewingDoc(null)}
+              aria-label="Cerrar la vista previa"
             >
               <X className="h-4 w-4" />
             </Button>

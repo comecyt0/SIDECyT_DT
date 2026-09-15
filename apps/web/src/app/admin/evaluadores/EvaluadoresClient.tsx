@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, UserPlus, Link2 } from 'lucide-react';
+import PageHeader from '@/components/ui/page-header';
+import { Users, UserPlus, Link2, ClipboardCheck } from 'lucide-react';
 import StepFrame from '@/components/ui/step-frame';
 import api from '@/lib/api';
 import type { User, Solicitud } from '@/types/api';
@@ -32,7 +33,7 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
 
   const handleAsignar = async () => {
     if (!form.solicitud_id || !form.evaluador_id || !form.fecha_limite) {
-      setFeedback({ type: 'error', message: 'Faltan datos: solicitud, evaluador y fecha límite.' });
+      setFeedback({ type: 'error', message: 'Elige la solicitud, el evaluador y la fecha límite.' });
       return;
     }
     setSaving(true);
@@ -46,7 +47,7 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
       setForm(emptyForm);
       router.refresh();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Error al asignar evaluador';
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo asignar al evaluador. Inténtalo de nuevo.';
       setFeedback({ type: 'error', message: msg });
     } finally {
       setSaving(false);
@@ -56,46 +57,54 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {feedback && <AlertBox type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-dark">Revisores y evaluadores</h1>
-          <p className="text-neutral-500 dark:text-neutral-400">Quién revisa los documentos y quién dictamina cada proyecto.</p>
-        </div>
-        <Button onClick={() => { setForm(emptyForm); setShowModal(true); }}>
-          <UserPlus className="mr-2 h-4 w-4" /> Asignar evaluador
-        </Button>
-      </div>
+      <PageHeader
+        title="Revisores y evaluadores"
+        description="Quién revisa los documentos y quién dictamina cada proyecto. Desde aquí asignas un evaluador a una solicitud."
+        icon={<Users className="h-5 w-5" />}
+        actions={
+          <Button onClick={() => { setForm(emptyForm); setShowModal(true); }}>
+            <UserPlus className="h-4 w-4" /> Asignar evaluador
+          </Button>
+        }
+      />
 
-      {/* Evaluadores */}
-      <Card className="border-0 shadow-md">
-        <CardHeader className="bg-white dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700">
-          <CardTitle className="text-lg text-primary flex items-center gap-2">
-            <Users className="w-5 h-5" /> Evaluadores ({evaluadores.length})
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <ClipboardCheck className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Evaluadores ({evaluadores.length})
           </CardTitle>
-          <CardDescription>Investigadores con acceso al módulo de evaluación técnica.</CardDescription>
+          <CardDescription>Personas que califican los proyectos con los criterios de cada convocatoria.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-neutral-50 dark:bg-neutral-900">
+            <TableHeader>
               <TableRow>
-                <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Nombre</TableHead>
-                <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Email</TableHead>
-                <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Rol</TableHead>
-                <TableHead className="font-bold text-neutral-700 dark:text-neutral-200 text-right">Acción</TableHead>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Correo</TableHead>
+                <TableHead>Papel</TableHead>
+                <TableHead className="text-right">Acción</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {evaluadores.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center text-neutral-400 dark:text-neutral-500">Sin evaluadores registrados.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={4}>
+                    <div className="text-center py-10">
+                      <ClipboardCheck className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+                      <p className="font-semibold text-[var(--app-ink)]">Sin evaluadores todavía</p>
+                      <p className="text-sm text-[var(--app-ink-2)]">Crea usuarios con el papel de evaluador desde Usuarios.</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ) : evaluadores.map(ev => (
-                <TableRow key={ev.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                  <TableCell className="font-semibold text-neutral-800 dark:text-neutral-100">{ev.name}</TableCell>
-                  <TableCell className="text-neutral-500 dark:text-neutral-400 text-sm">{ev.email}</TableCell>
-                  <TableCell><Badge className="bg-purple-100 text-purple-800 shadow-none">Evaluador</Badge></TableCell>
+                <TableRow key={ev.id}>
+                  <TableCell className="font-semibold">{ev.name}</TableCell>
+                  <TableCell className="text-[var(--app-ink-2)]">{ev.email}</TableCell>
+                  <TableCell><Badge variant="outline" style={{ backgroundColor: 'var(--tile-sky-bg)', color: 'var(--tile-sky-fg)', borderColor: 'transparent' }}>Evaluador</Badge></TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/5"
+                    <Button variant="soft" size="sm"
                       onClick={() => { setForm({...emptyForm, evaluador_id: String(ev.id)}); setShowModal(true); }}>
-                      <Link2 className="h-4 w-4 mr-1" /> Asignar
+                      <Link2 /> Asignar
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -105,31 +114,38 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
         </CardContent>
       </Card>
 
-      {/* Revisores */}
-      <Card className="border-0 shadow-md">
-        <CardHeader className="bg-white dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700">
-          <CardTitle className="text-lg text-amber-700 flex items-center gap-2">
-            <Users className="w-5 h-5" /> Revisores ({revisores.length})
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <Users className="h-4 w-4" style={{ color: 'var(--tile-gold-fg)' }} /> Revisores ({revisores.length})
           </CardTitle>
-          <CardDescription>Personal con acceso al módulo de revisión documental.</CardDescription>
+          <CardDescription>Personas que revisan que la documentación de cada solicitud esté completa.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-neutral-50 dark:bg-neutral-900">
+            <TableHeader>
               <TableRow>
-                <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Nombre</TableHead>
-                <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Email</TableHead>
-                <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Rol</TableHead>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Correo</TableHead>
+                <TableHead>Papel</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {revisores.length === 0 ? (
-                <TableRow><TableCell colSpan={3} className="h-20 text-center text-neutral-400 dark:text-neutral-500">Sin revisores registrados.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={3}>
+                    <div className="text-center py-10">
+                      <Users className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+                      <p className="font-semibold text-[var(--app-ink)]">Sin revisores todavía</p>
+                      <p className="text-sm text-[var(--app-ink-2)]">Crea usuarios con el papel de revisor desde Usuarios.</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ) : revisores.map((rv) => (
-                <TableRow key={rv.id} className="hover:bg-amber-50/30">
-                  <TableCell className="font-semibold text-neutral-800 dark:text-neutral-100">{rv.name}</TableCell>
-                  <TableCell className="text-neutral-500 dark:text-neutral-400 text-sm">{rv.email}</TableCell>
-                  <TableCell><Badge className="bg-amber-100 text-amber-800 shadow-none">Revisor</Badge></TableCell>
+                <TableRow key={rv.id}>
+                  <TableCell className="font-semibold">{rv.name}</TableCell>
+                  <TableCell className="text-[var(--app-ink-2)]">{rv.email}</TableCell>
+                  <TableCell><Badge variant="outline" style={{ backgroundColor: 'var(--tile-gold-bg)', color: 'var(--tile-gold-fg)', borderColor: 'transparent' }}>Revisor</Badge></TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -45,7 +45,6 @@ function applyDarkClass(isDark: boolean) {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>('light');
   const [isDark, setIsDarkState] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
 
   // Mount: leer persistencia + aplicar inmediatamente.
   useEffect(() => {
@@ -62,7 +61,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const dark = resolveIsDark(initial);
     setIsDarkState(dark);
     applyDarkClass(dark);
-    setIsMounted(true);
   }, []);
 
   // Cuando mode='system', escuchar cambios del OS en vivo.
@@ -93,11 +91,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setMode(isDark ? 'light' : 'dark');
   }, [isDark, setMode]);
 
+  // E29: nunca cambiar el "padre" de `children` después de montar (antes había un <span> que se
+  // quitaba al montar): React desmontaba y volvía a montar toda la app, duplicando efectos y
+  // peticiones, y dejaba una ventana en la que un commit podía fallar con nodos ya retirados.
   return (
     <ThemeContext.Provider value={{ mode, isDark, setMode, toggleTheme }}>
-      <span style={{ display: 'contents' }} suppressHydrationWarning>
-        {isMounted ? children : <span suppressHydrationWarning>{children}</span>}
-      </span>
+      {children}
     </ThemeContext.Provider>
   );
 }

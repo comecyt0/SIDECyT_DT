@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { User, Mail, Building2, ShieldCheck, Phone, Briefcase, KeyRound, Loader2, Info } from 'lucide-react';
+import { User, Mail, Building2, ShieldCheck, Phone, Briefcase, KeyRound, Loader2, Info, UserCog } from 'lucide-react';
 import api from '@/lib/api';
-import { colorMap } from '@/lib/color-mapper';
 import { AlertBox } from '@/components/ui/alert-box';
+import PageHeader from '@/components/ui/page-header';
 import TwoFactorSetup from '@/components/auth/TwoFactorSetup';
 import PushNotificationsCard from '@/components/pwa/PushNotificationsCard';
 import { INSTITUTION } from '@/lib/institution';
@@ -104,93 +103,92 @@ export default function SolicitanteSettingsPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-neutral-dark">Ajustes de Perfil</h1>
-        <p className="text-neutral-500 mt-1">{`Información de tu cuenta institucional registrada en ${INSTITUTION.name}.`}</p>
-      </div>
+      <PageHeader
+        title="Mi cuenta"
+        description={`Consulta los datos de tu cuenta en ${INSTITUTION.name} y cambia tu contraseña cuando lo necesites.`}
+        icon={<UserCog className="h-5 w-5" />}
+      />
 
-      {/* Profile Card */}
-      <Card className="border-0 shadow-sm ring-1 ring-neutral-100">
-        <CardHeader className="bg-neutral-50 border-b border-neutral-100 pb-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <User className="h-4 w-4 text-primary" /> Mi Perfil
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <User className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Mi perfil
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-6 space-y-6">
+        <CardContent className="space-y-6">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <span className="ml-2 text-sm text-neutral-500">Cargando perfil...</span>
+              <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--auth-vino)' }} />
+              <span className="ml-2 text-sm text-[var(--app-ink-2)]">Cargando tu perfil...</span>
             </div>
           ) : (
             <>
-              {/* Avatar */}
               <div className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-full bg-primary text-white flex items-center justify-center text-xl font-bold shadow">
+                <div className="h-16 w-16 rounded-full text-white flex items-center justify-center text-xl font-bold shrink-0" style={{ backgroundColor: 'var(--auth-vino)' }}>
                   {initials}
                 </div>
-                <div>
-                  <p className="font-semibold text-neutral-900 text-lg">{profile?.name ?? '—'}</p>
-                  <Badge className="bg-primary/10 text-primary border-primary/20 shadow-none mt-1">
-                    {profile?.rol?.nombre ?? 'Solicitante Institucional'}
-                  </Badge>
+                <div className="min-w-0">
+                  <p className="font-semibold text-[var(--app-ink)] text-lg truncate">{profile?.name ?? '—'}</p>
+                  <span className="inline-flex h-5 items-center rounded-md px-2 text-[11px] font-semibold mt-1" style={{ backgroundColor: 'var(--tile-vino-bg)', color: 'var(--tile-vino-fg)' }}>
+                    {profile?.rol?.nombre ?? 'Solicitante institucional'}
+                  </span>
                 </div>
               </div>
 
-              <div className="space-y-4 text-sm">
-                <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
-                  <Mail className="h-4 w-4 text-neutral-400 shrink-0" />
-                  <div>
-                    <p className="text-xs text-neutral-400 font-medium">Correo Electrónico</p>
-                    <p className="font-medium text-neutral-700">{profile?.email ?? '—'}</p>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center gap-3 p-3 bg-[var(--auth-field)] rounded-[14px] border border-[var(--app-rule)]">
+                  <Mail className="h-4 w-4 text-[var(--app-ink-2)] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-[var(--app-ink-2)] font-medium">Correo electrónico</p>
+                    <p className="font-medium text-[var(--app-ink)] break-all">{profile?.email ?? '—'}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
-                  <Building2 className="h-4 w-4 text-neutral-400 shrink-0" />
-                  <div>
-                    <p className="text-xs text-neutral-400 font-medium">Institución</p>
-                    <p className="font-medium text-neutral-700">
+                <div className="flex items-center gap-3 p-3 bg-[var(--auth-field)] rounded-[14px] border border-[var(--app-rule)]">
+                  <Building2 className="h-4 w-4 text-[var(--app-ink-2)] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-[var(--app-ink-2)] font-medium">Institución</p>
+                    <p className="font-medium text-[var(--app-ink)]">
                       {profile?.empresa?.nombre ?? 'Sin institución asignada'}
                     </p>
                   </div>
                 </div>
 
                 {profile?.cargo && (
-                  <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
-                    <Briefcase className="h-4 w-4 text-neutral-400 shrink-0" />
-                    <div>
-                      <p className="text-xs text-neutral-400 font-medium">Cargo</p>
-                      <p className="font-medium text-neutral-700">{profile.cargo}</p>
+                  <div className="flex items-center gap-3 p-3 bg-[var(--auth-field)] rounded-[14px] border border-[var(--app-rule)]">
+                    <Briefcase className="h-4 w-4 text-[var(--app-ink-2)] shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-[var(--app-ink-2)] font-medium">Cargo</p>
+                      <p className="font-medium text-[var(--app-ink)]">{profile.cargo}</p>
                     </div>
                   </div>
                 )}
 
                 {profile?.telefono && (
-                  <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
-                    <Phone className="h-4 w-4 text-neutral-400 shrink-0" />
-                    <div>
-                      <p className="text-xs text-neutral-400 font-medium">Teléfono</p>
-                      <p className="font-medium text-neutral-700">{profile.telefono}</p>
+                  <div className="flex items-center gap-3 p-3 bg-[var(--auth-field)] rounded-[14px] border border-[var(--app-rule)]">
+                    <Phone className="h-4 w-4 text-[var(--app-ink-2)] shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-[var(--app-ink-2)] font-medium">Teléfono</p>
+                      <p className="font-medium text-[var(--app-ink)]">{profile.telefono}</p>
                     </div>
                   </div>
                 )}
 
-                <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
-                  <ShieldCheck className="h-4 w-4 text-neutral-400 shrink-0" />
-                  <div>
-                    <p className="text-xs text-neutral-400 font-medium">Rol del Sistema</p>
-                    <p className="font-medium text-neutral-700">
+                <div className="flex items-center gap-3 p-3 bg-[var(--auth-field)] rounded-[14px] border border-[var(--app-rule)]">
+                  <ShieldCheck className="h-4 w-4 text-[var(--app-ink-2)] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-[var(--app-ink-2)] font-medium">Tipo de cuenta</p>
+                    <p className="font-medium text-[var(--app-ink)]">
                       {profile?.rol?.nombre ?? 'Solicitante'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className={`p-4 ${colorMap.states.warning.background} border ${colorMap.states.warning.border} rounded-lg`}>
-                <p className={`text-sm ${colorMap.states.warning.text} font-medium inline-flex items-center gap-1.5`}><Info className="h-4 w-4" aria-hidden="true" /> Nota</p>
-                <p className={`text-xs ${colorMap.states.warning.main} mt-1`}>
-                  {`La modificación de datos de perfil e institución se realiza directamente a través de la administración ${INSTITUTION.name}. Contacta al encargado del sistema para actualizar tu información.`}
+              <div className="p-4 rounded-[16px]" style={{ backgroundColor: 'var(--tile-gold-bg)' }}>
+                <p className="text-sm text-[var(--app-ink)] font-semibold inline-flex items-center gap-1.5"><Info className="h-4 w-4" aria-hidden="true" style={{ color: 'var(--tile-gold-fg)' }} /> ¿Necesitas cambiar algún dato?</p>
+                <p className="text-sm text-[var(--app-ink-2)] mt-1">
+                  {`Los datos de tu perfil y de tu institución los actualiza el equipo de ${INSTITUTION.name}. Si algo cambió, escríbele a la persona encargada del sistema.`}
                 </p>
               </div>
             </>

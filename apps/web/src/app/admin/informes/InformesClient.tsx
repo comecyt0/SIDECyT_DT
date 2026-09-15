@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import PageHeader from '@/components/ui/page-header';
 import { FileText, Eye, CheckCircle } from 'lucide-react';
 import type { Informe } from '@/types/api';
 
@@ -11,72 +12,78 @@ interface Props {
   informes: Informe[];
 }
 
+const ESTADO_INFORME: Record<string, { label: string; variant: 'default' | 'destructive' | 'secondary' | 'outline' }> = {
+  pendiente: { label: 'Pendiente', variant: 'secondary' },
+  en_revision: { label: 'En revisión', variant: 'outline' },
+  entregado: { label: 'Entregado', variant: 'outline' },
+  observado: { label: 'Con observaciones', variant: 'secondary' },
+  aprobado: { label: 'Aprobado', variant: 'default' },
+  rechazado: { label: 'Rechazado', variant: 'destructive' },
+};
+
+const formatDate = (value?: string) =>
+  value ? new Date(value).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
 export default function InformesClient({ informes }: Props) {
   const getStatusBadge = (estado: string) => {
-    const statusVariant: Record<string, string> = {
-      pendiente: 'default',
-      en_revision: 'default',
-      aprobado: 'default',
-      rechazado: 'destructive',
-    };
-    const variant = statusVariant[estado] || 'default';
-    return <Badge variant={variant as 'default' | 'destructive' | 'secondary' | 'outline'}>{estado?.toUpperCase()}</Badge>;
+    const cfg = ESTADO_INFORME[estado] ?? { label: estado || '—', variant: 'outline' as const };
+    return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-dark">Seguimiento e Informes</h1>
-          <p className="text-neutral-500 dark:text-neutral-400">Gestión de informes técnicos y financieros de proyectos aprobados.</p>
-        </div>
-        <Button className="shadow-md">
-          <FileText className="mr-2 h-4 w-4" />
-          Solicitar Informe Extraordinario
-        </Button>
-      </div>
+      <PageHeader
+        title="Seguimiento e informes"
+        description="Aquí llegan los informes técnicos y financieros de los proyectos apoyados. Revisa cada uno y registra su estado."
+        icon={<FileText className="h-5 w-5" />}
+        actions={
+          <Button variant="outline">
+            <FileText className="h-4 w-4" /> Solicitar informe extraordinario
+          </Button>
+        }
+      />
 
-      <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm relative overflow-hidden ring-1 ring-black/5">
-        <div className="bg-gradient-to-r from-accent/20 to-transparent h-1 w-full absolute top-0" />
-        <CardHeader className="bg-white/50 border-b border-neutral-100 dark:border-neutral-700">
-          <CardTitle className="text-lg text-primary flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-accent" />
-            Bandeja de Informes Recibidos
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <CheckCircle className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Informes recibidos
           </CardTitle>
-          <CardDescription>Monitoreo de tiempos de entrega (máx 20 días hábiles) y evidencia documental.</CardDescription>
+          <CardDescription>Cada informe debe entregarse en un máximo de 20 días hábiles a partir de su fecha límite.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-neutral-50/80">
+            <TableHeader>
               <TableRow>
-                <TableHead className="font-bold text-neutral-700 dark:text-neutral-200 w-16">ID</TableHead>
-                <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Folio Solicitud</TableHead>
-                <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Tipo</TableHead>
-                <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Fecha Límite</TableHead>
-                <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Estado</TableHead>
-                <TableHead className="font-bold text-neutral-700 dark:text-neutral-200 text-right">Revisar</TableHead>
+                <TableHead>Folio de la solicitud</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Fecha límite</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Revisar</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {informes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-40 text-center text-neutral-500 dark:text-neutral-400 font-medium tracking-wide">
-                    No hay informes registrados en seguimiento actualmente.
+                  <TableCell colSpan={5}>
+                    <div className="text-center py-14">
+                      <FileText className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+                      <p className="font-semibold text-[var(--app-ink)]">Sin informes todavía</p>
+                      <p className="text-sm text-[var(--app-ink-2)]">Aparecen cuando un proyecto apoyado entrega su informe.</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
                 informes.map((inf) => (
-                  <TableRow key={inf.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
-                    <TableCell className="font-semibold text-neutral-800 dark:text-neutral-100">{inf.id}</TableCell>
-                    <TableCell className="text-primary font-medium">{inf.solicitud?.folio || 'N/A'}</TableCell>
-                    <TableCell className="capitalize">{inf.tipo}</TableCell>
-                    <TableCell className="font-mono text-sm">{inf.fecha_limite_entrega}</TableCell>
+                  <TableRow key={inf.id}>
+                    <TableCell className="font-mono font-medium" style={{ color: 'var(--auth-vino)' }}>{inf.solicitud?.folio || '—'}</TableCell>
+                    <TableCell className="capitalize">{inf.tipo || '—'}</TableCell>
+                    <TableCell>{formatDate(inf.fecha_limite_entrega)}</TableCell>
                     <TableCell>
                       {getStatusBadge(inf.estado)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="text-accent hover:text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-                        <Eye className="h-4 w-4" />
+                      <Button variant="soft" size="icon-sm" aria-label="Revisar informe" title="Revisar">
+                        <Eye />
                       </Button>
                     </TableCell>
                   </TableRow>

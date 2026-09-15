@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { FileText, PlusCircle, Search, Clock, FolderOpen, ArrowRight } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { badgeColorMap } from '@/lib/color-mapper';
+import { FileText, PlusCircle, Search, Clock, FolderOpen, ArrowRight, CheckCircle2 } from 'lucide-react';
 import type { Solicitud } from '@/types/api';
 import { INSTITUTION } from '@/lib/institution';
-import { estadoLabel } from '@/lib/solicitud-estados';
+import { estadoBadgeClass, estadoLabel } from '@/lib/solicitud-estados';
+import PageHeader from '@/components/ui/page-header';
+import StatTile, { type TileTone } from '@/components/ui/stat-tile';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const container = {
   hidden: { opacity: 0 },
@@ -36,128 +38,121 @@ export default function SolicitudesClient({ solicitudes }: Props) {
   const enProceso = solicitudes.filter(s => ['enviada', 'en_revision', 'en_evaluacion', 'observada'].includes(s.estado)).length;
   const aprobadas = solicitudes.filter(s => ['aprobada', 'convenio', 'ministracion', 'cerrada'].includes(s.estado)).length;
 
-  const miniStats = [
-    { label: 'Total', value: total, bg: 'bg-primary/10', text: 'text-primary' },
-    { label: 'Borradores', value: borradores, bg: 'bg-neutral-100 dark:bg-neutral-800', text: 'text-neutral-600 dark:text-neutral-300' },
-    { label: 'En Proceso', value: enProceso, bg: 'bg-amber-50', text: 'text-amber-700' },
-    { label: 'Aprobadas', value: aprobadas, bg: 'bg-emerald-50', text: 'text-emerald-700' },
+  const miniStats: { label: string; value: number; icon: typeof FolderOpen; tone: TileTone; hint: string; solid?: boolean }[] = [
+    { label: 'Solicitudes', value: total, icon: FolderOpen, tone: 'vino', hint: 'Todas las que has registrado', solid: true },
+    { label: 'Borradores', value: borradores, icon: FileText, tone: 'gold', hint: 'Esperan tu envío' },
+    { label: 'En proceso', value: enProceso, icon: Clock, tone: 'sky', hint: 'En revisión o evaluación' },
+    { label: 'Aprobadas', value: aprobadas, icon: CheckCircle2, tone: 'emerald', hint: 'Con apoyo otorgado' },
   ];
 
   return (
     <div className="space-y-8">
+      <PageHeader
+        title="Mis solicitudes"
+        description={`Aquí están todas las solicitudes que has registrado en ${INSTITUTION.name}. Abre una para ver su avance o completar lo que falte.`}
+        icon={<FolderOpen className="h-5 w-5" />}
+        actions={
+          <Link href="/solicitante/solicitudes/nueva">
+            <Button>
+              <PlusCircle className="h-4 w-4" />
+              Nueva solicitud
+            </Button>
+          </Link>
+        }
+      />
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-50 tracking-tight">Mis Solicitudes</h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-            {`Historial completo de tus proyectos registrados en ${INSTITUTION.name}.`}
-          </p>
-        </div>
-        <Link href="/solicitante/solicitudes/nueva">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-[var(--brand-vino-700)] text-white text-sm font-bold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl transition-shadow duration-300"
-          >
-            <PlusCircle className="w-4 h-4" />
-            Nueva Solicitud
-          </motion.button>
-        </Link>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {miniStats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <StatTile
+              key={s.label}
+              label={s.label}
+              value={s.value}
+              icon={<Icon className="h-5 w-5" />}
+              tone={s.tone}
+              hint={s.hint}
+              solid={s.solid}
+            />
+          );
+        })}
       </div>
 
-      {/* Mini stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {miniStats.map((s) => (
-          <div key={s.label} className={`${s.bg} ${s.text} rounded-2xl px-5 py-4`}>
-            <p className="text-2xl font-extrabold tracking-tight tabular-nums">{s.value}</p>
-            <p className="text-xs font-semibold uppercase tracking-widest mt-0.5 opacity-70">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* List card */}
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-700 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-neutral-100 dark:border-neutral-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <FolderOpen className="w-4 h-4 text-primary" />
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="min-w-0">
+              <CardTitle>
+                <FolderOpen className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
+                Historial
+              </CardTitle>
+              <CardDescription>
+                {filtered.length === 1 ? '1 solicitud' : `${filtered.length} solicitudes`}
+              </CardDescription>
             </div>
-            <div>
-              <h2 className="font-bold text-neutral-900 dark:text-neutral-50 text-sm">Historial de Solicitudes</h2>
-              <p className="text-xs text-neutral-400 dark:text-neutral-500">
-                {filtered.length} registro(s) encontrado(s)
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--app-ink-2)] pointer-events-none" aria-hidden="true" />
+              <input
+                type="search"
+                placeholder="Buscar por folio o título"
+                aria-label="Buscar por folio o título"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="auth-input auth-input-static pl-10"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {filtered.length === 0 ? (
+            <div className="text-center py-14">
+              <FileText className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+              <p className="font-semibold text-[var(--app-ink)]">
+                {search ? 'No encontramos resultados' : 'Todavía no tienes solicitudes'}
+              </p>
+              <p className="text-sm text-[var(--app-ink-2)]">
+                {search ? 'Prueba con otro folio u otra palabra del título.' : 'Crea la primera desde "Nueva solicitud".'}
               </p>
             </div>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-500" />
-            <input
-              type="search"
-              placeholder="Buscar folio o título..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 text-sm bg-neutral-100 dark:bg-neutral-800 border-0 rounded-xl ring-1 ring-neutral-200 focus:outline-none focus:ring-2 focus:ring-primary/30 w-64 placeholder:text-neutral-400"
-            />
-          </div>
-        </div>
-
-        {filtered.length === 0 ? (
-          <div className="py-16 text-center">
-            <div className="w-12 h-12 bg-neutral-50 dark:bg-neutral-900 rounded-full flex items-center justify-center mx-auto mb-3 border border-neutral-100 dark:border-neutral-700">
-              <FileText className="w-5 h-5 text-neutral-300" />
-            </div>
-            <p className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">
-              {search ? 'Sin resultados para tu búsqueda' : 'Sin solicitudes registradas'}
-            </p>
-            <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
-              {search ? 'Intenta con otros términos.' : 'Crea tu primera solicitud haciendo clic en "Nueva Solicitud".'}
-            </p>
-          </div>
-        ) : (
-          <motion.div variants={container} initial="hidden" animate="show" className="divide-y divide-neutral-50 dark:divide-neutral-800">
-            {filtered.map((s) => {
-              const variant = badgeColorMap[s.estado as keyof typeof badgeColorMap] || 'secondary';
-              return (
+          ) : (
+            <motion.div variants={container} initial="hidden" animate="show" className="divide-y divide-[var(--app-rule)]">
+              {filtered.map((s) => (
                 <motion.div
                   key={s.id}
                   variants={item}
-                  className="px-6 py-4 flex items-center gap-4 hover:bg-neutral-50/60 transition-colors group"
+                  className="px-5 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 hover:bg-[var(--auth-field)] transition-colors"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-md font-mono">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="font-mono text-[11px] font-bold text-[var(--app-ink-2)] bg-[var(--auth-field)] px-2 py-0.5 rounded-md">
                         {s.folio}
                       </span>
-                      <Badge variant={variant} className="text-[10px] font-bold uppercase tracking-tight">
+                      <span className={`inline-flex h-5 items-center rounded-md px-2 text-[11px] font-semibold ${estadoBadgeClass(s.estado)}`}>
                         {estadoLabel(s.estado)}
-                      </Badge>
+                      </span>
                     </div>
-                    <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 truncate group-hover:text-primary transition-colors">
+                    <p className="text-sm font-semibold text-[var(--app-ink)] truncate">
                       {s.titulo_proyecto}
                     </p>
-                    <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
+                    <p className="text-xs text-[var(--app-ink-2)] mt-0.5 flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
                       {s.updated_at
                         ? new Date(s.updated_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
                         : '—'
                       }
                     </p>
                   </div>
-                  <Link href={`/solicitante/solicitudes/${s.id}`}>
-                    <motion.button
-                      whileHover={{ x: 2 }}
-                      className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-[var(--brand-vino-700)] transition-colors shrink-0"
-                    >
-                      Ver <ArrowRight className="w-3.5 h-3.5" />
-                    </motion.button>
+                  <Link href={`/solicitante/solicitudes/${s.id}`} className="shrink-0">
+                    <Button variant="soft" size="sm">
+                      Ver <ArrowRight className="h-3.5 w-3.5" />
+                    </Button>
                   </Link>
                 </motion.div>
-              );
-            })}
-          </motion.div>
-        )}
-      </div>
+              ))}
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

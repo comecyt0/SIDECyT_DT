@@ -21,6 +21,11 @@
 > connect a `0.0.0.0` en Windows (E27) — corregido en PHP, el daemon siempre estuvo bien.
 > Detalle y qué falta en [DISENO_UI.md](DISENO_UI.md) §5-7.
 >
+> 🐞 **15/09/2026 — Safari rompía al navegar ("This page couldn't load").** Causa: el splash inicial se
+> quitaba del DOM siendo un nodo de React (E29 en `CLAUDE.md`). Corregido (se oculta), más `ThemeProvider`
+> sin remontar toda la app y pantallas de error en español (`app/error.tsx`, `app/global-error.tsx`).
+> Reproducido y verificado con Playwright WebKit.
+>
 > 🎨 **14/09/2026 (noche) — Reglas globales de UI y formularios por pasos.** Íconos de vidrio sin blur,
 > cero emojis, `<select>` y botones unificados, tablas, sin jerga técnica, responsive móvil primero; y la
 > última ola: **todos los formularios de crear/editar (16) son asistentes por pasos** (`StepFrame`,

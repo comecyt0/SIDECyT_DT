@@ -4,16 +4,16 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import StepFrame from '@/components/ui/step-frame';
+import PageHeader from '@/components/ui/page-header';
 import { FileText, Loader2, FileSignature, Search, Download, CheckCheck, XCircle, Ban, PlayCircle, Check } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import PaginationControls from '@/components/ui/pagination-controls';
 import api from '@/lib/api';
 import type { Solicitud } from '@/types/api';
 import SavedFiltersBar from '@/components/filters/SavedFiltersBar';
-import { estadoLabel } from '@/lib/solicitud-estados';
+import { estadoLabel, estadoBadgeClass } from '@/lib/solicitud-estados';
 import { DataCardGrid } from '@/components/ui/DataCardGrid';
 import { formatCurrency } from '@/lib/format';
 
@@ -105,13 +105,13 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
     if (!selectedSolicitud) return;
 
     if (!convenioForm.monto_aprobado) {
-      setConvenioError('El monto aprobado es requerido.');
+      setConvenioError('Indica el monto aprobado.');
       return;
     }
 
     const numTranches = parseInt(convenioForm.num_tranches) || 1;
     if (numTranches < 1 || numTranches > 12) {
-      setConvenioError('Las tranches deben estar entre 1 y 12.');
+      setConvenioError('El número de entregas debe estar entre 1 y 12.');
       return;
     }
 
@@ -130,14 +130,14 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
       );
 
       if (response.data?.convenio) {
-        setConvenioSuccess(`Convenio ${response.data.convenio.numero_convenio} generado exitosamente.`);
+        setConvenioSuccess(`Listo: se generó el convenio ${response.data.convenio.numero_convenio}.`);
         setTimeout(() => {
           setShowConvenioModal(false);
           router.refresh();
         }, 2000);
       }
     } catch (error: any) {
-      const errorMsg = error.response?.data?.error || error.message || 'Error al generar convenio';
+      const errorMsg = error.response?.data?.error || error.message || 'No se pudo generar el convenio. Inténtalo de nuevo.';
       setConvenioError(errorMsg);
     } finally {
       setConvenioLoading(false);
@@ -211,60 +211,32 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
     }
   };
 
-  const getEstadoBadgeVariant = (estado: string) => {
-    switch (estado) {
-      case 'borrador':
-        return 'secondary';
-      case 'enviada':
-        return 'default';
-      case 'observada':
-        return 'outline';
-      case 'en_evaluacion':
-        return 'default';
-      case 'aprobada':
-        return 'default';
-      case 'rechazada':
-        return 'destructive';
-      case 'convenio':
-        return 'default';
-      default:
-        return 'secondary';
-    }
-  };
-
   const canGenerateConvenio = (sol: Solicitud) => {
     return sol.estado === 'aprobada' && !sol.convenio;
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-dark">Administración de Solicitudes</h1>
-          <p className="text-neutral-500 dark:text-neutral-400">Gestiona solicitudes, genera convenios y monitorea estados.</p>
-        </div>
-        <Button
-          variant="outline"
-          onClick={handleExport}
-          disabled={exporting}
-          className="flex items-center gap-2 border-neutral-200 dark:border-neutral-700 hover:border-primary/30 hover:text-primary"
-        >
-          {exporting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4" />
-          )}
-          {exporting ? 'Exportando...' : 'Exportar Excel'}
-        </Button>
-      </div>
+      <PageHeader
+        title="Solicitudes"
+        description="Revisa cada solicitud, genera su convenio cuando esté aprobada y sigue su avance hasta el cierre."
+        icon={<FileText className="h-5 w-5" />}
+        actions={
+          <Button variant="outline" onClick={handleExport} disabled={exporting}>
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {exporting ? 'Exportando…' : 'Exportar a Excel'}
+          </Button>
+        }
+      />
 
-      {/* Search Bar + Saved Filters */}
       <div className="space-y-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400 dark:text-neutral-500" />
-          <Input
-            placeholder="Buscar por folio, proyecto o empresa..."
-            className="pl-10 bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700"
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--app-ink-2)] pointer-events-none" aria-hidden="true" />
+          <input
+            type="search"
+            aria-label="Buscar solicitudes"
+            placeholder="Buscar por folio, proyecto o empresa"
+            className="auth-input auth-input-static pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -276,16 +248,15 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
         />
       </div>
 
-      {/* Solicitudes Table */}
-      <Card className="border-0 shadow-md">
-        <CardHeader className="bg-white dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700">
-          <CardTitle className="text-lg text-primary flex items-center gap-2">
-            <FileText className="w-5 h-5" />
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <FileText className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
             Solicitudes ({pagination.total})
           </CardTitle>
-          <CardDescription>Listado de solicitudes con opciones de gestión</CardDescription>
+          <CardDescription>Cada tarjeta muestra el estado de la solicitud y las acciones que puedes tomar.</CardDescription>
         </CardHeader>
-        <CardContent className="p-4">
+        <CardContent>
           <DataCardGrid
             items={solicitudes}
             getKey={(s) => s.id}
@@ -299,63 +270,68 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
               return 'neutral';
             }}
             emptyState={
-              <div className="p-12 text-center text-neutral-500 dark:text-neutral-400">
-                <FileText className="h-12 w-12 mx-auto mb-2 text-neutral-300" />
-                <p>No hay solicitudes que coincidan con tu búsqueda.</p>
+              <div className="text-center py-14">
+                <FileText className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+                <p className="font-semibold text-[var(--app-ink)]">
+                  {searchTerm ? 'Ninguna solicitud coincide con tu búsqueda' : 'Sin solicitudes todavía'}
+                </p>
+                <p className="text-sm text-[var(--app-ink-2)]">
+                  {searchTerm ? 'Prueba con otro folio, proyecto o empresa.' : 'Aparecen cuando un solicitante envía su proyecto a una convocatoria.'}
+                </p>
               </div>
             }
             renderCard={(sol) => (
               <div className="pl-3">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0 flex-1">
-                    <span className="text-[10px] font-bold text-primary uppercase tracking-widest font-mono">{sol.folio}</span>
-                    <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-50 leading-tight mt-0.5 line-clamp-2">{sol.titulo_proyecto}</h3>
+                    <span className="text-[10px] font-bold uppercase tracking-widest font-mono" style={{ color: 'var(--auth-vino)' }}>{sol.folio}</span>
+                    <h3 className="text-sm font-bold text-[var(--app-ink)] leading-tight mt-0.5 line-clamp-2">{sol.titulo_proyecto}</h3>
                   </div>
-                  <Badge variant={getEstadoBadgeVariant(sol.estado)} className="shrink-0 text-[10px]">
-                    {estadoLabel(sol.estado).toUpperCase()}
+                  <Badge variant="outline" className={`shrink-0 border-transparent ${estadoBadgeClass(sol.estado)}`}>
+                    {estadoLabel(sol.estado)}
                   </Badge>
                 </div>
-                <div className="grid grid-cols-2 gap-3 mb-3 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 text-xs">
                   <div>
-                    <span className="text-[10px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block">Empresa</span>
-                    <span className="text-neutral-700 dark:text-neutral-200 truncate block">{sol.empresa?.nombre || 'N/A'}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-[var(--app-ink-2)] block">Empresa</span>
+                    <span className="text-[var(--app-ink)] truncate block">{sol.empresa?.nombre || 'Sin empresa'}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block">Monto</span>
-                    <span className="text-neutral-700 dark:text-neutral-200 font-semibold tabular-nums">{formatCurrency(sol.monto_solicitado || 0)}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-[var(--app-ink-2)] block">Monto solicitado</span>
+                    <span className="text-[var(--app-ink)] font-semibold tabular-nums">{formatCurrency(sol.monto_solicitado || 0)}</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-neutral-50 dark:border-neutral-800 flex-wrap">
+                <div className="flex items-center justify-end gap-1.5 pt-3 border-t flex-wrap" style={{ borderColor: 'var(--app-rule)' }}>
                   {canGenerateConvenio(sol) && (
-                    <Button size="sm" className="h-7 text-xs bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => handleOpenConvenioModal(sol)}>
-                      <FileSignature className="h-3.5 w-3.5 mr-1" /> Convenio
+                    <Button size="sm" onClick={() => handleOpenConvenioModal(sol)}>
+                      <FileSignature /> Generar convenio
                     </Button>
                   )}
-                  {sol.convenio && <Badge variant="outline" className="text-[10px]"><Check aria-hidden="true" /> Convenio</Badge>}
+                  {sol.convenio && <Badge variant="outline"><Check aria-hidden="true" /> Con convenio</Badge>}
                   {sol.estado === 'ministracion' && (
-                    <Button size="sm" variant="outline" className="h-7 text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+                    <Button size="sm" variant="soft"
                       disabled={actionLoading === sol.id} onClick={() => setConfirmSeguimiento({ open: true, solicitudId: sol.id })}>
-                      {actionLoading === sol.id ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <PlayCircle className="h-3.5 w-3.5 mr-1" />}
-                      Seguimiento
+                      {actionLoading === sol.id ? <Loader2 className="animate-spin" /> : <PlayCircle />}
+                      Iniciar seguimiento
                     </Button>
                   )}
                   {(sol.estado === 'ministracion' || sol.estado === 'seguimiento') && (
-                    <Button size="sm" variant="outline" className="h-7 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                    <Button size="sm" variant="soft"
                       disabled={closingId === sol.id} onClick={() => setConfirmClose({ open: true, solicitudId: sol.id })}>
-                      {closingId === sol.id ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <CheckCheck className="h-3.5 w-3.5 mr-1" />}
+                      {closingId === sol.id ? <Loader2 className="animate-spin" /> : <CheckCheck />}
                       Cerrar
                     </Button>
                   )}
                   {['enviada', 'en_evaluacion', 'aprobada'].includes(sol.estado) && (
-                    <Button size="sm" variant="outline" className="h-7 text-xs border-red-200 text-red-600 hover:bg-red-50"
+                    <Button size="sm" variant="destructive"
                       disabled={actionLoading === sol.id} onClick={() => setConfirmRechazar({ open: true, solicitudId: sol.id })}>
-                      <XCircle className="h-3.5 w-3.5 mr-1" /> Rechazar
+                      <XCircle /> Rechazar
                     </Button>
                   )}
                   {['borrador', 'enviada', 'observada', 'en_evaluacion'].includes(sol.estado) && (
-                    <Button size="sm" variant="outline" className="h-7 text-xs border-neutral-200 text-neutral-500 hover:bg-neutral-50"
+                    <Button size="sm" variant="ghost"
                       disabled={actionLoading === sol.id} onClick={() => setConfirmCancelar({ open: true, solicitudId: sol.id })}>
-                      <Ban className="h-3.5 w-3.5 mr-1" /> Cancelar
+                      <Ban /> Cancelar
                     </Button>
                   )}
                 </div>
@@ -457,12 +433,11 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
         ]}
       />
 
-      {/* Confirm Close Dialog */}
       <ConfirmDialog
         open={confirmClose.open}
-        title="Cerrar Proyecto"
-        description="¿Confirmas el cierre de este proyecto? El estado cambiará a CERRADA y no podrá revertirse."
-        confirmLabel="Sí, Cerrar Proyecto"
+        title="Cerrar proyecto"
+        description="La solicitud quedará como cerrada y ya no podrá reabrirse. ¿Quieres continuar?"
+        confirmLabel="Sí, cerrar"
         cancelLabel="Cancelar"
         variant="default"
         onConfirm={() => {
@@ -472,12 +447,11 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
         onCancel={() => setConfirmClose({ open: false, solicitudId: null })}
       />
 
-      {/* Confirm Seguimiento Dialog */}
       <ConfirmDialog
         open={confirmSeguimiento.open}
-        title="Iniciar Seguimiento"
-        description="La solicitud pasará al estado SEGUIMIENTO indicando que el informe final está pendiente."
-        confirmLabel="Iniciar Seguimiento"
+        title="Iniciar seguimiento"
+        description="La solicitud pasará a seguimiento: queda pendiente el informe final del proyecto."
+        confirmLabel="Iniciar seguimiento"
         cancelLabel="Cancelar"
         variant="default"
         onConfirm={() => {
@@ -487,12 +461,11 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
         onCancel={() => setConfirmSeguimiento({ open: false, solicitudId: null })}
       />
 
-      {/* Confirm Rechazar Dialog */}
       <ConfirmDialog
         open={confirmRechazar.open}
-        title="Rechazar Solicitud"
-        description="La solicitud cambiará a estado RECHAZADA. Esta acción no puede revertirse fácilmente."
-        confirmLabel="Sí, Rechazar"
+        title="Rechazar solicitud"
+        description="La solicitud quedará como rechazada y se avisará al solicitante. Esta acción no se puede deshacer."
+        confirmLabel="Sí, rechazar"
         cancelLabel="Cancelar"
         variant="destructive"
         onConfirm={() => {
@@ -502,12 +475,11 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
         onCancel={() => setConfirmRechazar({ open: false, solicitudId: null })}
       />
 
-      {/* Confirm Cancelar Dialog */}
       <ConfirmDialog
         open={confirmCancelar.open}
-        title="Cancelar Solicitud"
-        description="La solicitud cambiará a estado CANCELADA. El solicitante será notificado."
-        confirmLabel="Sí, Cancelar"
+        title="Cancelar solicitud"
+        description="La solicitud quedará como cancelada y se avisará al solicitante."
+        confirmLabel="Sí, cancelar"
         cancelLabel="Mantener"
         variant="destructive"
         onConfirm={() => {

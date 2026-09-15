@@ -8,6 +8,9 @@ import {
   Mail, User, RefreshCw, ShieldAlert
 } from 'lucide-react';
 import api from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import PageHeader from '@/components/ui/page-header';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
@@ -21,10 +24,12 @@ export interface ResetRequest {
 }
 
 const statusConfig = {
-  pending:  { label: 'Pendiente',  bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-300',   icon: Clock },
-  approved: { label: 'Aprobada',   bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-300', icon: CheckCircle2 },
-  rejected: { label: 'Rechazada',  bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-300',     icon: XCircle },
+  pending:  { label: 'Pendiente',  chip: 'bg-amber-50 text-amber-700',     icon: Clock },
+  approved: { label: 'Aprobada',   chip: 'bg-emerald-50 text-emerald-700', icon: CheckCircle2 },
+  rejected: { label: 'Rechazada',  chip: 'bg-red-50 text-red-700',         icon: XCircle },
 };
+
+const FILTER_LABELS = { all: 'Todas', pending: 'Pendientes', approved: 'Aprobadas', rejected: 'Rechazadas' } as const;
 
 interface Props {
   requests: ResetRequest[];
@@ -57,7 +62,7 @@ export default function ResetRequestsClient({ requests }: Props) {
           router.refresh();
         } catch (err: unknown) {
           const e = err as { response?: { data?: { error?: string } } };
-          setFeedback({ type: 'error', message: e.response?.data?.error || 'Error al aprobar la solicitud.' });
+          setFeedback({ type: 'error', message: e.response?.data?.error || 'No se pudo aprobar la solicitud. Inténtalo de nuevo.' });
         }
       },
     });
@@ -76,7 +81,7 @@ export default function ResetRequestsClient({ requests }: Props) {
           router.refresh();
         } catch (err: unknown) {
           const e = err as { response?: { data?: { error?: string } } };
-          setFeedback({ type: 'error', message: e.response?.data?.error || 'Error al rechazar la solicitud.' });
+          setFeedback({ type: 'error', message: e.response?.data?.error || 'No se pudo rechazar la solicitud. Inténtalo de nuevo.' });
         }
       },
     });
@@ -87,27 +92,17 @@ export default function ResetRequestsClient({ requests }: Props) {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-50 tracking-tight flex items-center gap-2">
-            <KeyRound className="w-6 h-6 text-primary" />
-            Recuperación de Contraseñas
-          </h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-            Solicitudes de recuperación enviadas por usuarios. Apruébalas para enviar el enlace de restablecimiento.
-          </p>
-        </div>
-        <button
-          onClick={() => router.refresh()}
-          className="p-2 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:text-neutral-900 transition-colors"
-          title="Actualizar"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
-      </div>
+      <PageHeader
+        title="Recuperación de contraseñas"
+        description="Cuando alguien olvida su contraseña, su solicitud llega aquí. Al aprobarla se le envía el enlace para cambiarla."
+        icon={<KeyRound className="h-5 w-5" />}
+        actions={
+          <Button variant="outline" onClick={() => router.refresh()}>
+            <RefreshCw className="h-4 w-4" /> Actualizar
+          </Button>
+        }
+      />
 
-      {/* Feedback */}
       {feedback && (
         <AlertBox
           type={feedback.type}
@@ -116,40 +111,38 @@ export default function ResetRequestsClient({ requests }: Props) {
         />
       )}
 
-      {/* Alert banner for pending requests */}
       {pendingCount > 0 && (
-        <div className="flex items-center gap-3 px-5 py-4 bg-amber-50 border border-amber-200 rounded-2xl">
-          <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
+        <div className="flex items-center gap-3 px-5 py-4 rounded-[18px]" style={{ backgroundColor: 'var(--tile-gold-bg)' }}>
+          <ShieldAlert className="w-5 h-5 shrink-0" style={{ color: 'var(--tile-gold-fg)' }} aria-hidden="true" />
           <div>
-            <p className="text-sm font-bold text-amber-800">
+            <p className="text-sm font-bold text-[var(--app-ink)]">
               {pendingCount} solicitud{pendingCount > 1 ? 'es' : ''} pendiente{pendingCount > 1 ? 's' : ''} de revisión
             </p>
-            <p className="text-xs text-amber-600 mt-0.5">
-              Aprueba las solicitudes para que los usuarios puedan recuperar su acceso.
+            <p className="text-xs text-[var(--app-ink-2)] mt-0.5">
+              Apruébalas para que esas personas puedan recuperar su acceso.
             </p>
           </div>
         </div>
       )}
 
-      {/* Filter tabs */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-1.5 flex-wrap">
         {(['all', 'pending', 'approved', 'rejected'] as const).map(f => {
           const count = f === 'all' ? requests.length : requests.filter(r => r.status === f).length;
           const active = filter === f;
-          const colors = f === 'pending' ? 'bg-amber-100 text-amber-700' :
-                         f === 'approved' ? 'bg-emerald-100 text-emerald-700' :
-                         f === 'rejected' ? 'bg-red-100 text-red-700' :
-                         'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200';
           return (
             <button
               key={f}
+              type="button"
+              aria-pressed={active}
               onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 flex items-center gap-1.5 ${
-                active ? colors + ' ring-2 ring-current/30 shadow-sm' : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+              className={`px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-colors duration-150 flex items-center gap-1.5 border ${
+                active
+                  ? 'bg-[var(--auth-vino)] text-white border-transparent'
+                  : 'bg-[var(--app-card-bg)] text-[var(--app-ink-2)] border-[var(--app-rule)] hover:text-[var(--app-ink)]'
               }`}
             >
-              {{ all: 'Todas', pending: 'Pendientes', approved: 'Aprobadas', rejected: 'Rechazadas' }[f]}
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${active ? 'bg-white/50' : 'bg-neutral-100 dark:bg-neutral-800'}`}>
+              {FILTER_LABELS[f]}
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${active ? 'bg-white/20 text-white' : 'bg-[var(--auth-field)] text-[var(--app-ink-2)]'}`}>
                 {count}
               </span>
             </button>
@@ -157,18 +150,16 @@ export default function ResetRequestsClient({ requests }: Props) {
         })}
       </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-700 shadow-sm overflow-hidden">
+      <Card>
+        <CardContent className="p-0">
         {filtered.length === 0 ? (
-          <div className="py-20 text-center">
-            <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-3">
-              <KeyRound className="w-5 h-5 text-neutral-400 dark:text-neutral-500" />
-            </div>
-            <p className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">Sin solicitudes</p>
-            <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">No hay solicitudes de recuperación en este momento.</p>
+          <div className="text-center py-14">
+            <KeyRound className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+            <p className="font-semibold text-[var(--app-ink)]">Sin solicitudes todavía</p>
+            <p className="text-sm text-[var(--app-ink-2)]">Aparecen cuando alguien pide recuperar su contraseña desde la pantalla de inicio de sesión.</p>
           </div>
         ) : (
-          <div className="divide-y divide-neutral-50 dark:divide-neutral-800">
+          <div className="divide-y divide-[var(--app-rule)]">
             <AnimatePresence>
               {filtered.map((req, i) => {
                 const cfg = statusConfig[req.status];
@@ -180,54 +171,45 @@ export default function ResetRequestsClient({ requests }: Props) {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 8 }}
                     transition={{ delay: i * 0.04 }}
-                    className="px-6 py-4 flex items-center gap-4 hover:bg-neutral-50/60 transition-colors"
+                    className="px-5 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 hover:bg-[var(--auth-field)] transition-colors"
                   >
-                    {/* Avatar */}
-                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <User className="w-4 h-4 text-primary" />
-                    </div>
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <span className="app-tile-icon shrink-0" style={{ color: 'var(--tile-sky-fg)' }}>
+                        <User className="h-5 w-5" />
+                      </span>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-sm font-bold text-neutral-900 dark:text-neutral-50 truncate">
-                          {req.nombre || req.email}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <p className="text-sm font-bold text-[var(--app-ink)] truncate">
+                            {req.nombre || req.email}
+                          </p>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${cfg.chip} uppercase tracking-tight shrink-0 inline-flex items-center gap-1`}>
+                            <Icon className="w-2.5 h-2.5" /> {cfg.label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-[var(--app-ink-2)]">
+                          <Mail className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{req.email}</span>
+                        </div>
+                        <p className="text-[11px] text-[var(--app-ink-2)] mt-0.5">
+                          Solicitado el {new Date(req.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {req.approved_at && ` · Atendida el ${new Date(req.approved_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}`}
                         </p>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${cfg.bg} ${cfg.text} uppercase tracking-tight shrink-0 flex items-center gap-1`}>
-                          <Icon className="w-2.5 h-2.5" /> {cfg.label}
-                        </span>
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-neutral-400 dark:text-neutral-500">
-                        <Mail className="w-3 h-3 shrink-0" />
-                        <span className="truncate">{req.email}</span>
-                      </div>
-                      <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-0.5">
-                        Solicitado el {new Date(req.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        {req.approved_at && ` · Procesado: ${new Date(req.approved_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}`}
-                      </p>
                     </div>
 
-                    {/* Actions */}
                     {req.status === 'pending' && (
-                      <div className="flex gap-2 shrink-0">
-                        <motion.button
-                          whileHover={{ y: -1 }}
-                          onClick={() => handleApprove(req)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white rounded-lg transition-all"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Aprobar
-                        </motion.button>
-                        <motion.button
-                          whileHover={{ y: -1 }}
-                          onClick={() => handleReject(req)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-700 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all"
-                        >
-                          <XCircle className="w-3.5 h-3.5" /> Rechazar
-                        </motion.button>
+                      <div className="flex gap-2 shrink-0 sm:justify-end">
+                        <Button size="sm" variant="soft" onClick={() => handleApprove(req)}>
+                          <CheckCircle2 /> Aprobar
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleReject(req)}>
+                          <XCircle /> Rechazar
+                        </Button>
                       </div>
                     )}
                     {req.status !== 'pending' && (
-                      <span className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${cfg.bg} ${cfg.text} shrink-0`}>
+                      <span className={`text-xs font-semibold px-3 py-1.5 rounded-[10px] ${cfg.chip} shrink-0 self-start sm:self-auto`}>
                         {req.status === 'approved' ? 'Enlace enviado' : 'Rechazada'}
                       </span>
                     )}
@@ -237,7 +219,8 @@ export default function ResetRequestsClient({ requests }: Props) {
             </AnimatePresence>
           </div>
         )}
-      </div>
+        </CardContent>
+      </Card>
 
       <ConfirmDialog
         open={confirm.open}

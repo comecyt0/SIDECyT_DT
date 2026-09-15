@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import StepFrame from '@/components/ui/step-frame';
+import PageHeader from '@/components/ui/page-header';
 import {
   ChevronRight,
   ChevronLeft,
@@ -28,6 +29,8 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
+  Megaphone,
+  Inbox,
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -97,6 +100,38 @@ interface WizardState {
 
 const wizLabelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
 const wizInputCls = 'auth-input auth-input-static pl-4';
+
+const TIPO_CAMPO_LABELS: Record<Campo['tipo_campo'], string> = {
+  text: 'Texto corto',
+  textarea: 'Texto largo',
+  number: 'Número',
+  date: 'Fecha',
+  select: 'Lista de opciones',
+};
+
+const TIPO_APOYO_LABELS: Record<WizardState['programa']['tipo_apoyo'], string> = {
+  reembolso: 'Reembolso',
+  concurrente: 'Concurrente',
+  honorarios: 'Honorarios',
+};
+
+const WIZARD_STEPS = [
+  'Convocatoria',
+  'Programa',
+  'Preguntas',
+  'Documentos',
+  'Conceptos de gasto',
+  'Criterios',
+  'Revisión',
+];
+
+const EmptyList = ({ text }: { text: string }) => (
+  <div className="text-center py-10">
+    <Inbox className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+    <p className="font-semibold text-[var(--app-ink)]">Sin registros todavía</p>
+    <p className="text-sm text-[var(--app-ink-2)]">{text}</p>
+  </div>
+);
 
 // Identificador interno a partir del texto visible: "Título del proyecto" → "titulo_del_proyecto"
 const slugify = (s: string) =>
@@ -533,59 +568,75 @@ export default function ConvocatoriasNuevaPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_22rem] gap-6">
         {/* Columna izquierda: wizard */}
         <div className="space-y-6 min-w-0">
-      <div>
-        <h1 className="text-3xl font-bold text-neutral-dark">Nueva Convocatoria</h1>
-        <p className="text-neutral-500 dark:text-neutral-400">Wizard de 7 pasos para crear una convocatoria completa con programa, campos, documentos, rubros y criterios.</p>
-      </div>
+      <PageHeader
+        backHref="/admin/convocatorias"
+        backLabel="Volver a convocatorias"
+        eyebrow="Convocatorias"
+        title="Nueva convocatoria"
+        description="En siete pasos defines la convocatoria, su programa, las preguntas y documentos que pedirás, en qué se puede gastar el apoyo y cómo se evaluará."
+        icon={<Megaphone className="h-5 w-5" />}
+      />
 
-      <div className="flex items-center justify-center gap-1">
-        {[1, 2, 3, 4, 5, 6, 7].map((step) => (
-          <div key={step} className="flex items-center gap-1">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
-                currentStep === step
-                  ? 'bg-primary text-white ring-2 ring-primary ring-offset-2'
-                  : currentStep > step
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-neutral-200 text-neutral-600 dark:text-neutral-300'
-              }`}
-            >
-              {currentStep > step ? <CheckCircle className="w-5 h-5" /> : step}
-            </div>
-            {step < 7 && <div className="w-2 h-1 bg-neutral-200" />}
-          </div>
-        ))}
-      </div>
+      <ol className="flex items-center justify-center gap-1" aria-label={`Paso ${currentStep} de 7: ${WIZARD_STEPS[currentStep - 1]}`}>
+        {WIZARD_STEPS.map((label, i) => {
+          const step = i + 1;
+          const done = currentStep > step;
+          const active = currentStep === step;
+          return (
+            <li key={step} className="flex items-center gap-1">
+              <span
+                title={label}
+                aria-current={active ? 'step' : undefined}
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold transition-[transform,background-color,color] duration-200 ${
+                  active
+                    ? 'bg-[var(--auth-vino)] text-white ring-4 ring-[var(--auth-vino-soft)] scale-105'
+                    : done
+                    ? 'text-[var(--tile-emerald-fg)]'
+                    : 'bg-[var(--auth-field)] text-[var(--app-ink-2)]'
+                }`}
+                style={done ? { backgroundColor: 'var(--tile-emerald-bg)' } : undefined}
+              >
+                {done ? <CheckCircle className="w-5 h-5" aria-hidden="true" /> : step}
+                <span className="sr-only">{label}</span>
+              </span>
+              {step < 7 && <span className="w-2 sm:w-3 h-0.5 bg-[var(--app-rule)]" aria-hidden="true" />}
+            </li>
+          );
+        })}
+      </ol>
+      <p className="text-center text-xs font-bold uppercase tracking-[0.14em] -mt-3" style={{ color: 'var(--auth-vino)' }}>
+        Paso {currentStep} de 7 · {WIZARD_STEPS[currentStep - 1]}
+      </p>
 
-      <Card className="border-0 shadow-md">
-        <CardHeader className="bg-white dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700">
-          <CardTitle className="text-xl text-primary">
-            {currentStep === 1 && 'Información de la Convocatoria'}
-            {currentStep === 2 && 'Configuración del Programa'}
-            {currentStep === 3 && 'Campos del Formulario'}
-            {currentStep === 4 && 'Documentos Requeridos'}
-            {currentStep === 5 && 'Rubros Presupuestarios'}
-            {currentStep === 6 && 'Criterios de Evaluación'}
-            {currentStep === 7 && 'Revisión y Guardar'}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {currentStep === 1 && 'Información de la convocatoria'}
+            {currentStep === 2 && 'Configuración del programa'}
+            {currentStep === 3 && 'Preguntas del formulario'}
+            {currentStep === 4 && 'Documentos que se piden'}
+            {currentStep === 5 && 'Conceptos de gasto'}
+            {currentStep === 6 && 'Criterios de evaluación'}
+            {currentStep === 7 && 'Revisa y guarda'}
           </CardTitle>
           <CardDescription>
-            {currentStep === 1 && 'Completa la información general de la convocatoria'}
-            {currentStep === 2 && 'Configura los parámetros del programa'}
-            {currentStep === 3 && 'Define los campos dinámicos del formulario que verá el solicitante'}
-            {currentStep === 4 && 'Especifica qué documentos debe proporcionar el solicitante'}
-            {currentStep === 5 && 'Define los rubros presupuestarios permitidos'}
-            {currentStep === 6 && 'Especifica los criterios de evaluación técnica'}
-            {currentStep === 7 && 'Verifica toda la información antes de crear la convocatoria'}
+            {currentStep === 1 && 'Escribe los datos generales que verán los solicitantes.'}
+            {currentStep === 2 && 'Define cómo se entrega el apoyo y qué reglas aplican.'}
+            {currentStep === 3 && 'Estas son las preguntas que responderá el solicitante en su formulario.'}
+            {currentStep === 4 && 'Indica qué archivos debe adjuntar el solicitante.'}
+            {currentStep === 5 && 'Define en qué se puede usar el dinero del apoyo.'}
+            {currentStep === 6 && 'Indica qué se califica y cuánto pesa cada aspecto.'}
+            {currentStep === 7 && 'Revisa toda la información antes de crear la convocatoria.'}
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-8">
+        <CardContent>
           {currentStep === 1 && (
             <div className="space-y-6">
               {validationErrors.nombre && (
                 <AlertBox type="error" message={validationErrors.nombre} />
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="conv_nombre" className="text-neutral-700 dark:text-neutral-200 font-medium">
                     Nombre de la Convocatoria *
@@ -647,7 +698,7 @@ export default function ConvocatoriasNuevaPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="fecha_apertura" className="text-neutral-700 dark:text-neutral-200 font-medium">
                     Fecha de Apertura *
@@ -690,7 +741,7 @@ export default function ConvocatoriasNuevaPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="monto_maximo" className="text-neutral-700 dark:text-neutral-200 font-medium">
                     Monto Máximo de Apoyo *
@@ -751,7 +802,7 @@ export default function ConvocatoriasNuevaPage() {
                 <AlertBox type="error" message={validationErrors.clave} />
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="prog_clave" className="text-neutral-700 dark:text-neutral-200 font-medium">
                     Clave del Programa *
@@ -794,7 +845,7 @@ export default function ConvocatoriasNuevaPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="tipo_apoyo" className="text-neutral-700 dark:text-neutral-200 font-medium">
                     Tipo de Apoyo *
@@ -990,58 +1041,43 @@ export default function ConvocatoriasNuevaPage() {
                 <AlertBox type="error" message={validationErrors.campos} />
               )}
 
-              <Button
-                onClick={() => openCampoModal()}
-                className="bg-primary hover:bg-primary-light text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" /> Agregar Campo
+              <Button onClick={() => openCampoModal()}>
+                <Plus className="h-4 w-4" /> Agregar pregunta
               </Button>
 
               {state.campos.length === 0 ? (
-                <div className="p-8 text-center text-neutral-500 dark:text-neutral-400">
-                  <p>No hay campos agregados. Agrega al menos uno.</p>
-                </div>
+                <EmptyList text="Agrega al menos una pregunta para continuar." />
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-primary font-semibold">Campo</TableHead>
-                      <TableHead className="text-primary font-semibold">Etiqueta</TableHead>
-                      <TableHead className="text-primary font-semibold">Tipo</TableHead>
-                      <TableHead className="text-primary font-semibold">Requerido</TableHead>
-                      <TableHead className="text-primary font-semibold">Orden</TableHead>
-                      <TableHead className="text-right text-primary font-semibold">Acciones</TableHead>
+                      <TableHead>Pregunta</TableHead>
+                      <TableHead>Tipo de respuesta</TableHead>
+                      <TableHead>Obligatoria</TableHead>
+                      <TableHead>Posición</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {state.campos.map((campo, idx) => (
-                      <TableRow key={idx} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                        <TableCell className="font-mono text-sm">{campo.nombre_campo}</TableCell>
-                        <TableCell>{campo.etiqueta}</TableCell>
+                      <TableRow key={idx}>
+                        <TableCell className="font-medium whitespace-normal">{campo.etiqueta}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{campo.tipo_campo}</Badge>
+                          <Badge variant="outline">{TIPO_CAMPO_LABELS[campo.tipo_campo] ?? campo.tipo_campo}</Badge>
                         </TableCell>
                         <TableCell>
-                          {campo.requerido ? <Badge className="bg-green-100 text-green-700">Sí</Badge> : <Badge variant="secondary">No</Badge>}
+                          <Badge variant={campo.requerido ? 'default' : 'secondary'}>{campo.requerido ? 'Sí' : 'No'}</Badge>
                         </TableCell>
                         <TableCell>{campo.orden}</TableCell>
-                        <TableCell className="text-right space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openCampoModal(idx)}
-                            className="text-neutral-600 dark:text-neutral-300 hover:text-primary"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => deleteCampo(idx)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <TableCell className="text-right">
+                          <div className="inline-flex items-center gap-1.5">
+                            <Button variant="soft" size="icon-sm" onClick={() => openCampoModal(idx)} aria-label="Editar" title="Editar">
+                              <Edit2 />
+                            </Button>
+                            <Button variant="destructive" size="icon-sm" onClick={() => deleteCampo(idx)} aria-label="Eliminar" title="Eliminar">
+                              <Trash2 />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1142,54 +1178,39 @@ export default function ConvocatoriasNuevaPage() {
                 <AlertBox type="error" message={validationErrors.documentos} />
               )}
 
-              <Button
-                onClick={() => openDocumentoModal()}
-                className="bg-primary hover:bg-primary-light text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" /> Agregar Documento
+              <Button onClick={() => openDocumentoModal()}>
+                <Plus className="h-4 w-4" /> Agregar documento
               </Button>
 
               {state.documentos.length === 0 ? (
-                <div className="p-8 text-center text-neutral-500 dark:text-neutral-400">
-                  <p>No hay documentos agregados. Agrega al menos uno.</p>
-                </div>
+                <EmptyList text="Agrega al menos un documento para continuar." />
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-primary font-semibold">Clave</TableHead>
-                      <TableHead className="text-primary font-semibold">Nombre</TableHead>
-                      <TableHead className="text-primary font-semibold">Obligatorio</TableHead>
-                      <TableHead className="text-primary font-semibold">Orden</TableHead>
-                      <TableHead className="text-right text-primary font-semibold">Acciones</TableHead>
+                      <TableHead>Documento</TableHead>
+                      <TableHead>Obligatorio</TableHead>
+                      <TableHead>Posición</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {state.documentos.map((doc, idx) => (
-                      <TableRow key={idx} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                        <TableCell className="font-mono text-sm">{doc.clave}</TableCell>
-                        <TableCell>{doc.nombre}</TableCell>
+                      <TableRow key={idx}>
+                        <TableCell className="font-medium whitespace-normal">{doc.nombre}</TableCell>
                         <TableCell>
-                          {doc.obligatorio ? <Badge className="bg-green-100 text-green-700">Sí</Badge> : <Badge variant="secondary">No</Badge>}
+                          <Badge variant={doc.obligatorio ? 'default' : 'secondary'}>{doc.obligatorio ? 'Sí' : 'No'}</Badge>
                         </TableCell>
                         <TableCell>{doc.orden}</TableCell>
-                        <TableCell className="text-right space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openDocumentoModal(idx)}
-                            className="text-neutral-600 dark:text-neutral-300 hover:text-primary"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => deleteDocumento(idx)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <TableCell className="text-right">
+                          <div className="inline-flex items-center gap-1.5">
+                            <Button variant="soft" size="icon-sm" onClick={() => openDocumentoModal(idx)} aria-label="Editar" title="Editar">
+                              <Edit2 />
+                            </Button>
+                            <Button variant="destructive" size="icon-sm" onClick={() => deleteDocumento(idx)} aria-label="Eliminar" title="Eliminar">
+                              <Trash2 />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1270,50 +1291,35 @@ export default function ConvocatoriasNuevaPage() {
                 <AlertBox type="error" message={validationErrors.rubros} />
               )}
 
-              <Button
-                onClick={() => openRubroModal()}
-                className="bg-primary hover:bg-primary-light text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" /> Agregar Rubro
+              <Button onClick={() => openRubroModal()}>
+                <Plus className="h-4 w-4" /> Agregar concepto
               </Button>
 
               {state.rubros.length === 0 ? (
-                <div className="p-8 text-center text-neutral-500 dark:text-neutral-400">
-                  <p>No hay rubros agregados. Agrega al menos uno.</p>
-                </div>
+                <EmptyList text="Agrega al menos un concepto de gasto para continuar." />
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-primary font-semibold">Clave</TableHead>
-                      <TableHead className="text-primary font-semibold">Nombre</TableHead>
-                      <TableHead className="text-primary font-semibold">Porcentaje Máx</TableHead>
-                      <TableHead className="text-right text-primary font-semibold">Acciones</TableHead>
+                      <TableHead>Concepto</TableHead>
+                      <TableHead>Porcentaje máximo</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {state.rubros.map((rubro, idx) => (
-                      <TableRow key={idx} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                        <TableCell className="font-mono text-sm">{rubro.clave}</TableCell>
-                        <TableCell>{rubro.nombre}</TableCell>
+                      <TableRow key={idx}>
+                        <TableCell className="font-medium whitespace-normal">{rubro.nombre}</TableCell>
                         <TableCell>{rubro.porcentaje_maximo}%</TableCell>
-                        <TableCell className="text-right space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openRubroModal(idx)}
-                            className="text-neutral-600 dark:text-neutral-300 hover:text-primary"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => deleteRubro(idx)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <TableCell className="text-right">
+                          <div className="inline-flex items-center gap-1.5">
+                            <Button variant="soft" size="icon-sm" onClick={() => openRubroModal(idx)} aria-label="Editar" title="Editar">
+                              <Edit2 />
+                            </Button>
+                            <Button variant="destructive" size="icon-sm" onClick={() => deleteRubro(idx)} aria-label="Eliminar" title="Eliminar">
+                              <Trash2 />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1400,41 +1406,37 @@ export default function ConvocatoriasNuevaPage() {
                 <AlertBox type="warning" message={validationErrors.ponderacion} />
               )}
 
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-900">
-                  <strong>Ponderación Total:</strong> {totalPonderacion}%{' '}
-                  {totalPonderacion === 100
-                    ? <CheckCircle className="inline w-4 h-4 text-emerald-600 align-text-bottom" aria-label="Correcto" />
-                    : <XCircle className="inline w-4 h-4 text-red-500 align-text-bottom" aria-label="Debe sumar 100" />}
+              <div className="p-4 rounded-[14px] flex items-center gap-3" style={{ backgroundColor: totalPonderacion === 100 ? 'var(--tile-emerald-bg)' : 'var(--tile-gold-bg)' }}>
+                {totalPonderacion === 100
+                  ? <CheckCircle className="w-5 h-5 shrink-0" style={{ color: 'var(--tile-emerald-fg)' }} aria-label="Correcto" />
+                  : <XCircle className="w-5 h-5 shrink-0" style={{ color: 'var(--tile-gold-fg)' }} aria-label="Debe sumar 100" />}
+                <p className="text-sm text-[var(--app-ink)]">
+                  <strong>Peso total:</strong> {totalPonderacion} %.{' '}
+                  {totalPonderacion === 100 ? 'Los criterios ya suman 100 %.' : 'Entre todos los criterios deben sumar 100 %.'}
                 </p>
               </div>
 
-              <Button
-                onClick={() => openCriterioModal()}
-                className="bg-primary hover:bg-primary-light text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" /> Agregar Criterio
+              <Button onClick={() => openCriterioModal()}>
+                <Plus className="h-4 w-4" /> Agregar criterio
               </Button>
 
               {state.criterios.length === 0 ? (
-                <div className="p-8 text-center text-neutral-500 dark:text-neutral-400">
-                  <p>No hay criterios agregados. Agrega al menos uno.</p>
-                </div>
+                <EmptyList text="Agrega al menos un criterio para continuar." />
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-primary font-semibold">Nombre</TableHead>
-                      <TableHead className="text-primary font-semibold">Ponderación</TableHead>
-                      <TableHead className="text-primary font-semibold">Puntaje Máx</TableHead>
-                      <TableHead className="text-primary font-semibold">Orden</TableHead>
-                      <TableHead className="text-right text-primary font-semibold">Acciones</TableHead>
+                      <TableHead>Criterio</TableHead>
+                      <TableHead>Peso</TableHead>
+                      <TableHead>Calificación máxima</TableHead>
+                      <TableHead>Posición</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {state.criterios.map((criterio, idx) => (
-                      <TableRow key={idx} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                        <TableCell className="font-medium">{criterio.nombre}</TableCell>
+                      <TableRow key={idx}>
+                        <TableCell className="font-medium whitespace-normal">{criterio.nombre}</TableCell>
                         <TableCell>
                           <Badge variant={criterio.ponderacion > 0 ? 'default' : 'destructive'}>
                             {criterio.ponderacion}%
@@ -1442,23 +1444,15 @@ export default function ConvocatoriasNuevaPage() {
                         </TableCell>
                         <TableCell>{criterio.puntaje_maximo}</TableCell>
                         <TableCell>{criterio.orden}</TableCell>
-                        <TableCell className="text-right space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openCriterioModal(idx)}
-                            className="text-neutral-600 dark:text-neutral-300 hover:text-primary"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => deleteCriterio(idx)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <TableCell className="text-right">
+                          <div className="inline-flex items-center gap-1.5">
+                            <Button variant="soft" size="icon-sm" onClick={() => openCriterioModal(idx)} aria-label="Editar" title="Editar">
+                              <Edit2 />
+                            </Button>
+                            <Button variant="destructive" size="icon-sm" onClick={() => deleteCriterio(idx)} aria-label="Eliminar" title="Eliminar">
+                              <Trash2 />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1559,81 +1553,81 @@ export default function ConvocatoriasNuevaPage() {
           {currentStep === 7 && (
             <div className="space-y-6">
               {saveError && (
-                <AlertBox type="error" title="Error al guardar" message={saveError} />
+                <AlertBox type="error" title="No se pudo guardar" message={saveError} />
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <Card className="border border-neutral-200 dark:border-neutral-700">
-                  <CardHeader className="bg-neutral-50 dark:bg-neutral-900">
-                    <CardTitle className="text-base">Convocatoria</CardTitle>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Card size="sm">
+                  <CardHeader>
+                    <CardTitle>Convocatoria</CardTitle>
                   </CardHeader>
-                  <CardContent className="text-sm space-y-2 pt-4">
+                  <CardContent className="text-sm space-y-2">
                     <p><strong>Nombre:</strong> {state.convocatoria.nombre}</p>
-                    <p><strong>Ejercicio:</strong> {state.convocatoria.ejercicio_fiscal}</p>
+                    <p><strong>Ejercicio fiscal:</strong> {state.convocatoria.ejercicio_fiscal}</p>
                     <p><strong>Apertura:</strong> {state.convocatoria.fecha_apertura}</p>
                     <p><strong>Cierre:</strong> {state.convocatoria.fecha_cierre}</p>
-                    <p><strong>Monto Máx:</strong> ${state.convocatoria.monto_maximo_apoyo.toLocaleString()}</p>
-                    <p><strong>Aportación Concurrente:</strong> {state.convocatoria.porcentaje_aportacion_minima}%</p>
+                    <p><strong>Apoyo máximo:</strong> ${state.convocatoria.monto_maximo_apoyo.toLocaleString()}</p>
+                    <p><strong>Aportación concurrente:</strong> {state.convocatoria.porcentaje_aportacion_minima}%</p>
                   </CardContent>
                 </Card>
 
-                <Card className="border border-neutral-200 dark:border-neutral-700">
-                  <CardHeader className="bg-neutral-50 dark:bg-neutral-900">
-                    <CardTitle className="text-base">Programa</CardTitle>
+                <Card size="sm">
+                  <CardHeader>
+                    <CardTitle>Programa</CardTitle>
                   </CardHeader>
-                  <CardContent className="text-sm space-y-2 pt-4">
+                  <CardContent className="text-sm space-y-2">
                     <p><strong>Clave:</strong> {state.programa.clave}</p>
                     <p><strong>Nombre:</strong> {state.programa.nombre}</p>
-                    <p><strong>Tipo Apoyo:</strong> {state.programa.tipo_apoyo}</p>
-                    <p><strong>Monto Máx:</strong> ${state.programa.monto_maximo.toLocaleString()}</p>
+                    <p><strong>Forma del apoyo:</strong> {TIPO_APOYO_LABELS[state.programa.tipo_apoyo] ?? state.programa.tipo_apoyo}</p>
+                    <p><strong>Monto máximo:</strong> ${state.programa.monto_maximo.toLocaleString()}</p>
                     <p><strong>Etapas:</strong> {state.programa.tiene_etapas ? `Sí (${state.programa.num_etapas})` : 'No'}</p>
-                    <p><strong>Equipo:</strong> {state.programa.tiene_equipo ? `Sí (${state.programa.min_miembros_equipo}-${state.programa.max_miembros_equipo})` : 'No'}</p>
-                    <p><strong>Puntaje Min:</strong> {state.programa.puntaje_minimo_aprobatorio}</p>
+                    <p><strong>Equipo:</strong> {state.programa.tiene_equipo ? `Sí (de ${state.programa.min_miembros_equipo} a ${state.programa.max_miembros_equipo} personas)` : 'No'}</p>
+                    <p><strong>Calificación mínima para aprobar:</strong> {state.programa.puntaje_minimo_aprobatorio}</p>
                   </CardContent>
                 </Card>
 
-                <Card className="border border-neutral-200 dark:border-neutral-700">
-                  <CardHeader className="bg-neutral-50 dark:bg-neutral-900">
-                    <CardTitle className="text-base">Campos ({state.campos.length})</CardTitle>
+                <Card size="sm">
+                  <CardHeader>
+                    <CardTitle>Preguntas ({state.campos.length})</CardTitle>
                   </CardHeader>
-                  <CardContent className="text-sm space-y-1 pt-4">
+                  <CardContent className="text-sm space-y-1.5">
                     {state.campos.map((c, i) => (
-                      <p key={i} className="text-neutral-600 dark:text-neutral-300">• {c.etiqueta} <Badge variant="outline" className="ml-2">{c.tipo_campo}</Badge></p>
+                      <p key={i} className="text-[var(--app-ink)] flex items-center gap-2 flex-wrap">{c.etiqueta} <Badge variant="outline">{TIPO_CAMPO_LABELS[c.tipo_campo] ?? c.tipo_campo}</Badge></p>
                     ))}
                   </CardContent>
                 </Card>
 
-                <Card className="border border-neutral-200 dark:border-neutral-700">
-                  <CardHeader className="bg-neutral-50 dark:bg-neutral-900">
-                    <CardTitle className="text-base">Documentos ({state.documentos.length})</CardTitle>
+                <Card size="sm">
+                  <CardHeader>
+                    <CardTitle>Documentos ({state.documentos.length})</CardTitle>
                   </CardHeader>
-                  <CardContent className="text-sm space-y-1 pt-4">
+                  <CardContent className="text-sm space-y-1.5">
                     {state.documentos.map((d, i) => (
-                      <p key={i} className="text-neutral-600 dark:text-neutral-300">• {d.nombre} {d.obligatorio && <Badge className="bg-green-100 text-green-700 ml-2">Obligatorio</Badge>}</p>
+                      <p key={i} className="text-[var(--app-ink)] flex items-center gap-2 flex-wrap">{d.nombre} {d.obligatorio && <Badge>Obligatorio</Badge>}</p>
                     ))}
                   </CardContent>
                 </Card>
 
-                <Card className="border border-neutral-200 dark:border-neutral-700">
-                  <CardHeader className="bg-neutral-50 dark:bg-neutral-900">
-                    <CardTitle className="text-base">Rubros ({state.rubros.length})</CardTitle>
+                <Card size="sm">
+                  <CardHeader>
+                    <CardTitle>Conceptos de gasto ({state.rubros.length})</CardTitle>
                   </CardHeader>
-                  <CardContent className="text-sm space-y-1 pt-4">
+                  <CardContent className="text-sm space-y-1.5">
                     {state.rubros.map((r, i) => (
-                      <p key={i} className="text-neutral-600 dark:text-neutral-300">• {r.nombre} <Badge variant="outline" className="ml-2">{r.porcentaje_maximo}%</Badge></p>
+                      <p key={i} className="text-[var(--app-ink)] flex items-center gap-2 flex-wrap">{r.nombre} <Badge variant="outline">{r.porcentaje_maximo}%</Badge></p>
                     ))}
                   </CardContent>
                 </Card>
 
-                <Card className="border border-neutral-200 dark:border-neutral-700">
-                  <CardHeader className="bg-neutral-50 dark:bg-neutral-900">
-                    <CardTitle className="text-base">Criterios ({state.criterios.length})</CardTitle>
+                <Card size="sm">
+                  <CardHeader>
+                    <CardTitle>Criterios ({state.criterios.length})</CardTitle>
                   </CardHeader>
-                  <CardContent className="text-sm space-y-1 pt-4">
+                  <CardContent className="text-sm space-y-1.5">
                     {state.criterios.map((cr, i) => (
-                      <p key={i} className="text-neutral-600 dark:text-neutral-300">• {cr.nombre} <Badge variant="outline" className="ml-2">{cr.ponderacion}%</Badge></p>
+                      <p key={i} className="text-[var(--app-ink)] flex items-center gap-2 flex-wrap">{cr.nombre} <Badge variant="outline">{cr.ponderacion}%</Badge></p>
                     ))}
-                    <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-2 border-t pt-2">Total: {totalPonderacion}%</p>
+                    <p className="text-xs text-[var(--app-ink-2)] mt-2 border-t border-[var(--app-rule)] pt-2">Peso total: {totalPonderacion}%</p>
                   </CardContent>
                 </Card>
               </div>
@@ -1641,38 +1635,36 @@ export default function ConvocatoriasNuevaPage() {
           )}
         </CardContent>
 
-        <div className="border-t border-neutral-100 dark:border-neutral-700 p-6 bg-white dark:bg-neutral-900 flex justify-between">
+        <div className="border-t border-[var(--app-rule)] px-5 sm:px-6 py-4 flex flex-col-reverse sm:flex-row gap-3 sm:justify-between">
           <Button
             variant="outline"
             onClick={handlePrevious}
             disabled={currentStep === 1 || saving}
           >
-            <ChevronLeft className="h-4 w-4 mr-2" /> Anterior
+            <ChevronLeft className="h-4 w-4" /> Anterior
           </Button>
 
           {currentStep < 7 ? (
             <Button
-              className="bg-primary hover:bg-primary-light text-white"
               onClick={handleNext}
               disabled={saving}
             >
-              Siguiente <ChevronRight className="h-4 w-4 ml-2" />
+              Siguiente <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
             <Button
-              className="bg-green-600 hover:bg-green-700 text-white"
               onClick={handleSaveConvocatoria}
               disabled={saving}
             >
               {saving ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   {saveProgress || 'Guardando...'}
                 </>
               ) : (
                 <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Crear Convocatoria Completa
+                  <CheckCircle className="h-4 w-4" />
+                  Crear convocatoria
                 </>
               )}
             </Button>

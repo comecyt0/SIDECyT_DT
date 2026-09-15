@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import PageHeader from '@/components/ui/page-header';
 import {
   FileSignature, Search, Loader2, Download,
   Building2, Calendar, DollarSign, Layers,
@@ -13,7 +13,6 @@ import {
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
 import PaginationControls from '@/components/ui/pagination-controls';
-import { INSTITUTION } from '@/lib/institution';
 import { formatCurrency } from '@/lib/format';
 import { DataCardGrid } from '@/components/ui/DataCardGrid';
 
@@ -49,11 +48,11 @@ interface Props {
   pagination: PaginationMeta;
 }
 
-const ESTADO_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; color: string }> = {
-  borrador:  { label: 'Borrador',  variant: 'secondary',    color: 'text-neutral-500 dark:text-neutral-400' },
-  firmado:   { label: 'Firmado',   variant: 'default',      color: 'text-blue-600'    },
-  vigente:   { label: 'Vigente',   variant: 'default',      color: 'text-emerald-600' },
-  cerrado:   { label: 'Cerrado',   variant: 'outline',      color: 'text-neutral-400 dark:text-neutral-500' },
+const ESTADO_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  borrador:  { label: 'Borrador',  variant: 'secondary' },
+  firmado:   { label: 'Firmado',   variant: 'default'   },
+  vigente:   { label: 'Vigente',   variant: 'default'   },
+  cerrado:   { label: 'Cerrado',   variant: 'outline'   },
 };
 
 const FILTER_TABS = [
@@ -135,68 +134,61 @@ export default function ConveniosClient({ convenios, pagination }: Props) {
         <AlertBox type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />
       )}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-800 dark:text-neutral-100">Convenios</h1>
-          <p className="text-neutral-500 dark:text-neutral-400 mt-0.5">
-            {`Gestión de convenios formales entre ${INSTITUTION.name} y empresas beneficiarias.`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-700 rounded-xl px-4 py-2 shadow-sm">
-          <FileSignature className="w-5 h-5 text-accent" />
-          <span className="text-sm font-bold text-neutral-700 dark:text-neutral-200">{convenios.length} convenio{convenios.length !== 1 ? 's' : ''}</span>
-        </div>
-      </div>
+      <PageHeader
+        title="Convenios"
+        description="Cada convenio fija cuánto se aprobó y en cuántas entregas se paga. Aquí puedes buscarlos y descargar el documento."
+        icon={<FileSignature className="h-5 w-5" />}
+      />
 
-      {/* Search + Filter tabs */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400 dark:text-neutral-500" />
-          <Input
-            placeholder="Buscar por número, folio o institución..."
-            className="pl-10 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 h-10"
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--app-ink-2)] pointer-events-none" aria-hidden="true" />
+          <input
+            type="search"
+            aria-label="Buscar convenios"
+            placeholder="Buscar por número, folio o empresa"
+            className="auth-input auth-input-static pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex gap-1.5 flex-wrap">
-          {FILTER_TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 flex items-center gap-1.5 ${
-                activeTab === tab.key
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 hover:border-primary/30 hover:text-primary'
-              }`}
-            >
-              {tab.label}
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400'
-              }`}>
-                {countByEstado(tab.key)}
-              </span>
-            </button>
-          ))}
+        <div className="flex gap-1.5 flex-wrap items-center">
+          {FILTER_TABS.map((tab) => {
+            const active = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-colors duration-150 flex items-center gap-1.5 border ${
+                  active
+                    ? 'bg-[var(--auth-vino)] text-white border-transparent'
+                    : 'bg-[var(--app-card-bg)] text-[var(--app-ink-2)] border-[var(--app-rule)] hover:text-[var(--app-ink)]'
+                }`}
+              >
+                {tab.label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${active ? 'bg-white/20 text-white' : 'bg-[var(--auth-field)] text-[var(--app-ink-2)]'}`}>
+                  {countByEstado(tab.key)}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Content card */}
-      <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm relative overflow-hidden ring-1 ring-black/5">
-        <div className="bg-gradient-to-r from-accent/20 to-transparent h-1 w-full absolute top-0" />
-        <CardHeader className="bg-white/50 border-b border-neutral-100 dark:border-neutral-700">
-          <CardTitle className="text-lg text-primary flex items-center gap-2">
-            <FileSignature className="w-5 h-5 text-accent" />
-            Listado de Convenios
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <FileSignature className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Convenios registrados
           </CardTitle>
           <CardDescription>
             {filtered.length === convenios.length
-              ? `${convenios.length} convenio${convenios.length !== 1 ? 's' : ''} registrado${convenios.length !== 1 ? 's' : ''}`
+              ? `${convenios.length} convenio${convenios.length !== 1 ? 's' : ''} en total`
               : `${filtered.length} de ${convenios.length} convenios`}
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-4">
+        <CardContent>
           <DataCardGrid
             items={filtered}
             getKey={(c) => c.id}
@@ -205,21 +197,19 @@ export default function ConveniosClient({ convenios, pagination }: Props) {
               if (c.estado === 'vigente') return 'emerald';
               if (c.estado === 'firmado') return 'sky';
               if (c.estado === 'cerrado') return 'neutral';
-              return 'amber'; // borrador
+              return 'amber';
             }}
             emptyState={
-              <div className="p-16 text-center">
-                <FileSignature className="h-14 w-14 mx-auto mb-3 text-neutral-200" />
-                <p className="text-neutral-400 dark:text-neutral-500 font-medium">
-                  {convenios.length === 0
-                    ? 'No hay convenios registrados aún.'
-                    : 'No hay convenios que coincidan con tu búsqueda.'}
+              <div className="text-center py-14">
+                <FileSignature className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+                <p className="font-semibold text-[var(--app-ink)]">
+                  {convenios.length === 0 ? 'Sin convenios todavía' : 'Ningún convenio coincide con tu búsqueda'}
                 </p>
-                {convenios.length === 0 && (
-                  <p className="text-xs text-neutral-300 mt-1">
-                    Los convenios se generan desde Solicitudes cuando una es aprobada.
-                  </p>
-                )}
+                <p className="text-sm text-[var(--app-ink-2)]">
+                  {convenios.length === 0
+                    ? 'Los convenios se generan desde Solicitudes cuando una solicitud es aprobada.'
+                    : 'Prueba con otro número, folio o empresa.'}
+                </p>
               </div>
             }
             renderCard={(convenio) => {
@@ -227,48 +217,48 @@ export default function ConveniosClient({ convenios, pagination }: Props) {
               return (
                 <div className="pl-3">
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                      <FileSignature className="w-5 h-5 text-primary" />
-                    </div>
+                    <span className="app-tile-icon shrink-0" style={{ color: 'var(--tile-sky-fg)' }}>
+                      <FileSignature className="h-5 w-5" />
+                    </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                        <span className="font-bold text-primary font-mono text-xs">{convenio.numero_convenio}</span>
-                        <Badge variant={cfg.variant} className="text-[10px] h-4">{cfg.label}</Badge>
+                        <span className="font-bold font-mono text-xs" style={{ color: 'var(--auth-vino)' }}>{convenio.numero_convenio}</span>
+                        <Badge variant={cfg.variant}>{cfg.label}</Badge>
                       </div>
-                      <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 line-clamp-1">
+                      <p className="text-sm font-semibold text-[var(--app-ink)] line-clamp-1">
                         {convenio.solicitud?.titulo_proyecto ?? 'Sin título'}
                       </p>
                       {convenio.solicitud?.folio && (
-                        <p className="text-[10px] text-neutral-400 dark:text-neutral-500 font-mono">{convenio.solicitud.folio}</p>
+                        <p className="text-[11px] text-[var(--app-ink-2)] font-mono">{convenio.solicitud.folio}</p>
                       )}
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                    <span className="flex items-center gap-1 text-neutral-500 dark:text-neutral-300 truncate">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-3 text-[var(--app-ink-2)]">
+                    <span className="flex items-center gap-1 truncate">
                       <Building2 className="w-3 h-3 shrink-0" />
                       {convenio.solicitud?.empresa?.nombre ?? 'Sin empresa'}
                     </span>
-                    <span className="flex items-center gap-1 text-neutral-500 dark:text-neutral-300 font-semibold tabular-nums">
+                    <span className="flex items-center gap-1 font-semibold tabular-nums text-[var(--app-ink)]">
                       <DollarSign className="w-3 h-3 shrink-0" />
                       {formatCurrency(convenio.monto_aprobado ?? 0)}
                     </span>
-                    <span className="flex items-center gap-1 text-neutral-500 dark:text-neutral-300">
+                    <span className="flex items-center gap-1">
                       <Layers className="w-3 h-3 shrink-0" />
-                      {convenio.num_tranches} tranche{convenio.num_tranches !== 1 ? 's' : ''}
+                      {convenio.num_tranches === 1 ? 'Una sola entrega' : `${convenio.num_tranches} entregas`}
                     </span>
-                    <span className="flex items-center gap-1 text-neutral-500 dark:text-neutral-300">
+                    <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3 shrink-0" />
                       {formatDate(convenio.fecha_generacion ?? convenio.created_at)}
                     </span>
                   </div>
-                  <div className="flex justify-end pt-2 border-t border-neutral-50 dark:border-neutral-800">
-                    <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5"
+                  <div className="flex justify-end pt-3 border-t" style={{ borderColor: 'var(--app-rule)' }}>
+                    <Button size="sm" variant="soft"
                       onClick={() => handleDownloadPdf(convenio)} disabled={downloading === convenio.id}>
                       {downloading === convenio.id
-                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        : <Download className="h-3.5 w-3.5" />
+                        ? <Loader2 className="animate-spin" />
+                        : <Download />
                       }
-                      Descargar PDF
+                      Descargar convenio
                     </Button>
                   </div>
                 </div>

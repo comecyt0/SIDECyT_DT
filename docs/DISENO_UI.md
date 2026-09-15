@@ -272,8 +272,9 @@ calificación criterio por criterio, no un alta de registro.
 ### Pantalla de carga v3 — "en cualquier recarga y al pulsar botones"
 
 - **Recarga de cualquier página:** `app/layout.tsx` imprime `#boot-splash` (mismo dibujo, con `<img>` plano)
-  **en el HTML del servidor**, así se ve antes de que cargue el JS. `RouteChangeOverlay` lo retira cuando la
-  app montó y pasaron ≥ 1.1 s desde el inicio de la navegación (`performance.now()`), con un fundido de 200 ms.
+  **en el HTML del servidor**, así se ve antes de que cargue el JS. `RouteChangeOverlay` lo **oculta** cuando
+  la app montó y pasaron ≥ 1.1 s desde el inicio de la navegación (`performance.now()`), con un fundido de
+  200 ms. **Nunca `remove()`**: es un nodo hidratado por React y quitarlo rompía Safari (E29, 15/09/2026).
 - **Botones:** `lib/api.ts` avisa por `lib/loading-bus.ts` en toda petición que **escribe** (POST/PUT/PATCH/
   DELETE) o **descarga** (`responseType: 'blob'`); `RouteChangeOverlay` la muestra mientras dura, con mínimo
   de 1 s. Los GET normales no (búsquedas y filtros seguirían "lentos" a propósito). Excepciones: refresh
@@ -287,16 +288,18 @@ calificación criterio por criterio, no un alta de registro.
 
 ## 7. Pendiente (no cubierto en esta pasada)
 
-- **Formularios de crear/editar: cubiertos todos** (§6b, `StepFrame`). **Encabezados, tablas y textos**
-  del resto de vistas: ya heredaron `Badge` sin píldora, `table.tsx`, `select` global, botones y, donde
-  aplica, `DataCardGrid`; pero el encabezado de página y los textos de ayuda de programas, convocatorias
-  (lista y asistente exterior), solicitudes, ministraciones, convenios, informes, notificaciones,
-  solicitudes-acceso, reset-requests y las vistas de revisor/evaluador/solicitante (dashboard, lista de
-  solicitudes, detalle de solicitud, ministraciones, informes) siguen con el estilo anterior. Hechos:
-  dashboard, usuarios, carrusel, empresas, lista negra, evaluadores, historial (audit-logs). El patrón a
-  repetir está en `UsuariosClient.tsx` (encabezado) y en cualquier `StepFrame`.
-- **Jerga restante**: los estados de solicitud en mayúsculas (`ENVIADA`, `EN_EVALUACION`) en las vistas no
-  rediseñadas; `estadoLabel()` de `lib/solicitud-estados.ts` ya los traduce y hay que usarlo en todas.
+- **Vistas: cubiertas todas** (15/09/2026). Las 4 áreas (admin, revisor, evaluador, solicitante) y las
+  páginas legales usan las mismas primitivas: `components/ui/page-header.tsx` (`PageHeader`: título,
+  descripción llana, ícono, `eyebrow`, `actions`, `backHref`), `components/ui/stat-tile.tsx` (`StatTile`,
+  tonos `vino/gold/sky/emerald`, `solid`, `href`, `loading`) y `components/ui/card.tsx`, cuya base ahora es
+  `.app-card` (radio 22 px, cabecera con regla) — por eso **ninguna vista debe añadir `border-0 shadow-*
+  bg-neutral-50` a una `Card`**. Estados siempre con `estadoLabel()`/`estadoBadgeClass()`; informes,
+  ministraciones y asignaciones con sus mapas de etiquetas locales. Fuera del alcance, a propósito: el
+  scorecard de la rúbrica del evaluador (lógica de calificación), los campos del paso 1-2 del asistente de
+  nueva convocatoria (dependen de tests por etiqueta) y el `NestedCRUDModal` de `programas/[id]`, que sigue
+  pidiendo el identificador interno.
+- **Jerga restante**: `obs.campo`/`obs.tipo` (observaciones del revisor) y `etapa_actual` vienen de la API sin
+  catálogo en el front; se muestran con un mapa local y un fallback (guion bajo → espacio).
 - El menú, la barra superior y el pie del panel **no entran** en el rediseño (E26).
 - `GlobalSearch.tsx`: el placeholder "Buscar folio, usuario, institución…" se cortaba a medio carácter en
   el buscador del topbar (`max-w-xs` = 320 px, insuficiente). Ensanchado a `max-w-sm` (384 px) — no se

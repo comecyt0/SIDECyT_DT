@@ -5,10 +5,19 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Calendar, FileText, Settings } from 'lucide-react';
+import PageHeader from '@/components/ui/page-header';
+import { Loader2, Calendar, FileText, Coins, Edit } from 'lucide-react';
 import api from '@/lib/api';
 import type { Convocatoria } from '@/types/api';
 import { formatCurrency } from '@/lib/format';
+
+const ESTADO_CONVOCATORIA: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  borrador: { label: 'Borrador', variant: 'secondary' },
+  activa: { label: 'Activa', variant: 'default' },
+  cerrada: { label: 'Cerrada', variant: 'outline' },
+};
+
+const sectionTitleCls = 'text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)] flex items-center gap-2 border-b border-[var(--app-rule)] pb-2';
 
 export default function VerConvocatoriaPage() {
   const { id } = useParams();
@@ -34,7 +43,7 @@ export default function VerConvocatoriaPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <Loader2 className="w-10 h-10 animate-spin" style={{ color: 'var(--auth-vino)' }} />
       </div>
     );
   }
@@ -42,63 +51,73 @@ export default function VerConvocatoriaPage() {
   if (!convocatoria) {
     return (
       <div className="text-center py-20">
-        <h2 className="text-2xl font-bold text-neutral-800 dark:text-neutral-100">Convocatoria no encontrada</h2>
+        <h2 className="text-2xl font-bold text-[var(--app-ink)]">No encontramos esta convocatoria</h2>
+        <p className="text-sm text-[var(--app-ink-2)] mt-1">Puede que se haya eliminado o que el enlace esté incompleto.</p>
         <Button variant="outline" className="mt-4" onClick={() => router.back()}>Regresar</Button>
       </div>
     );
   }
 
+  const estadoCfg = ESTADO_CONVOCATORIA[convocatoria.estado] ?? { label: convocatoria.estado, variant: 'outline' as const };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-4xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/admin/convocatorias')} className="rounded-full hover:bg-neutral-200">
-          <ArrowLeft className="h-5 w-5 text-neutral-600 dark:text-neutral-300" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-dark">Detalle de Convocatoria</h1>
-          <p className="text-neutral-500 dark:text-neutral-400">Información pública y paramétrica del evento.</p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/admin/convocatorias"
+        backLabel="Volver a convocatorias"
+        eyebrow="Convocatoria"
+        title={convocatoria.nombre}
+        description={`Ejercicio fiscal ${convocatoria.ejercicio_fiscal}. Aquí ves las fechas, los montos y la descripción que conocen los solicitantes.`}
+        actions={
+          <Button variant="outline" onClick={() => router.push(`/admin/convocatorias/${id}/editar`)}>
+            <Edit className="h-4 w-4" /> Editar
+          </Button>
+        }
+      />
 
-      <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm relative overflow-hidden ring-1 ring-black/5">
-        <div className="bg-gradient-to-r from-primary/30 to-accent/30 h-1 w-full absolute top-0" />
-        <CardHeader className="bg-white/50 border-b border-neutral-100 dark:border-neutral-700 flex flex-row items-center justify-between">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-2xl text-primary font-bold">{convocatoria.nombre}</CardTitle>
-            <CardDescription className="text-base mt-2">Ejercicio Fiscal {convocatoria.ejercicio_fiscal}</CardDescription>
+            <CardTitle>
+              <FileText className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Datos generales
+            </CardTitle>
+            <CardDescription>Estado actual de la convocatoria y su información pública.</CardDescription>
           </div>
-          <Badge className={`text-sm py-1 px-3 ${convocatoria.estado === 'activa' ? 'bg-green-100 text-green-800' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100'}`}>
-            {convocatoria.estado.toUpperCase()}
-          </Badge>
+          <Badge variant={estadoCfg.variant}>{estadoCfg.label}</Badge>
         </CardHeader>
-        <CardContent className="p-8 space-y-8">
-          
+        <CardContent className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
-              <h3 className="font-bold text-neutral-700 dark:text-neutral-200 flex items-center gap-2 border-b pb-2">
-                <Calendar className="w-4 h-4 text-accent" /> Ventanas de Tiempo
+              <h3 className={sectionTitleCls}>
+                <Calendar className="w-4 h-4" style={{ color: 'var(--auth-vino)' }} /> Fechas
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium">Fecha de Apertura</p>
-                  <p className="font-semibold text-neutral-800 dark:text-neutral-100">{convocatoria.fecha_apertura ? new Date(convocatoria.fecha_apertura).toLocaleDateString('es-MX', { dateStyle: 'long' }) : '—'}</p>
+                  <p className="text-sm text-[var(--app-ink-2)]">Fecha de apertura</p>
+                  <p className="font-semibold text-[var(--app-ink)]">{convocatoria.fecha_apertura ? new Date(convocatoria.fecha_apertura).toLocaleDateString('es-MX', { dateStyle: 'long' }) : '—'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium">Fecha de Cierre</p>
-                  <p className="font-semibold text-neutral-800 dark:text-neutral-100">{convocatoria.fecha_cierre ? new Date(convocatoria.fecha_cierre).toLocaleDateString('es-MX', { dateStyle: 'long' }) : '—'}</p>
+                  <p className="text-sm text-[var(--app-ink-2)]">Fecha de cierre</p>
+                  <p className="font-semibold text-[var(--app-ink)]">{convocatoria.fecha_cierre ? new Date(convocatoria.fecha_cierre).toLocaleDateString('es-MX', { dateStyle: 'long' }) : '—'}</p>
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="font-bold text-neutral-700 dark:text-neutral-200 flex items-center gap-2 border-b pb-2">
-                <Settings className="w-4 h-4 text-accent" /> Parametrización
+              <h3 className={sectionTitleCls}>
+                <Coins className="w-4 h-4" style={{ color: 'var(--auth-vino)' }} /> Montos
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium">Presupuesto Asignado</p>
-                  <p className="font-semibold text-neutral-800 dark:text-neutral-100">
-                    {convocatoria.presupuesto_total ? formatCurrency(convocatoria.presupuesto_total) : 'No definido'}
+                  <p className="text-sm text-[var(--app-ink-2)]">Presupuesto asignado</p>
+                  <p className="font-semibold text-[var(--app-ink)]">
+                    {convocatoria.presupuesto_total ? formatCurrency(convocatoria.presupuesto_total) : 'Sin definir'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-[var(--app-ink-2)]">Apoyo máximo por proyecto</p>
+                  <p className="font-semibold text-[var(--app-ink)]">
+                    {convocatoria.monto_maximo_apoyo ? formatCurrency(convocatoria.monto_maximo_apoyo) : 'Sin definir'}
                   </p>
                 </div>
               </div>
@@ -106,18 +125,12 @@ export default function VerConvocatoriaPage() {
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-bold text-neutral-700 dark:text-neutral-200 flex items-center gap-2 border-b pb-2">
-              <FileText className="w-4 h-4 text-accent" /> Descripción General
+            <h3 className={sectionTitleCls}>
+              <FileText className="w-4 h-4" style={{ color: 'var(--auth-vino)' }} /> Descripción
             </h3>
-            <p className="text-neutral-600 dark:text-neutral-300 leading-relaxed bg-neutral-50 dark:bg-neutral-900 p-6 rounded-xl border border-neutral-100 dark:border-neutral-700">
-              {convocatoria.descripcion || 'Sin descripción detallada.'}
+            <p className="text-[var(--app-ink)] leading-relaxed p-5 rounded-[14px] bg-[var(--auth-field)]">
+              {convocatoria.descripcion || 'Esta convocatoria no tiene descripción.'}
             </p>
-          </div>
-
-          <div className="flex justify-end gap-4 pt-6">
-            <Button variant="outline" onClick={() => router.push(`/admin/convocatorias/${id}/editar`)}>
-              Modificar Parámetros
-            </Button>
           </div>
         </CardContent>
       </Card>

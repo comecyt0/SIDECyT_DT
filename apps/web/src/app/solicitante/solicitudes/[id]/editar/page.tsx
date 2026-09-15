@@ -5,16 +5,17 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Send, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Send, Loader2, AlertCircle, CheckCircle2, FileText, ListChecks } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { colorMap } from '@/lib/color-mapper';
 import { DocumentosAdjuntos } from '@/components/solicitante/DocumentosAdjuntos';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { Solicitud } from '@/types/api';
 import { INSTITUTION } from '@/lib/institution';
 import { formatCurrency } from '@/lib/format';
+import PageHeader from '@/components/ui/page-header';
+import { estadoBadgeClass, estadoLabel } from '@/lib/solicitud-estados';
 
 export default function EditarSolicitudPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,16 +40,16 @@ export default function EditarSolicitudPage() {
   const handleReenviar = () => {
     setConfirmState({
       open: true,
-      title: 'Reenviar Solicitud',
-      description: `¿Has realizado todas las correcciones indicadas? Una vez reenviada, será revisada nuevamente por ${INSTITUTION.name}.`,
+      title: 'Reenviar la solicitud',
+      description: `¿Ya hiciste todas las correcciones que te pidieron? Al reenviarla, ${INSTITUTION.name} la revisará de nuevo.`,
       onConfirm: async () => {
         setSending(true);
         try {
           await api.post(`/solicitudes/${id}/reenviar`);
-          setFeedback({ type: 'success', message: 'Solicitud reenviada exitosamente para re-revisión.' });
+          setFeedback({ type: 'success', message: 'Tu solicitud se reenvió y volverá a revisarse.' });
           setTimeout(() => router.push('/solicitante/solicitudes'), 1500);
         } catch (error: any) {
-          setFeedback({ type: 'error', message: error.response?.data?.error || 'Error al reenviar solicitud' });
+          setFeedback({ type: 'error', message: error.response?.data?.error || 'No pudimos reenviar la solicitud. Inténtalo de nuevo.' });
         } finally {
           setSending(false);
         }
@@ -58,8 +59,8 @@ export default function EditarSolicitudPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--auth-vino)' }} />
       </div>
     );
   }
@@ -67,7 +68,7 @@ export default function EditarSolicitudPage() {
   if (!solicitud) return null;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto p-6">
+    <div className="space-y-6 max-w-4xl mx-auto">
       {feedback && <AlertBox type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
       <ConfirmDialog
         open={confirmState.open}
@@ -77,53 +78,42 @@ export default function EditarSolicitudPage() {
         onCancel={() => setConfirmState(s => ({...s, open: false}))}
         variant="default"
       />
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href={`/solicitante/solicitudes/${id}`}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50">Corregir Solicitud</h1>
-          <p className="text-neutral-600 dark:text-neutral-300">{solicitud.folio}</p>
-        </div>
-      </div>
 
-      {/* Status */}
-      <div className="flex items-center gap-3">
-        <Badge variant="outline" className="bg-orange-50 text-orange-800 border-orange-200">
-          {solicitud.estado.toUpperCase()}
-        </Badge>
-        <span className="text-sm text-neutral-600 dark:text-neutral-300">Etapa: Correcciones Requeridas</span>
-      </div>
+      <PageHeader
+        backHref={`/solicitante/solicitudes/${id}`}
+        backLabel="Volver al detalle"
+        eyebrow={solicitud.folio}
+        title="Corregir mi solicitud"
+        description="Atiende cada observación, actualiza los documentos que hagan falta y vuelve a enviarla."
+        actions={
+          <span className={`inline-flex h-7 items-center rounded-md px-3 text-xs font-semibold ${estadoBadgeClass(solicitud.estado)}`}>
+            {estadoLabel(solicitud.estado)}
+          </span>
+        }
+      />
 
-      {/* Observaciones Card */}
       {Array.isArray(solicitud.observaciones) && solicitud.observaciones.length > 0 && (
-        <Card className="border-orange-200 bg-orange-50">
+        <Card style={{ backgroundColor: 'var(--tile-gold-bg)' }}>
           <CardHeader>
-            <CardTitle className="text-orange-900 flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" />
-              Hallazgos Detectados
+            <CardTitle>
+              <AlertCircle className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
+              Lo que hay que corregir
             </CardTitle>
-            <CardDescription className="text-orange-800">
-              Por favor realiza las correcciones indicadas y reenvía tu solicitud
+            <CardDescription>
+              Haz los cambios que se indican y después reenvía tu solicitud.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {solicitud.observaciones.map((obs: any, idx: number) => (
-              <div key={idx} className="border-l-2 border-orange-300 pl-4 py-2">
-                <div className="flex items-start gap-2">
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm text-orange-900">
-                      {obs.campo || 'Observación General'}
+              <div key={idx} className="rounded-[16px] bg-[var(--app-card-bg)] border border-[var(--app-rule)] p-4">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-[var(--app-ink)]">
+                      {obs.campo ? String(obs.campo).replace(/_/g, ' ') : 'Observación general'}
                     </p>
-                    <p className="text-sm text-orange-800 mt-1">{obs.comentario}</p>
+                    <p className="text-sm text-[var(--app-ink-2)] mt-1">{obs.comentario}</p>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="capitalize text-xs flex-shrink-0 bg-white dark:bg-neutral-900"
-                  >
+                  <Badge variant="outline" className="capitalize text-xs shrink-0 border-[var(--app-rule)] text-[var(--app-ink-2)]">
                     {obs.tipo || 'documental'}
                   </Badge>
                 </div>
@@ -133,74 +123,75 @@ export default function EditarSolicitudPage() {
         </Card>
       )}
 
-      {/* Project Summary */}
       <Card>
         <CardHeader>
-          <CardTitle>Datos del Proyecto</CardTitle>
-          <CardDescription>Verifica que hayas realizado las correcciones</CardDescription>
+          <CardTitle>
+            <FileText className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
+            Datos del proyecto
+          </CardTitle>
+          <CardDescription>Revisa que la información ya tenga las correcciones que te pidieron.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Título</p>
-            <p className="text-neutral-900 dark:text-neutral-50">{solicitud.titulo_proyecto}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--app-ink-2)]">Título</p>
+            <p className="text-sm text-[var(--app-ink)]">{solicitud.titulo_proyecto}</p>
           </div>
           <div>
-            <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Descripción</p>
-            <p className="text-neutral-900 dark:text-neutral-50">{solicitud.descripcion_proyecto}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--app-ink-2)]">Descripción</p>
+            <p className="text-sm text-[var(--app-ink)] whitespace-pre-wrap">{solicitud.descripcion_proyecto}</p>
           </div>
           <div>
-            <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Monto Solicitado</p>
-            <p className="text-neutral-900 dark:text-neutral-50">{formatCurrency(Number(solicitud.monto_solicitado))}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--app-ink-2)]">Monto solicitado</p>
+            <p className="text-sm font-semibold text-[var(--app-ink)]">{formatCurrency(Number(solicitud.monto_solicitado))}</p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Documentos Adjuntos Section */}
       <DocumentosAdjuntos
         solicitudId={parseInt(id)}
         tipoProgramaId={solicitud?.convocatoria?.tipo_programa_id || 1}
         documentos={solicitud?.documentos || []}
         onUpload={() => {
-          // Recargar solicitud para mostrar el documento subido
           window.location.reload();
         }}
         readonly={false}
       />
 
-      {/* Info Box */}
-      <Card className="border-blue-200 bg-blue-50">
+      <Card style={{ backgroundColor: 'var(--tile-sky-bg)' }}>
         <CardHeader>
-          <CardTitle className="text-blue-900 text-base">Próximos Pasos</CardTitle>
+          <CardTitle>
+            <ListChecks className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
+            Próximos pasos
+          </CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-blue-800 space-y-2">
+        <CardContent className="text-sm text-[var(--app-ink)] space-y-2">
           {[
-            'Revisa todas las observaciones anteriores',
-            'Realiza los cambios necesarios en tu solicitud',
-            'Sube o actualiza los documentos requeridos',
-            'Haz clic en "Reenviar Solicitud" para continuar',
-            `${INSTITUTION.name} revisará nuevamente tu solicitud corregida`,
+            'Lee todas las observaciones de arriba.',
+            'Haz los cambios necesarios en tu solicitud.',
+            'Sube o actualiza los documentos que se piden.',
+            'Presiona "Reenviar solicitud" para continuar.',
+            `${INSTITUTION.name} revisará de nuevo tu solicitud corregida.`,
           ].map((paso) => (
             <p key={paso} className="flex items-start gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" /> <span>{paso}</span>
+              <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--tile-sky-fg)' }} aria-hidden="true" /> <span>{paso}</span>
             </p>
           ))}
         </CardContent>
       </Card>
 
-      {/* Actions */}
-      <div className="flex gap-3 justify-end">
+      <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
         <Link href={`/solicitante/solicitudes/${id}`}>
-          <Button variant="outline">
+          <Button variant="outline" className="w-full sm:w-auto">
             Volver
           </Button>
         </Link>
         <Button
           onClick={handleReenviar}
           disabled={sending}
-          className={`${colorMap.states.success.background} ${colorMap.states.success.text} hover:opacity-90 gap-2`}
+          className="w-full sm:w-auto"
         >
           {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          Reenviar Solicitud
+          Reenviar solicitud
         </Button>
       </div>
     </div>

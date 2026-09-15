@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
+import { ScrollText } from 'lucide-react';
 import { INSTITUTION } from '@/lib/institution';
+import PageHeader from '@/components/ui/page-header';
 
 export const metadata: Metadata = {
   title: `Términos y Condiciones — ${INSTITUTION.name}`,
@@ -9,13 +11,24 @@ export const metadata: Metadata = {
 export default function TerminosPage() {
   return (
     <>
-      <h1>Términos y Condiciones de Uso</h1>
-      <p className="text-sm text-neutral-500 dark:text-neutral-400">
-        Sistema {INSTITUTION.systemTagline}<br />
-        <strong>Vigente desde:</strong> 12 de junio de 2026
-      </p>
-
-      <hr />
+      <div className="not-prose space-y-4 mb-8">
+        <PageHeader
+          eyebrow="Documento legal"
+          title="Términos y condiciones de uso"
+          description={`Las reglas para usar el sistema de ${INSTITUTION.name} y lo que se espera de cada persona usuaria.`}
+          icon={<ScrollText className="h-5 w-5" />}
+        />
+        <div className="app-card rounded-[22px] px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--app-ink-2)]">Sistema</p>
+            <p className="font-semibold text-[var(--app-ink)]">{INSTITUTION.systemTagline}</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--app-ink-2)]">Vigente desde</p>
+            <p className="font-semibold text-[var(--app-ink)]">12 de junio de 2026</p>
+          </div>
+        </div>
+      </div>
 
       <h2>1. Aceptación de los Términos</h2>
       <p>
@@ -205,7 +218,7 @@ export default function TerminosPage() {
 
       <hr />
 
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+      <p className="text-xs text-[var(--app-ink-2)]">
         <strong>Nota institucional:</strong> Este documento es una plantilla técnica. El texto
         definitivo debe ser revisado y aprobado por las áreas jurídica y de comunicación del
         COMECYT antes de su publicación formal.

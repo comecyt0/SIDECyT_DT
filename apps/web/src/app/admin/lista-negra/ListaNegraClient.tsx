@@ -6,18 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ShieldAlert, Ban, Unlock, Loader2, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, Ban, Unlock, Loader2, Building } from 'lucide-react';
 import StepFrame from '@/components/ui/step-frame';
+import PageHeader from '@/components/ui/page-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { colorMap } from '@/lib/color-mapper';
 import type { ListaNegra, Empresa } from '@/types/api';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { INSTITUTION } from '@/lib/institution';
 import { DataCardGrid } from '@/components/ui/DataCardGrid';
-import { Building } from 'lucide-react';
 
 const emptyForm = {
   empresa_id: '',
@@ -46,15 +44,15 @@ export default function ListaNegraClient({ sanciones, empresas }: Props) {
   const handleRemoveVeto = (id: number) => {
     setConfirmState({
       open: true,
-      title: 'Remover Veto',
-      description: '¿Confirmar la eliminación del veto a esta institución?',
+      title: 'Levantar sanción',
+      description: 'La empresa podrá volver a presentar solicitudes a partir de hoy. ¿Quieres continuar?',
       onConfirm: async () => {
         setRemovingId(id);
         try {
           await api.put(`/admin/lista-negra/${id}`, { activa: false, fecha_fin_sancion: new Date().toISOString().split('T')[0] });
           router.refresh();
         } catch (err: unknown) {
-          const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Error al actualizar sanción';
+          const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo levantar la sanción. Inténtalo de nuevo.';
           setFeedback({ type: 'error', message: msg });
         } finally {
           setRemovingId(null);
@@ -65,7 +63,7 @@ export default function ListaNegraClient({ sanciones, empresas }: Props) {
 
   const handleSave = async () => {
     if (!form.empresa_id || !form.motivo || !form.fecha_inicio_sancion) {
-      setFeedback({ type: 'error', message: 'Por favor completa todos los campos requeridos.' });
+      setFeedback({ type: 'error', message: 'Elige la empresa, escribe el motivo e indica desde qué día aplica.' });
       return;
     }
     setSaving(true);
@@ -75,7 +73,7 @@ export default function ListaNegraClient({ sanciones, empresas }: Props) {
       setForm(emptyForm);
       router.refresh();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Error al registrar sanción';
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo registrar la sanción. Inténtalo de nuevo.';
       setFeedback({ type: 'error', message: msg });
     } finally {
       setSaving(false);
@@ -85,71 +83,70 @@ export default function ListaNegraClient({ sanciones, empresas }: Props) {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {feedback && <AlertBox type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-dark">Lista Negra de Empresas</h1>
-          <p className="text-neutral-500 dark:text-neutral-400">{`Control de entidades bloqueadas por incumplimiento de normativas ${INSTITUTION.name}.`}</p>
-        </div>
-        <Button variant="destructive" className="shadow-md" onClick={() => setShowModal(true)}>
-          <Ban className="mr-2 h-4 w-4" /> Registrar Sanción
-        </Button>
-      </div>
+      <PageHeader
+        title="Lista negra"
+        description="Empresas que no pueden presentar solicitudes por un incumplimiento. Registra una sanción o levántala cuando corresponda."
+        icon={<ShieldAlert className="h-5 w-5" />}
+        actions={
+          <Button variant="destructive" onClick={() => setShowModal(true)}>
+            <Ban className="h-4 w-4" /> Registrar sanción
+          </Button>
+        }
+      />
 
-      <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm relative overflow-hidden ring-1 ring-black/5">
-        <div className="bg-gradient-to-r from-red-600/40 via-red-800/40 to-transparent h-1 w-full absolute top-0" />
-        <CardHeader className="bg-red-50/50 border-b border-red-100">
-          <CardTitle className="text-lg text-red-900 flex items-center gap-2">
-            <ShieldAlert className="w-5 h-5 text-red-700" /> Registro de Sanciones {INSTITUTION.name}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <ShieldAlert className="h-4 w-4" style={{ color: 'var(--auth-danger)' }} /> Sanciones registradas
           </CardTitle>
-          <CardDescription>Las empresas vetadas no podrán ingresar nuevas solicitudes al sistema.</CardDescription>
+          <CardDescription>Mientras una sanción esté activa, la empresa no podrá enviar nuevas solicitudes.</CardDescription>
         </CardHeader>
-        <CardContent className="p-4">
+        <CardContent>
           <DataCardGrid
             items={sanciones}
             getKey={(s) => s.id}
             columns={2}
             accentColor={(s) => (s.activa ? 'red' : 'emerald')}
             emptyState={
-              <div className="text-center py-16">
-                <AlertTriangle className="mx-auto h-10 w-10 text-neutral-300 mb-3" />
-                <p className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">Sin sanciones activas</p>
-                <p className="text-xs text-neutral-400 mt-1">No hay empresas vetadas actualmente.</p>
+              <div className="text-center py-14">
+                <ShieldAlert className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+                <p className="font-semibold text-[var(--app-ink)]">Sin sanciones todavía</p>
+                <p className="text-sm text-[var(--app-ink-2)]">Ninguna empresa está bloqueada. Usa «Registrar sanción» si hace falta.</p>
               </div>
             }
             renderCard={(s) => (
               <div className="pl-3">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <Building className="h-4 w-4 text-red-600 shrink-0" />
-                    <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-50 truncate">
-                      {s.empresa?.nombre || `Empresa #${s.empresa_id}`}
+                    <Building className="h-4 w-4 shrink-0" style={{ color: s.activa ? 'var(--auth-danger)' : 'var(--tile-emerald-fg)' }} />
+                    <h3 className="text-sm font-bold text-[var(--app-ink)] truncate">
+                      {s.empresa?.nombre || `Empresa nº ${s.empresa_id}`}
                     </h3>
                   </div>
                   {s.activa
-                    ? <Badge variant="destructive" className="shrink-0 text-[10px]">BLOQUEADO</Badge>
-                    : <Badge variant="default" className="shrink-0 text-[10px]">LIBERADO</Badge>
+                    ? <Badge variant="destructive" className="shrink-0">Bloqueada</Badge>
+                    : <Badge variant="default" className="shrink-0">Liberada</Badge>
                   }
                 </div>
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 mb-3 line-clamp-2" title={s.motivo}>
-                  <span className="font-semibold uppercase tracking-wider text-[10px] text-neutral-400 dark:text-neutral-500 block mb-0.5">Motivo</span>
+                <p className="text-xs text-[var(--app-ink)] mb-3 line-clamp-2" title={s.motivo}>
+                  <span className="font-semibold uppercase tracking-wider text-[10px] text-[var(--app-ink-2)] block mb-0.5">Motivo</span>
                   {s.motivo}
                 </p>
                 <div className="grid grid-cols-2 gap-3 text-xs mb-3">
                   <div>
-                    <span className="text-[10px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block">Inicio</span>
-                    <span className="font-mono text-neutral-600 dark:text-neutral-300">{s.fecha_inicio_sancion}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-[var(--app-ink-2)] block">Desde</span>
+                    <span className="text-[var(--app-ink)]">{s.fecha_inicio_sancion ? new Date(s.fecha_inicio_sancion).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block">Fin</span>
-                    <span className="font-mono text-neutral-600 dark:text-neutral-300">{s.fecha_fin_sancion || 'Indefinido'}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-[var(--app-ink-2)] block">Hasta</span>
+                    <span className="text-[var(--app-ink)]">{s.fecha_fin_sancion ? new Date(s.fecha_fin_sancion).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Sin fecha final'}</span>
                   </div>
                 </div>
                 {s.activa && (
-                  <div className="pt-2 border-t border-neutral-50 dark:border-neutral-800 flex justify-end">
-                    <Button variant="outline" size="sm" disabled={removingId === s.id} onClick={() => handleRemoveVeto(s.id)}
-                      className={`${colorMap.states.success.text} text-xs`}>
-                      {removingId === s.id ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Unlock className="w-3 h-3 mr-1" />}
-                      Remover Veto
+                  <div className="pt-3 border-t flex justify-end" style={{ borderColor: 'var(--app-rule)' }}>
+                    <Button variant="soft" size="sm" disabled={removingId === s.id} onClick={() => handleRemoveVeto(s.id)}>
+                      {removingId === s.id ? <Loader2 className="animate-spin" /> : <Unlock />}
+                      Levantar sanción
                     </Button>
                   </div>
                 )}

@@ -4,13 +4,21 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import StepFrame from '@/components/ui/step-frame';
+import PageHeader from '@/components/ui/page-header';
 import { FileText, Eye, Search } from 'lucide-react';
 import api from '@/lib/api';
-import { colorMap } from '@/lib/color-mapper';
+
+const INFORME_ESTADO: Record<string, { label: string; badge: string }> = {
+  pendiente: { label: 'Pendiente de entrega', badge: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
+  en_revision: { label: 'En revisión', badge: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
+  aprobado: { label: 'Aprobado', badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
+  rechazado: { label: 'Necesita correcciones', badge: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
+};
+
+const informeEstadoLabel = (estado: string) => INFORME_ESTADO[estado]?.label ?? estado;
+const informeEstadoBadge = (estado: string) => INFORME_ESTADO[estado]?.badge ?? 'bg-neutral-100 text-neutral-500';
 
 export interface Informe {
   id: number;
@@ -104,124 +112,94 @@ export default function InformesClient({ informes }: Props) {
     }
   };
 
-  const getEstadoBadgeVariant = (estado: string) => {
-    switch (estado) {
-      case 'pendiente':
-        return 'outline';
-      case 'en_revision':
-        return 'default';
-      case 'aprobado':
-        return 'default';
-      case 'rechazado':
-        return 'destructive';
-      default:
-        return 'default';
-    }
-  };
-
   const estados = ['pendiente', 'en_revision', 'aprobado', 'rechazado'];
+  const total = filteredInformes.length;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-dark">Revisión de Informes Finales</h1>
-          <p className="text-neutral-500 dark:text-neutral-400">Revisa y aprueba los informes finales entregados por los solicitantes.</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Informes finales"
+        description="Revisa los informes finales que entregaron las instituciones; apruébalos o pide correcciones."
+        icon={<FileText className="h-5 w-5" />}
+      />
 
-      {/* Filters */}
-      <div className="space-y-4">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400 dark:text-neutral-500" />
-          <Input
-            placeholder="Buscar por folio, proyecto o institución..."
-            className="pl-10 bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700"
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--app-ink-2)] pointer-events-none" aria-hidden="true" />
+          <input
+            type="search"
+            aria-label="Buscar por folio, proyecto o institución"
+            placeholder="Buscar por folio, proyecto o institución"
+            className="auth-input auth-input-static pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-
-        {/* Status Filter */}
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => setStatusFilter('')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              statusFilter === ''
-                ? `${colorMap.primary.background} text-white`
-                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200'
-            }`}
+        <div className="sm:w-64">
+          <select
+            aria-label="Filtrar por estado del informe"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="auth-input auth-input-static pl-4"
           >
-            Todos
-          </button>
-          {estados.map((estado) => (
-            <button
-              key={estado}
-              onClick={() => setStatusFilter(estado)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === estado
-                  ? `${colorMap.primary.background} text-white`
-                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200'
-              }`}
-            >
-              {estado === 'en_revision' ? 'En Revisión' : estado.charAt(0).toUpperCase() + estado.slice(1)}
-            </button>
-          ))}
+            <option value="">Todos los estados</option>
+            {estados.map((estado) => (
+              <option key={estado} value={estado}>{informeEstadoLabel(estado)}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Informes Table */}
-      <Card className="border-0 shadow-md">
-        <CardHeader className="bg-white dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700">
-          <CardTitle className="text-lg text-primary flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Informes ({filteredInformes.length})
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <FileText className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
+            Informes entregados
           </CardTitle>
-          <CardDescription>Listado de informes finales entregados por solicitantes</CardDescription>
+          <CardDescription>{total === 1 ? '1 informe' : `${total} informes`} en la lista</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {filteredInformes.length === 0 ? (
-            <div className="p-12 text-center text-neutral-500 dark:text-neutral-400">
-              <FileText className="h-12 w-12 mx-auto mb-2 text-neutral-300" />
-              <p>No hay informes que coincidan con tu búsqueda.</p>
+            <div className="text-center py-14">
+              <FileText className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+              <p className="font-semibold text-[var(--app-ink)]">No hay informes que mostrar</p>
+              <p className="text-sm text-[var(--app-ink-2)]">Prueba con otro texto o cambia el filtro de estado.</p>
             </div>
           ) : (
             <Table>
-              <TableHeader className="bg-neutral-50 dark:bg-neutral-900">
+              <TableHeader>
                 <TableRow>
-                  <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Folio</TableHead>
-                  <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Proyecto</TableHead>
-                  <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Institución</TableHead>
-                  <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Entregado</TableHead>
-                  <TableHead className="font-bold text-neutral-700 dark:text-neutral-200">Estado</TableHead>
-                  <TableHead className="font-bold text-neutral-700 dark:text-neutral-200 text-right">Acciones</TableHead>
+                  <TableHead>Folio</TableHead>
+                  <TableHead>Proyecto</TableHead>
+                  <TableHead>Institución</TableHead>
+                  <TableHead>Entregado</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredInformes.map((informe) => (
-                  <TableRow key={informe.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                    <TableCell className="font-medium text-neutral-600 dark:text-neutral-300">{informe.solicitud?.folio || 'N/A'}</TableCell>
-                    <TableCell className="max-w-xs truncate">{informe.solicitud?.titulo_proyecto || 'N/A'}</TableCell>
-                    <TableCell>{informe.solicitud?.empresa?.nombre || 'N/A'}</TableCell>
-                    <TableCell className="text-sm">
+                  <TableRow key={informe.id}>
+                    <TableCell className="font-mono text-xs font-semibold" style={{ color: 'var(--auth-vino)' }}>{informe.solicitud?.folio || '—'}</TableCell>
+                    <TableCell className="max-w-xs truncate font-medium text-[var(--app-ink)]" title={informe.solicitud?.titulo_proyecto}>{informe.solicitud?.titulo_proyecto || '—'}</TableCell>
+                    <TableCell className="text-[var(--app-ink-2)]">{informe.solicitud?.empresa?.nombre || '—'}</TableCell>
+                    <TableCell className="text-[var(--app-ink-2)]">
                       {informe.fecha_entregado
                         ? new Date(informe.fecha_entregado).toLocaleDateString('es-MX')
-                        : 'Pendiente'}
+                        : 'Todavía no'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getEstadoBadgeVariant(informe.estado)}>
-                        {informe.estado === 'en_revision' ? 'EN REVISIÓN' : informe.estado.toUpperCase()}
-                      </Badge>
+                      <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${informeEstadoBadge(informe.estado)}`}>
+                        {informeEstadoLabel(informe.estado)}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
                         size="sm"
-                        variant="ghost"
-                        className="h-8 text-primary hover:bg-primary/10"
+                        variant="soft"
                         onClick={() => handleOpenDetail(informe)}
                       >
-                        <Eye className="h-4 w-4 mr-1" />
+                        <Eye className="h-4 w-4" />
                         Revisar
                       </Button>
                     </TableCell>

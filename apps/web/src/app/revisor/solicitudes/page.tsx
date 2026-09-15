@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Eye, CheckCircle, XCircle, Loader2, Search, FileText, CheckCircle2 } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Loader2, Search, FileText, CheckCircle2, Inbox } from 'lucide-react';
 import api from '@/lib/api';
-import { Badge } from '@/components/ui/badge';
-import { badgeColorMap } from '@/lib/color-mapper';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import PageHeader from '@/components/ui/page-header';
+import { estadoBadgeClass, estadoLabel } from '@/lib/solicitud-estados';
 import type { Solicitud } from '@/types/api';
 import SavedFiltersBar from '@/components/filters/SavedFiltersBar';
 
@@ -44,15 +46,15 @@ export default function RevisorSolicitudesPage() {
   const handleApprove = (id: number) => {
     setConfirmState({
       open: true,
-      title: 'Turnar a Evaluación Técnica',
+      title: 'Turnar a evaluación técnica',
       description: '¿Seguro que deseas turnar esta solicitud a evaluación técnica?',
       onConfirm: async () => {
         try {
           await api.post(`/revisor/solicitudes/${id}/aprobar`);
-          setFeedback({ type: 'success', message: 'Aprobada y turnada a Evaluación Técnica exitosamente.' });
+          setFeedback({ type: 'success', message: 'La solicitud se aprobó y ya está en evaluación técnica.' });
           window.location.reload();
         } catch (err: any) {
-          setFeedback({ type: 'error', message: err.response?.data?.error || 'Error al procesar la aprobación' });
+          setFeedback({ type: 'error', message: err.response?.data?.error || 'No se pudo aprobar la solicitud. Intenta de nuevo.' });
         }
       },
     });
@@ -64,6 +66,8 @@ export default function RevisorSolicitudesPage() {
         s.titulo_proyecto?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
+
+  const total = filteredSolicitudes.length;
 
   return (
     <div className="space-y-8">
@@ -80,94 +84,81 @@ export default function RevisorSolicitudesPage() {
         <AlertBox type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-neutral-900 tracking-tight">Bandeja de Entrada</h1>
-          <p className="text-sm text-neutral-500 mt-0.5">
-            Solicitudes pendientes de revisión y validación documental.
-          </p>
-        </div>
-        <div className="space-y-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+      <PageHeader
+        title="Bandeja de revisión"
+        description="Revisa los documentos de cada solicitud, apruébala para evaluación técnica o regrésala con observaciones."
+        icon={<Inbox className="h-5 w-5" />}
+      />
+
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 sm:max-w-sm">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--app-ink-2)] pointer-events-none" aria-hidden="true" />
             <input
               type="search"
-              placeholder="Buscar por folio o título..."
+              aria-label="Buscar por folio o título"
+              placeholder="Buscar por folio o título"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-2.5 text-sm bg-neutral-100 border-0 rounded-xl ring-1 ring-neutral-200 focus:outline-none focus:ring-2 focus:ring-primary/30 w-72 placeholder:text-neutral-400"
+              className="auth-input auth-input-static pl-10"
             />
           </div>
-          <SavedFiltersBar
-            scope="revisor.bandeja"
-            currentFilters={{ search: searchTerm }}
-            onApply={(f) => setSearchTerm(String(f.search ?? ''))}
-          />
         </div>
+        <SavedFiltersBar
+          scope="revisor.bandeja"
+          currentFilters={{ search: searchTerm }}
+          onApply={(f) => setSearchTerm(String(f.search ?? ''))}
+        />
       </div>
 
-      {/* Main list */}
-      <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-neutral-100 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <FileText className="w-4 h-4 text-primary" />
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <FileText className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
+            Solicitudes por revisar
+          </CardTitle>
+          <CardDescription>
+            {loading ? 'Cargando…' : total === 1 ? '1 solicitud en la bandeja' : `${total} solicitudes en la bandeja`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="py-16 flex justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-[var(--auth-vino)]" />
             </div>
-            <div>
-              <h2 className="font-bold text-neutral-900 text-sm">Solicitudes Asignadas</h2>
-              <p className="text-xs text-neutral-400">
-                {loading ? 'Cargando…' : `${filteredSolicitudes.length} solicitud(es) en bandeja`}
+          ) : filteredSolicitudes.length === 0 ? (
+            <div className="text-center py-14">
+              <CheckCircle2 className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+              <p className="font-semibold text-[var(--app-ink)]">
+                {searchTerm ? 'No encontramos solicitudes con ese texto' : 'Nada pendiente por ahora'}
+              </p>
+              <p className="text-sm text-[var(--app-ink-2)]">
+                {searchTerm ? 'Prueba con otro folio u otra palabra del título.' : 'No hay solicitudes esperando revisión.'}
               </p>
             </div>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="py-16 flex justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-primary/20" />
-          </div>
-        ) : filteredSolicitudes.length === 0 ? (
-          <div className="py-16 text-center">
-            <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-emerald-100">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-            </div>
-            <p className="text-sm font-semibold text-neutral-600">
-              {searchTerm ? 'Sin resultados para tu búsqueda' : '¡Bandeja vacía!'}
-            </p>
-            <p className="text-xs text-neutral-400 mt-1">
-              {searchTerm ? 'Intenta con otros términos.' : 'No hay solicitudes pendientes de revisión.'}
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-neutral-50">
-            {filteredSolicitudes.map((s, i) => {
-              const variant = badgeColorMap[s.estado as keyof typeof badgeColorMap] || 'secondary';
-              const displayEstado = s.estado === 'en_revision' ? 'En Revisión'
-                : s.estado === 'enviada' ? 'Enviada'
-                : s.estado.charAt(0).toUpperCase() + s.estado.slice(1).replace(/_/g, ' ');
-
-              return (
+          ) : (
+            <div className="divide-y divide-[var(--app-rule)]">
+              {filteredSolicitudes.map((s, i) => (
                 <motion.div
                   key={s.id}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className="px-6 py-4 flex items-center gap-4 hover:bg-neutral-50/60 transition-colors group"
+                  className="px-5 sm:px-6 py-4 flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4 hover:bg-[var(--auth-field)] transition-colors"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-md font-mono">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="font-mono text-xs font-semibold" style={{ color: 'var(--auth-vino)' }}>
                         {s.folio}
                       </span>
-                      <Badge variant={variant} className="text-[10px] font-bold uppercase tracking-tight">
-                        {displayEstado}
-                      </Badge>
+                      <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${estadoBadgeClass(s.estado)}`}>
+                        {estadoLabel(s.estado)}
+                      </span>
                     </div>
-                    <p className="text-sm font-semibold text-neutral-800 truncate group-hover:text-primary transition-colors">
+                    <p className="text-sm font-semibold text-[var(--app-ink)] truncate">
                       {s.titulo_proyecto}
                     </p>
-                    <p className="text-xs text-neutral-400 mt-0.5 truncate">
+                    <p className="text-xs text-[var(--app-ink-2)] mt-0.5 truncate">
                       {s.user?.name || s.empresa?.nombre || 'Solicitante'}
                       {s.updated_at && (
                         <span className="ml-2">
@@ -177,44 +168,30 @@ export default function RevisorSolicitudesPage() {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
                     <Link href={`/revisor/solicitudes/${s.id}`}>
-                      <motion.button
-                        whileHover={{ x: 1 }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-primary bg-primary/[8%] hover:bg-primary hover:text-white rounded-lg transition-all"
-                        title="Ver detalles"
-                      >
-                        <Eye className="w-3 h-3" />
+                      <Button variant="soft" size="sm" title="Ver la solicitud completa">
+                        <Eye className="h-3.5 w-3.5" />
                         Ver
-                      </motion.button>
+                      </Button>
                     </Link>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleApprove(s.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white rounded-lg transition-all"
-                      title="Turnar a Evaluación Técnica"
-                    >
-                      <CheckCircle className="w-3 h-3" />
+                    <Button size="sm" onClick={() => handleApprove(s.id)} title="Turnar a evaluación técnica">
+                      <CheckCircle className="h-3.5 w-3.5" />
                       Aprobar
-                    </motion.button>
+                    </Button>
                     <Link href={`/revisor/solicitudes/${s.id}`}>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all"
-                        title="Generar Observación"
-                      >
-                        <XCircle className="w-3 h-3" />
+                      <Button variant="outline" size="sm" title="Regresar con observaciones">
+                        <XCircle className="h-3.5 w-3.5" />
                         Observar
-                      </motion.button>
+                      </Button>
                     </Link>
                   </div>
                 </motion.div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

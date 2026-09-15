@@ -2,19 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import {
-  ArrowLeft, Loader2, Eye, CheckCircle,
+  Loader2, Eye, CheckCircle,
   FileText, Building2, BookOpen, CalendarDays,
   FilePlus, Trash2, Send, FileCheck, ShieldCheck, CheckSquare
 } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { badgeColorMap, colorMap } from '@/lib/color-mapper';
+import { estadoBadgeClass, estadoLabel } from '@/lib/solicitud-estados';
+import PageHeader from '@/components/ui/page-header';
 import { DocumentosAdjuntos } from '@/components/solicitante/DocumentosAdjuntos';
 import type { Solicitud, Observacion } from '@/types/api';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -129,18 +128,18 @@ export default function RevisorDetalleSolicitudPage() {
   const handleAprobar = () => {
     setConfirmState({
       open: true,
-      title: 'Turnar a Evaluación Técnica',
-      description: '¿Confirmas turnar esta solicitud a Evaluación Técnica? Esta acción no se puede revertir.',
+      title: 'Turnar a evaluación técnica',
+      description: '¿Confirmas turnar esta solicitud a evaluación técnica? Esta acción no se puede revertir.',
       onConfirm: async () => {
         setSubmitting('aprobar');
         try {
           await api.post(`/revisor/solicitudes/${id}/aprobar`);
-          setFeedback({ type: 'success', message: 'Solicitud turnada a Evaluación Técnica exitosamente.' });
+          setFeedback({ type: 'success', message: 'La solicitud ya está en evaluación técnica.' });
           setTimeout(() => router.push('/revisor/solicitudes'), 1500);
         } catch (error) {
           const errorMsg = error instanceof Error
             ? (error as any).response?.data?.error || error.message
-            : 'Error al aprobar';
+            : 'No se pudo aprobar la solicitud.';
           setFeedback({ type: 'error', message: errorMsg });
         } finally {
           setSubmitting(null);
@@ -151,23 +150,23 @@ export default function RevisorDetalleSolicitudPage() {
 
   const handleObservar = () => {
     if (newObservaciones.length === 0) {
-      setFeedback({ type: 'warning', message: 'Debes agregar al menos una observación antes de enviar.' });
+      setFeedback({ type: 'warning', message: 'Agrega al menos una observación antes de enviar.' });
       return;
     }
     setConfirmState({
       open: true,
-      title: 'Enviar Observaciones',
+      title: 'Enviar observaciones',
       description: `¿Confirmas enviar estas ${newObservaciones.length} observaciones al solicitante?`,
       onConfirm: async () => {
         setSubmitting('observar');
         try {
           await api.post(`/revisor/solicitudes/${id}/observar`, { observaciones: newObservaciones });
-          setFeedback({ type: 'success', message: 'Observaciones enviadas con éxito. El solicitante será notificado.' });
+          setFeedback({ type: 'success', message: 'Las observaciones se enviaron. El solicitante recibirá un aviso.' });
           setTimeout(() => router.push('/revisor/solicitudes'), 1500);
         } catch (error) {
           const errorMsg = error instanceof Error
             ? (error as any).response?.data?.error || error.message
-            : 'Error al generar observación';
+            : 'No se pudieron enviar las observaciones.';
           setFeedback({ type: 'error', message: errorMsg });
         } finally {
           setSubmitting(null);
@@ -179,18 +178,18 @@ export default function RevisorDetalleSolicitudPage() {
   const handleAprobarInforme = () => {
     setConfirmState({
       open: true,
-      title: 'Aprobar Informe Final',
-      description: '¿Confirmas que el informe final cumple con todos los requisitos? El proyecto se marcará como CERRADO.',
+      title: 'Aprobar informe final',
+      description: '¿Confirmas que el informe final cumple con todos los requisitos? El proyecto quedará cerrado.',
       onConfirm: async () => {
         setSubmitting('aprobar');
         try {
           await api.post(`/revisor/solicitudes/${id}/aprobar-informe`);
-          setFeedback({ type: 'success', message: 'Informe final aprobado y proyecto cerrado.' });
+          setFeedback({ type: 'success', message: 'El informe final quedó aprobado y el proyecto cerrado.' });
           setTimeout(() => router.push('/revisor/solicitudes'), 1500);
         } catch (error) {
           const errorMsg = error instanceof Error
             ? (error as any).response?.data?.error || error.message
-            : 'Error al aprobar informe';
+            : 'No se pudo aprobar el informe.';
           setFeedback({ type: 'error', message: errorMsg });
         } finally {
           setSubmitting(null);
@@ -201,13 +200,16 @@ export default function RevisorDetalleSolicitudPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64 text-primary">
+      <div className="flex justify-center items-center h-64 text-[var(--auth-vino)]">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   if (!solicitud) return null;
+
+  const labelClass = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
+  const rowClass = 'flex justify-between gap-4 border-b border-[var(--app-rule)] pb-2';
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
@@ -220,87 +222,80 @@ export default function RevisorDetalleSolicitudPage() {
         onCancel={() => setConfirmState(s => ({...s, open: false}))}
         variant="default"
       />
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/revisor/solicitudes">
-          <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <p className="text-sm font-mono text-neutral-500 dark:text-neutral-400">{solicitud.folio}</p>
-          <h1 className="text-2xl font-bold text-neutral-dark leading-tight">{solicitud.titulo_proyecto}</h1>
-        </div>
-        <div className="ml-auto">
-          <Badge variant={badgeColorMap[solicitud.estado as keyof typeof badgeColorMap] || 'default'} className="text-sm px-3 py-1">
-            {solicitud.estado?.toUpperCase().replace('_', ' ')}
-          </Badge>
-        </div>
-      </div>
 
-      {/* Info Cards */}
+      <PageHeader
+        backHref="/revisor/solicitudes"
+        backLabel="Volver a la bandeja"
+        eyebrow={solicitud.folio}
+        title={solicitud.titulo_proyecto}
+        description="Revisa los datos y documentos, y decide si la solicitud continúa o regresa con observaciones."
+        actions={
+          <span className={`inline-flex rounded-md px-2.5 py-1 text-sm font-semibold ${estadoBadgeClass(solicitud.estado)}`}>
+            {estadoLabel(solicitud.estado)}
+          </span>
+        }
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-0 shadow-sm ring-1 ring-neutral-100">
-          <CardHeader className="pb-3 bg-neutral-50/50 border-b border-neutral-100 dark:border-neutral-700">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" /> Datos del Proyecto
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <FileText className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Datos del proyecto
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 space-y-3 text-sm">
-            <div className="flex justify-between border-b border-neutral-50 dark:border-neutral-800 pb-2">
-              <span className="text-neutral-500 dark:text-neutral-400 font-medium">Modalidad</span>
-              <span className="font-semibold text-neutral-800 dark:text-neutral-100">{solicitud.modalidad}</span>
+          <CardContent className="space-y-3 text-sm">
+            <div className={rowClass}>
+              <span className="text-[var(--app-ink-2)] font-medium">Modalidad</span>
+              <span className="font-semibold text-[var(--app-ink)] text-right">{solicitud.modalidad}</span>
             </div>
-            <div className="flex justify-between border-b border-neutral-50 dark:border-neutral-800 pb-2">
-              <span className="text-neutral-500 dark:text-neutral-400 font-medium">Convocatoria</span>
-              <span className="font-semibold text-neutral-800 dark:text-neutral-100 text-right max-w-[200px]">{solicitud.convocatoria?.nombre || 'N/A'}</span>
+            <div className={rowClass}>
+              <span className="text-[var(--app-ink-2)] font-medium">Convocatoria</span>
+              <span className="font-semibold text-[var(--app-ink)] text-right">{solicitud.convocatoria?.nombre || '—'}</span>
             </div>
-            <div className="flex justify-between border-b border-neutral-50 dark:border-neutral-800 pb-2">
-              <span className="text-neutral-500 dark:text-neutral-400 font-medium">Monto Solicitado</span>
-              <span className="font-bold text-primary">${Number(solicitud.monto_solicitado).toLocaleString()} MXN</span>
+            <div className={rowClass}>
+              <span className="text-[var(--app-ink-2)] font-medium">Monto solicitado</span>
+              <span className="font-bold" style={{ color: 'var(--auth-vino)' }}>${Number(solicitud.monto_solicitado).toLocaleString()} MXN</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-neutral-500 dark:text-neutral-400 font-medium">Etapa Actual</span>
-              <Badge variant="outline" className="capitalize text-[10px] font-bold tracking-wider">{solicitud.etapa_actual || 'Revisión'}</Badge>
+            <div className="flex justify-between gap-4">
+              <span className="text-[var(--app-ink-2)] font-medium">Etapa actual</span>
+              <Badge variant="outline" className="capitalize">{solicitud.etapa_actual || 'Revisión'}</Badge>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm ring-1 ring-neutral-100">
-          <CardHeader className="pb-3 bg-neutral-50/50 border-b border-neutral-100 dark:border-neutral-700">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-primary" /> Institución Postulante
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <Building2 className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Institución solicitante
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 space-y-3 text-sm">
-            <div className="flex justify-between border-b border-neutral-50 dark:border-neutral-800 pb-2">
-              <span className="text-neutral-500 dark:text-neutral-400 font-medium">Institución</span>
-              <span className="font-semibold text-neutral-800 dark:text-neutral-100 text-right">{solicitud.user?.name || solicitud.empresa?.nombre || 'N/A'}</span>
+          <CardContent className="space-y-3 text-sm">
+            <div className={rowClass}>
+              <span className="text-[var(--app-ink-2)] font-medium">Institución</span>
+              <span className="font-semibold text-[var(--app-ink)] text-right">{solicitud.user?.name || solicitud.empresa?.nombre || '—'}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-neutral-500 dark:text-neutral-400 font-medium">Fecha de Envío</span>
-              <span className="font-medium flex items-center gap-1.5 text-neutral-700 dark:text-neutral-200">
-                <CalendarDays className="h-4 w-4 text-primary/60" />
-                {solicitud.created_at ? new Date(solicitud.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' }) : 'N/A'}
+            <div className="flex justify-between gap-4">
+              <span className="text-[var(--app-ink-2)] font-medium">Fecha de envío</span>
+              <span className="font-medium flex items-center gap-1.5 text-[var(--app-ink)]">
+                <CalendarDays className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />
+                {solicitud.created_at ? new Date(solicitud.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'}
               </span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Resumen */}
-      <Card className="border-0 shadow-sm ring-1 ring-neutral-100 border-l-4 border-l-primary overflow-hidden">
-        <CardHeader className="pb-3 bg-neutral-50/30 border-b border-neutral-100 dark:border-neutral-700">
-          <CardTitle className="text-base flex items-center gap-2 text-primary">
-            <BookOpen className="h-4 w-4" /> Resumen Ejecutivo del Proyecto
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <BookOpen className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Resumen del proyecto
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-4">
-          <p className="text-sm text-neutral-700 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap">{solicitud.descripcion_proyecto || solicitud.resumen || 'Sin descripción proporcionada.'}</p>
+        <CardContent>
+          <p className="text-sm text-[var(--app-ink)] leading-relaxed whitespace-pre-wrap">{solicitud.descripcion_proyecto || solicitud.resumen || 'El solicitante no escribió una descripción.'}</p>
         </CardContent>
       </Card>
 
-      {/* Documentos del Solicitante */}
       {solicitud.convocatoria?.tipo_programa_id && (
         <DocumentosAdjuntos
           solicitudId={parseInt(id)}
@@ -310,27 +305,26 @@ export default function RevisorDetalleSolicitudPage() {
         />
       )}
 
-      {/* === OBSERVACIONES EXISTENTES (Ya Enviadas) === */}
       {existingObservaciones.length > 0 && (
-        <Card className="border-0 shadow-lg ring-1 ring-neutral-100 bg-amber-50/40">
-          <CardHeader className="bg-amber-100/50 border-b border-amber-200 py-4 pb-3">
-            <CardTitle className="text-base font-bold text-amber-900 flex items-center gap-2">
-              <FileText className="h-5 w-5 text-amber-600" /> Observaciones Previas ({existingObservaciones.length})
+        <Card style={{ backgroundColor: 'var(--tile-gold-bg)' }}>
+          <CardHeader>
+            <CardTitle>
+              <FileText className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Observaciones anteriores ({existingObservaciones.length})
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-5 space-y-3">
+          <CardContent className="space-y-3">
             {existingObservaciones.map((obs, i) => (
-              <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-white dark:bg-neutral-900 border border-amber-200">
-                <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-amber-700">{i + 1}</span>
-                </div>
+              <div key={i} className="flex items-start gap-4 p-4 rounded-[14px] bg-[var(--app-card-bg)] border border-[var(--app-rule)]">
+                <span className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold" style={{ backgroundColor: 'var(--tile-gold-bg)', color: 'var(--tile-gold-fg)' }}>
+                  {i + 1}
+                </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold text-amber-700 uppercase tracking-widest">{obs.campo || 'General'}</p>
-                  <p className="text-sm text-neutral-700 dark:text-neutral-200 mt-1 leading-relaxed">{obs.comentario}</p>
+                  <p className={labelClass}>{obs.campo || 'General'}</p>
+                  <p className="text-sm text-[var(--app-ink)] mt-1 leading-relaxed">{obs.comentario}</p>
                   {obs.respuesta_solicitante && (
-                    <div className="mt-3 p-2 bg-green-50/40 border-l-2 border-green-400 rounded">
-                      <p className="text-xs font-bold text-green-700 uppercase mb-1">Respuesta del Solicitante:</p>
-                      <p className="text-xs text-green-900">{obs.respuesta_solicitante}</p>
+                    <div className="mt-3 p-3 rounded-[10px]" style={{ backgroundColor: 'var(--tile-emerald-bg)' }}>
+                      <p className="text-xs font-bold mb-1" style={{ color: 'var(--tile-emerald-fg)' }}>Respuesta del solicitante</p>
+                      <p className="text-xs text-[var(--app-ink)]">{obs.respuesta_solicitante}</p>
                     </div>
                   )}
                 </div>
@@ -340,59 +334,56 @@ export default function RevisorDetalleSolicitudPage() {
         </Card>
       )}
 
-      {/* === VALIDACIÓN DE INFORME FINAL === */}
       {solicitud.estado_informe === 'entregado' && (
-        <Card className={`border-0 shadow-lg ring-2 ring-emerald-500/20 overflow-hidden bg-white dark:bg-neutral-900`}>
-          <CardHeader className={`${colorMap.states.success.background} text-white py-4`}>
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" /> Validación de Informe Final de Resultados
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <CheckCircle className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Validación del informe final
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6 space-y-4">
-            <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-700">
-               <div className="flex items-center gap-3">
-                 <FileText className="h-8 w-8 text-neutral-400 dark:text-neutral-500" />
-                 <div>
-                   <p className="text-sm font-bold text-neutral-800 dark:text-neutral-100 tracking-tight">Reporte Final Entregado</p>
-                   <p className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-medium">Fecha de recepción: {solicitud.fecha_entrega_informe ? new Date(solicitud.fecha_entrega_informe).toLocaleDateString() : 'N/A'}</p>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-[14px] bg-[var(--auth-field)]">
+               <div className="flex items-center gap-3 min-w-0">
+                 <span className="app-tile-icon shrink-0" style={{ color: 'var(--tile-sky-fg)' }}><FileText className="h-5 w-5" /></span>
+                 <div className="min-w-0">
+                   <p className="text-sm font-bold text-[var(--app-ink)]">Informe final entregado</p>
+                   <p className="text-xs text-[var(--app-ink-2)]">Recibido el {solicitud.fecha_entrega_informe ? new Date(solicitud.fecha_entrega_informe).toLocaleDateString('es-MX') : '—'}</p>
                  </div>
                </div>
                {solicitud.informe_final_url && (
-                 <Link href={solicitud.informe_final_url} target="_blank">
-                   <Button variant="outline" size="sm" className="font-bold gap-2">
-                     <Eye className="h-4 w-4" /> Revisar Documento
+                 <Link href={solicitud.informe_final_url} target="_blank" className="shrink-0">
+                   <Button variant="soft" size="sm">
+                     <Eye className="h-4 w-4" /> Abrir el documento
                    </Button>
                  </Link>
                )}
             </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button variant="outline" className={`border-${colorMap.states.error.border} ${colorMap.states.error.text} hover:${colorMap.states.error.background} font-bold px-6`}>Observar Informe</Button>
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
+              <Button variant="outline">Pedir correcciones</Button>
               <Button
-                className={`${colorMap.states.success.background} hover:bg-emerald-700 text-white font-bold px-8 shadow-lg shadow-emerald-600/20`}
                 onClick={handleAprobarInforme}
                 disabled={submitting !== null}
               >
-                Aprobar y Cerrar Proyecto
+                Aprobar y cerrar el proyecto
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* === PANEL DE OBSERVACIONES === */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Lado izquierdo: Nueva Observación */}
-        <Card className="lg:col-span-1 border-0 shadow-lg ring-1 ring-neutral-100">
-          <CardHeader className="bg-neutral-900 text-white rounded-t-xl py-4">
-            <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest">
-              <FilePlus className="h-4 w-4 text-accent" /> Nueva Observación
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle>
+              <FilePlus className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Nueva observación
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-5 space-y-4">
-            <div className="space-y-2">
-              <Label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase">Campo a observar</Label>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <label htmlFor="obs-campo" className={labelClass}>Campo a observar</label>
               <select
-                className="w-full h-10 px-3 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                id="obs-campo"
+                className="auth-input auth-input-static pl-4"
                 value={newObs.campo}
                 onChange={(e) => {
                   const selectedId = e.target.value;
@@ -400,7 +391,7 @@ export default function RevisorDetalleSolicitudPage() {
                   setNewObs({...newObs, campo: selectedField?.label || selectedId});
                 }}
               >
-                <option value="">Selecciona un campo...</option>
+                <option value="">Elige un campo…</option>
                 {camposPrograma.length > 0 ? (
                   camposPrograma.map(c => <option key={c.id} value={c.id}>{c.label}</option>)
                 ) : (
@@ -408,91 +399,90 @@ export default function RevisorDetalleSolicitudPage() {
                 )}
               </select>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase">Comentario Técnico</Label>
-              <Textarea 
-                placeholder="Explica qué debe corregir el solicitante..."
-                className="min-h-[100px] border-neutral-200 dark:border-neutral-700 focus-visible:ring-primary/20 text-sm"
+            <div className="space-y-1.5">
+              <label htmlFor="obs-comentario" className={labelClass}>Comentario</label>
+              <textarea
+                id="obs-comentario"
+                placeholder="Explica qué debe corregir el solicitante."
+                className="auth-input auth-input-static pl-4 !h-auto min-h-[100px] py-3 resize-y"
                 value={newObs.comentario}
                 onChange={(e) => setNewObs({...newObs, comentario: e.target.value})}
               />
             </div>
             <Button
-              className="w-full bg-primary hover:bg-primary-light text-white font-bold h-11 shadow-md"
+              className="w-full"
               onClick={addObservacion}
               disabled={!newObs.comentario.trim()}
             >
-              Anexar a Lista
+              Agregar a la lista
             </Button>
 
-            {/* Error Message */}
             {obsError && (
-              <div className="p-3 rounded-lg bg-red-50 border border-red-200 animate-in slide-in-from-top-2 duration-200">
-                <p className="text-sm font-medium text-red-700">{obsError}</p>
+              <div className="rounded-[14px] px-4 py-3 text-sm font-medium" style={{ backgroundColor: 'var(--tile-vino-bg)', color: 'var(--auth-danger)' }}>
+                {obsError}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Lado derecho: Lista y Dictamen */}
-        <Card className="lg:col-span-2 border-0 shadow-lg ring-1 ring-neutral-100">
-          <CardHeader className="border-b border-neutral-100 dark:border-neutral-700 py-4 pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-bold text-neutral-800 dark:text-neutral-100 flex items-center gap-2">
-                <CheckSquare className="h-5 w-5 text-primary" /> Lista de Nuevos Hallazgos ({newObservaciones.length})
-              </CardTitle>
-              {newObservaciones.length > 0 && (
-                <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-bold">ACCIONES PENDIENTES</Badge>
-              )}
-            </div>
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>
+              <CheckSquare className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Observaciones por enviar ({newObservaciones.length})
+            </CardTitle>
+            {newObservaciones.length > 0 && (
+              <CardAction>
+                <Badge variant="outline">Pendientes de enviar</Badge>
+              </CardAction>
+            )}
           </CardHeader>
-          <CardContent className="pt-5 space-y-6">
+          <CardContent className="space-y-6">
             {newObservaciones.length === 0 ? (
-              <div className="py-12 flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500 border-2 border-dashed border-neutral-100 dark:border-neutral-700 rounded-2xl bg-neutral-50/50">
-                <ShieldCheck className="h-10 w-10 mb-3 opacity-20" />
-                <p className="text-sm font-medium">No hay nuevas observaciones pendientes.</p>
-                <p className="text-[10px] uppercase tracking-tighter mt-1 opacity-60">Listo para aprobación si el expediente está completo</p>
+              <div className="text-center py-14">
+                <ShieldCheck className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+                <p className="font-semibold text-[var(--app-ink)]">No hay observaciones nuevas</p>
+                <p className="text-sm text-[var(--app-ink-2)]">Si la solicitud está completa, puedes turnarla a evaluación técnica.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {newObservaciones.map((obs, i) => (
-                  <div key={i} className={`flex items-start gap-4 p-4 rounded-xl ${colorMap.states.warning.background}/30 border ${colorMap.states.warning.border} group animate-in slide-in-from-right-2 duration-300`}>
-                    <div className={`h-8 w-8 rounded-full ${colorMap.states.warning.background} flex items-center justify-center shrink-0`}>
-                      <span className={`text-xs font-bold ${colorMap.states.warning.text}`}>{i + 1}</span>
-                    </div>
+                  <div key={i} className="flex items-start gap-4 p-4 rounded-[14px] animate-in slide-in-from-right-2 duration-300" style={{ backgroundColor: 'var(--tile-gold-bg)' }}>
+                    <span className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold bg-[var(--app-card-bg)]" style={{ color: 'var(--tile-gold-fg)' }}>
+                      {i + 1}
+                    </span>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-[10px] font-bold ${colorMap.states.warning.text} uppercase tracking-widest`}>{obs.campo}</p>
-                      <p className="text-sm text-neutral-700 dark:text-neutral-200 mt-1 leading-relaxed">{obs.comentario}</p>
+                      <p className={labelClass}>{obs.campo}</p>
+                      <p className="text-sm text-[var(--app-ink)] mt-1 leading-relaxed">{obs.comentario}</p>
                     </div>
-                    <button 
+                    <Button
+                      variant="destructive"
+                      size="icon-sm"
+                      aria-label="Quitar esta observación"
+                      title="Quitar esta observación"
                       onClick={() => removeObservacion(i)}
-                      className="text-neutral-300 hover:text-red-500 transition-colors p-1"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Acciones Finales */}
-            <div className="pt-6 border-t border-neutral-100 dark:border-neutral-700 flex flex-col sm:flex-row justify-end gap-3">
+            <div className="pt-6 border-t border-[var(--app-rule)] flex flex-col sm:flex-row sm:justify-end gap-3">
               <Button
                 variant="outline"
-                className={`border-primary/20 ${colorMap.primary.text} hover:bg-neutral-50 dark:hover:bg-neutral-800 gap-2 h-11 px-6 font-bold disabled:opacity-50`}
                 onClick={handleObservar}
                 disabled={submitting !== null || newObservaciones.length === 0}
               >
-                {submitting === 'observar' ? <Loader2 className={`h-4 w-4 animate-spin ${colorMap.primary.text}`} /> : <Send className={`h-4 w-4 ${colorMap.primary.text}`} />}
-                Enviar Observaciones al Solicitante
+                {submitting === 'observar' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Enviar observaciones al solicitante
               </Button>
               <Button
-                className={`${colorMap.states.success.background} hover:bg-emerald-700 text-white gap-2 shadow-lg h-11 px-8 font-bold disabled:opacity-50`}
                 onClick={handleAprobar}
                 disabled={submitting !== null || newObservaciones.length > 0}
               >
                 {submitting === 'aprobar' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileCheck className="h-4 w-4" />}
-                Turnar a Evaluación Técnica
+                Turnar a evaluación técnica
               </Button>
             </div>
           </CardContent>

@@ -5,10 +5,10 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import PageHeader from '@/components/ui/page-header';
 import {
-  ArrowLeft, Loader2, Send,
+  Loader2, Send,
   Brain, FlaskConical, Globe2, CheckSquare,
   Building2, FileText, Check, X
 } from 'lucide-react';
@@ -318,7 +318,7 @@ export default function RubricaEvaluacionPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64 text-primary">
+      <div className="flex justify-center items-center h-64 text-[var(--auth-vino)]">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
@@ -335,37 +335,31 @@ export default function RubricaEvaluacionPage() {
         onCancel={() => setConfirmState(s => ({...s, open: false}))}
         variant="default"
       />
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/evaluador/evaluaciones">
-          <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium">Formato B — Rúbrica de Evaluación Técnico-Académica</p>
-          <h1 className="text-2xl font-bold text-neutral-dark leading-tight">Dictamen del Proyecto</h1>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/evaluador/evaluaciones"
+        backLabel="Volver a mis asignaciones"
+        eyebrow="Formato B · Rúbrica de evaluación técnica y académica"
+        title="Dictamen del proyecto"
+        description="Califica cada criterio, escribe tu justificación y emite el dictamen."
+      />
 
-      {/* Project Summary Card */}
       {asignacion && (
-        <Card className="border-0 shadow-sm ring-1 ring-neutral-100">
-          <CardContent className="pt-5 pb-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="flex items-start gap-3">
-              <FileText className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-xs text-neutral-400 dark:text-neutral-500 font-medium">Proyecto / Folio</p>
-                <p className="font-semibold text-neutral-800 dark:text-neutral-100">{asignacion.solicitud?.titulo_proyecto}</p>
-                <p className="text-xs text-primary font-mono mt-0.5">{asignacion.solicitud?.folio}</p>
+        <Card>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="flex items-start gap-3 min-w-0">
+              <span className="app-tile-icon shrink-0" style={{ color: 'var(--tile-vino-fg)' }}><FileText className="h-5 w-5" /></span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Proyecto</p>
+                <p className="font-semibold text-[var(--app-ink)]">{asignacion.solicitud?.titulo_proyecto}</p>
+                <p className="text-xs font-mono font-semibold mt-0.5" style={{ color: 'var(--auth-vino)' }}>{asignacion.solicitud?.folio}</p>
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              <Building2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-xs text-neutral-400 dark:text-neutral-500 font-medium">Institución</p>
-                <p className="font-semibold text-neutral-800 dark:text-neutral-100">{asignacion.solicitud?.empresa?.nombre || 'N/A'}</p>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Modalidad: {asignacion.solicitud?.modalidad}</p>
+            <div className="flex items-start gap-3 min-w-0">
+              <span className="app-tile-icon shrink-0" style={{ color: 'var(--tile-sky-fg)' }}><Building2 className="h-5 w-5" /></span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Institución</p>
+                <p className="font-semibold text-[var(--app-ink)]">{asignacion.solicitud?.empresa?.nombre || '—'}</p>
+                <p className="text-xs text-[var(--app-ink-2)] mt-0.5">Modalidad: {asignacion.solicitud?.modalidad}</p>
               </div>
             </div>
           </CardContent>
@@ -542,34 +536,34 @@ export default function RubricaEvaluacionPage() {
         )}
       </div>
 
-      {/* Comentarios */}
-      <Card className="border-0 shadow-sm ring-1 ring-neutral-100">
-        <CardHeader className="pb-3 bg-neutral-50/50 border-b border-neutral-100 dark:border-neutral-700">
-          <CardTitle className="text-base">Comentarios y Justificación del Dictamen</CardTitle>
-          <CardDescription>Opcional — máximo 1000 caracteres. Se incluirá en el resumen oficial.</CardDescription>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <FileText className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Comentarios y justificación del dictamen
+          </CardTitle>
+          <CardDescription>Opcional. Lo que escribas aquí se incluye en el dictamen oficial.</CardDescription>
         </CardHeader>
-        <CardContent className="pt-4">
-          <Textarea
-            placeholder="Describe los fundamentos técnicos del dictamen, observaciones relevantes o recomendaciones adicionales para el comité..."
-            className="min-h-[140px] resize-y border-neutral-300 dark:border-neutral-600 focus-visible:ring-primary"
+        <CardContent>
+          <textarea
+            aria-label="Comentarios y justificación del dictamen"
+            placeholder="Explica en qué se basa tu dictamen, qué observaste y qué recomiendas al comité."
+            className="auth-input auth-input-static pl-4 !h-auto min-h-[140px] py-3 resize-y"
             value={comentarios_justificacion}
             onChange={(e) => setComentarios(e.target.value)}
             maxLength={2000}
           />
-          <p className="text-xs text-neutral-400 dark:text-neutral-500 text-right mt-1">{comentarios_justificacion.length}/2000</p>
+          <p className="text-xs text-[var(--app-ink-2)] text-right mt-1">{comentarios_justificacion.length}/2000</p>
         </CardContent>
       </Card>
 
-      {/* Error Message */}
       {evalError && (
-        <div className="p-4 rounded-lg bg-red-50 border border-red-200 animate-in slide-in-from-top-2 duration-200">
-          <p className="text-sm font-medium text-red-700">{evalError}</p>
+        <div className="rounded-[14px] px-4 py-3 text-sm font-medium animate-in slide-in-from-top-2 duration-200" style={{ backgroundColor: 'var(--tile-vino-bg)', color: 'var(--auth-danger)' }}>
+          {evalError}
         </div>
       )}
 
-      {/* Carta de Imparcialidad */}
-      <Card className="border-0 shadow-sm ring-1 ring-neutral-100 bg-blue-50/30">
-        <CardContent className="pt-6">
+      <Card style={{ backgroundColor: 'var(--tile-sky-bg)' }}>
+        <CardContent>
           <div className="flex items-start gap-3">
             <Checkbox
               id="carta-imparcialidad"
@@ -578,10 +572,10 @@ export default function RubricaEvaluacionPage() {
               className="mt-1"
             />
             <div className="flex-1">
-              <Label htmlFor="carta-imparcialidad" className="text-sm font-semibold text-neutral-900 dark:text-neutral-50 cursor-pointer">
-                Aceptar Carta de Imparcialidad
+              <Label htmlFor="carta-imparcialidad" className="text-sm font-semibold text-[var(--app-ink)] cursor-pointer">
+                Acepto la carta de imparcialidad
               </Label>
-              <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1 leading-relaxed">
+              <p className="text-xs text-[var(--app-ink-2)] mt-1 leading-relaxed">
                 Certifico bajo protesta de decir verdad que no tengo conflicto de interés en la evaluación de esta solicitud, que actuaré con imparcialidad y que mi dictamen se basa exclusivamente en criterios técnicos y académicos.
               </p>
             </div>
@@ -589,26 +583,18 @@ export default function RubricaEvaluacionPage() {
         </CardContent>
       </Card>
 
-      {/* Submit */}
-      <div className="flex justify-end gap-3 pb-4">
+      <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pb-4">
         <Link href="/evaluador/evaluaciones">
-          <Button variant="outline" className="h-11">Cancelar</Button>
+          <Button variant="outline">Cancelar</Button>
         </Link>
         <Button
-          className={`h-11 gap-2 shadow-md font-semibold px-6 transition-all ${
-            aprobado && total > 0
-              ? `${colorMap.states.success.background} ${colorMap.states.success.text} hover:opacity-90`
-              : total > 0
-              ? `${colorMap.states.error.background} ${colorMap.states.error.text} hover:opacity-90`
-              : `${colorMap.primary.background} ${colorMap.primary.text} hover:opacity-90`
-          }`}
           onClick={handleSubmit}
           disabled={submitting || total === 0}
         >
           {submitting ? (
-            <><Loader2 className="h-4 w-4 animate-spin" /> Emitiendo...</>
+            <><Loader2 className="h-4 w-4 animate-spin" /> Emitiendo…</>
           ) : (
-            <><Send className="h-4 w-4" /> Emitir Dictamen ({total}/{maxTotal})</>
+            <><Send className="h-4 w-4" /> Emitir dictamen ({total}/{maxTotal})</>
           )}
         </Button>
       </div>

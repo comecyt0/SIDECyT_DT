@@ -26,7 +26,7 @@ describe('ConvocatoriasNuevaPage — Wizard 7 pasos', () => {
   it('renderiza el paso 1 inicialmente con el título correcto', () => {
     render(<ConvocatoriasNuevaPage />);
     // El step indicator muestra "1" como activo (sin checkmark)
-    expect(screen.getByText('Información de la Convocatoria')).toBeInTheDocument();
+    expect(screen.getByText('Información de la convocatoria')).toBeInTheDocument();
     expect(screen.getByLabelText(/Nombre de la Convocatoria/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Fecha de Apertura/i)).toBeInTheDocument();
   });
@@ -38,7 +38,7 @@ describe('ConvocatoriasNuevaPage — Wizard 7 pasos', () => {
     fireEvent.click(nextBtn);
 
     // Sigue en paso 1 — el título no cambia
-    expect(screen.getByText('Información de la Convocatoria')).toBeInTheDocument();
+    expect(screen.getByText('Información de la convocatoria')).toBeInTheDocument();
     // Aparecen mensajes de error
     expect(screen.getAllByText(/requerid[oa]/i).length).toBeGreaterThan(0);
   });
@@ -65,7 +65,7 @@ describe('ConvocatoriasNuevaPage — Wizard 7 pasos', () => {
     fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
 
     // Ya cambió al paso 2
-    expect(screen.getByText('Configuración del Programa')).toBeInTheDocument();
+    expect(screen.getByText('Configuración del programa')).toBeInTheDocument();
   });
 
   it('"Anterior" regresa del paso 2 al paso 1', () => {
@@ -82,11 +82,11 @@ describe('ConvocatoriasNuevaPage — Wizard 7 pasos', () => {
     fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
 
     // Estamos en paso 2
-    expect(screen.getByText('Configuración del Programa')).toBeInTheDocument();
+    expect(screen.getByText('Configuración del programa')).toBeInTheDocument();
 
     // Click "Anterior"
     fireEvent.click(screen.getByRole('button', { name: /Anterior/i }));
-    expect(screen.getByText('Información de la Convocatoria')).toBeInTheDocument();
+    expect(screen.getByText('Información de la convocatoria')).toBeInTheDocument();
   });
 
   it('valida que fecha_apertura no puede ser posterior a fecha_cierre', () => {
@@ -104,7 +104,7 @@ describe('ConvocatoriasNuevaPage — Wizard 7 pasos', () => {
     fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
 
     // No avanza — sigue en paso 1
-    expect(screen.getByText('Información de la Convocatoria')).toBeInTheDocument();
+    expect(screen.getByText('Información de la convocatoria')).toBeInTheDocument();
     // Aparece el mensaje específico
     expect(screen.getByText(/Apertura no puede ser después de cierre/i)).toBeInTheDocument();
   });

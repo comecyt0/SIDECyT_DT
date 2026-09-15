@@ -27,14 +27,18 @@ export default function RouteChangeOverlay() {
   const [busActive, setBusActive] = useState(false);
   const [linkActive, setLinkActive] = useState(false);
 
-  // 1. Splash del servidor: retirarlo cuando la app montó y pasó el mínimo.
+  // 1. Splash del servidor: ocultarlo cuando la app montó y pasó el mínimo. Es un nodo que
+  //    React hidrató, así que NO se quita del DOM (E29): solo se oculta.
   useEffect(() => {
     const splash = document.getElementById('boot-splash');
     if (!splash) return;
     const remaining = Math.max(0, BOOT_MS - performance.now());
     const t = setTimeout(() => {
       splash.classList.add('route-loading-out');
-      setTimeout(() => splash.remove(), 220);
+      setTimeout(() => {
+        splash.style.display = 'none';
+        splash.setAttribute('aria-hidden', 'true');
+      }, 220);
     }, remaining);
     return () => clearTimeout(t);
   }, []);

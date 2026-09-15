@@ -937,6 +937,25 @@ imagen se sirve por `/storage/carousel/...`).
 `Storage::put()`/`writeStream()`. Cualquier otro upload del sistema que use `putFileAs()` o `store()` (que
 también usa realpath) debe revisarse antes de que alguien suba su primer documento.
 
+### E29 — "This page couldn't load" / `NotFoundError: The object can not be found here` en Safari [resuelto 15-09-2026]
+**Síntoma:** en Safari 26 (macOS), al pulsar un enlace del menú (o cualquier navegación interna) la página
+se rompía con la pantalla genérica de Next "This page couldn't load" y en consola
+`NotFoundError: The object can not be found here` dos veces (React reintenta el commit una vez). En Chrome no pasaba.
+**Causa:** `app/layout.tsx` imprime `#boot-splash` en el HTML del servidor **dentro del árbol de React**
+(hijo directo de `<body>`), y `RouteChangeOverlay` lo quitaba con `splash.remove()`. Al navegar, Next.js
+inserta un `<div hidden>` propio como hermano anterior del splash: React ejecuta
+`body.insertBefore(divHidden, bootSplash)` con un nodo de referencia que ya no está en el DOM → excepción en
+fase de commit, fuera de nuestro `ErrorBoundary` (lo atrapa el boundary raíz de Next). Reproducido con
+Playwright **WebKit** (`repro-webkit3.mjs`, parcheando `Node.prototype.insertBefore` para registrar el
+nodo que falla) — con Chromium no se reproducía.
+**Fix:** el splash se **oculta** (`style.display='none'` + `aria-hidden`), nunca se quita. De paso:
+`ThemeProvider` envolvía `children` en un `<span>` que desaparecía al montar → React **desmontaba y volvía a
+montar toda la app** tras hidratar (peticiones iniciales duplicadas en el log de IIS); eliminado. Y ahora hay
+`app/error.tsx` y `app/global-error.tsx` en español (botón "Volver a cargar", `digest` en consola).
+**Lección:** un nodo que React hidrató es de React: se oculta, no se toca con `remove()`/`innerHTML`. Y para
+errores "solo en Safari", reproducir con `playwright install webkit` + `addInitScript` que parchee las
+operaciones del DOM: da el nodo exacto en un minuto; razonar sobre el stack minificado, no.
+
 ### Reglas de UI vigentes (14/09/2026, ver `docs/DISENO_UI.md` §6b)
 Íconos de vidrio sin blur (`.icon-glass`, color por `color:`), cero emojis (íconos de lucide), `<select>`
 global estilizado en `globals.css`, botones unificados con hover líquido (`Button` variantes `soft` /

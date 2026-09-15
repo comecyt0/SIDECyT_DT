@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import PageHeader from '@/components/ui/page-header';
+import StatTile from '@/components/ui/stat-tile';
 import { AlertBox } from '@/components/ui/alert-box';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -59,13 +61,13 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
     setError('');
     try {
       await api.post(`/admin/solicitudes-acceso/${sol.id}/aprobar`);
-      setSuccess(`Acceso aprobado para ${sol.nombre}. Se envió notificación por correo.`);
+      setSuccess(`Listo: ${sol.nombre} ya tiene acceso. Le avisamos por correo.`);
       setConfirmApprove(null);
       setViewingSolicitud(null);
       router.refresh();
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
-      setError(axiosErr.response?.data?.message || 'Error al aprobar la solicitud.');
+      setError(axiosErr.response?.data?.message || 'No se pudo aprobar la solicitud. Inténtalo de nuevo.');
     } finally {
       setProcessing(false);
     }
@@ -77,14 +79,14 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
     setError('');
     try {
       await api.post(`/admin/solicitudes-acceso/${rejectDialog.id}/rechazar`, { motivo_rechazo: motivoRechazo });
-      setSuccess(`Solicitud de ${rejectDialog.nombre} rechazada. Se notificó al solicitante.`);
+      setSuccess(`La solicitud de ${rejectDialog.nombre} quedó rechazada. Le avisamos por correo.`);
       setRejectDialog(null);
       setMotivoRechazo('');
       setViewingSolicitud(null);
       router.refresh();
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
-      setError(axiosErr.response?.data?.message || 'Error al rechazar la solicitud.');
+      setError(axiosErr.response?.data?.message || 'No se pudo rechazar la solicitud. Inténtalo de nuevo.');
     } finally {
       setProcessing(false);
     }
@@ -105,125 +107,119 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50 flex items-center gap-3">
-          <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 text-primary">
-            <UserCheck className="w-5 h-5" />
-          </span>
-          Solicitudes de Acceso
-        </h1>
-        <p className="text-neutral-500 dark:text-neutral-400 mt-1 ml-13">
-          Revisa y gestiona las solicitudes de registro de nuevos usuarios.
-        </p>
-      </div>
+      <PageHeader
+        title="Solicitudes de acceso"
+        description="Personas que pidieron una cuenta para entrar al sistema. Revisa cada solicitud y apruébala o recházala."
+        icon={<UserCheck className="h-5 w-5" />}
+      />
 
       {error && <AlertBox type="error" message={error} onClose={() => setError('')} />}
       {success && <AlertBox type="success" message={success} onClose={() => setSuccess('')} />}
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {([
-          { key: 'pendiente', label: 'Pendientes', icon: Clock, color: 'from-amber-50 to-orange-50 border-amber-200 text-amber-700' },
-          { key: 'aprobada', label: 'Aprobadas', icon: CheckCircle2, color: 'from-emerald-50 to-green-50 border-emerald-200 text-emerald-700' },
-          { key: 'rechazada', label: 'Rechazadas', icon: XCircle, color: 'from-red-50 to-rose-50 border-red-200 text-red-600' },
-        ] as const).map(({ key, label, icon: Icon, color }) => (
-          <button
-            key={key}
-            onClick={() => setFilter(filter === key ? 'all' : key)}
-            className={`p-4 rounded-xl border bg-gradient-to-br ${color} transition-all duration-200 text-left hover:shadow-md hover:-translate-y-0.5 ${filter === key ? 'ring-2 ring-offset-1 ring-current/30 shadow-md' : ''}`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <Icon className="w-5 h-5" />
-              <span className="text-2xl font-extrabold">{counts[key]}</span>
-            </div>
-            <p className="text-xs font-semibold">{label}</p>
-          </button>
-        ))}
+          { key: 'pendiente', label: 'Pendientes', hint: 'Esperan tu decisión', icon: Clock, tone: 'gold', solid: true },
+          { key: 'aprobada', label: 'Aprobadas', hint: 'Ya tienen cuenta', icon: CheckCircle2, tone: 'emerald', solid: false },
+          { key: 'rechazada', label: 'Rechazadas', hint: 'Se les avisó el motivo', icon: XCircle, tone: 'vino', solid: false },
+        ] as const).map(({ key, label, hint, icon: Icon, tone, solid }) => {
+          const active = filter === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setFilter(active ? 'all' : key)}
+              className={`text-left w-full rounded-[28px] outline-none transition-[transform] duration-200 hover:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-[var(--auth-vino-soft)] ${active ? 'ring-4 ring-[var(--auth-vino-soft)]' : ''}`}
+            >
+              <StatTile label={label} value={counts[key]} hint={hint} icon={<Icon className="h-5 w-5" />} tone={tone} solid={solid} />
+            </button>
+          );
+        })}
       </div>
 
-      {/* Table card */}
-      <Card className="border-0 shadow-md">
-        <CardHeader className="bg-white dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700 pb-4">
+      <Card>
+        <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-lg text-primary flex items-center gap-2">
-                <UserCheck className="w-5 h-5" />
-                {filter === 'all' ? 'Todas' : ESTADO_CONFIG[filter].label}
-                <span className="text-sm font-normal text-neutral-400 dark:text-neutral-500">({filtered.length})</span>
+              <CardTitle>
+                <UserCheck className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
+                {filter === 'all' ? 'Todas las solicitudes' : ESTADO_CONFIG[filter].label + 's'}
+                <span className="text-sm font-normal text-[var(--app-ink-2)]">({filtered.length})</span>
               </CardTitle>
-              <CardDescription>Haz clic en una solicitud para ver detalles y tomar acción.</CardDescription>
+              <CardDescription>Toca una solicitud para ver el detalle y decidir.</CardDescription>
             </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-500" />
-              <Input
-                placeholder="Buscar por nombre, correo o institución..."
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--app-ink-2)] pointer-events-none" aria-hidden="true" />
+              <input
+                type="search"
+                aria-label="Buscar solicitudes de acceso"
+                placeholder="Buscar por nombre, correo o institución"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 w-64 bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700"
+                className="auth-input auth-input-static pl-10 !h-11"
               />
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           {filtered.length === 0 ? (
-            <div className="py-16 text-center text-neutral-400 dark:text-neutral-500">
-              <UserCheck className="w-12 h-12 mx-auto mb-3 text-neutral-200" />
-              <p>No hay solicitudes {filter !== 'all' && ESTADO_CONFIG[filter].label.toLowerCase() + 's'}.</p>
+            <div className="text-center py-14">
+              <UserCheck className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+              <p className="font-semibold text-[var(--app-ink)]">
+                {solicitudes.length === 0 ? 'Sin solicitudes todavía' : 'Ninguna solicitud coincide'}
+              </p>
+              <p className="text-sm text-[var(--app-ink-2)]">
+                {solicitudes.length === 0
+                  ? 'Aparecen cuando alguien pide una cuenta desde la pantalla de inicio de sesión.'
+                  : 'Prueba con otro filtro u otra búsqueda.'}
+              </p>
             </div>
           ) : (
-            <div className="divide-y divide-neutral-50 dark:divide-neutral-800">
+            <div className="divide-y divide-[var(--app-rule)]">
               {filtered.map((sol) => {
                 const cfg = ESTADO_CONFIG[sol.estado];
                 const Icon = cfg.icon;
                 return (
                   <div
                     key={sol.id}
-                    className="flex items-center gap-4 px-6 py-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer group"
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-5 sm:px-6 py-4 hover:bg-[var(--auth-field)] transition-colors cursor-pointer group"
                     onClick={() => setViewingSolicitud(sol)}
                   >
-                    {/* Avatar */}
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
-                      {sol.nombre.charAt(0).toUpperCase()}
-                    </div>
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <span className="app-tile-icon shrink-0 font-bold text-sm" style={{ color: 'var(--tile-sky-fg)' }}>
+                        {sol.nombre.charAt(0).toUpperCase()}
+                      </span>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-bold text-sm text-neutral-900 dark:text-neutral-50 truncate">{sol.nombre}</p>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold shrink-0 ${cfg.color}`}>
-                          <Icon className="w-3 h-3" />
-                          {cfg.label}
-                        </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <p className="font-bold text-sm text-[var(--app-ink)] truncate">{sol.nombre}</p>
+                          <Badge variant="outline" className={`gap-1 ${cfg.color}`}>
+                            <Icon className="w-3 h-3" />
+                            {cfg.label}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-[var(--app-ink-2)] flex items-center gap-3 flex-wrap">
+                          <span className="flex items-center gap-1 truncate"><Mail className="w-3 h-3 shrink-0" />{sol.email}</span>
+                          <span className="flex items-center gap-1 truncate"><Building2 className="w-3 h-3 shrink-0" />{sol.empresa_nombre}</span>
+                        </p>
                       </div>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate flex items-center gap-3">
-                        <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{sol.email}</span>
-                        <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{sol.empresa_nombre}</span>
-                      </p>
                     </div>
 
-                    {/* Date + Actions */}
-                    <div className="flex items-center gap-3 shrink-0">
-                      <p className="text-xs text-neutral-400 dark:text-neutral-500 hidden sm:block">
+                    <div className="flex items-center gap-3 shrink-0 sm:justify-end">
+                      <p className="text-xs text-[var(--app-ink-2)] hidden md:block">
                         {new Date(sol.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </p>
                       {sol.estado === 'pendiente' && (
-                        <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setConfirmApprove(sol); }}
-                            className="px-3 py-1.5 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
-                          >
+                        <div className="flex gap-1.5">
+                          <Button size="sm" variant="soft" onClick={(e) => { e.stopPropagation(); setConfirmApprove(sol); }}>
                             Aprobar
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setRejectDialog(sol); setMotivoRechazo(''); }}
-                            className="px-3 py-1.5 text-xs font-bold bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors"
-                          >
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); setRejectDialog(sol); setMotivoRechazo(''); }}>
                             Rechazar
-                          </button>
+                          </Button>
                         </div>
                       )}
-                      <Eye className="w-4 h-4 text-neutral-300 group-hover:text-primary transition-colors" />
+                      <Eye className="w-4 h-4 text-[var(--app-ink-2)] transition-colors group-hover:text-[var(--auth-vino)]" aria-hidden="true" />
                     </div>
                   </div>
                 );
@@ -233,19 +229,17 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
         </CardContent>
       </Card>
 
-      {/* Detail Dialog */}
       <Dialog open={!!viewingSolicitud} onOpenChange={(open) => !open && setViewingSolicitud(null)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
-              Solicitud de Acceso
+              <User className="w-5 h-5" style={{ color: 'var(--auth-vino)' }} />
+              Solicitud de acceso
             </DialogTitle>
           </DialogHeader>
           {viewingSolicitud && (
             <div className="space-y-4">
-              {/* Status */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold ${ESTADO_CONFIG[viewingSolicitud.estado].color}`}>
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-[12px] border text-sm font-semibold ${ESTADO_CONFIG[viewingSolicitud.estado].color}`}>
                 {(() => { const Icon = ESTADO_CONFIG[viewingSolicitud.estado].icon; return <Icon className="w-4 h-4" />; })()}
                 Estado: {ESTADO_CONFIG[viewingSolicitud.estado].label}
                 {viewingSolicitud.revisado_at && (
@@ -255,8 +249,7 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
                 )}
               </div>
 
-              {/* Info grid */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <DetailItem icon={User} label="Nombre" value={viewingSolicitud.nombre} />
                 <DetailItem icon={Mail} label="Correo" value={viewingSolicitud.email} />
                 <DetailItem icon={Building2} label="Institución" value={viewingSolicitud.empresa_nombre} />
@@ -267,36 +260,36 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
 
               {viewingSolicitud.motivo && (
                 <div>
-                  <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <p className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5" /> Motivo
                   </p>
-                  <p className="text-sm text-neutral-700 dark:text-neutral-200 bg-neutral-50 dark:bg-neutral-900 p-3 rounded-xl border border-neutral-100 dark:border-neutral-700 leading-relaxed">
+                  <p className="text-sm text-[var(--app-ink)] p-3 rounded-[12px] leading-relaxed bg-[var(--auth-field)]">
                     {viewingSolicitud.motivo}
                   </p>
                 </div>
               )}
 
               {viewingSolicitud.motivo_rechazo && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-                  <p className="text-xs font-bold text-red-600 mb-1">Motivo de rechazo:</p>
+                <div className="p-3 rounded-[12px] bg-red-50 border border-red-200">
+                  <p className="text-xs font-bold mb-1" style={{ color: 'var(--auth-danger)' }}>Motivo del rechazo</p>
                   <p className="text-sm text-red-700">{viewingSolicitud.motivo_rechazo}</p>
                 </div>
               )}
 
               {viewingSolicitud.estado === 'pendiente' && (
-                <div className="flex gap-3 pt-2">
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <Button
                     onClick={() => { setViewingSolicitud(null); setRejectDialog(viewingSolicitud); setMotivoRechazo(''); }}
-                    variant="outline"
-                    className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                    variant="destructive"
+                    className="flex-1"
                   >
-                    <XCircle className="w-4 h-4 mr-1.5" /> Rechazar
+                    <XCircle className="w-4 h-4" /> Rechazar
                   </Button>
                   <Button
                     onClick={() => { setViewingSolicitud(null); setConfirmApprove(viewingSolicitud); }}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="flex-1"
                   >
-                    <CheckCircle2 className="w-4 h-4 mr-1.5" /> Aprobar Acceso
+                    <CheckCircle2 className="w-4 h-4" /> Aprobar acceso
                   </Button>
                 </div>
               )}
@@ -305,52 +298,52 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
         </DialogContent>
       </Dialog>
 
-      {/* Approve Confirm */}
       <ConfirmDialog
         open={!!confirmApprove}
         title="Aprobar solicitud de acceso"
-        description={`¿Confirmas que deseas aprobar el acceso de ${confirmApprove?.nombre} (${confirmApprove?.email})? Se creará su cuenta y se le notificará por correo.`}
+        description={`Se creará la cuenta de ${confirmApprove?.nombre} (${confirmApprove?.email}) y le avisaremos por correo. ¿Quieres continuar?`}
         confirmLabel="Sí, aprobar acceso"
         variant="default"
         onConfirm={() => confirmApprove && handleAprobar(confirmApprove)}
         onCancel={() => setConfirmApprove(null)}
       />
 
-      {/* Reject Dialog */}
       <Dialog open={!!rejectDialog} onOpenChange={(open) => !open && setRejectDialog(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
+            <DialogTitle className="flex items-center gap-2" style={{ color: 'var(--auth-danger)' }}>
               <XCircle className="w-5 h-5" />
-              Rechazar Solicitud
+              Rechazar solicitud
             </DialogTitle>
           </DialogHeader>
           {rejectDialog && (
             <div className="space-y-4">
-              <p className="text-sm text-neutral-600 dark:text-neutral-300">
-                Estás rechazando la solicitud de <strong>{rejectDialog.nombre}</strong>. El solicitante recibirá un correo con el motivo.
+              <p className="text-sm text-[var(--app-ink-2)]">
+                Vas a rechazar la solicitud de <strong className="text-[var(--app-ink)]">{rejectDialog.nombre}</strong>. La persona recibirá un correo con el motivo.
               </p>
-              <div>
-                <label className="text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase tracking-wider block mb-1.5">
-                  Motivo del Rechazo *
+              <div className="space-y-1.5">
+                <label htmlFor="acc-motivo-rechazo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest block">
+                  Motivo del rechazo *
                 </label>
                 <textarea
+                  id="acc-motivo-rechazo"
                   value={motivoRechazo}
                   onChange={(e) => setMotivoRechazo(e.target.value)}
-                  placeholder="Explica el motivo por el que se rechaza la solicitud de acceso..."
-                  className="w-full px-3 py-2 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400"
+                  placeholder="Explica con tus palabras por qué no se aprueba el acceso."
+                  className="auth-input auth-input-static pl-4 !h-auto min-h-[100px] py-3 resize-y"
                 />
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Button variant="outline" onClick={() => setRejectDialog(null)} className="flex-1" disabled={processing}>
                   Cancelar
                 </Button>
                 <Button
                   onClick={handleRechazar}
                   disabled={!motivoRechazo.trim() || processing}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  variant="destructive"
+                  className="flex-1"
                 >
-                  {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar Rechazo'}
+                  {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar rechazo'}
                 </Button>
               </div>
             </div>
@@ -364,10 +357,10 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
 function DetailItem({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string }) {
   return (
     <div className="flex items-start gap-2">
-      <Icon className="w-4 h-4 text-neutral-400 dark:text-neutral-500 mt-0.5 shrink-0" />
-      <div>
-        <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">{label}</p>
-        <p className="text-sm text-neutral-800 dark:text-neutral-100 font-medium">{value}</p>
+      <Icon className="w-4 h-4 text-[var(--app-ink-2)] mt-0.5 shrink-0" />
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold text-[var(--app-ink-2)] uppercase tracking-wider">{label}</p>
+        <p className="text-sm text-[var(--app-ink)] font-medium break-words">{value}</p>
       </div>
     </div>
   );

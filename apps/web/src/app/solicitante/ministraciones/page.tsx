@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { DollarSign, Loader2, CheckCircle2, AlertCircle, Clock, ArrowRight } from 'lucide-react';
+import { Banknote, Loader2, CheckCircle2, AlertCircle, Clock, ArrowRight, Info } from 'lucide-react';
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
 import { INSTITUTION } from '@/lib/institution';
+import PageHeader from '@/components/ui/page-header';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface Ministracion {
   id: number;
@@ -28,51 +30,46 @@ interface Ministracion {
   };
 }
 
-const estadoConfig: Record<string, { label: string; icon: typeof CheckCircle2; bg: string; text: string; border: string; desc: string; next: string }> = {
+const estadoConfig: Record<string, { label: string; icon: typeof CheckCircle2; bg: string; fg: string; desc: string; next: string }> = {
   pendiente:  {
     label: 'Pendiente',
     icon: Clock,
-    bg: 'bg-neutral-50',
-    text: 'text-neutral-600',
-    border: 'border-neutral-300',
-    desc: 'Solicitud registrada, en espera de revisión.',
+    bg: 'var(--tile-gold-bg)',
+    fg: 'var(--tile-gold-fg)',
+    desc: 'La entrega está registrada y en espera de revisión.',
     next: `El equipo de ${INSTITUTION.name} la revisará pronto.`,
   },
   revision: {
-    label: 'En Revisión',
+    label: 'En revisión',
     icon: Clock,
-    bg: 'bg-amber-50',
-    text: 'text-amber-700',
-    border: 'border-amber-400',
-    desc: `En revisión por ${INSTITUTION.name}.`,
-    next: 'Te notificaremos cuando haya cambios.',
+    bg: 'var(--tile-sky-bg)',
+    fg: 'var(--tile-sky-fg)',
+    desc: `El equipo de ${INSTITUTION.name} está revisando los datos y documentos.`,
+    next: 'Te avisaremos cuando haya cambios.',
   },
   autorizada: {
     label: 'Autorizada',
     icon: CheckCircle2,
-    bg: 'bg-blue-50',
-    text: 'text-blue-700',
-    border: 'border-blue-400',
-    desc: 'Pago autorizado.',
-    next: 'Se procesará en los próximos días hábiles.',
+    bg: 'var(--tile-sky-bg)',
+    fg: 'var(--tile-sky-fg)',
+    desc: 'El pago ya está autorizado.',
+    next: 'Se realizará en los próximos días hábiles.',
   },
   pagada: {
     label: 'Pagada',
     icon: CheckCircle2,
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-700',
-    border: 'border-emerald-400',
-    desc: '¡Pago completado exitosamente!',
-    next: 'Verifica tu cuenta bancaria para confirmar el depósito.',
+    bg: 'var(--tile-emerald-bg)',
+    fg: 'var(--tile-emerald-fg)',
+    desc: 'El pago ya se realizó.',
+    next: 'Revisa tu cuenta bancaria para confirmar el depósito.',
   },
   rechazada: {
-    label: 'Rechazada',
+    label: 'Con correcciones',
     icon: AlertCircle,
-    bg: 'bg-red-50',
-    text: 'text-red-700',
-    border: 'border-red-400',
-    desc: 'Ministración rechazada.',
-    next: `Contacta al área de ${INSTITUTION.name} para corregir los datos.`,
+    bg: 'color-mix(in oklch, var(--auth-danger) 10%, transparent)',
+    fg: 'var(--auth-danger)',
+    desc: 'Hay que corregir los datos bancarios o algún documento.',
+    next: `Comunícate con ${INSTITUTION.name} para corregirlos.`,
   },
 };
 
@@ -103,161 +100,159 @@ export default function SolicitanteMinistracionesPage() {
 
   return (
     <div className="space-y-8">
+      <PageHeader
+        title="Pagos del apoyo"
+        description="Cada ministración es una entrega del apoyo aprobado. Aquí ves en qué paso va cada una y a qué cuenta se deposita."
+        icon={<Banknote className="h-5 w-5" />}
+      />
 
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-50 tracking-tight">Mis Ministraciones</h1>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-          Seguimiento de pagos y liberación de fondos de tus solicitudes aprobadas.
-        </p>
-      </div>
-
-      {/* Content */}
       {loading ? (
         <div className="py-16 flex justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary/20" />
+          <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--auth-vino)' }} />
         </div>
       ) : ministraciones.length === 0 ? (
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-700 shadow-sm py-16 text-center">
-          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-            <DollarSign className="w-5 h-5 text-primary" />
-          </div>
-          <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Sin ministraciones por ahora</p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-300 mt-1">
-            Los pagos aparecerán aquí cuando tus solicitudes sean aprobadas.
-          </p>
-        </div>
+        <Card>
+          <CardContent>
+            <div className="text-center py-14">
+              <Banknote className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
+              <p className="font-semibold text-[var(--app-ink)]">Todavía no hay pagos registrados</p>
+              <p className="text-sm text-[var(--app-ink-2)]">Aparecerán aquí cuando una de tus solicitudes sea aprobada.</p>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
           {ministraciones.map((mini, i) => {
             const cfg = estadoConfig[mini.estado] ?? estadoConfig.pendiente;
             const Icon = cfg.icon;
+            const entregas = mini.solicitud?.convenio?.num_tranches;
             return (
               <motion.div
                 key={mini.id}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06 }}
-                className={`bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-700 shadow-sm overflow-hidden border-l-4 ${cfg.border}`}
               >
-                {/* Card header */}
-                <div className="px-6 pt-5 pb-4 border-b border-neutral-50 dark:border-neutral-800">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Icon className={`w-4 h-4 ${cfg.text} shrink-0`} />
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${cfg.bg} ${cfg.text} uppercase tracking-tight`}>
-                          {cfg.label}
-                        </span>
-                        <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md font-mono">
-                          {mini.solicitud?.folio}
-                        </span>
+                <Card>
+                  <CardHeader>
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="inline-flex h-5 items-center gap-1 rounded-md px-2 text-[11px] font-semibold" style={{ backgroundColor: cfg.bg, color: cfg.fg }}>
+                            <Icon className="h-3 w-3" aria-hidden="true" />
+                            {cfg.label}
+                          </span>
+                          <span className="font-mono text-[11px] font-bold text-[var(--app-ink-2)] bg-[var(--auth-field)] px-2 py-0.5 rounded-md">
+                            {mini.solicitud?.folio}
+                          </span>
+                        </div>
+                        <CardTitle className="truncate">{mini.solicitud?.titulo_proyecto}</CardTitle>
+                        {mini.solicitud?.empresa?.nombre && (
+                          <CardDescription>{mini.solicitud.empresa.nombre}</CardDescription>
+                        )}
                       </div>
-                      <p className="text-sm font-bold text-neutral-900 dark:text-neutral-50 truncate">
-                        {mini.solicitud?.titulo_proyecto}
-                      </p>
-                      {mini.solicitud?.empresa?.nombre && (
-                        <p className="text-xs text-neutral-500 dark:text-neutral-300 mt-0.5">{mini.solicitud.empresa.nombre}</p>
+                      {mini.solicitud?.convenio && (
+                        <div className="sm:text-right shrink-0">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--app-ink-2)]">Monto aprobado</p>
+                          <p className="text-lg font-extrabold" style={{ color: 'var(--auth-vino)' }}>
+                            ${mini.solicitud.convenio.monto_aprobado.toLocaleString('es-MX')}
+                          </p>
+                          {typeof entregas === 'number' && (
+                            <p className="text-xs text-[var(--app-ink-2)]">{entregas === 1 ? 'En 1 entrega' : `En ${entregas} entregas`}</p>
+                          )}
+                        </div>
                       )}
                     </div>
-                    {mini.solicitud?.convenio && (
-                      <div className="text-right shrink-0">
-                        <p className="text-xs text-neutral-500 dark:text-neutral-300 uppercase tracking-wide">Monto aprobado</p>
-                        <p className="text-lg font-extrabold text-primary">
-                          ${mini.solicitud.convenio.monto_aprobado.toLocaleString('es-MX')}
-                        </p>
-                        <p className="text-xs text-neutral-500 dark:text-neutral-300">{mini.solicitud.convenio.num_tranches} tranche(s)</p>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    <div className="rounded-[16px] px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2" style={{ backgroundColor: cfg.bg }}>
+                      <p className="text-sm font-semibold text-[var(--app-ink)]">{cfg.desc}</p>
+                      <p className="flex items-center gap-1 text-xs text-[var(--app-ink-2)]">
+                        <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        {cfg.next}
+                      </p>
+                    </div>
+
+                    {(mini.estado === 'autorizada' || mini.estado === 'pagada') &&
+                      (mini.cuenta_clabe || mini.numero_cuenta) && (
+                      <div className="rounded-[16px] bg-[var(--auth-field)] p-4 space-y-2">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--app-ink-2)]">Cuenta para el depósito</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {mini.cuenta_clabe && (
+                            <div>
+                              <p className="text-[11px] text-[var(--app-ink-2)] uppercase mb-0.5">CLABE</p>
+                              <p className="text-xs font-mono font-bold text-[var(--app-ink)] bg-[var(--app-card-bg)] px-3 py-2 rounded-[10px] border border-[var(--app-rule)]">
+                                {mini.cuenta_clabe}
+                              </p>
+                            </div>
+                          )}
+                          {mini.numero_cuenta && (
+                            <div>
+                              <p className="text-[11px] text-[var(--app-ink-2)] uppercase mb-0.5">Número de cuenta</p>
+                              <p className="text-xs font-mono font-bold text-[var(--app-ink)] bg-[var(--app-card-bg)] px-3 py-2 rounded-[10px] border border-[var(--app-rule)]">
+                                {mini.numero_cuenta}
+                              </p>
+                            </div>
+                          )}
+                          {mini.titular_cuenta && (
+                            <div>
+                              <p className="text-[11px] text-[var(--app-ink-2)] uppercase mb-0.5">Titular</p>
+                              <p className="text-xs font-bold text-[var(--app-ink)] bg-[var(--app-card-bg)] px-3 py-2 rounded-[10px] border border-[var(--app-rule)] truncate">
+                                {mini.titular_cuenta}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
-                  </div>
-                </div>
 
-                {/* Card body */}
-                <div className="px-6 py-4 space-y-4">
-                  {/* Status description */}
-                  <div className={`${cfg.bg} rounded-xl px-4 py-3 flex items-center justify-between`}>
-                    <p className={`text-sm font-semibold ${cfg.text}`}>{cfg.desc}</p>
-                    <div className={`flex items-center gap-1 text-xs ${cfg.text}`}>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                      {cfg.next}
-                    </div>
-                  </div>
-
-                  {/* Bank details */}
-                  {(mini.estado === 'autorizada' || mini.estado === 'pagada') &&
-                    (mini.cuenta_clabe || mini.numero_cuenta) && (
-                    <div className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-4 space-y-2">
-                      <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Datos Bancarios</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {mini.cuenta_clabe && (
-                          <div>
-                            <p className="text-[10px] text-neutral-500 dark:text-neutral-300 uppercase mb-0.5">CLABE</p>
-                            <p className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-100 bg-white dark:bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                              {mini.cuenta_clabe}
-                            </p>
-                          </div>
-                        )}
-                        {mini.numero_cuenta && (
-                          <div>
-                            <p className="text-[10px] text-neutral-500 dark:text-neutral-300 uppercase mb-0.5">N° Cuenta</p>
-                            <p className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-100 bg-white dark:bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                              {mini.numero_cuenta}
-                            </p>
-                          </div>
-                        )}
-                        {mini.titular_cuenta && (
-                          <div>
-                            <p className="text-[10px] text-neutral-500 dark:text-neutral-300 uppercase mb-0.5">Titular</p>
-                            <p className="text-xs font-bold text-neutral-800 dark:text-neutral-100 bg-white dark:bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 truncate">
-                              {mini.titular_cuenta}
-                            </p>
-                          </div>
-                        )}
+                    {mini.observaciones && mini.estado !== 'rechazada' && (
+                      <div className="rounded-[16px] px-4 py-3" style={{ backgroundColor: 'var(--tile-gold-bg)' }}>
+                        <p className="text-xs font-bold text-[var(--app-ink)] mb-0.5">Observaciones</p>
+                        <p className="text-sm text-[var(--app-ink)]">{mini.observaciones}</p>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Observaciones */}
-                  {mini.observaciones && mini.estado !== 'rechazada' && (
-                    <div className="border-l-2 border-amber-400 pl-4 py-1">
-                      <p className="text-xs font-bold text-amber-700 mb-0.5">Observaciones</p>
-                      <p className="text-sm text-amber-800">{mini.observaciones}</p>
-                    </div>
-                  )}
+                    {mini.estado === 'rechazada' && (
+                      <AlertBox
+                        type="error"
+                        title="Esta entrega necesita correcciones"
+                        message={mini.observaciones || `Hay que corregir algo antes de continuar. Comunícate con ${INSTITUTION.name} para saber qué falta.`}
+                      />
+                    )}
 
-                  {/* Rechazo */}
-                  {mini.estado === 'rechazada' && (
-                    <AlertBox
-                      type="error"
-                      title="Ministración Rechazada"
-                      message={mini.observaciones || `La ministración fue rechazada. Contacta al área de ${INSTITUTION.name} para más detalles.`}
-                    />
-                  )}
-
-                  <p className="text-xs text-neutral-500 dark:text-neutral-300">
-                    Registrada el {new Date(mini.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}
-                  </p>
-                </div>
+                    <p className="text-xs text-[var(--app-ink-2)]">
+                      Registrada el {new Date(mini.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </p>
+                  </CardContent>
+                </Card>
               </motion.div>
             );
           })}
         </div>
       )}
 
-      {/* Help card */}
-      <div className="bg-neutral-50 dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-700 px-6 py-5">
-        <p className="text-sm font-bold text-neutral-700 dark:text-neutral-200 mb-3">¿Preguntas sobre el estado de tu ministración?</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {Object.entries(estadoConfig).map(([key, cfg]) => (
-            <div key={key} className="flex items-start gap-2">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${cfg.bg} ${cfg.text} uppercase whitespace-nowrap mt-0.5`}>
-                {cfg.label}
-              </span>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">{cfg.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <Info className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
+            Qué significa cada estado
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {Object.entries(estadoConfig).map(([key, cfg]) => (
+              <div key={key} className="flex items-start gap-2">
+                <span className="inline-flex h-5 shrink-0 items-center rounded-md px-2 text-[11px] font-semibold whitespace-nowrap" style={{ backgroundColor: cfg.bg, color: cfg.fg }}>
+                  {cfg.label}
+                </span>
+                <p className="text-sm text-[var(--app-ink-2)]">{cfg.desc}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
