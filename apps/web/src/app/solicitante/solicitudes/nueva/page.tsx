@@ -2,24 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { AlertBox } from '@/components/ui/alert-box';
-import { Save, Send, Loader2, ArrowLeft, AlertCircle, FileText, CheckCircle2, Upload, X } from 'lucide-react';
-import { currencySymbol } from '@/lib/format';
+import StepFrame, { type StepDef } from '@/components/ui/step-frame';
+import { Loader2, ArrowLeft, AlertCircle, FileText, CheckCircle2, Upload, X, FilePlus2 } from 'lucide-react';
+import { currencySymbol, formatCurrency } from '@/lib/format';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { colorMap } from '@/lib/color-mapper';
 import { useProgramaCatalog } from '@/hooks/useProgramaCatalog';
 import type { AreaConocimiento } from '@/types/api';
 import { DynamicFieldRenderer } from '@/components/solicitante/DynamicFieldRenderer';
@@ -33,6 +23,9 @@ interface Convocatoria {
   tipo_programa?: { id: number; clave: string; nombre: string };
   tipoPrograma?: { id: number; clave: string; nombre: string };
 }
+
+const labelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
+const inputCls = 'auth-input auth-input-static pl-4';
 
 export default function NuevaSolicitud() {
   const router = useRouter();
@@ -87,7 +80,7 @@ export default function NuevaSolicitud() {
         setConvocatorias(convItems);
         setAreasConocimiento(areaItems);
       } catch (error: any) {
-        const errorMsg = error?.response?.data?.message || error?.message || 'Error desconocido al cargar convocatorias';
+        const errorMsg = error?.response?.data?.message || error?.message || 'No se pudieron cargar las convocatorias';
         console.error('Error al cargar datos:', {
           status: error?.response?.status,
           message: errorMsg,
@@ -104,10 +97,9 @@ export default function NuevaSolicitud() {
   }, []);
 
   // Handle convocatoria selection → derive programa and reset dynamic state
-  const handleConvocatoriaChange = (convId: string | null) => {
-    if (!convId) return;
-
+  const handleConvocatoriaChange = (convId: string) => {
     setFormData({ ...formData, convocatoria_id: convId });
+    if (!convId) return;
 
     const selected = convocatorias.find((c) => c.id.toString() === convId);
     const tipoProgramaData = selected?.tipo_programa || selected?.tipoPrograma;
@@ -127,84 +119,100 @@ export default function NuevaSolicitud() {
     }
   };
 
+  const rubrosTotal = () => Object.values(rubroValues).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+
   // Check if rubros exceed limit (used to disable buttons)
   const rubrosExceedLimit = (): boolean => {
     if (!programa || rubros.length === 0) return false;
-    const total = Object.values(rubroValues).reduce((sum, val) => {
-      return sum + (parseFloat(val) || 0);
-    }, 0);
-    return total > (programa.monto_maximo || 0);
+    return rubrosTotal() > (programa.monto_maximo || 0);
   };
 
-  // Validate form
-  const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
+  // ── Validación por bloque: cada paso revisa solo lo suyo y deja el mensaje en pantalla ──
+  const validateConvocatoria = (): Record<string, string> =>
+    !formData.convocatoria_id ? { convocatoria: 'Selecciona una convocatoria' } : {};
 
-    if (!formData.convocatoria_id) errors.convocatoria = 'Selecciona una convocatoria';
+  const validateBasics = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
     if (!formData.titulo_proyecto.trim()) errors.titulo = 'El título es obligatorio';
     if (!formData.area_conocimiento_id) errors.area = 'Selecciona un área';
     if (!formData.descripcion.trim()) errors.descripcion = 'La descripción es obligatoria';
-    if (!formData.monto_solicitado) errors.monto = 'El monto es obligatorio';
-    // Solo validar modalidad si el programa tiene modalidades
-    if (modalidades.length > 0 && !modalidadId) errors.modalidad = 'Selecciona una modalidad';
+    if (!formData.monto_solicitado || Number(formData.monto_solicitado) <= 0) errors.monto = 'El monto es obligatorio';
+    return errors;
+  };
 
-    // Validate dynamic fields
+  const validateModalidad = (): Record<string, string> =>
+    modalidades.length > 0 && !modalidadId ? { modalidad: 'Selecciona una modalidad' } : {};
+
+  const validateCampos = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
     campos.forEach((campo) => {
       if (campo.requerido && (!dinamicFields[campo.id] || dinamicFields[campo.id] === '')) {
         errors[`campo_${campo.id}`] = `${campo.etiqueta} es obligatorio`;
       }
     });
-
-    // Validate rubros total
-    if (rubros.length > 0) {
-      const total = Object.values(rubroValues).reduce((sum, val) => {
-        return sum + (parseFloat(val) || 0);
-      }, 0);
-      if (total === 0) {
-        errors.rubros = 'Debe distribuir al menos un monto en los rubros';
-      } else if (programa?.monto_maximo && total > programa.monto_maximo) {
-        errors.rubros = `El total de rubros (${total}) excede el límite (${programa.monto_maximo})`;
-      }
-    }
-
-    // Validate team members count and details
-    if (programa?.tiene_equipo) {
-      const minMiembros = programa.min_miembros_equipo || 0;
-      const maxMiembros = programa.max_miembros_equipo || 100;
-
-      // Check minimum members required
-      if (minMiembros > 0 && miembros.length < minMiembros) {
-        errors.miembros_count = `Se requieren mínimo ${minMiembros} miembro(s) de equipo para este programa`;
-      }
-      // Check maximum members allowed
-      if (miembros.length > maxMiembros) {
-        errors.miembros_count = `Máximo ${maxMiembros} miembro(s) permitido(s) para este programa`;
-      }
-
-      // Validate individual member details
-      if (miembros.length > 0) {
-        miembros.forEach((m, i) => {
-          if (!m.nombre.trim()) errors[`miembro_${i}_nombre`] = 'Nombre requerido';
-          if (!m.rol.trim()) errors[`miembro_${i}_rol`] = 'Rol requerido';
-          if (programa.rango_edad_min && m.edad && m.edad < programa.rango_edad_min) {
-            errors[`miembro_${i}_edad`] = `Edad mínima: ${programa.rango_edad_min}`;
-          }
-          if (programa.rango_edad_max && m.edad && m.edad > programa.rango_edad_max) {
-            errors[`miembro_${i}_edad`] = `Edad máxima: ${programa.rango_edad_max}`;
-          }
-        });
-      }
-    }
-
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+    return errors;
   };
 
-  const handleSubmit = async (e?: React.FormEvent, _submitFinal = false) => {
-    if (e) e.preventDefault();
-    if (!validateForm()) return;
+  const validateRubros = (): Record<string, string> => {
+    if (rubros.length === 0) return {};
+    const total = rubrosTotal();
+    if (total === 0) return { rubros: 'Reparte el monto entre al menos un concepto de gasto' };
+    if (programa?.monto_maximo && total > programa.monto_maximo) {
+      return { rubros: `Lo repartido (${formatCurrency(total)}) supera el máximo del programa (${formatCurrency(programa.monto_maximo)})` };
+    }
+    return {};
+  };
+
+  const validateEquipo = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    if (!programa?.tiene_equipo) return errors;
+    const minMiembros = programa.min_miembros_equipo || 0;
+    const maxMiembros = programa.max_miembros_equipo || 100;
+    if (minMiembros > 0 && miembros.length < minMiembros) {
+      errors.miembros_count = `Este programa pide al menos ${minMiembros} integrante(s)`;
+    }
+    if (miembros.length > maxMiembros) {
+      errors.miembros_count = `Este programa admite máximo ${maxMiembros} integrante(s)`;
+    }
+    miembros.forEach((m, i) => {
+      if (!m.nombre.trim()) errors[`miembro_${i}_nombre`] = 'Nombre requerido';
+      if (!m.rol.trim()) errors[`miembro_${i}_rol`] = 'Rol requerido';
+      if (programa.rango_edad_min && m.edad && m.edad < programa.rango_edad_min) {
+        errors[`miembro_${i}_edad`] = `Edad mínima: ${programa.rango_edad_min}`;
+      }
+      if (programa.rango_edad_max && m.edad && m.edad > programa.rango_edad_max) {
+        errors[`miembro_${i}_edad`] = `Edad máxima: ${programa.rango_edad_max}`;
+      }
+    });
+    return errors;
+  };
+
+  const validateForm = (): Record<string, string> => ({
+    ...validateConvocatoria(),
+    ...validateBasics(),
+    ...validateModalidad(),
+    ...validateCampos(),
+    ...validateRubros(),
+    ...validateEquipo(),
+  });
+
+  /** Envuelve un validador de bloque para StepFrame: guarda los errores y devuelve el primero. */
+  const stepValidate = (fn: () => Record<string, string>) => () => {
+    const errors = fn();
+    setFieldErrors(errors);
+    return Object.values(errors)[0] ?? null;
+  };
+
+  const handleSubmit = async () => {
+    const errors = validateForm();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setSubmitError({ type: 'error', message: 'Faltan datos por completar. Regresa al paso indicado.', details: Object.values(errors) });
+      return;
+    }
 
     setLoading(true);
+    setSubmitError(null);
 
     try {
       // Obtener nombre de la modalidad seleccionada, si existe
@@ -250,14 +258,14 @@ export default function NuevaSolicitud() {
         setSubmitError({
           type: 'success',
           message: filesToUpload.length > 0
-            ? `Solicitud creada con ${filesToUpload.length} documento(s) adjunto(s). Redirigiendo...`
-            : 'Solicitud creada. Redirigiendo...',
+            ? `Solicitud guardada con ${filesToUpload.length} documento(s). Abriendo tu solicitud…`
+            : 'Solicitud guardada. Abriendo tu solicitud…',
         });
         setTimeout(() => {
           router.push(`/solicitante/solicitudes/${solicitudId}`);
         }, 1500);
       } else {
-        setSubmitError({ type: 'success', message: 'Solicitud creada exitosamente.' });
+        setSubmitError({ type: 'success', message: 'Solicitud guardada.' });
         setTimeout(() => router.push('/solicitante/dashboard'), 2000);
       }
     } catch (error: any) {
@@ -266,7 +274,7 @@ export default function NuevaSolicitud() {
       const technicalError = error.response?.data?.error;
       const statusCode = error.response?.status;
 
-      const errorMsg = serverMessage || 'Error al procesar la solicitud.';
+      const errorMsg = serverMessage || 'No se pudo guardar la solicitud.';
       let errorDetails: string[] = [];
 
       if (statusCode === 422 && validationErrors) {
@@ -289,6 +297,352 @@ export default function NuevaSolicitud() {
     }
   };
 
+  const errText = (key: string) =>
+    fieldErrors[key] ? <p className="text-xs font-medium" style={{ color: 'var(--auth-danger)' }}>{fieldErrors[key]}</p> : null;
+
+  const selectedConvocatoria = convocatorias.find((c) => c.id.toString() === formData.convocatoria_id);
+  const selectedArea = areasConocimiento.find((a) => a.id.toString() === formData.area_conocimiento_id);
+  const attachedCount = Object.values(documentosFiles).filter(Boolean).length;
+
+  // ── Pasos (los del programa solo aparecen cuando el catálogo los trae) ──
+  const steps: StepDef[] = [
+    {
+      key: 'convocatoria',
+      label: 'La convocatoria',
+      question: '¿A qué convocatoria aplicas?',
+      validate: stepValidate(validateConvocatoria),
+      content: (
+        <>
+          {fetchError && (
+            <AlertBox
+              type="error"
+              title="No se pudieron cargar las convocatorias"
+              message={fetchError}
+              details={['Revisa tu conexión a internet.', 'Si sigue igual, avisa al administrador.']}
+            />
+          )}
+          <div className="space-y-1.5">
+            <Label htmlFor="convocatoria" className={labelCls}>Convocatoria *</Label>
+            <select
+              id="convocatoria"
+              value={formData.convocatoria_id}
+              onChange={(e) => handleConvocatoriaChange(e.target.value)}
+              className={inputCls}
+              aria-invalid={fieldErrors.convocatoria ? 'true' : undefined}
+            >
+              <option value="">{convocatorias.length === 0 ? 'No hay convocatorias abiertas ahora' : 'Elige una convocatoria…'}</option>
+              {convocatorias.map((c) => (
+                <option key={c.id} value={c.id.toString()}>
+                  {c.nombre} ({c.ejercicio_fiscal})
+                </option>
+              ))}
+            </select>
+            {errText('convocatoria')}
+            <p className="text-xs text-[var(--app-ink-2)]">Cada convocatoria pertenece a un programa con sus propias preguntas y documentos; los verás en los siguientes pasos.</p>
+          </div>
+          {catalogLoading && (
+            <p className="inline-flex items-center gap-2 text-sm text-[var(--app-ink-2)]"><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Preparando el formulario del programa…</p>
+          )}
+        </>
+      ),
+    },
+    {
+      key: 'proyecto',
+      label: 'Tu proyecto',
+      question: '¿De qué trata tu proyecto?',
+      validate: stepValidate(validateBasics),
+      content: (
+        <>
+          <div className="space-y-1.5">
+            <Label htmlFor="titulo" className={labelCls}>Título del proyecto *</Label>
+            <input
+              id="titulo"
+              placeholder="Ej. Congreso Internacional de Inteligencia Artificial"
+              className={inputCls}
+              value={formData.titulo_proyecto}
+              onChange={(e) => setFormData({ ...formData, titulo_proyecto: e.target.value })}
+              aria-invalid={fieldErrors.titulo ? 'true' : undefined}
+            />
+            {errText('titulo')}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="area" className={labelCls}>Área de conocimiento *</Label>
+              <select
+                id="area"
+                value={formData.area_conocimiento_id}
+                onChange={(e) => setFormData({ ...formData, area_conocimiento_id: e.target.value })}
+                className={inputCls}
+                aria-invalid={fieldErrors.area ? 'true' : undefined}
+              >
+                <option value="">{areasConocimiento.length === 0 ? 'Sin áreas disponibles' : 'Elige un área…'}</option>
+                {areasConocimiento.map((a) => (
+                  <option key={a.id} value={a.id.toString()}>{a.nombre}</option>
+                ))}
+              </select>
+              {errText('area')}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="monto" className={labelCls}>Monto que solicitas *</Label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[var(--app-ink-2)]" aria-hidden="true">{currencySymbol()}</span>
+                <input
+                  id="monto"
+                  type="number"
+                  min="1"
+                  placeholder="0.00"
+                  className={`${inputCls} !pl-9`}
+                  value={formData.monto_solicitado}
+                  onChange={(e) => setFormData({ ...formData, monto_solicitado: e.target.value })}
+                  aria-invalid={fieldErrors.monto ? 'true' : undefined}
+                />
+              </div>
+              {errText('monto')}
+              {programa?.monto_maximo ? (
+                <p className="text-xs text-[var(--app-ink-2)]">Este programa apoya hasta {formatCurrency(programa.monto_maximo)} por proyecto.</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="descripcion" className={labelCls}>Resumen del proyecto *</Label>
+            <textarea
+              id="descripcion"
+              placeholder="En pocas líneas: qué quieres lograr, cómo y a quién beneficia."
+              className={`${inputCls} !h-auto min-h-[150px] py-3 resize-y`}
+              maxLength={2000}
+              value={formData.descripcion}
+              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+              aria-invalid={fieldErrors.descripcion ? 'true' : undefined}
+            />
+            <div className="flex justify-between gap-3">
+              <p className="text-xs text-[var(--app-ink-2)]">{formData.descripcion.length} / 2000 caracteres</p>
+              {errText('descripcion')}
+            </div>
+          </div>
+        </>
+      ),
+    },
+  ];
+
+  if (!catalogLoading && !catalogError && modalidades.length > 0) {
+    steps.push({
+      key: 'modalidad',
+      label: 'Modalidad',
+      question: '¿En qué modalidad participas?',
+      validate: stepValidate(validateModalidad),
+      content: (
+        <div className="space-y-1.5">
+          <Label htmlFor="program-modalidad" className={labelCls}>Modalidad *</Label>
+          <select id="program-modalidad" value={modalidadId} onChange={(e) => setModalidadId(e.target.value)} className={inputCls}>
+            <option value="">Elige una modalidad…</option>
+            {modalidades.map((m) => (
+              <option key={m.id} value={m.id.toString()}>{m.nombre}</option>
+            ))}
+          </select>
+          {errText('modalidad')}
+        </div>
+      ),
+    });
+  }
+
+  if (catalogError) {
+    steps.push({
+      key: 'catalogo-error',
+      label: 'Datos del programa',
+      question: 'No pudimos cargar las preguntas del programa',
+      content: (
+        <div className="flex items-start gap-3 rounded-[14px] px-4 py-3 text-sm" style={{ backgroundColor: 'var(--tile-vino-bg)', color: 'var(--auth-danger)' }}>
+          <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" aria-hidden="true" />
+          <div>
+            <p className="font-semibold">Inténtalo de nuevo en un momento.</p>
+            <p>{catalogError}</p>
+          </div>
+        </div>
+      ),
+    });
+  } else if (!catalogLoading && campos.length > 0) {
+    const renderCampos = (list: typeof campos) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {list.map((campo) => (
+          <DynamicFieldRenderer
+            key={campo.id}
+            campo={campo}
+            value={dinamicFields[campo.id] || ''}
+            onChange={(val) => setDinamicFields({ ...dinamicFields, [campo.id]: val })}
+            error={fieldErrors[`campo_${campo.id}`]}
+          />
+        ))}
+      </div>
+    );
+    steps.push({
+      key: 'campos',
+      label: 'Datos del programa',
+      question: 'Cuéntanos lo que este programa necesita saber',
+      validate: stepValidate(validateCampos),
+      content: programa?.tiene_etapas ? (
+        <div className="space-y-6">
+          {[1, 2].map((etapaNum) => {
+            const fieldsPorEtapa = campos.filter((c) => !c.etapa_id || c.etapa_id === etapaNum);
+            if (fieldsPorEtapa.length === 0) return null;
+            return (
+              <div key={`etapa-${etapaNum}`} className="space-y-3">
+                <h4 className="text-sm font-bold text-[var(--app-ink)]">Etapa {etapaNum}</h4>
+                {renderCampos(fieldsPorEtapa)}
+              </div>
+            );
+          })}
+        </div>
+      ) : renderCampos(campos),
+    });
+  }
+
+  if (!catalogLoading && !catalogError && rubros.length > 0) {
+    steps.push({
+      key: 'presupuesto',
+      label: 'Presupuesto',
+      question: '¿Cómo repartes el dinero?',
+      validate: stepValidate(validateRubros),
+      content: (
+        <>
+          <RubrosTable
+            rubros={rubros}
+            values={rubroValues}
+            montoMaximo={programa?.monto_maximo || null}
+            onChange={(rubroId, monto) => setRubroValues({ ...rubroValues, [rubroId]: monto })}
+          />
+          {errText('rubros')}
+          {rubrosExceedLimit() && (
+            <p className="flex items-center gap-2 rounded-[14px] px-4 py-3 text-sm" style={{ backgroundColor: 'var(--tile-vino-bg)', color: 'var(--auth-danger)' }}>
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              Lo repartido supera el máximo del programa. Ajusta las cantidades antes de continuar.
+            </p>
+          )}
+        </>
+      ),
+    });
+  }
+
+  if (!catalogLoading && !catalogError && programa?.tiene_equipo) {
+    steps.push({
+      key: 'equipo',
+      label: 'Equipo',
+      question: '¿Quiénes participan contigo?',
+      validate: stepValidate(validateEquipo),
+      content: (
+        <>
+          <p className="text-sm text-[var(--app-ink-2)]">
+            Este programa pide entre {programa.min_miembros_equipo || 1}{programa.max_miembros_equipo ? ` y ${programa.max_miembros_equipo}` : ''} integrantes.
+          </p>
+          <MiembrosEquipo
+            miembros={miembros}
+            minMiembros={programa.min_miembros_equipo || 1}
+            maxMiembros={programa.max_miembros_equipo || null}
+            edadMin={programa.rango_edad_min}
+            edadMax={programa.rango_edad_max}
+            onChange={setMiembros}
+          />
+          {errText('miembros_count')}
+        </>
+      ),
+    });
+  }
+
+  if (!catalogLoading && documentos.length > 0) {
+    steps.push({
+      key: 'documentos',
+      label: 'Documentos',
+      question: '¿Tienes los documentos a la mano?',
+      content: (
+        <>
+          <p className="text-sm text-[var(--app-ink-2)]">Puedes adjuntarlos ahora o después, desde tu solicitud. Solo PDF.</p>
+          <div className="space-y-2">
+            {documentos.map((doc) => {
+              const selectedFile = documentosFiles[doc.clave] || null;
+              return (
+                <div key={doc.id} className="flex items-center gap-3 rounded-[14px] border px-4 py-3" style={{ borderColor: 'var(--app-rule)', backgroundColor: selectedFile ? 'var(--tile-emerald-bg)' : 'var(--auth-field)' }}>
+                  <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" style={{ color: selectedFile ? 'var(--tile-emerald-fg)' : doc.obligatorio ? 'var(--auth-danger)' : 'var(--app-ink-2)' }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-[var(--app-ink)]">{doc.nombre}</span>
+                      {doc.obligatorio && !selectedFile && (
+                        <span className="text-xs font-bold" style={{ color: 'var(--auth-danger)' }}>Obligatorio</span>
+                      )}
+                      {selectedFile && (
+                        <span className="text-xs font-medium truncate max-w-[200px]" style={{ color: 'var(--tile-emerald-fg)' }}>{selectedFile.name}</span>
+                      )}
+                    </div>
+                    {doc.descripcion && !selectedFile && (
+                      <p className="text-xs text-[var(--app-ink-2)] mt-0.5">{doc.descripcion}</p>
+                    )}
+                    <p className="text-xs text-[var(--app-ink-2)]">
+                      PDF{doc.tamaño_maximo_mb ? ` · hasta ${doc.tamaño_maximo_mb} MB` : ' · hasta 10 MB'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {selectedFile && (
+                      <Button type="button" variant="ghost" size="icon-sm" aria-label="Quitar archivo" title="Quitar archivo" onClick={() => setDocumentosFiles(prev => ({ ...prev, [doc.clave]: null }))}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <input
+                      ref={el => { fileInputRefs.current[doc.clave] = el; }}
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0] || null;
+                        setDocumentosFiles(prev => ({ ...prev, [doc.clave]: file }));
+                        e.target.value = '';
+                      }}
+                    />
+                    <Button type="button" variant="soft" size="sm" className="gap-1.5" onClick={() => fileInputRefs.current[doc.clave]?.click()}>
+                      <Upload className="h-3.5 w-3.5" />
+                      {selectedFile ? 'Cambiar' : 'Adjuntar PDF'}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ),
+    });
+  }
+
+  steps.push({
+    key: 'revisar',
+    label: 'Revisar y guardar',
+    question: '¿Todo en orden?',
+    content: (
+      <>
+        <p className="text-sm text-[var(--app-ink-2)]">Se guarda como <strong>borrador</strong>: podrás completarla y enviarla a revisión desde tu solicitud.</p>
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          {[
+            ['Convocatoria', selectedConvocatoria ? `${selectedConvocatoria.nombre} (${selectedConvocatoria.ejercicio_fiscal})` : '—'],
+            ['Título', formData.titulo_proyecto || '—'],
+            ['Área', selectedArea?.nombre || '—'],
+            ['Monto', formData.monto_solicitado ? formatCurrency(Number(formData.monto_solicitado)) : '—'],
+            ...(modalidades.length > 0 ? [['Modalidad', modalidades.find(m => m.id.toString() === modalidadId)?.nombre || '—']] : []),
+            ...(rubros.length > 0 ? [['Presupuesto repartido', formatCurrency(rubrosTotal())]] : []),
+            ...(programa?.tiene_equipo ? [['Integrantes', String(miembros.length)]] : []),
+            ...(documentos.length > 0 ? [['Documentos adjuntos', `${attachedCount} de ${documentos.length}`]] : []),
+          ].map(([k, v]) => (
+            <div key={k} className="rounded-[14px] px-4 py-3" style={{ background: 'var(--auth-field)' }}>
+              <dt className="text-[11px] font-bold uppercase tracking-widest text-[var(--app-ink-2)]">{k}</dt>
+              <dd className="font-semibold text-[var(--app-ink)] mt-0.5 break-words">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        {uploadProgress && (
+          <p className="inline-flex items-center gap-2 text-sm text-[var(--app-ink-2)]"><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> {uploadProgress}</p>
+        )}
+      </>
+    ),
+  });
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-500">
       {submitError && (
@@ -301,450 +655,36 @@ export default function NuevaSolicitud() {
       )}
 
       <div className="flex items-center gap-4">
-        <Link href="/solicitante/dashboard">
-          <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
+        <Link href="/solicitante/dashboard" aria-label="Volver al inicio">
+          <Button variant="soft" size="icon" className="h-10 w-10 shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-neutral-dark">Nueva Solicitud</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-neutral-dark">Nueva solicitud</h1>
           <p className="text-neutral-500 dark:text-neutral-400">
-            Completa los campos para registrar un nuevo proyecto o evento.
+            Paso a paso, con lo que este programa necesita saber de tu proyecto.
           </p>
         </div>
       </div>
 
-      <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-6">
-        {/* CARD 1: Convocatoria */}
-        <Card className="border-0 shadow-md">
-          <CardHeader className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700 rounded-t-xl pb-4">
-            <CardTitle className="text-xl">Selecciona Convocatoria</CardTitle>
-            <CardDescription>
-              Cada convocatoria corresponde a un programa específico con requisitos únicos.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 pt-6">
-            {fetchError && (
-              <AlertBox
-                type="error"
-                title="Error al cargar convocatorias"
-                message={fetchError}
-                details={[
-                  'Verifica que tengas conectividad',
-                  'Si el error persiste, contacta al administrador'
-                ]}
-              />
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="convocatoria" className="font-semibold">
-                Convocatoria Activa <span className={colorMap.states.error.text}>*</span>
-              </Label>
-              <Select value={formData.convocatoria_id} onValueChange={handleConvocatoriaChange}>
-                <SelectTrigger id="convocatoria" className="h-12 border-neutral-300 dark:border-neutral-600">
-                  <SelectValue placeholder="Seleccione una convocatoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {convocatorias.length === 0 ? (
-                    <SelectItem value="none" disabled>
-                      No hay convocatorias activas en este momento
-                    </SelectItem>
-                  ) : (
-                    convocatorias.map((c) => (
-                      <SelectItem key={c.id} value={c.id.toString()}>
-                        {c.nombre} ({c.ejercicio_fiscal})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {fieldErrors.convocatoria && (
-                <p className={`text-xs ${colorMap.states.error.text}`}>{fieldErrors.convocatoria}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      <StepFrame
+        inline
+        title="Registrar un proyecto"
+        icon={<FilePlus2 className="h-5 w-5" />}
+        intro={<>Nada se envía todavía: al terminar se guarda como <strong>borrador</strong> y {`podrás revisarlo con calma. Los pasos cambian según la convocatoria que elijas.`}</>}
+        steps={steps}
+        onClose={() => router.back()}
+        onSubmit={handleSubmit}
+        submitting={loading}
+        submitLabel="Guardar solicitud"
+      />
 
-        {/* CARD 1B: Documentos Requeridos con upload */}
-        {!catalogLoading && documentos.length > 0 && (
-          <Card className="border-0 shadow-md border-l-4 border-l-amber-400">
-            <CardHeader className="bg-amber-50 border-b border-amber-100 rounded-t-xl pb-4">
-              <CardTitle className="text-xl flex items-center gap-2">
-                <FileText className="h-5 w-5 text-amber-600" />
-                Documentos Requeridos
-              </CardTitle>
-              <CardDescription>
-                Adjunta los documentos ahora o podrás subirlos después desde el detalle de la solicitud.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4 pb-5 space-y-3">
-              {documentos.map((doc) => {
-                const selectedFile = documentosFiles[doc.clave] || null;
-                return (
-                  <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
-                    <CheckCircle2 className={`h-4 w-4 shrink-0 ${selectedFile ? 'text-emerald-500' : doc.obligatorio ? 'text-red-400' : 'text-neutral-300'}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">{doc.nombre}</span>
-                        {doc.obligatorio && !selectedFile && (
-                          <span className="text-xs font-bold text-red-500">Obligatorio</span>
-                        )}
-                        {selectedFile && (
-                          <span className="text-xs font-medium text-emerald-600 truncate max-w-[200px] inline-flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> {selectedFile.name}
-                          </span>
-                        )}
-                      </div>
-                      {doc.descripcion && !selectedFile && (
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{doc.descripcion}</p>
-                      )}
-                      <p className="text-xs text-neutral-400 dark:text-neutral-500">
-                        PDF{doc.tamaño_maximo_mb ? ` · máx ${doc.tamaño_maximo_mb}MB` : ' · máx 10MB'}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {selectedFile && (
-                        <button
-                          type="button"
-                          className="p-1 text-neutral-400 dark:text-neutral-500 hover:text-red-500 transition-colors"
-                          onClick={() => setDocumentosFiles(prev => ({ ...prev, [doc.clave]: null }))}
-                          title="Quitar archivo"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      )}
-                      <input
-                        ref={el => { fileInputRefs.current[doc.clave] = el; }}
-                        type="file"
-                        accept=".pdf,application/pdf"
-                        className="hidden"
-                        onChange={e => {
-                          const file = e.target.files?.[0] || null;
-                          setDocumentosFiles(prev => ({ ...prev, [doc.clave]: file }));
-                          e.target.value = '';
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs gap-1.5"
-                        onClick={() => fileInputRefs.current[doc.clave]?.click()}
-                      >
-                        <Upload className="h-3.5 w-3.5" />
-                        {selectedFile ? 'Cambiar' : 'Subir PDF'}
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-              {uploadProgress && (
-                <div className="flex items-center gap-2 text-sm text-primary mt-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {uploadProgress}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* CARD 2: Datos Generales */}
-        <Card className="border-0 shadow-md">
-          <CardHeader className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700 rounded-t-xl pb-4">
-            <CardTitle className="text-xl">Datos Generales del Proyecto</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6 pt-6">
-            <div className="space-y-2">
-              <Label htmlFor="titulo" className="font-semibold">
-                Título del Proyecto/Evento <span className={colorMap.states.error.text}>*</span>
-              </Label>
-              <Input
-                id="titulo"
-                placeholder="Ej. Congreso Internacional de IA..."
-                className="h-12 border-neutral-300 dark:border-neutral-600"
-                value={formData.titulo_proyecto}
-                onChange={(e) => setFormData({ ...formData, titulo_proyecto: e.target.value })}
-              />
-              {fieldErrors.titulo && (
-                <p className={`text-xs ${colorMap.states.error.text}`}>{fieldErrors.titulo}</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="area" className="font-semibold">
-                  Área de Conocimiento <span className={colorMap.states.error.text}>*</span>
-                </Label>
-                <Select
-                  value={formData.area_conocimiento_id}
-                  onValueChange={(val) =>
-                    setFormData({ ...formData, area_conocimiento_id: val || '' })
-                  }
-                >
-                  <SelectTrigger id="area" className="h-12 border-neutral-300 dark:border-neutral-600">
-                    <SelectValue placeholder="Selecciona..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {areasConocimiento.length === 0 ? (
-                      <SelectItem value="none" disabled>
-                        No se encontraron áreas en la BD
-                      </SelectItem>
-                    ) : (
-                      areasConocimiento.map((a) => (
-                        <SelectItem key={a.id} value={a.id.toString()}>
-                          {a.nombre}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                {fieldErrors.area && <p className={`text-xs ${colorMap.states.error.text}`}>{fieldErrors.area}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="monto" className="font-semibold">
-                  Monto Solicitado <span className={colorMap.states.error.text}>*</span>
-                </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-3 text-neutral-500 dark:text-neutral-400">{currencySymbol()}</span>
-                  <Input
-                    id="monto"
-                    type="number"
-                    min="1"
-                    placeholder="0.00"
-                    className="h-12 pl-8 border-neutral-300 dark:border-neutral-600"
-                    value={formData.monto_solicitado}
-                    onChange={(e) =>
-                      setFormData({ ...formData, monto_solicitado: e.target.value })
-                    }
-                  />
-                </div>
-                {fieldErrors.monto && (
-                  <p className={`text-xs ${colorMap.states.error.text}`}>{fieldErrors.monto}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="descripcion" className="font-semibold">
-                Resumen Ejecutivo <span className={colorMap.states.error.text}>*</span>
-              </Label>
-              <Textarea
-                id="descripcion"
-                placeholder="Describe brevemente los objetivos, metodología e impacto..."
-                className="min-h-[150px] resize-y border-neutral-300 dark:border-neutral-600"
-                value={formData.descripcion}
-                onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-              />
-              <div className="flex justify-between">
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {formData.descripcion.length} / 2000 caracteres
-                </p>
-                {fieldErrors.descripcion && (
-                  <p className={`text-xs ${colorMap.states.error.text}`}>{fieldErrors.descripcion}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* CARD 3: Modalidades (Dinámicas) */}
-        {!catalogLoading && !catalogError && modalidades.length > 0 && (
-          <Card className="border-0 shadow-md">
-            <CardHeader className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700 rounded-t-xl pb-4">
-              <CardTitle className="text-xl">Modalidad del Programa</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-              <div className="space-y-2">
-                <Label htmlFor="program-modalidad" className="font-semibold">
-                  Selecciona Modalidad <span className={colorMap.states.error.text}>*</span>
-                </Label>
-                <Select value={modalidadId} onValueChange={(val) => val && setModalidadId(val)}>
-                  <SelectTrigger id="program-modalidad" className="h-12 border-neutral-300 dark:border-neutral-600">
-                    <SelectValue placeholder="Selecciona..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {modalidades.map((m) => (
-                      <SelectItem key={m.id} value={m.id.toString()}>
-                        {m.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* CARD 4: Campos Dinámicos */}
-        {catalogLoading ? (
-          <Card className="border-0 shadow-md">
-            <CardContent className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </CardContent>
-          </Card>
-        ) : catalogError ? (
-          <Card className={`border-0 shadow-md ${colorMap.states.error.border} ${colorMap.states.error.background}`}>
-            <CardContent className="flex items-start gap-4 py-6">
-              <AlertCircle className={`h-5 w-5 ${colorMap.states.error.text} mt-0.5 shrink-0`} />
-              <div>
-                <p className={`font-semibold text-red-900`}>Error al cargar catálogo</p>
-                <p className={`text-sm ${colorMap.states.error.main}`}>{catalogError}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : campos.length > 0 ? (
-          <Card className="border-0 shadow-md">
-            <CardHeader className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700 rounded-t-xl pb-4">
-              <CardTitle className="text-xl">Campos Específicos del Programa</CardTitle>
-              {programa?.tiene_etapas && (
-                <CardDescription>Los campos están agrupados por etapa del proyecto.</CardDescription>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-8 pt-6">
-              {programa?.tiene_etapas ? (
-                // Agrupar por etapa
-                [1, 2].map((etapaNum) => {
-                  const fieldsPorEtapa = campos.filter((c) => {
-                    // Si tiene etapa_id, filtra por esa; si no, asume etapa 1
-                    return !c.etapa_id || c.etapa_id === etapaNum;
-                  });
-                  if (fieldsPorEtapa.length === 0) return null;
-
-                  return (
-                    <div key={`etapa-${etapaNum}`} className="space-y-4">
-                      <h3 className="text-lg font-semibold text-neutral-700 dark:text-neutral-200">
-                        Etapa {etapaNum}
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {fieldsPorEtapa.map((campo) => (
-                          <DynamicFieldRenderer
-                            key={campo.id}
-                            campo={campo}
-                            value={dinamicFields[campo.id] || ''}
-                            onChange={(val) =>
-                              setDinamicFields({ ...dinamicFields, [campo.id]: val })
-                            }
-                            error={fieldErrors[`campo_${campo.id}`]}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                // Sin agrupar por etapa
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {campos.map((campo) => (
-                    <DynamicFieldRenderer
-                      key={campo.id}
-                      campo={campo}
-                      value={dinamicFields[campo.id] || ''}
-                      onChange={(val) => setDinamicFields({ ...dinamicFields, [campo.id]: val })}
-                      error={fieldErrors[`campo_${campo.id}`]}
-                    />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {/* CARD 5: Rubros Presupuestarios */}
-        {!catalogLoading && !catalogError && rubros.length > 0 && (
-          <Card className="border-0 shadow-md">
-            <CardHeader className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700 rounded-t-xl pb-4">
-              <CardTitle className="text-xl">Distribución Presupuestaria</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <RubrosTable
-                rubros={rubros}
-                values={rubroValues}
-                montoMaximo={programa?.monto_maximo || null}
-                onChange={(rubroId, monto) =>
-                  setRubroValues({ ...rubroValues, [rubroId]: monto })
-                }
-              />
-              {fieldErrors.rubros && (
-                <p className={`text-xs ${colorMap.states.error.text} mt-4`}>{fieldErrors.rubros}</p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* CARD 6: Miembros de Equipo */}
-        {!catalogLoading && !catalogError && programa?.tiene_equipo && (
-          <Card className="border-0 shadow-md">
-            <CardHeader className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-700 rounded-t-xl pb-4">
-              <CardTitle className="text-xl">Equipo de Trabajo</CardTitle>
-              <CardDescription>
-                Mínimo {programa.min_miembros_equipo || 1}
-                {programa.max_miembros_equipo ? ` - ${programa.max_miembros_equipo}` : ''}{' '}
-                miembros
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <MiembrosEquipo
-                miembros={miembros}
-                minMiembros={programa.min_miembros_equipo || 1}
-                maxMiembros={programa.max_miembros_equipo || null}
-                edadMin={programa.rango_edad_min}
-                edadMax={programa.rango_edad_max}
-                onChange={setMiembros}
-              />
-              {fieldErrors.miembros_count && (
-                <p className={`text-sm ${colorMap.states.error.text} mt-4 font-medium`}>{fieldErrors.miembros_count}</p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Submit Buttons */}
-        <div className="space-y-3">
-          {rubrosExceedLimit() && (
-            <div className={`p-3 ${colorMap.states.error.background} border ${colorMap.states.error.border} rounded-lg`}>
-              <p className={`text-sm ${colorMap.states.error.text}`}>
-                <AlertCircle className="inline h-4 w-4 mr-2" />
-                Los rubros exceden el presupuesto máximo. Revisa la distribución antes de enviar.
-              </p>
-            </div>
-          )}
-          <div className="p-6 bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-700 rounded-xl flex justify-end gap-3">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => router.back()}
-              className="h-11"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              className="bg-primary hover:bg-primary-light h-11 shadow-sm"
-              disabled={loading || rubrosExceedLimit()}
-              title={rubrosExceedLimit() ? 'Los rubros exceden el límite presupuestario' : ''}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" /> Guardar Borrador
-                </>
-              )}
-            </Button>
-            <Button
-              type="button"
-              className="bg-accent hover:bg-accent/90 text-accent-foreground h-11 shadow-md"
-              disabled={loading || rubrosExceedLimit()}
-              onClick={() => handleSubmit(undefined, true)}
-              title={rubrosExceedLimit() ? 'Los rubros exceden el límite presupuestario' : 'Crear solicitud e ir a subir documentos'}
-            >
-              <Send className="mr-2 h-4 w-4" /> Crear e Ir a Documentos
-            </Button>
-          </div>
-        </div>
-      </form>
+      {documentos.length === 0 && !catalogLoading && formData.convocatoria_id && (
+        <p className="inline-flex items-center gap-2 text-xs text-[var(--app-ink-2)] px-1">
+          <FileText className="h-3.5 w-3.5" aria-hidden="true" /> Esta convocatoria no pide documentos al registrar; si hacen falta, los subirás desde tu solicitud.
+        </p>
+      )}
     </div>
   );
 }

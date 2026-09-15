@@ -18,12 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import StepFrame from '@/components/ui/step-frame';
 import {
   ChevronRight,
   ChevronLeft,
@@ -99,6 +94,19 @@ interface WizardState {
   rubros: Rubro[];
   criterios: Criterio[];
 }
+
+const wizLabelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
+const wizInputCls = 'auth-input auth-input-static pl-4';
+
+// Identificador interno a partir del texto visible: "Título del proyecto" → "titulo_del_proyecto"
+const slugify = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 50);
 
 const emptyWizardState: WizardState = {
   convocatoria: {
@@ -1041,127 +1049,90 @@ export default function ConvocatoriasNuevaPage() {
                 </Table>
               )}
 
-              {showCampoModal && (
-                <Dialog open={showCampoModal} onOpenChange={setShowCampoModal}>
-                  <DialogContent className="w-full max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editCampoIdx !== null ? 'Editar Campo' : 'Nuevo Campo'}
-                      </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div>
-                        <Label htmlFor="campo_nombre" className="text-neutral-700 dark:text-neutral-200">
-                          Nombre del Campo *
-                        </Label>
-                        <Input
-                          id="campo_nombre"
-                          value={campoForm.nombre_campo}
-                          onChange={(e) =>
-                            setCampoForm({ ...campoForm, nombre_campo: e.target.value })
-                          }
-                          placeholder="ej. titulo_proyecto"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="campo_etiqueta" className="text-neutral-700 dark:text-neutral-200">
-                          Etiqueta *
-                        </Label>
-                        <Input
-                          id="campo_etiqueta"
-                          value={campoForm.etiqueta}
-                          onChange={(e) =>
-                            setCampoForm({ ...campoForm, etiqueta: e.target.value })
-                          }
-                          placeholder="ej. Título del Proyecto"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="campo_tipo" className="text-neutral-700 dark:text-neutral-200">
-                          Tipo de Campo *
-                        </Label>
-                        <Select
-                          value={campoForm.tipo_campo}
-                          onValueChange={(v: any) =>
-                            setCampoForm({ ...campoForm, tipo_campo: v })
-                          }
-                        >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="text">Texto</SelectItem>
-                            <SelectItem value="number">Número</SelectItem>
-                            <SelectItem value="date">Fecha</SelectItem>
-                            <SelectItem value="select">Selección</SelectItem>
-                            <SelectItem value="textarea">Texto largo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {campoForm.tipo_campo === 'select' && (
-                        <div>
-                          <Label htmlFor="campo_opciones" className="text-neutral-700 dark:text-neutral-200">
-                            Opciones (una por línea) *
-                          </Label>
-                          <Textarea
-                            id="campo_opciones"
-                            value={campoForm.opciones_json}
-                            onChange={(e) =>
-                              setCampoForm({ ...campoForm, opciones_json: e.target.value })
-                            }
-                            placeholder="Opción 1&#10;Opción 2&#10;Opción 3"
-                            rows={4}
-                            className="mt-1"
+              <StepFrame
+                open={showCampoModal}
+                size="md"
+                title={editCampoIdx !== null ? 'Editar pregunta' : 'Nueva pregunta del formulario'}
+                icon={<Plus className="h-5 w-5" />}
+                intro={<>Cada pregunta aparece en el formulario que llena el solicitante. Escribe el texto <strong>tal como quieres que lo lea</strong>.</>}
+                onClose={() => setShowCampoModal(false)}
+                onSubmit={saveCampo}
+                submitLabel={editCampoIdx !== null ? 'Guardar cambios' : 'Agregar pregunta'}
+                steps={[
+                  {
+                    key: 'texto',
+                    label: 'La pregunta',
+                    question: '¿Qué le vas a preguntar al solicitante?',
+                    validate: () => (!campoForm.etiqueta.trim() ? 'Escribe el texto de la pregunta.' : null),
+                    content: (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="campo_etiqueta" className={wizLabelCls}>Texto de la pregunta *</Label>
+                          <input
+                            id="campo_etiqueta"
+                            value={campoForm.etiqueta}
+                            onChange={(e) => {
+                              const etiqueta = e.target.value;
+                              setCampoForm({ ...campoForm, etiqueta, nombre_campo: editCampoIdx !== null ? campoForm.nombre_campo : slugify(etiqueta) });
+                            }}
+                            placeholder="Ej. Título del proyecto"
+                            className={wizInputCls}
                           />
+                          <p className="text-xs text-[var(--app-ink-2)]">Identificador interno: <code className="font-mono">{campoForm.nombre_campo || '—'}</code></p>
                         </div>
-                      )}
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          id="campo_requerido"
-                          checked={campoForm.requerido}
-                          onCheckedChange={(v) =>
-                            setCampoForm({ ...campoForm, requerido: v as boolean })
-                          }
-                        />
-                        <Label htmlFor="campo_requerido" className="text-neutral-700 dark:text-neutral-200 cursor-pointer">
-                          Este campo es requerido
-                        </Label>
-                      </div>
-                      <div>
-                        <Label htmlFor="campo_orden" className="text-neutral-700 dark:text-neutral-200">
-                          Orden
-                        </Label>
-                        <Input
-                          id="campo_orden"
-                          type="number"
-                          value={campoForm.orden}
-                          onChange={(e) =>
-                            setCampoForm({ ...campoForm, orden: parseInt(e.target.value) || 1 })
-                          }
-                          min="1"
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowCampoModal(false)}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        className="bg-primary hover:bg-primary-light text-white"
-                        onClick={saveCampo}
-                      >
-                        Guardar
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
+                      </>
+                    ),
+                  },
+                  {
+                    key: 'tipo',
+                    label: 'Cómo responde',
+                    question: '¿Qué tipo de respuesta esperas?',
+                    validate: () => (campoForm.tipo_campo === 'select' && !campoForm.opciones_json?.trim() ? 'Escribe al menos una opción para elegir.' : null),
+                    content: (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="campo_tipo" className={wizLabelCls}>Tipo de respuesta *</Label>
+                          <select
+                            id="campo_tipo"
+                            value={campoForm.tipo_campo}
+                            onChange={(e) => setCampoForm({ ...campoForm, tipo_campo: e.target.value as Campo['tipo_campo'] })}
+                            className={wizInputCls}
+                          >
+                            <option value="text">Texto corto</option>
+                            <option value="textarea">Texto largo (párrafos)</option>
+                            <option value="number">Un número</option>
+                            <option value="date">Una fecha</option>
+                            <option value="select">Elegir de una lista</option>
+                          </select>
+                        </div>
+                        {campoForm.tipo_campo === 'select' && (
+                          <div className="space-y-1.5">
+                            <Label htmlFor="campo_opciones" className={wizLabelCls}>Opciones (una por línea) *</Label>
+                            <textarea
+                              id="campo_opciones"
+                              value={campoForm.opciones_json}
+                              onChange={(e) => setCampoForm({ ...campoForm, opciones_json: e.target.value })}
+                              placeholder={'Opción 1\nOpción 2\nOpción 3'}
+                              className={`${wizInputCls} !h-auto min-h-[110px] py-3 resize-y`}
+                            />
+                          </div>
+                        )}
+                        <label className="flex items-center gap-3 rounded-[14px] border px-4 py-3 cursor-pointer" style={{ borderColor: 'var(--app-rule)', backgroundColor: campoForm.requerido ? 'var(--tile-sky-bg)' : 'var(--auth-field)' }}>
+                          <Checkbox id="campo_requerido" checked={campoForm.requerido} onCheckedChange={(v) => setCampoForm({ ...campoForm, requerido: v as boolean })} />
+                          <span className="flex-1">
+                            <span className="block text-sm font-semibold text-[var(--app-ink)]">Es obligatoria</span>
+                            <span className="block text-xs text-[var(--app-ink-2)]">El solicitante no podrá enviar sin responderla.</span>
+                          </span>
+                          <span className="flex items-center gap-2 text-xs text-[var(--app-ink-2)]">
+                            Posición
+                            <input type="number" aria-label="Posición en el formulario" value={campoForm.orden} onChange={(e) => setCampoForm({ ...campoForm, orden: parseInt(e.target.value) || 1 })} min={1} className={`${wizInputCls} pl-3 !w-20 !min-h-10 !h-10`} />
+                          </span>
+                        </label>
+                      </>
+                    ),
+                  },
+                ]}
+              />
             </div>
           )}
 
@@ -1226,106 +1197,70 @@ export default function ConvocatoriasNuevaPage() {
                 </Table>
               )}
 
-              {showDocumentoModal && (
-                <Dialog open={showDocumentoModal} onOpenChange={setShowDocumentoModal}>
-                  <DialogContent className="w-full max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editDocumentoIdx !== null ? 'Editar Documento' : 'Nuevo Documento'}
-                      </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div>
-                        <Label htmlFor="doc_clave" className="text-neutral-700 dark:text-neutral-200">
-                          Clave del Documento *
-                        </Label>
-                        <Input
-                          id="doc_clave"
-                          value={documentoForm.clave}
-                          onChange={(e) =>
-                            setDocumentoForm({
-                              ...documentoForm,
-                              clave: e.target.value.toLowerCase().replace(/\s+/g, '_'),
-                            })
-                          }
-                          placeholder="ej. ficha_tecnica"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="doc_nombre" className="text-neutral-700 dark:text-neutral-200">
-                          Nombre del Documento *
-                        </Label>
-                        <Input
-                          id="doc_nombre"
-                          value={documentoForm.nombre}
-                          onChange={(e) =>
-                            setDocumentoForm({ ...documentoForm, nombre: e.target.value })
-                          }
-                          placeholder="ej. Ficha Técnica"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="doc_descripcion" className="text-neutral-700 dark:text-neutral-200">
-                          Descripción
-                        </Label>
-                        <Textarea
-                          id="doc_descripcion"
-                          value={documentoForm.descripcion}
-                          onChange={(e) =>
-                            setDocumentoForm({ ...documentoForm, descripcion: e.target.value })
-                          }
-                          placeholder="Descripción del documento"
-                          rows={3}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          id="doc_obligatorio"
-                          checked={documentoForm.obligatorio}
-                          onCheckedChange={(v) =>
-                            setDocumentoForm({ ...documentoForm, obligatorio: v as boolean })
-                          }
-                        />
-                        <Label htmlFor="doc_obligatorio" className="text-neutral-700 dark:text-neutral-200 cursor-pointer">
-                          Este documento es obligatorio
-                        </Label>
-                      </div>
-                      <div>
-                        <Label htmlFor="doc_orden" className="text-neutral-700 dark:text-neutral-200">
-                          Orden
-                        </Label>
-                        <Input
-                          id="doc_orden"
-                          type="number"
-                          value={documentoForm.orden}
-                          onChange={(e) =>
-                            setDocumentoForm({ ...documentoForm, orden: parseInt(e.target.value) || 1 })
-                          }
-                          min="1"
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowDocumentoModal(false)}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        className="bg-primary hover:bg-primary-light text-white"
-                        onClick={saveDocumento}
-                      >
-                        Guardar
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
+              <StepFrame
+                open={showDocumentoModal}
+                size="md"
+                title={editDocumentoIdx !== null ? 'Editar documento' : 'Nuevo documento a solicitar'}
+                icon={<Plus className="h-5 w-5" />}
+                intro={<>Es un archivo PDF que el solicitante deberá adjuntar. Ponle el <strong>nombre con el que lo conoce</strong> (por ejemplo, &ldquo;Carta de apoyo institucional&rdquo;).</>}
+                onClose={() => setShowDocumentoModal(false)}
+                onSubmit={saveDocumento}
+                submitLabel={editDocumentoIdx !== null ? 'Guardar cambios' : 'Agregar documento'}
+                steps={[
+                  {
+                    key: 'nombre',
+                    label: 'Cuál es',
+                    question: '¿Qué documento se pide?',
+                    validate: () => (!documentoForm.nombre.trim() ? 'Escribe el nombre del documento.' : null),
+                    content: (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="doc_nombre" className={wizLabelCls}>Nombre del documento *</Label>
+                          <input
+                            id="doc_nombre"
+                            value={documentoForm.nombre}
+                            onChange={(e) => {
+                              const nombre = e.target.value;
+                              setDocumentoForm({ ...documentoForm, nombre, clave: editDocumentoIdx !== null ? documentoForm.clave : slugify(nombre) });
+                            }}
+                            placeholder="Ej. Ficha técnica del proyecto"
+                            className={wizInputCls}
+                          />
+                          <p className="text-xs text-[var(--app-ink-2)]">Identificador interno: <code className="font-mono">{documentoForm.clave || '—'}</code></p>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="doc_descripcion" className={wizLabelCls}>Qué debe contener (opcional)</Label>
+                          <textarea
+                            id="doc_descripcion"
+                            value={documentoForm.descripcion}
+                            onChange={(e) => setDocumentoForm({ ...documentoForm, descripcion: e.target.value })}
+                            placeholder="Una guía breve para quien lo va a preparar."
+                            className={`${wizInputCls} !h-auto min-h-[90px] py-3 resize-y`}
+                          />
+                        </div>
+                      </>
+                    ),
+                  },
+                  {
+                    key: 'reglas',
+                    label: 'Reglas',
+                    question: '¿Es obligatorio y en qué orden va?',
+                    content: (
+                      <label className="flex items-center gap-3 rounded-[14px] border px-4 py-3 cursor-pointer" style={{ borderColor: 'var(--app-rule)', backgroundColor: documentoForm.obligatorio ? 'var(--tile-sky-bg)' : 'var(--auth-field)' }}>
+                        <Checkbox id="doc_obligatorio" checked={documentoForm.obligatorio} onCheckedChange={(v) => setDocumentoForm({ ...documentoForm, obligatorio: v as boolean })} />
+                        <span className="flex-1">
+                          <span className="block text-sm font-semibold text-[var(--app-ink)]">Es obligatorio</span>
+                          <span className="block text-xs text-[var(--app-ink-2)]">Sin él, la solicitud no se puede enviar.</span>
+                        </span>
+                        <span className="flex items-center gap-2 text-xs text-[var(--app-ink-2)]">
+                          Posición
+                          <input type="number" aria-label="Posición en la lista" value={documentoForm.orden} onChange={(e) => setDocumentoForm({ ...documentoForm, orden: parseInt(e.target.value) || 1 })} min={1} className={`${wizInputCls} pl-3 !w-20 !min-h-10 !h-10`} />
+                        </span>
+                      </label>
+                    ),
+                  },
+                ]}
+              />
             </div>
           )}
 
@@ -1386,98 +1321,73 @@ export default function ConvocatoriasNuevaPage() {
                 </Table>
               )}
 
-              {showRubroModal && (
-                <Dialog open={showRubroModal} onOpenChange={setShowRubroModal}>
-                  <DialogContent className="w-full max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editRubroIdx !== null ? 'Editar Rubro' : 'Nuevo Rubro'}
-                      </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div>
-                        <Label htmlFor="rubro_clave" className="text-neutral-700 dark:text-neutral-200">
-                          Clave del Rubro *
-                        </Label>
-                        <Input
-                          id="rubro_clave"
-                          value={rubroForm.clave}
-                          onChange={(e) =>
-                            setRubroForm({
-                              ...rubroForm,
-                              clave: e.target.value.toUpperCase(),
-                            })
-                          }
-                          placeholder="ej. PERSONAL, EQUIPO, VIAJE"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="rubro_nombre" className="text-neutral-700 dark:text-neutral-200">
-                          Nombre del Rubro *
-                        </Label>
-                        <Input
-                          id="rubro_nombre"
-                          value={rubroForm.nombre}
-                          onChange={(e) =>
-                            setRubroForm({ ...rubroForm, nombre: e.target.value })
-                          }
-                          placeholder="ej. Personal"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="rubro_descripcion" className="text-neutral-700 dark:text-neutral-200">
-                          Descripción
-                        </Label>
-                        <Textarea
-                          id="rubro_descripcion"
-                          value={rubroForm.descripcion}
-                          onChange={(e) =>
-                            setRubroForm({ ...rubroForm, descripcion: e.target.value })
-                          }
-                          placeholder="Descripción del rubro"
-                          rows={3}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="rubro_porcentaje" className="text-neutral-700 dark:text-neutral-200">
-                          Porcentaje Máximo
-                        </Label>
-                        <Input
+              <StepFrame
+                open={showRubroModal}
+                size="md"
+                title={editRubroIdx !== null ? 'Editar concepto de gasto' : 'Nuevo concepto de gasto'}
+                icon={<Plus className="h-5 w-5" />}
+                intro={<>Un concepto de gasto es <strong>en qué se puede usar el dinero</strong> (personal, equipo, viajes…). El solicitante reparte su presupuesto entre estos conceptos.</>}
+                onClose={() => setShowRubroModal(false)}
+                onSubmit={saveRubro}
+                submitLabel={editRubroIdx !== null ? 'Guardar cambios' : 'Agregar concepto'}
+                steps={[
+                  {
+                    key: 'nombre',
+                    label: 'Cuál es',
+                    question: '¿En qué se puede gastar?',
+                    validate: () => (!rubroForm.nombre.trim() ? 'Escribe el nombre del concepto.' : null),
+                    content: (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="rubro_nombre" className={wizLabelCls}>Nombre del concepto *</Label>
+                          <input
+                            id="rubro_nombre"
+                            value={rubroForm.nombre}
+                            onChange={(e) => {
+                              const nombre = e.target.value;
+                              setRubroForm({ ...rubroForm, nombre, clave: editRubroIdx !== null ? rubroForm.clave : slugify(nombre).toUpperCase() });
+                            }}
+                            placeholder="Ej. Equipo de cómputo"
+                            className={wizInputCls}
+                          />
+                          <p className="text-xs text-[var(--app-ink-2)]">Identificador interno: <code className="font-mono">{rubroForm.clave || '—'}</code></p>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="rubro_descripcion" className={wizLabelCls}>Qué incluye (opcional)</Label>
+                          <textarea
+                            id="rubro_descripcion"
+                            value={rubroForm.descripcion}
+                            onChange={(e) => setRubroForm({ ...rubroForm, descripcion: e.target.value })}
+                            placeholder="Ej. Computadoras, licencias de software y periféricos."
+                            className={`${wizInputCls} !h-auto min-h-[90px] py-3 resize-y`}
+                          />
+                        </div>
+                      </>
+                    ),
+                  },
+                  {
+                    key: 'limite',
+                    label: 'Límite',
+                    question: '¿Qué parte del presupuesto puede irse aquí?',
+                    validate: () => (rubroForm.porcentaje_maximo < 0 || rubroForm.porcentaje_maximo > 100 ? 'El porcentaje va de 0 a 100.' : null),
+                    content: (
+                      <div className="space-y-1.5">
+                        <Label htmlFor="rubro_porcentaje" className={wizLabelCls}>Porcentaje máximo del total</Label>
+                        <input
                           id="rubro_porcentaje"
                           type="number"
                           value={rubroForm.porcentaje_maximo}
-                          onChange={(e) =>
-                            setRubroForm({
-                              ...rubroForm,
-                              porcentaje_maximo: parseFloat(e.target.value) || 25,
-                            })
-                          }
-                          min="0"
-                          max="100"
-                          className="mt-1"
+                          onChange={(e) => setRubroForm({ ...rubroForm, porcentaje_maximo: parseFloat(e.target.value) || 0 })}
+                          min={0}
+                          max={100}
+                          className={wizInputCls}
                         />
+                        <p className="text-xs text-[var(--app-ink-2)]">Ejemplo: con 25 %, de un apoyo de $100,000 podrán destinar hasta $25,000 a este concepto.</p>
                       </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowRubroModal(false)}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        className="bg-primary hover:bg-primary-light text-white"
-                        onClick={saveRubro}
-                      >
-                        Guardar
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
+                    ),
+                  },
+                ]}
+              />
             </div>
           )}
 
@@ -1556,117 +1466,93 @@ export default function ConvocatoriasNuevaPage() {
                 </Table>
               )}
 
-              {showCriterioModal && (
-                <Dialog open={showCriterioModal} onOpenChange={setShowCriterioModal}>
-                  <DialogContent className="w-full max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editCriterioIdx !== null ? 'Editar Criterio' : 'Nuevo Criterio'}
-                      </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div>
-                        <Label htmlFor="criterio_nombre" className="text-neutral-700 dark:text-neutral-200">
-                          Nombre del Criterio *
-                        </Label>
-                        <Input
-                          id="criterio_nombre"
-                          value={criterioForm.nombre}
-                          onChange={(e) =>
-                            setCriterioForm({ ...criterioForm, nombre: e.target.value })
-                          }
-                          placeholder="ej. Viabilidad Técnica"
-                          className="mt-1"
-                        />
+              <StepFrame
+                open={showCriterioModal}
+                size="md"
+                title={editCriterioIdx !== null ? 'Editar criterio' : 'Nuevo criterio de evaluación'}
+                icon={<Plus className="h-5 w-5" />}
+                intro={<>Los evaluadores califican cada proyecto criterio por criterio. Entre todos los criterios el <strong>peso debe sumar 100 %</strong> (ahora llevan {totalPonderacion} %).</>}
+                onClose={() => setShowCriterioModal(false)}
+                onSubmit={saveCriterio}
+                submitLabel={editCriterioIdx !== null ? 'Guardar cambios' : 'Agregar criterio'}
+                steps={[
+                  {
+                    key: 'nombre',
+                    label: 'Qué se evalúa',
+                    question: '¿Qué aspecto del proyecto se califica?',
+                    validate: () => (!criterioForm.nombre.trim() ? 'Escribe el nombre del criterio.' : null),
+                    content: (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="criterio_nombre" className={wizLabelCls}>Nombre del criterio *</Label>
+                          <input
+                            id="criterio_nombre"
+                            value={criterioForm.nombre}
+                            onChange={(e) => setCriterioForm({ ...criterioForm, nombre: e.target.value })}
+                            placeholder="Ej. Viabilidad técnica"
+                            className={wizInputCls}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="criterio_descripcion" className={wizLabelCls}>Qué debe considerar el evaluador (opcional)</Label>
+                          <textarea
+                            id="criterio_descripcion"
+                            value={criterioForm.descripcion}
+                            onChange={(e) => setCriterioForm({ ...criterioForm, descripcion: e.target.value })}
+                            placeholder="Ej. Que la metodología sea realizable con los recursos y el tiempo propuestos."
+                            className={`${wizInputCls} !h-auto min-h-[90px] py-3 resize-y`}
+                          />
+                        </div>
+                      </>
+                    ),
+                  },
+                  {
+                    key: 'peso',
+                    label: 'Cuánto pesa',
+                    question: '¿Qué tanto cuenta en la calificación final?',
+                    validate: () => (criterioForm.ponderacion <= 0 || criterioForm.ponderacion > 100 ? 'El peso va de 1 a 100.' : null),
+                    content: (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="criterio_ponderacion" className={wizLabelCls}>Peso (%) *</Label>
+                          <input
+                            id="criterio_ponderacion"
+                            type="number"
+                            value={criterioForm.ponderacion}
+                            onChange={(e) => setCriterioForm({ ...criterioForm, ponderacion: parseFloat(e.target.value) || 0 })}
+                            min={0}
+                            max={100}
+                            className={wizInputCls}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="criterio_puntaje" className={wizLabelCls}>Calificación máxima</Label>
+                          <input
+                            id="criterio_puntaje"
+                            type="number"
+                            value={criterioForm.puntaje_maximo}
+                            onChange={(e) => setCriterioForm({ ...criterioForm, puntaje_maximo: parseFloat(e.target.value) || 100 })}
+                            min={0}
+                            className={wizInputCls}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="criterio_orden" className={wizLabelCls}>Posición</Label>
+                          <input
+                            id="criterio_orden"
+                            type="number"
+                            value={criterioForm.orden}
+                            onChange={(e) => setCriterioForm({ ...criterioForm, orden: parseInt(e.target.value) || 1 })}
+                            min={1}
+                            className={wizInputCls}
+                          />
+                        </div>
+                        <p className="sm:col-span-3 text-xs text-[var(--app-ink-2)]">El evaluador califica de 0 a la calificación máxima; el sistema convierte esa nota al peso indicado.</p>
                       </div>
-                      <div>
-                        <Label htmlFor="criterio_descripcion" className="text-neutral-700 dark:text-neutral-200">
-                          Descripción
-                        </Label>
-                        <Textarea
-                          id="criterio_descripcion"
-                          value={criterioForm.descripcion}
-                          onChange={(e) =>
-                            setCriterioForm({ ...criterioForm, descripcion: e.target.value })
-                          }
-                          placeholder="Descripción del criterio de evaluación"
-                          rows={3}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="criterio_ponderacion" className="text-neutral-700 dark:text-neutral-200">
-                          Ponderación (%) *
-                        </Label>
-                        <Input
-                          id="criterio_ponderacion"
-                          type="number"
-                          value={criterioForm.ponderacion}
-                          onChange={(e) =>
-                            setCriterioForm({
-                              ...criterioForm,
-                              ponderacion: parseFloat(e.target.value) || 25,
-                            })
-                          }
-                          min="0"
-                          max="100"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="criterio_puntaje" className="text-neutral-700 dark:text-neutral-200">
-                          Puntaje Máximo
-                        </Label>
-                        <Input
-                          id="criterio_puntaje"
-                          type="number"
-                          value={criterioForm.puntaje_maximo}
-                          onChange={(e) =>
-                            setCriterioForm({
-                              ...criterioForm,
-                              puntaje_maximo: parseFloat(e.target.value) || 100,
-                            })
-                          }
-                          min="0"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="criterio_orden" className="text-neutral-700 dark:text-neutral-200">
-                          Orden
-                        </Label>
-                        <Input
-                          id="criterio_orden"
-                          type="number"
-                          value={criterioForm.orden}
-                          onChange={(e) =>
-                            setCriterioForm({
-                              ...criterioForm,
-                              orden: parseInt(e.target.value) || 1,
-                            })
-                          }
-                          min="1"
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowCriterioModal(false)}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        className="bg-primary hover:bg-primary-light text-white"
-                        onClick={saveCriterio}
-                      >
-                        Guardar
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
+                    ),
+                  },
+                ]}
+              />
             </div>
           )}
 

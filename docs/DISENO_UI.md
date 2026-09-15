@@ -225,6 +225,49 @@ Cada una vive en un solo lugar y por eso alcanza a todas las vistas sin tocarlas
 | **Bento suave, no saturado** (referencia "Marketer") | `.app-card`: radio 28 px, sin borde duro (filo de luz), sombra suave, veladura superior de vidrio; `data-tone="solid"` = tarjeta ciruela protagonista | Dashboard, modales, Reverb, carrusel, usuarios |
 | **Sin jerga técnica a la vista** | Dashboard ("Quién hizo qué, y cuándo", "Buenas prácticas"), usuarios (sin "Soft delete"), carrusel (sin rutas `/storage/…`), Reverb ("Notificaciones al instante · Funcionando con normalidad"; host/latencia plegados en "Información para soporte") | Lo rediseñado. **Pendiente** en el resto de vistas (§7) |
 | **Responsive, móvil primero** | Regla permanente. El menú (sin cambiar su diseño) en `< md` pasa a `position: fixed` con márgenes de 12 px y scroll propio; el panel de notificaciones se limita a `100vw - 1.5rem`; el pie apila. Verificado a 390 px sin scroll horizontal | Menú de los 4 roles, dashboard, auth |
+| **Crear / editar por pasos** (referencia: lista de pasos a la izquierda, "PASO n DE N", pregunta guía, aviso de contexto, Cancelar / Siguiente) | `components/ui/step-frame.tsx` (`StepFrame`). Ver la sección siguiente | **Los 16 formularios de crear/editar del sistema**, sin excepción (lista abajo) |
+
+### Formularios por pasos — `StepFrame` (noche del 14/09/2026)
+
+Un solo componente para todo lo que crea o edita un registro. Props: `title`, `icon`, `intro` (aviso en
+lenguaje llano, tarjeta dorada), `steps: { key, label, question, content, validate? }[]`, `onClose`,
+`onSubmit`, `submitting`, `submitLabel`, `error` (ReactNode), `success` (reemplaza el formulario por una
+palomita). Modos: **modal** (`open`; hoja inferior en móvil, ventana centrada en escritorio; se desmonta al
+cerrar para arrancar siempre en el paso 1) e **`inline`** (tarjeta en el flujo de una página completa; sin
+botón "×"). `hideCancel` quita "Cancelar" del primer paso en flujos que no se abandonan (bienvenida).
+
+Reglas que sigue cada conversión:
+- Cada paso responde **una pregunta** ("¿Quién es?", "¿Cuánto se aprueba?"), no lista campos. Lo
+  obligatorio va primero; lo opcional, en el paso "Detalles" o al final.
+- `validate` del paso devuelve el **primer** mensaje o `null`; sin pasar no se avanza. La lista de la
+  izquierda solo permite volver a pasos ya vistos.
+- Campos: `input`/`select`/`textarea` nativos con `auth-input auth-input-static pl-4` (el `<select>` toma
+  el chevron global); etiquetas `text-xs font-bold uppercase tracking-widest` en `--app-ink-2`; casillas
+  como tarjeta clicable (`rounded-[14px]`, fondo `--tile-sky-bg` / `--tile-emerald-bg` al activarse).
+- Los identificadores internos (`nombre_campo`, `clave`) **ya no se piden**: se derivan del texto visible
+  (`slugify`) y se muestran como dato informativo. Nada de "select", "tranche", "soft delete", "JSON".
+
+| Formulario | Archivo | Pasos |
+|---|---|---|
+| Usuario (crear/editar) | `admin/usuarios/UsuariosClient.tsx` | La cuenta → Su papel |
+| Empresa | `admin/empresas/EmpresasClient.tsx` | Quién es → Disponibilidad |
+| Sanción (lista negra) | `admin/lista-negra/ListaNegraClient.tsx` | A quién → Desde cuándo |
+| Diapositiva del carrusel | `admin/carrusel/CarruselClient.tsx` | La foto → Los textos → Cuándo se ve |
+| Programa | `admin/programas/ProgramasClient.tsx` | Lo básico → El apoyo → Reglas |
+| Campos / documentos / rubros / etapas / modalidades / criterios de un programa | `components/admin/NestedCRUDModal.tsx` | Lo básico → Detalles (automático: requeridos / opcionales) |
+| Asignar evaluador | `admin/evaluadores/EvaluadoresClient.tsx` | La solicitud → Quién evalúa → Para cuándo |
+| Editar convocatoria (página) | `admin/convocatorias/[id]/editar/page.tsx` | Nombre → Fechas → Montos y estado (`inline`) |
+| Pregunta / documento / concepto de gasto / criterio del asistente de nueva convocatoria | `admin/convocatorias/nueva/page.tsx` | 2 pasos cada uno (qué es → reglas / límite / peso). El asistente exterior de 7 pasos conserva su propio marco |
+| Generar convenio | `admin/solicitudes/SolicitudesClient.tsx` | El monto → Las entregas → Notas |
+| Revisar informe final (revisor) | `revisor/informes/InformesClient.tsx` | Lo entregado (solo lectura) → Tu decisión |
+| Bienvenida del solicitante | `solicitante/onboarding/page.tsx` | Tu institución → Cómo contactarte (`inline`, `hideCancel`) |
+| Cambiar contraseña | `solicitante/settings/page.tsx` | Tu clave de hoy → La nueva (`inline`; se reinicia con `key` tras el éxito) |
+| **Nueva solicitud** (página) | `solicitante/solicitudes/nueva/page.tsx` | La convocatoria → Tu proyecto → [Modalidad] → [Datos del programa] → [Presupuesto] → [Equipo] → [Documentos] → Revisar y guardar. Los pasos entre corchetes aparecen solo si el programa los pide (`useProgramaCatalog`). `Select` de base-ui sustituido por `<select>` nativo (probable en jsdom y con el mismo dibujo) |
+| Datos bancarios del beneficiario | `solicitante/solicitudes/[id]/page.tsx` | La cuenta (CLABE de 18 dígitos validada) → El titular |
+
+Fuera del patrón, a propósito: acciones de una sola decisión con `ConfirmDialog` (rechazar, cancelar,
+cerrar, levantar veto) y la rúbrica del evaluador (`evaluador/asignaciones/[id]/rubrica`), que es una
+calificación criterio por criterio, no un alta de registro.
 
 ### Pantalla de carga v3 — "en cualquier recarga y al pulsar botones"
 
@@ -244,12 +287,16 @@ Cada una vive en un solo lugar y por eso alcanza a todas las vistas sin tocarlas
 
 ## 7. Pendiente (no cubierto en esta pasada)
 
-- **Contenido interno del resto de `/admin/*`** (programas, convocatorias, solicitudes, ministraciones,
-  convenios, informes, empresas, evaluadores, notificaciones, solicitudes-acceso, reset-requests,
-  lista-negra, audit-logs) y de **revisor / evaluador / solicitante**: ya heredaron `Badge` sin píldora y,
-  donde aplica, `DataCardGrid` con tokens; el resto (encabezados, modales, tablas, formularios) sigue con
-  el estilo anterior. Hechos en esta pasada: **dashboard, usuarios, carrusel**. El patrón a repetir está en
-  `UsuariosClient.tsx` (encabezado + modal `FField`) y `CarruselClient.tsx`.
+- **Formularios de crear/editar: cubiertos todos** (§6b, `StepFrame`). **Encabezados, tablas y textos**
+  del resto de vistas: ya heredaron `Badge` sin píldora, `table.tsx`, `select` global, botones y, donde
+  aplica, `DataCardGrid`; pero el encabezado de página y los textos de ayuda de programas, convocatorias
+  (lista y asistente exterior), solicitudes, ministraciones, convenios, informes, notificaciones,
+  solicitudes-acceso, reset-requests y las vistas de revisor/evaluador/solicitante (dashboard, lista de
+  solicitudes, detalle de solicitud, ministraciones, informes) siguen con el estilo anterior. Hechos:
+  dashboard, usuarios, carrusel, empresas, lista negra, evaluadores, historial (audit-logs). El patrón a
+  repetir está en `UsuariosClient.tsx` (encabezado) y en cualquier `StepFrame`.
+- **Jerga restante**: los estados de solicitud en mayúsculas (`ENVIADA`, `EN_EVALUACION`) en las vistas no
+  rediseñadas; `estadoLabel()` de `lib/solicitud-estados.ts` ya los traduce y hay que usarlo en todas.
 - El menú, la barra superior y el pie del panel **no entran** en el rediseño (E26).
 - `GlobalSearch.tsx`: el placeholder "Buscar folio, usuario, institución…" se cortaba a medio carácter en
   el buscador del topbar (`max-w-xs` = 320 px, insuficiente). Ensanchado a `max-w-sm` (384 px) — no se

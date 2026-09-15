@@ -6,8 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { AlertBox } from '@/components/ui/alert-box';
+import StepFrame from '@/components/ui/step-frame';
 import { FileText, Loader2, FileSignature, Search, Download, CheckCheck, XCircle, Ban, PlayCircle, Check } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import PaginationControls from '@/components/ui/pagination-controls';
@@ -374,119 +373,89 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
         </CardContent>
       </Card>
 
-      {/* Convenio Modal */}
-      <Dialog open={showConvenioModal} onOpenChange={setShowConvenioModal}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Generar Convenio</DialogTitle>
-            <DialogDescription>
-              {selectedSolicitud && `Folio: ${selectedSolicitud.folio}`}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {convenioError && (
-              <AlertBox type="error" message={convenioError} />
-            )}
-
-            {convenioSuccess && (
-              <AlertBox type="success" message={convenioSuccess} />
-            )}
-
-            {!convenioSuccess && (
-              <>
-                {/* Monto Aprobado */}
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200 mb-1">
-                    Monto Aprobado (MXN) *
-                  </label>
-                  <Input
-                    type="number"
-                    value={convenioForm.monto_aprobado}
-                    onChange={(e) =>
-                      setConvenioForm({
-                        ...convenioForm,
-                        monto_aprobado: e.target.value,
-                      })
-                    }
-                    placeholder="Ej: 500000"
-                    className="border-neutral-300 dark:border-neutral-600"
-                  />
-                </div>
-
-                {/* Número de Tranches */}
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200 mb-1">
-                    Número de Tranches (1-12) *
-                  </label>
-                  <select
-                    value={convenioForm.num_tranches}
-                    onChange={(e) =>
-                      setConvenioForm({
-                        ...convenioForm,
-                        num_tranches: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm"
-                  >
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
-                      <option key={num} value={num}>
-                        {num} Tranche{num > 1 ? 's' : ''} (${((parseFloat(convenioForm.monto_aprobado) || 0) / num).toLocaleString()} c/u)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Observaciones */}
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200 mb-1">
-                    Observaciones
-                  </label>
-                  <textarea
-                    value={convenioForm.observaciones}
-                    onChange={(e) =>
-                      setConvenioForm({
-                        ...convenioForm,
-                        observaciones: e.target.value,
-                      })
-                    }
-                    placeholder="Notas adicionales sobre el convenio..."
-                    className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm resize-none h-24"
-                  />
-                </div>
-
-                {/* Buttons */}
-                <div className="flex gap-3 justify-end pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowConvenioModal(false)}
-                    disabled={convenioLoading}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleGenerarConvenio}
-                    disabled={convenioLoading}
-                    className="bg-accent hover:bg-accent/90"
-                  >
-                    {convenioLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Generando...
-                      </>
-                    ) : (
-                      <>
-                        <FileSignature className="h-4 w-4 mr-2" />
-                        Generar Convenio
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Convenio, por pasos */}
+      <StepFrame
+        open={showConvenioModal}
+        size="md"
+        title="Generar convenio"
+        icon={<FileSignature className="h-5 w-5" />}
+        intro={<>{selectedSolicitud ? <>Solicitud <strong>{selectedSolicitud.folio}</strong>. </> : null}El convenio fija <strong>cuánto se aprueba y en cuántas entregas</strong> se paga. Al generarlo se crea el documento y las ministraciones correspondientes.</>}
+        onClose={() => setShowConvenioModal(false)}
+        onSubmit={handleGenerarConvenio}
+        submitting={convenioLoading}
+        submitLabel="Generar convenio"
+        error={convenioError || null}
+        success={convenioSuccess || null}
+        steps={[
+          {
+            key: 'monto',
+            label: 'El monto',
+            question: '¿Cuánto se aprueba?',
+            validate: () => (!convenioForm.monto_aprobado || parseFloat(convenioForm.monto_aprobado) <= 0 ? 'Indica el monto aprobado.' : null),
+            content: (
+              <div className="space-y-1.5">
+                <label htmlFor="conv-monto" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Monto aprobado (MXN) *</label>
+                <input
+                  id="conv-monto"
+                  type="number"
+                  min={0}
+                  value={convenioForm.monto_aprobado}
+                  onChange={(e) => setConvenioForm({ ...convenioForm, monto_aprobado: e.target.value })}
+                  placeholder="Ej. 500000"
+                  className="auth-input auth-input-static pl-4"
+                />
+                {selectedSolicitud && (
+                  <p className="text-xs text-[var(--app-ink-2)]">Se solicitó {formatCurrency(Number(selectedSolicitud.monto_solicitado))}. Puedes aprobar una cantidad menor.</p>
+                )}
+              </div>
+            ),
+          },
+          {
+            key: 'entregas',
+            label: 'Las entregas',
+            question: '¿En cuántas entregas se paga?',
+            validate: () => {
+              const n = parseInt(convenioForm.num_tranches) || 0;
+              return n < 1 || n > 12 ? 'Elige entre 1 y 12 entregas.' : null;
+            },
+            content: (
+              <div className="space-y-1.5">
+                <label htmlFor="conv-entregas" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Número de entregas *</label>
+                <select
+                  id="conv-entregas"
+                  value={convenioForm.num_tranches}
+                  onChange={(e) => setConvenioForm({ ...convenioForm, num_tranches: e.target.value })}
+                  className="auth-input auth-input-static pl-4"
+                >
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
+                    <option key={num} value={num}>
+                      {num === 1 ? 'Una sola entrega' : `${num} entregas`} · {formatCurrency((parseFloat(convenioForm.monto_aprobado) || 0) / num)} cada una
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-[var(--app-ink-2)]">Cada entrega genera su propia ministración y su informe.</p>
+              </div>
+            ),
+          },
+          {
+            key: 'notas',
+            label: 'Notas',
+            question: '¿Algo que deba constar en el convenio?',
+            content: (
+              <div className="space-y-1.5">
+                <label htmlFor="conv-notas" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Observaciones (opcional)</label>
+                <textarea
+                  id="conv-notas"
+                  value={convenioForm.observaciones}
+                  onChange={(e) => setConvenioForm({ ...convenioForm, observaciones: e.target.value })}
+                  placeholder="Condiciones especiales, fechas comprometidas…"
+                  className="auth-input auth-input-static pl-4 !h-auto min-h-[110px] py-3 resize-y"
+                />
+              </div>
+            ),
+          },
+        ]}
+      />
 
       {/* Confirm Close Dialog */}
       <ConfirmDialog

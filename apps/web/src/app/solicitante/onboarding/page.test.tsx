@@ -62,7 +62,7 @@ describe('SolicitanteOnboardingPage', () => {
     expect(screen.getByText('IPN — IPN')).toBeInTheDocument();
   });
 
-  it('valida que institución sea obligatoria al hacer submit', async () => {
+  it('no avanza de paso sin institución (y no llama PUT)', async () => {
     mockedGet.mockResolvedValue({ data: { user: { id: 1, empresa_id: null }, empresas: [] } });
 
     render(<SolicitanteOnboardingPage />);
@@ -70,13 +70,12 @@ describe('SolicitanteOnboardingPage', () => {
       expect(screen.getByText(/Bienvenido a COMECYT/i)).toBeInTheDocument();
     });
 
-    // Simular submit con required HTML5 validation (no se llama PUT)
-    fireEvent.submit(screen.getByRole('button', { name: /Continuar al sistema/i }).closest('form')!);
-    // No se debe llamar PUT — el select tiene required
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Elige tu institución/i);
     expect(mockedPut).not.toHaveBeenCalled();
   });
 
-  it('hace PUT /auth/profile y redirige tras submit válido', async () => {
+  it('hace PUT /auth/profile y redirige tras completar los dos pasos', async () => {
     mockedGet.mockImplementation((url: string) => {
       if (url === '/catalogos') {
         return Promise.resolve({ data: { empresas: [{ id: 5, nombre: 'X' }] } });
@@ -92,7 +91,9 @@ describe('SolicitanteOnboardingPage', () => {
     });
 
     fireEvent.change(screen.getByRole('combobox'), { target: { value: '5' } });
-    fireEvent.change(screen.getByLabelText(/Cargo/i), { target: { value: 'Investigador' } });
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
+
+    fireEvent.change(await screen.findByLabelText(/Cargo/i), { target: { value: 'Investigador' } });
     fireEvent.change(screen.getByLabelText(/Teléfono/i), { target: { value: '722000' } });
     fireEvent.click(screen.getByRole('button', { name: /Continuar al sistema/i }));
 

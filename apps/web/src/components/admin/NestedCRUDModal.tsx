@@ -1,9 +1,5 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -12,26 +8,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { X, Save, Loader2 } from 'lucide-react';
+import StepFrame, { type StepDef } from '@/components/ui/step-frame';
+import { ListPlus } from 'lucide-react';
+
+interface Field {
+  name: string;
+  label: string;
+  type: 'text' | 'number' | 'textarea' | 'checkbox' | 'select';
+  required?: boolean;
+  options?: Array<{ value: string; label: string }>;
+  placeholder?: string;
+  /** Texto de ayuda en lenguaje llano (opcional). */
+  hint?: string;
+}
 
 interface NestedCRUDModalProps {
   isOpen: boolean;
   title: string;
-  fields: Array<{
-    name: string;
-    label: string;
-    type: 'text' | 'number' | 'textarea' | 'checkbox' | 'select';
-    required?: boolean;
-    options?: Array<{ value: string; label: string }>;
-    placeholder?: string;
-  }>;
-  formData: Record<string, any>;
-  onFormChange: (data: Record<string, any>) => void;
+  fields: Field[];
+  formData: Record<string, unknown>;
+  onFormChange: (data: Record<string, unknown>) => void;
   onSave: () => void;
   onClose: () => void;
   loading?: boolean;
+  /** Aviso de contexto arriba del formulario (qué es lo que se está creando). */
+  intro?: React.ReactNode;
+  error?: string | null;
 }
 
+/**
+ * Modal genérico de crear/editar de los catálogos anidados (campos, documentos, rubros, etapas,
+ * modalidades, criterios…). 14/09/2026: usa el marco por pasos del sistema (StepFrame): los campos
+ * obligatorios van en "Lo básico" y el resto en "Detalles"; si todo es obligatorio, un solo paso.
+ */
 export function NestedCRUDModal({
   isOpen,
   title,
@@ -41,106 +50,93 @@ export function NestedCRUDModal({
   onSave,
   onClose,
   loading = false,
+  intro,
+  error,
 }: NestedCRUDModalProps) {
-  if (!isOpen) return null;
+  const required = fields.filter((f) => f.required);
+  const optional = fields.filter((f) => !f.required);
+
+  const renderField = (field: Field) => {
+    const id = `nested-${field.name}`;
+    const value = formData[field.name];
+    if (field.type === 'checkbox') {
+      return (
+        <label key={field.name} htmlFor={id} className="flex items-center gap-3 rounded-[14px] border px-4 py-3 cursor-pointer" style={{ borderColor: 'var(--app-rule)', backgroundColor: value ? 'var(--tile-emerald-bg)' : 'var(--auth-field)' }}>
+          <Checkbox id={id} checked={Boolean(value)} onCheckedChange={(v) => onFormChange({ ...formData, [field.name]: v })} />
+          <span className="text-sm font-semibold text-[var(--app-ink)]">{field.label}</span>
+        </label>
+      );
+    }
+    return (
+      <div key={field.name} className="space-y-1.5">
+        <label htmlFor={id} className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">
+          {field.label} {field.required && '*'}
+        </label>
+        {field.type === 'select' ? (
+          <Select value={String(value ?? '')} onValueChange={(v) => onFormChange({ ...formData, [field.name]: v })}>
+            <SelectTrigger id={id} className="w-full">
+              <SelectValue placeholder={field.placeholder ?? 'Selecciona…'} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options?.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : field.type === 'textarea' ? (
+          <textarea
+            id={id}
+            value={String(value ?? '')}
+            onChange={(e) => onFormChange({ ...formData, [field.name]: e.target.value })}
+            placeholder={field.placeholder}
+            rows={3}
+            className="w-full px-4 py-3 rounded-[var(--auth-radius-field)] text-sm resize-none outline-none transition-colors"
+            style={{ border: '1.5px solid var(--auth-rule)', background: 'var(--auth-field)', color: 'var(--auth-ink)' }}
+          />
+        ) : (
+          <input
+            id={id}
+            type={field.type}
+            value={String(value ?? '')}
+            onChange={(e) => onFormChange({ ...formData, [field.name]: e.target.value })}
+            placeholder={field.placeholder}
+            className="auth-input auth-input-static pl-4"
+          />
+        )}
+        {field.hint && <p className="text-xs text-[var(--app-ink-2)]">{field.hint}</p>}
+      </div>
+    );
+  };
+
+  const missing = () => {
+    const faltan = required.filter((f) => {
+      const v = formData[f.name];
+      return v === undefined || v === null || String(v).trim() === '';
+    });
+    return faltan.length ? `Falta completar: ${faltan.map((f) => f.label).join(', ')}.` : null;
+  };
+
+  const steps: StepDef[] = [];
+  if (required.length && optional.length) {
+    steps.push({ key: 'basico', label: 'Lo básico', question: '¿Qué es y cómo se llama?', content: <>{required.map(renderField)}</>, validate: missing });
+    steps.push({ key: 'detalles', label: 'Detalles', question: '¿Algo más que precisar?', content: <>{optional.map(renderField)}</> });
+  } else {
+    steps.push({ key: 'todo', label: 'Datos', question: 'Completa la información', content: <>{fields.map(renderField)}</>, validate: missing });
+  }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-lg max-h-screen overflow-y-auto">
-        <CardHeader className="flex flex-row justify-between items-start bg-white border-b border-neutral-100">
-          <CardTitle>{title}</CardTitle>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-600">
-            <X className="h-5 w-5" />
-          </button>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          {fields.map((field) => (
-            <div key={field.name}>
-              {field.type === 'checkbox' ? (
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id={field.name}
-                    checked={formData[field.name] ?? false}
-                    onCheckedChange={(v) => onFormChange({ ...formData, [field.name]: v })}
-                  />
-                  <Label htmlFor={field.name} className="text-neutral-700 cursor-pointer">
-                    {field.label}
-                  </Label>
-                </div>
-              ) : field.type === 'select' ? (
-                <div>
-                  <Label htmlFor={field.name} className="text-neutral-700">
-                    {field.label} {field.required && '*'}
-                  </Label>
-                  <Select
-                    value={formData[field.name] ?? ''}
-                    onValueChange={(v) => onFormChange({ ...formData, [field.name]: v })}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder={field.placeholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {field.options?.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : field.type === 'textarea' ? (
-                <div>
-                  <Label htmlFor={field.name} className="text-neutral-700">
-                    {field.label} {field.required && '*'}
-                  </Label>
-                  <textarea
-                    id={field.name}
-                    value={formData[field.name] ?? ''}
-                    onChange={(e) => onFormChange({ ...formData, [field.name]: e.target.value })}
-                    placeholder={field.placeholder}
-                    className="mt-1 w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    rows={3}
-                  />
-                </div>
-              ) : (
-                <div>
-                  <Label htmlFor={field.name} className="text-neutral-700">
-                    {field.label} {field.required && '*'}
-                  </Label>
-                  <Input
-                    id={field.name}
-                    type={field.type}
-                    value={formData[field.name] ?? ''}
-                    onChange={(e) => onFormChange({ ...formData, [field.name]: e.target.value })}
-                    placeholder={field.placeholder}
-                    className="mt-1"
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-        </CardContent>
-        <div className="border-t border-neutral-100 p-6 flex justify-end gap-3 bg-white">
-          <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button
-            className="bg-primary hover:bg-primary-light text-white"
-            onClick={onSave}
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" /> Guardar
-              </>
-            )}
-          </Button>
-        </div>
-      </Card>
-    </div>
+    <StepFrame
+      open={isOpen}
+      title={title}
+      icon={<ListPlus className="h-5 w-5" />}
+      intro={intro}
+      steps={steps}
+      onClose={onClose}
+      onSubmit={onSave}
+      submitting={loading}
+      submitLabel="Guardar"
+      error={error}
+      size="md"
+    />
   );
 }

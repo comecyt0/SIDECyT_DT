@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, UserPlus, Loader2, X, Save, Link2 } from 'lucide-react';
+import { Users, UserPlus, Link2 } from 'lucide-react';
+import StepFrame from '@/components/ui/step-frame';
 import api from '@/lib/api';
 import type { User, Solicitud } from '@/types/api';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -32,7 +32,7 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
 
   const handleAsignar = async () => {
     if (!form.solicitud_id || !form.evaluador_id || !form.fecha_limite) {
-      setFeedback({ type: 'error', message: 'Todos los campos son requeridos' });
+      setFeedback({ type: 'error', message: 'Faltan datos: solicitud, evaluador y fecha límite.' });
       return;
     }
     setSaving(true);
@@ -58,11 +58,11 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
       {feedback && <AlertBox type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-dark">Revisores y Evaluadores</h1>
-          <p className="text-neutral-500 dark:text-neutral-400">Gestión del comité técnico y asignación de dictámenes.</p>
+          <h1 className="text-3xl font-bold text-neutral-dark">Revisores y evaluadores</h1>
+          <p className="text-neutral-500 dark:text-neutral-400">Quién revisa los documentos y quién dictamina cada proyecto.</p>
         </div>
-        <Button className="bg-primary hover:bg-primary-light text-white shadow-md" onClick={() => setShowModal(true)}>
-          <UserPlus className="mr-2 h-4 w-4" /> Asignar Evaluador
+        <Button onClick={() => { setForm(emptyForm); setShowModal(true); }}>
+          <UserPlus className="mr-2 h-4 w-4" /> Asignar evaluador
         </Button>
       </div>
 
@@ -137,65 +137,75 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
         </CardContent>
       </Card>
 
-      {/* Assignment Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md border-0 shadow-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b">
-              <CardTitle className="text-lg text-neutral-800 dark:text-neutral-100">Asignar Evaluador a Solicitud</CardTitle>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowModal(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="space-y-2">
-                <Label>Solicitud a Evaluar <span className="text-red-500">*</span></Label>
-                <select
-                  className="w-full border border-neutral-200 dark:border-neutral-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-neutral-900 focus:ring-2 focus:ring-primary/30 outline-none"
-                  value={form.solicitud_id}
-                  onChange={e => setForm({...form, solicitud_id: e.target.value})}
-                >
-                  <option value="">Selecciona solicitud...</option>
+      {/* Asignación por pasos */}
+      <StepFrame
+        open={showModal}
+        size="md"
+        title="Asignar un evaluador"
+        icon={<Link2 className="h-5 w-5" />}
+        intro={<>El evaluador recibirá la solicitud en su bandeja y tendrá hasta la <strong>fecha límite</strong> para emitir su dictamen. Puedes quitar la asignación después si hace falta.</>}
+        steps={[
+          {
+            key: 'solicitud',
+            label: 'La solicitud',
+            question: '¿Qué proyecto se va a evaluar?',
+            validate: () => (!form.solicitud_id ? 'Elige la solicitud.' : null),
+            content: (
+              <div className="space-y-1.5">
+                <Label htmlFor="asig-solicitud" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Solicitud *</Label>
+                <select id="asig-solicitud" value={form.solicitud_id} onChange={e => setForm({ ...form, solicitud_id: e.target.value })} className="auth-input auth-input-static pl-4">
+                  <option value="">Elige una solicitud…</option>
                   {solicitudes.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.folio} — {s.titulo_proyecto?.substring(0, 50)}
-                    </option>
+                    <option key={s.id} value={s.id}>{s.folio} — {s.titulo_proyecto?.substring(0, 60)}</option>
                   ))}
                 </select>
+                <p className="text-xs text-[var(--app-ink-2)]">Solo aparecen las solicitudes que ya pasaron la revisión documental.</p>
               </div>
-              <div className="space-y-2">
-                <Label>Evaluador <span className="text-red-500">*</span></Label>
-                <select
-                  className="w-full border border-neutral-200 dark:border-neutral-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-neutral-900 focus:ring-2 focus:ring-primary/30 outline-none"
-                  value={form.evaluador_id}
-                  onChange={e => setForm({...form, evaluador_id: e.target.value})}
-                >
-                  <option value="">Selecciona evaluador...</option>
+            ),
+          },
+          {
+            key: 'evaluador',
+            label: 'Quién evalúa',
+            question: '¿Quién hará el dictamen?',
+            validate: () => (!form.evaluador_id ? 'Elige al evaluador.' : null),
+            content: (
+              <div className="space-y-1.5">
+                <Label htmlFor="asig-evaluador" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Evaluador *</Label>
+                <select id="asig-evaluador" value={form.evaluador_id} onChange={e => setForm({ ...form, evaluador_id: e.target.value })} className="auth-input auth-input-static pl-4">
+                  <option value="">Elige un evaluador…</option>
                   {evaluadores.map((ev) => (
                     <option key={ev.id} value={ev.id}>{ev.name}</option>
                   ))}
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label>Fecha Límite de Evaluación <span className="text-red-500">*</span></Label>
-                <Input
+            ),
+          },
+          {
+            key: 'fecha',
+            label: 'Para cuándo',
+            question: '¿Hasta qué día tiene para dictaminar?',
+            validate: () => (!form.fecha_limite ? 'Indica la fecha límite.' : null),
+            content: (
+              <div className="space-y-1.5">
+                <Label htmlFor="asig-fecha" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Fecha límite *</Label>
+                <input
+                  id="asig-fecha"
                   type="date"
                   min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
                   value={form.fecha_limite}
-                  onChange={e => setForm({...form, fecha_limite: e.target.value})}
+                  onChange={e => setForm({ ...form, fecha_limite: e.target.value })}
+                  className="auth-input auth-input-static pl-4"
                 />
+                <p className="text-xs text-[var(--app-ink-2)]">A partir de mañana. El evaluador la verá como recordatorio.</p>
               </div>
-              <div className="pt-4 flex gap-3">
-                <Button className="flex-1 bg-primary hover:bg-primary-light text-white" disabled={saving} onClick={handleAsignar}>
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                  Confirmar Asignación
-                </Button>
-                <Button variant="outline" className="flex-1" onClick={() => setShowModal(false)}>Cancelar</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            ),
+          },
+        ]}
+        onClose={() => setShowModal(false)}
+        onSubmit={handleAsignar}
+        submitting={saving}
+        submitLabel="Asignar"
+      />
     </div>
   );
 }

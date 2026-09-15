@@ -2,17 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Mail, Building2, ShieldCheck, Phone, Briefcase, KeyRound, Loader2 } from 'lucide-react';
+import { User, Mail, Building2, ShieldCheck, Phone, Briefcase, KeyRound, Loader2, Info } from 'lucide-react';
 import api from '@/lib/api';
 import { colorMap } from '@/lib/color-mapper';
 import { AlertBox } from '@/components/ui/alert-box';
 import TwoFactorSetup from '@/components/auth/TwoFactorSetup';
 import PushNotificationsCard from '@/components/pwa/PushNotificationsCard';
 import { INSTITUTION } from '@/lib/institution';
+import StepFrame from '@/components/ui/step-frame';
+
+const pwLabelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
+const pwInputCls = 'auth-input auth-input-static pl-4';
 
 interface UserProfile {
   id: number;
@@ -37,6 +39,7 @@ export default function SolicitanteSettingsPage() {
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwSuccess, setPwSuccess] = useState<string | null>(null);
   const [pwValidationError, setPwValidationError] = useState<string | null>(null);
+  const [pwFrameKey, setPwFrameKey] = useState(0);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -58,8 +61,7 @@ export default function SolicitanteSettingsPage() {
     setPwValidationError(null);
   };
 
-  const handlePwSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePwSubmit = async () => {
     setPwError(null);
     setPwSuccess(null);
     setPwValidationError(null);
@@ -83,6 +85,7 @@ export default function SolicitanteSettingsPage() {
       });
       setPwSuccess(data.message || 'Contraseña actualizada correctamente.');
       setPwForm({ current_password: '', new_password: '', new_password_confirmation: '' });
+      setPwFrameKey((k) => k + 1);
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string; message?: string } } };
       setPwError(
@@ -185,7 +188,7 @@ export default function SolicitanteSettingsPage() {
               </div>
 
               <div className={`p-4 ${colorMap.states.warning.background} border ${colorMap.states.warning.border} rounded-lg`}>
-                <p className={`text-sm ${colorMap.states.warning.text} font-medium`}>ⓘ Nota</p>
+                <p className={`text-sm ${colorMap.states.warning.text} font-medium inline-flex items-center gap-1.5`}><Info className="h-4 w-4" aria-hidden="true" /> Nota</p>
                 <p className={`text-xs ${colorMap.states.warning.main} mt-1`}>
                   {`La modificación de datos de perfil e institución se realiza directamente a través de la administración ${INSTITUTION.name}. Contacta al encargado del sistema para actualizar tu información.`}
                 </p>
@@ -201,100 +204,86 @@ export default function SolicitanteSettingsPage() {
       {/* Web Push notifications */}
       <PushNotificationsCard />
 
-      {/* Change Password Card */}
-      <Card className="border-0 shadow-sm ring-1 ring-neutral-100">
-        <CardHeader className="bg-neutral-50 border-b border-neutral-100 pb-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <KeyRound className="h-4 w-4 text-primary" /> Cambiar Contraseña
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <form onSubmit={handlePwSubmit} className="space-y-4">
-            {pwSuccess && (
-              <AlertBox type="success" message={pwSuccess} />
-            )}
-            {pwError && (
-              <AlertBox type="error" message={pwError} />
-            )}
-
-            <div className="space-y-1">
-              <Label htmlFor="current_password" className="text-sm font-medium text-neutral-700">
-                Contraseña actual
-              </Label>
-              <Input
-                id="current_password"
-                name="current_password"
-                type="password"
-                autoComplete="current-password"
-                value={pwForm.current_password}
-                onChange={handlePwChange}
-                placeholder="••••••••"
-                required
-                disabled={pwLoading}
-                className="focus:ring-primary focus:border-primary"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="new_password" className="text-sm font-medium text-neutral-700">
-                Nueva contraseña
-              </Label>
-              <Input
-                id="new_password"
-                name="new_password"
-                type="password"
-                autoComplete="new-password"
-                value={pwForm.new_password}
-                onChange={handlePwChange}
-                placeholder="Mínimo 8 caracteres"
-                required
-                disabled={pwLoading}
-                className={`focus:ring-primary focus:border-primary ${
-                  pwValidationError ? 'border-red-400 focus:border-red-400' : ''
-                }`}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="new_password_confirmation" className="text-sm font-medium text-neutral-700">
-                Confirmar nueva contraseña
-              </Label>
-              <Input
-                id="new_password_confirmation"
-                name="new_password_confirmation"
-                type="password"
-                autoComplete="new-password"
-                value={pwForm.new_password_confirmation}
-                onChange={handlePwChange}
-                placeholder="Repite la nueva contraseña"
-                required
-                disabled={pwLoading}
-                className={`focus:ring-primary focus:border-primary ${
-                  pwValidationError ? 'border-red-400 focus:border-red-400' : ''
-                }`}
-              />
-              {pwValidationError && (
-                <p className="text-xs text-red-500 mt-1">{pwValidationError}</p>
-              )}
-            </div>
-
-            <Button
-              type="submit"
-              disabled={pwLoading || !pwForm.current_password || !pwForm.new_password || !pwForm.new_password_confirmation}
-              className="w-full bg-primary hover:bg-primary/90 text-white"
-            >
-              {pwLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Actualizando...
-                </>
-              ) : (
-                'Actualizar contraseña'
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      {/* Cambio de contraseña, por pasos */}
+      {pwSuccess && <AlertBox type="success" message={pwSuccess} onClose={() => setPwSuccess(null)} />}
+      <StepFrame
+        key={pwFrameKey}
+        inline
+        title="Cambiar contraseña"
+        icon={<KeyRound className="h-5 w-5" />}
+        intro={<>Primero confirmamos que eres tú con tu contraseña de hoy; después eliges la nueva. Mínimo <strong>8 caracteres</strong>; mezcla letras, números y símbolos.</>}
+        onClose={() => { setPwForm({ current_password: '', new_password: '', new_password_confirmation: '' }); setPwError(null); setPwValidationError(null); }}
+        onSubmit={handlePwSubmit}
+        submitting={pwLoading}
+        submitLabel="Actualizar contraseña"
+        error={pwError || pwValidationError}
+        steps={[
+          {
+            key: 'actual',
+            label: 'Tu clave de hoy',
+            question: '¿Cuál es tu contraseña actual?',
+            validate: () => (!pwForm.current_password ? 'Escribe tu contraseña actual para continuar.' : null),
+            content: (
+              <div className="space-y-1.5">
+                <Label htmlFor="current_password" className={pwLabelCls}>Contraseña actual</Label>
+                <input
+                  id="current_password"
+                  name="current_password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={pwForm.current_password}
+                  onChange={handlePwChange}
+                  placeholder="••••••••"
+                  disabled={pwLoading}
+                  className={pwInputCls}
+                />
+              </div>
+            ),
+          },
+          {
+            key: 'nueva',
+            label: 'La nueva',
+            question: '¿Cuál será tu nueva contraseña?',
+            validate: () => {
+              if (pwForm.new_password.length < 8) return 'La nueva contraseña debe tener al menos 8 caracteres.';
+              if (pwForm.new_password !== pwForm.new_password_confirmation) return 'La nueva contraseña y su confirmación no coinciden.';
+              return null;
+            },
+            content: (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="new_password" className={pwLabelCls}>Nueva contraseña</Label>
+                  <input
+                    id="new_password"
+                    name="new_password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={pwForm.new_password}
+                    onChange={handlePwChange}
+                    placeholder="Mínimo 8 caracteres"
+                    disabled={pwLoading}
+                    className={pwInputCls}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="new_password_confirmation" className={pwLabelCls}>Repítela</Label>
+                  <input
+                    id="new_password_confirmation"
+                    name="new_password_confirmation"
+                    type="password"
+                    autoComplete="new-password"
+                    value={pwForm.new_password_confirmation}
+                    onChange={handlePwChange}
+                    placeholder="Escríbela otra vez"
+                    disabled={pwLoading}
+                    className={pwInputCls}
+                  />
+                </div>
+              </div>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

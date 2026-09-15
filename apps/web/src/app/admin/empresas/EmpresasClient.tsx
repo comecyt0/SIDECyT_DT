@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Building, Plus, Edit, Eye, Loader2, X, Save, MapPin } from 'lucide-react';
+import { Building, Plus, Edit, Eye, X, MapPin } from 'lucide-react';
+import StepFrame from '@/components/ui/step-frame';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -121,12 +121,12 @@ export default function EmpresasClient({ empresas }: Props) {
                 {inst.municipio.nombre}
               </p>
             )}
-            <div className="flex items-center justify-end gap-1 pt-2 border-t border-neutral-50 dark:border-neutral-800">
-              <Button variant="ghost" size="icon" onClick={() => openPreview(inst)} aria-label="Ver detalle">
-                <Eye className="h-4 w-4 text-neutral-500 dark:text-neutral-400" />
+            <div className="flex items-center justify-end gap-1.5 pt-3 border-t" style={{ borderColor: 'var(--app-rule)' }}>
+              <Button variant="soft" size="icon-sm" onClick={() => openPreview(inst)} aria-label="Ver detalle" title="Ver">
+                <Eye />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => openEdit(inst)} aria-label="Editar">
-                <Edit className="h-4 w-4 text-neutral-500 dark:text-neutral-400" />
+              <Button variant="soft" size="icon-sm" onClick={() => openEdit(inst)} aria-label="Editar" title="Editar">
+                <Edit />
               </Button>
             </div>
           </div>
@@ -181,42 +181,53 @@ export default function EmpresasClient({ empresas }: Props) {
         </div>
       )}
 
-      {/* Create/Edit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md border-0 shadow-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b">
-              <CardTitle className="text-lg text-neutral-800 dark:text-neutral-100">{editId ? 'Editar Empresa' : 'Nueva Empresa'}</CardTitle>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowModal(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="inst-nombre">
-                  Nombre Oficial <span className="text-red-500">*</span>
-                </Label>
-                <Input id="inst-nombre" placeholder="Ej. Universidad Autónoma del Estado de México" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="inst-acronimo">Acrónimo / Siglas</Label>
-                <Input id="inst-acronimo" placeholder="Ej. UAEM" value={form.acronimo} onChange={(e) => setForm({ ...form, acronimo: e.target.value })} />
-              </div>
-              <div className="flex items-center gap-3">
-                <input type="checkbox" id="inst-activa" checked={form.activa} onChange={(e) => setForm({ ...form, activa: e.target.checked })} className="h-4 w-4 accent-primary" />
-                <Label htmlFor="inst-activa" className="cursor-pointer">Empresa Activa</Label>
-              </div>
-              <div className="pt-4 flex gap-3">
-                <Button className="flex-1 bg-primary hover:bg-primary-light text-white" disabled={saving} onClick={handleSave}>
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                  Guardar
-                </Button>
-                <Button variant="outline" className="flex-1" onClick={() => setShowModal(false)}>Cancelar</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Alta / edición por pasos */}
+      <StepFrame
+        open={showModal}
+        size="md"
+        title={editId ? 'Editar empresa' : 'Nueva empresa'}
+        icon={<Building className="h-5 w-5" />}
+        intro={<>Una empresa es <strong>la organización que presenta proyectos</strong>. Sus usuarios se vinculan a ella y aparece en convenios y reportes.</>}
+        steps={[
+          {
+            key: 'nombre',
+            label: 'Quién es',
+            question: '¿Cómo se llama la empresa?',
+            validate: () => (!form.nombre.trim() ? 'Escribe el nombre oficial de la empresa.' : null),
+            content: (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="inst-nombre" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Nombre oficial *</Label>
+                  <input id="inst-nombre" placeholder="Ej. Universidad Autónoma del Estado de México" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className="auth-input auth-input-static pl-4" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="inst-acronimo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Siglas (opcional)</Label>
+                  <input id="inst-acronimo" placeholder="Ej. UAEM" value={form.acronimo} onChange={(e) => setForm({ ...form, acronimo: e.target.value })} className="auth-input auth-input-static pl-4" />
+                  <p className="text-xs text-[var(--app-ink-2)]">Se muestran en listas y tarjetas para reconocerla rápido.</p>
+                </div>
+              </>
+            ),
+          },
+          {
+            key: 'estado',
+            label: 'Disponibilidad',
+            question: '¿Puede presentar proyectos ahora?',
+            content: (
+              <label className="flex items-center justify-between gap-4 rounded-[var(--auth-radius-field)] border px-4 py-3 cursor-pointer" style={{ borderColor: 'var(--app-rule)', backgroundColor: form.activa ? 'var(--tile-emerald-bg)' : 'var(--app-hover-bg)' }}>
+                <span>
+                  <span className="block text-sm font-semibold text-[var(--app-ink)]">Empresa activa</span>
+                  <span className="block text-xs text-[var(--app-ink-2)]">Si la apagas, sigue en el catálogo pero no podrá registrar nuevas solicitudes.</span>
+                </span>
+                <input type="checkbox" id="inst-activa" checked={form.activa} onChange={(e) => setForm({ ...form, activa: e.target.checked })} className="h-5 w-5 rounded accent-[var(--auth-vino)]" />
+              </label>
+            ),
+          },
+        ]}
+        onClose={() => setShowModal(false)}
+        onSubmit={handleSave}
+        submitting={saving}
+        submitLabel={editId ? 'Guardar cambios' : 'Crear empresa'}
+      />
     </div>
   );
 }

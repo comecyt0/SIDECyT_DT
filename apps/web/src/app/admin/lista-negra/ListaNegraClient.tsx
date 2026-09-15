@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ShieldAlert, Ban, Unlock, Loader2, AlertTriangle, X, Save } from 'lucide-react';
+import { ShieldAlert, Ban, Unlock, Loader2, AlertTriangle } from 'lucide-react';
+import StepFrame from '@/components/ui/step-frame';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -168,53 +168,66 @@ export default function ListaNegraClient({ sanciones, empresas }: Props) {
         variant="destructive"
       />
 
-      {/* Modal Nueva Sanción */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg border-0 shadow-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-neutral-100 dark:border-neutral-700">
-              <CardTitle className="text-lg text-red-900 flex items-center gap-2">
-                <Ban className="h-5 w-5" /> Nueva Sanción
-              </CardTitle>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowModal(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="space-y-2">
-                <Label>Empresa a Sancionar <span className="text-red-500">*</span></Label>
-                <Select value={form.empresa_id} onValueChange={v => setForm({...form, empresa_id: v ?? ''})}>
-                  <SelectTrigger><SelectValue placeholder="Selecciona empresa..." /></SelectTrigger>
-                  <SelectContent>
-                    {empresas.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.nombre}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Motivo del Bloqueo <span className="text-red-500">*</span></Label>
-                <Textarea placeholder="Especifica el incumplimiento o causa de la sanción..." value={form.motivo} onChange={e => setForm({...form, motivo: e.target.value})} className="min-h-[80px]" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Fecha de Inicio <span className="text-red-500">*</span></Label>
-                  <Input type="date" value={form.fecha_inicio_sancion} onChange={e => setForm({...form, fecha_inicio_sancion: e.target.value})} />
+      {/* Nueva sanción, por pasos */}
+      <StepFrame
+        open={showModal}
+        size="md"
+        title="Nueva sanción"
+        icon={<Ban className="h-5 w-5" />}
+        intro={<>Una sanción <strong>impide que la empresa presente nuevas solicitudes</strong> durante el periodo que indiques. Puedes levantarla en cualquier momento desde esta lista.</>}
+        steps={[
+          {
+            key: 'quien',
+            label: 'A quién',
+            question: '¿Qué empresa y por qué?',
+            validate: () => {
+              if (!form.empresa_id) return 'Elige la empresa.';
+              if (!form.motivo.trim()) return 'Explica el motivo: quedará registrado.';
+              return null;
+            },
+            content: (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Empresa *</Label>
+                  <Select value={form.empresa_id} onValueChange={v => setForm({...form, empresa_id: v ?? ''})}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Elige la empresa…" /></SelectTrigger>
+                    <SelectContent>
+                      {empresas.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.nombre}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Fecha Fin (opcional)</Label>
-                  <Input type="date" value={form.fecha_fin_sancion} onChange={e => setForm({...form, fecha_fin_sancion: e.target.value})} />
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Motivo *</Label>
+                  <Textarea placeholder="Describe el incumplimiento con tus palabras; la empresa podrá leerlo." value={form.motivo} onChange={e => setForm({...form, motivo: e.target.value})} className="min-h-[100px] rounded-[var(--auth-radius-field)]" style={{ background: 'var(--auth-field)' }} />
+                </div>
+              </>
+            ),
+          },
+          {
+            key: 'cuando',
+            label: 'Desde cuándo',
+            question: '¿Cuánto tiempo aplica?',
+            validate: () => (!form.fecha_inicio_sancion ? 'Indica desde qué día aplica.' : null),
+            content: (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="ln-inicio" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Desde *</Label>
+                  <input id="ln-inicio" type="date" value={form.fecha_inicio_sancion} onChange={e => setForm({...form, fecha_inicio_sancion: e.target.value})} className="auth-input auth-input-static pl-4" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ln-fin" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Hasta (opcional)</Label>
+                  <input id="ln-fin" type="date" value={form.fecha_fin_sancion} onChange={e => setForm({...form, fecha_fin_sancion: e.target.value})} className="auth-input auth-input-static pl-4" />
+                  <p className="text-xs text-[var(--app-ink-2)]">Sin fecha final, la sanción sigue hasta que la levantes.</p>
                 </div>
               </div>
-              <div className="pt-4 flex gap-3">
-                <Button className="flex-1" disabled={saving} onClick={handleSave}>
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                  Registrar Sanción
-                </Button>
-                <Button variant="outline" className="flex-1" onClick={() => setShowModal(false)}>Cancelar</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            ),
+          },
+        ]}
+        onClose={() => setShowModal(false)}
+        onSubmit={handleSave}
+        submitting={saving}
+        submitLabel="Registrar sanción"
+      />
     </div>
   );
 }

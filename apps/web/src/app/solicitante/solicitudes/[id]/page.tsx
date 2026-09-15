@@ -32,6 +32,7 @@ import api from '@/lib/api';
 import { DocumentosAdjuntos } from '@/components/solicitante/DocumentosAdjuntos';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import StepFrame from '@/components/ui/step-frame';
 import type { Solicitud } from '@/types/api';
 import { INSTITUTION } from '@/lib/institution';
 import { estadoLabel } from '@/lib/solicitud-estados';
@@ -633,77 +634,93 @@ export default function DetalleSolicitudPage() {
                     </div>
                   )}
 
-                  {!showBeneficiarioForm ? (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setBeneficiarioForm({
-                          cuenta_clabe: solicitud.ministracion?.cuenta_clabe || '',
-                          numero_cuenta: solicitud.ministracion?.numero_cuenta || '',
-                          titular_cuenta: solicitud.ministracion?.titular_cuenta || '',
-                        });
-                        setShowBeneficiarioForm(true);
-                      }}
-                      className="w-full mt-2 border-primary/30 text-primary bg-white dark:bg-neutral-900 hover:bg-primary/5 shadow-sm rounded-xl py-5 h-auto font-bold text-xs gap-2"
-                    >
-                      <ShieldCheck className="h-4 w-4" /> Actualizar Datos del Beneficiario
-                    </Button>
-                  ) : (
-                    <div className="mt-3 space-y-3 p-4 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700">
-                      <p className="text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase tracking-widest mb-1">Datos del Beneficiario</p>
-                      <div>
-                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Cuenta CLABE (18 dígitos)</label>
-                        <input
-                          type="text"
-                          maxLength={18}
-                          placeholder="000000000000000000"
-                          value={beneficiarioForm.cuenta_clabe}
-                          onChange={e => setBeneficiarioForm(f => ({ ...f, cuenta_clabe: e.target.value }))}
-                          className="mt-1 w-full border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">N° Cuenta</label>
-                        <input
-                          type="text"
-                          maxLength={50}
-                          placeholder="Número de cuenta bancaria"
-                          value={beneficiarioForm.numero_cuenta}
-                          onChange={e => setBeneficiarioForm(f => ({ ...f, numero_cuenta: e.target.value }))}
-                          className="mt-1 w-full border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Titular de la Cuenta</label>
-                        <input
-                          type="text"
-                          maxLength={255}
-                          placeholder="Nombre del titular"
-                          value={beneficiarioForm.titular_cuenta}
-                          onChange={e => setBeneficiarioForm(f => ({ ...f, titular_cuenta: e.target.value }))}
-                          className="mt-1 w-full border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
-                      </div>
-                      <div className="flex gap-2 pt-1">
-                        <Button
-                          onClick={handleUpdateBeneficiario}
-                          disabled={savingBeneficiario}
-                          className="flex-1 bg-primary hover:bg-primary/90 text-white rounded-lg py-2 h-auto text-xs font-bold gap-2"
-                        >
-                          {savingBeneficiario ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-                          Guardar
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowBeneficiarioForm(false)}
-                          disabled={savingBeneficiario}
-                          className="flex-1 rounded-lg py-2 h-auto text-xs font-bold"
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                  <Button
+                    variant="soft"
+                    onClick={() => {
+                      setBeneficiarioForm({
+                        cuenta_clabe: solicitud.ministracion?.cuenta_clabe || '',
+                        numero_cuenta: solicitud.ministracion?.numero_cuenta || '',
+                        titular_cuenta: solicitud.ministracion?.titular_cuenta || '',
+                      });
+                      setShowBeneficiarioForm(true);
+                    }}
+                    className="w-full mt-2 h-11 font-bold text-xs gap-2"
+                  >
+                    <ShieldCheck className="h-4 w-4" /> {solicitud.ministracion?.cuenta_clabe ? 'Cambiar datos bancarios' : 'Registrar datos bancarios'}
+                  </Button>
+
+                  <StepFrame
+                    open={showBeneficiarioForm}
+                    size="md"
+                    title="Datos bancarios para el pago"
+                    icon={<ShieldCheck className="h-5 w-5" />}
+                    intro={<>Aquí se depositará el apoyo. La cuenta debe estar <strong>a nombre de la institución</strong> que presenta el proyecto; revisa cada dígito antes de guardar.</>}
+                    onClose={() => setShowBeneficiarioForm(false)}
+                    onSubmit={handleUpdateBeneficiario}
+                    submitting={savingBeneficiario}
+                    submitLabel="Guardar datos"
+                    steps={[
+                      {
+                        key: 'clabe',
+                        label: 'La cuenta',
+                        question: '¿A qué cuenta se deposita?',
+                        validate: () => {
+                          if (!/^\d{18}$/.test(beneficiarioForm.cuenta_clabe)) return 'La CLABE son exactamente 18 dígitos, sin espacios.';
+                          return null;
+                        },
+                        content: (
+                          <>
+                            <div className="space-y-1.5">
+                              <label htmlFor="ben-clabe" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">CLABE interbancaria (18 dígitos) *</label>
+                              <input
+                                id="ben-clabe"
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={18}
+                                placeholder="000000000000000000"
+                                value={beneficiarioForm.cuenta_clabe}
+                                onChange={e => setBeneficiarioForm(f => ({ ...f, cuenta_clabe: e.target.value.replace(/\D/g, '') }))}
+                                className="auth-input auth-input-static pl-4 font-mono tracking-widest"
+                              />
+                              <p className="text-xs text-[var(--app-ink-2)]">Aparece en el estado de cuenta o en la app del banco.</p>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label htmlFor="ben-cuenta" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Número de cuenta (opcional)</label>
+                              <input
+                                id="ben-cuenta"
+                                type="text"
+                                maxLength={50}
+                                placeholder="Número de cuenta bancaria"
+                                value={beneficiarioForm.numero_cuenta}
+                                onChange={e => setBeneficiarioForm(f => ({ ...f, numero_cuenta: e.target.value }))}
+                                className="auth-input auth-input-static pl-4"
+                              />
+                            </div>
+                          </>
+                        ),
+                      },
+                      {
+                        key: 'titular',
+                        label: 'El titular',
+                        question: '¿A nombre de quién está?',
+                        validate: () => (!beneficiarioForm.titular_cuenta.trim() ? 'Escribe el nombre del titular tal como aparece en el banco.' : null),
+                        content: (
+                          <div className="space-y-1.5">
+                            <label htmlFor="ben-titular" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Titular de la cuenta *</label>
+                            <input
+                              id="ben-titular"
+                              type="text"
+                              maxLength={255}
+                              placeholder="Nombre o razón social"
+                              value={beneficiarioForm.titular_cuenta}
+                              onChange={e => setBeneficiarioForm(f => ({ ...f, titular_cuenta: e.target.value }))}
+                              className="auth-input auth-input-static pl-4"
+                            />
+                          </div>
+                        ),
+                      },
+                    ]}
+                  />
                 </div>
               </div>
 

@@ -21,6 +21,13 @@
 > connect a `0.0.0.0` en Windows (E27) — corregido en PHP, el daemon siempre estuvo bien.
 > Detalle y qué falta en [DISENO_UI.md](DISENO_UI.md) §5-7.
 >
+> 🎨 **14/09/2026 (noche) — Reglas globales de UI y formularios por pasos.** Íconos de vidrio sin blur,
+> cero emojis, `<select>` y botones unificados, tablas, sin jerga técnica, responsive móvil primero; y la
+> última ola: **todos los formularios de crear/editar (16) son asistentes por pasos** (`StepFrame`,
+> [DISENO_UI.md](DISENO_UI.md) §6b). Publicado (respaldos `.next.bak-20260914-prestepframes` y
+> `-pretopbar-movil`) y verificado en producción con Playwright (admin y solicitante, escritorio y 390 px,
+> 0 errores de consola). Corregido de paso: la barra superior desbordaba 31 px en teléfonos.
+>
 > 🔐 **14/09/2026 — Repositorio git.** El proyecto ya tiene git (`main`, commits `e993228` base y
 > `fecb5eb` login) con remoto `https://github.com/comecyt0/SIDECyT_DT.git`, **que es público**. No se
 > ha hecho push: falta la confirmación del usuario y revisar qué de `CLAUDE.md`/`docs/` no debe ser

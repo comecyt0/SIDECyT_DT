@@ -7,9 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { AlertBox } from '@/components/ui/alert-box';
-import { FileText, Eye, Loader2, Search } from 'lucide-react';
+import StepFrame from '@/components/ui/step-frame';
+import { FileText, Eye, Search } from 'lucide-react';
 import api from '@/lib/api';
 import { colorMap } from '@/lib/color-mapper';
 
@@ -234,128 +233,105 @@ export default function InformesClient({ informes }: Props) {
         </CardContent>
       </Card>
 
-      {/* Detail Modal */}
-      <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
-        <DialogContent className="sm:max-w-[700px]">
-          <DialogHeader>
-            <DialogTitle>Revisión de Informe Final</DialogTitle>
-            <DialogDescription>
-              {selectedInforme && `Folio: ${selectedInforme.solicitud?.folio}`}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            {updateError && <AlertBox type="error" message={updateError} />}
-            {updateSuccess && <AlertBox type="success" message={updateSuccess} />}
-
-            {!updateSuccess && selectedInforme && (
+      {/* Revisión del informe, por pasos */}
+      <StepFrame
+        open={showDetailModal && !!selectedInforme}
+        title="Revisar informe final"
+        icon={<FileText className="h-5 w-5" />}
+        intro={<>{selectedInforme?.solicitud?.folio ? <>Solicitud <strong>{selectedInforme.solicitud.folio}</strong>. </> : null}Primero lee lo que entregó la institución; después registra tu decisión. Si pides correcciones, tus observaciones le llegan tal cual las escribas.</>}
+        onClose={() => setShowDetailModal(false)}
+        onSubmit={handleUpdateInforme}
+        submitting={updateLoading}
+        submitLabel="Guardar revisión"
+        error={updateError || null}
+        success={updateSuccess || null}
+        steps={[
+          {
+            key: 'entregado',
+            label: 'Lo entregado',
+            question: '¿Qué reportó el proyecto?',
+            content: selectedInforme ? (
               <>
-                {/* Solicitud Info */}
-                <div className="space-y-3 border-b pb-4">
-                  <h3 className="font-semibold text-neutral-900 dark:text-neutral-50">Información de Solicitud</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-neutral-500 dark:text-neutral-400">Folio</p>
-                      <p className="font-medium">{selectedInforme.solicitud?.folio}</p>
-                    </div>
-                    <div>
-                      <p className="text-neutral-500 dark:text-neutral-400">Institución</p>
-                      <p className="font-medium">{selectedInforme.solicitud?.empresa?.nombre}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-neutral-500 dark:text-neutral-400">Proyecto</p>
-                      <p className="font-medium">{selectedInforme.solicitud?.titulo_proyecto}</p>
-                    </div>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-[14px] px-4 py-3" style={{ background: 'var(--auth-field)' }}>
+                    <dt className="text-[11px] font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Proyecto</dt>
+                    <dd className="font-semibold text-[var(--app-ink)] mt-0.5">{selectedInforme.solicitud?.titulo_proyecto}</dd>
                   </div>
-                </div>
-
-                {/* Informe Info */}
-                <div className="space-y-3 border-b pb-4">
-                  <h3 className="font-semibold text-neutral-900 dark:text-neutral-50">Información del Informe</h3>
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <p className="text-neutral-500 dark:text-neutral-400">Tipo</p>
-                      <p className="font-medium">{selectedInforme.tipo || 'Final'}</p>
-                    </div>
-                    <div>
-                      <p className="text-neutral-500 dark:text-neutral-400">Fecha Límite de Entrega</p>
-                      <p className="font-medium">
-                        {new Date(selectedInforme.fecha_limite_entrega).toLocaleDateString('es-MX')}
-                      </p>
-                    </div>
-                    {selectedInforme.fecha_entregado && (
-                      <div>
-                        <p className="text-neutral-500 dark:text-neutral-400">Fecha Entregado</p>
-                        <p className="font-medium">
-                          {new Date(selectedInforme.fecha_entregado).toLocaleDateString('es-MX')}
-                        </p>
-                      </div>
-                    )}
+                  <div className="rounded-[14px] px-4 py-3" style={{ background: 'var(--auth-field)' }}>
+                    <dt className="text-[11px] font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Institución</dt>
+                    <dd className="font-semibold text-[var(--app-ink)] mt-0.5">{selectedInforme.solicitud?.empresa?.nombre || '—'}</dd>
                   </div>
-                </div>
-
-                {/* Resultados */}
+                  <div className="rounded-[14px] px-4 py-3" style={{ background: 'var(--auth-field)' }}>
+                    <dt className="text-[11px] font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Debía entregarse el</dt>
+                    <dd className="font-semibold text-[var(--app-ink)] mt-0.5">{new Date(selectedInforme.fecha_limite_entrega).toLocaleDateString('es-MX')}</dd>
+                  </div>
+                  <div className="rounded-[14px] px-4 py-3" style={{ background: 'var(--auth-field)' }}>
+                    <dt className="text-[11px] font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Se entregó el</dt>
+                    <dd className="font-semibold text-[var(--app-ink)] mt-0.5">{selectedInforme.fecha_entregado ? new Date(selectedInforme.fecha_entregado).toLocaleDateString('es-MX') : 'Todavía no'}</dd>
+                  </div>
+                </dl>
                 {selectedInforme.resultados_obtenidos && (
-                  <div className="space-y-3 border-b pb-4">
-                    <h3 className="font-semibold text-neutral-900 dark:text-neutral-50">Resultados Obtenidos</h3>
-                    <div className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded text-sm text-neutral-700 dark:text-neutral-200 whitespace-pre-wrap">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--app-ink-2)] mb-1.5">Resultados que reporta</p>
+                    <div className="rounded-[14px] px-4 py-3 text-sm text-[var(--app-ink)] whitespace-pre-wrap" style={{ background: 'var(--auth-field)' }}>
                       {selectedInforme.resultados_obtenidos}
                     </div>
                   </div>
                 )}
-
-                {/* Status Update */}
-                <div className="space-y-3 border-b pb-4">
-                  <h3 className="font-semibold text-neutral-900 dark:text-neutral-50">Cambiar Estado</h3>
+                {(selectedInforme.archivo_informe_url || selectedInforme.archivo_evidencias_url) && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedInforme.archivo_informe_url && (
+                      <a href={selectedInforme.archivo_informe_url} target="_blank" rel="noreferrer" className="btn-liquid inline-flex items-center gap-2 h-10 px-4 rounded-[14px] border text-sm font-semibold" style={{ borderColor: 'var(--app-rule)', color: 'var(--app-ink)' }}>
+                        <FileText className="h-4 w-4" aria-hidden="true" /> Abrir el informe
+                      </a>
+                    )}
+                    {selectedInforme.archivo_evidencias_url && (
+                      <a href={selectedInforme.archivo_evidencias_url} target="_blank" rel="noreferrer" className="btn-liquid inline-flex items-center gap-2 h-10 px-4 rounded-[14px] border text-sm font-semibold" style={{ borderColor: 'var(--app-rule)', color: 'var(--app-ink)' }}>
+                        <FileText className="h-4 w-4" aria-hidden="true" /> Abrir las evidencias
+                      </a>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : null,
+          },
+          {
+            key: 'decision',
+            label: 'Tu decisión',
+            question: '¿Se aprueba o necesita correcciones?',
+            validate: () => (!formData.estado ? 'Elige qué pasa con el informe.' : null),
+            content: (
+              <>
+                <div className="space-y-1.5">
+                  <label htmlFor="inf-estado" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Resultado de la revisión *</label>
                   <select
+                    id="inf-estado"
                     value={formData.estado}
                     onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                    className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm"
+                    className="auth-input auth-input-static pl-4"
                   >
-                    <option value="">Seleccionar estado...</option>
-                    <option value="pendiente">Pendiente</option>
-                    <option value="en_revision">En Revisión</option>
+                    <option value="">Elige una opción…</option>
+                    <option value="en_revision">Lo estoy revisando</option>
                     <option value="aprobado">Aprobado</option>
-                    <option value="rechazado">Rechazado</option>
+                    <option value="rechazado">Necesita correcciones</option>
+                    <option value="pendiente">Sigue pendiente de entrega</option>
                   </select>
                 </div>
-
-                {/* Observaciones */}
-                <div className="space-y-3 border-b pb-4">
-                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200">Observaciones de Revisión</label>
+                <div className="space-y-1.5">
+                  <label htmlFor="inf-obs" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Observaciones {formData.estado === 'rechazado' ? '*' : '(opcional)'}</label>
                   <textarea
+                    id="inf-obs"
                     value={formData.observaciones}
                     onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
-                    placeholder="Escribe observaciones si el informe necesita correcciones..."
-                    className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm resize-none h-24"
+                    placeholder="Qué falta o qué hay que corregir, con tus palabras."
+                    className="auth-input auth-input-static pl-4 !h-auto min-h-[110px] py-3 resize-y"
                   />
                 </div>
-
-                {/* Buttons */}
-                <div className="flex gap-3 justify-end">
-                  <Button variant="outline" onClick={() => setShowDetailModal(false)} disabled={updateLoading}>
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleUpdateInforme}
-                    disabled={updateLoading}
-                    className={`${colorMap.accent.background} hover:opacity-90`}
-                  >
-                    {updateLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Guardando...
-                      </>
-                    ) : (
-                      'Guardar Revisión'
-                    )}
-                  </Button>
-                </div>
               </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

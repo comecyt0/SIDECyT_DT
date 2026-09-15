@@ -944,6 +944,11 @@ global estilizado en `globals.css`, botones unificados con hover líquido (`Butt
 suave, sin jerga técnica a la vista, **responsive móvil primero en todo**. El menú/nav no se rediseña, pero sí
 se corrige (responsive). Pantalla de carga v3: splash en el HTML del servidor + bus de `lib/api.ts` para
 peticiones que escriben + clics en enlaces.
+**Todo formulario de crear/editar es un `StepFrame`** (`components/ui/step-frame.tsx`: pasos a la izquierda,
+"Paso n de N", pregunta guía, aviso de contexto, Cancelar/Siguiente/Guardar; modal o `inline` para páginas
+completas). Un formulario nuevo **no** se hace con `Dialog` + `Input` sueltos: se declara como `steps`, cada
+uno con su `validate`. Los 16 existentes están listados en `docs/DISENO_UI.md` §6b. Los `Select` de base-ui
+dentro de formularios probados en jsdom se cambian por `<select>` nativo (mismo dibujo por el estilo global).
 
 ### Carrusel del login — imágenes subidas desde el panel [14-09-2026]
 `POST /admin/carousel/upload` (multipart `imagen`, JPG/PNG/WebP ≤ 8 MB, MIME real con finfo, nombre

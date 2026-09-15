@@ -185,7 +185,7 @@ export default function AdminTopLayout({
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col">
       {/* ── TOP BAR ── */}
       <header className="sticky top-0 z-50 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border-b border-neutral-100 dark:border-neutral-700 shadow-sm">
-        <div className="max-w-screen-2xl mx-auto px-4 md:px-8 h-16 flex items-center gap-4">
+        <div className="max-w-screen-2xl mx-auto px-4 md:px-8 h-16 flex items-center gap-2 sm:gap-4">
 
           {/* Logo */}
           <Link href="/admin/dashboard" className="flex items-center gap-3 shrink-0">
@@ -316,7 +316,7 @@ export default function AdminTopLayout({
           <GlobalSearch />
 
           {/* Right side */}
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-1 sm:gap-3">
 
             <LanguageSwitcher />
             <ThemeToggle />
@@ -424,7 +424,7 @@ export default function AdminTopLayout({
             </div>
 
             {/* Divider */}
-            <div className="h-7 w-px bg-neutral-200 dark:bg-neutral-700" />
+            <div className="h-7 w-px bg-neutral-200 dark:bg-neutral-700 hidden sm:block" />
 
             {/* User avatar + name */}
             <div className="flex items-center gap-3 cursor-pointer group">

@@ -4,8 +4,9 @@ import { useState, useEffect, Children, cloneElement, isValidElement, type React
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import StepFrame from '@/components/ui/step-frame';
 import {
-  Edit, Trash2, Loader2, UserPlus, X,
+  Edit, Trash2, UserPlus,
   Mail, UserCircle, Lock, Briefcase, Phone, Building2, ShieldCheck
 } from 'lucide-react';
 import api from '@/lib/api';
@@ -159,8 +160,8 @@ export default function UsuariosClient({ users, pagination }: Props) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
 
     if (!validateForm()) {
       setFeedback({ type: 'error', message: 'Por favor completa todos los campos requeridos' });
@@ -320,129 +321,101 @@ export default function UsuariosClient({ users, pagination }: Props) {
         variant="destructive"
       />
 
-      {/* Modal de alta/edición — mismo sistema de campos que el login (auth-input) sobre app-card */}
-      {showModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'color-mix(in oklch, var(--auth-ink) 40%, transparent)', backdropFilter: 'blur(6px)' }}
-          onClick={(e) => { if (e.target === e.currentTarget) { setShowModal(false); setErrors({}); } }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="usuario-modal-title"
-            className="app-card w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200"
-          >
-            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b" style={{ borderColor: 'var(--app-rule)' }}>
-              <div className="flex items-center gap-3">
-                <span className="app-tile-icon" style={{ color: 'var(--tile-vino-fg)' }}>
-                  <UserCircle className="h-5 w-5" />
-                </span>
-                <div>
-                  <h2 id="usuario-modal-title" className="text-base font-bold text-[var(--app-ink)]">
-                    {editingUser ? 'Editar usuario' : 'Nuevo usuario'}
-                  </h2>
-                  <p className="text-xs text-[var(--app-ink-2)]">
-                    {editingUser ? editingUser.email : 'La cuenta queda activa al guardar.'}
-                  </p>
+      {/* Alta / edición por pasos (StepFrame) — mismo marco que todo el sistema */}
+      <StepFrame
+        open={showModal}
+        title={editingUser ? `Editar a ${editingUser.name}` : 'Nuevo usuario'}
+        icon={<UserCircle className="h-5 w-5" />}
+        intro={
+          editingUser
+            ? <>Cambia solo lo necesario. Si dejas la contraseña vacía, <strong>se conserva la actual</strong>.</>
+            : <>Un usuario es <strong>una persona que entra al sistema</strong> con su correo y contraseña. Su papel define qué puede ver y hacer.</>
+        }
+        steps={[
+          {
+            key: 'cuenta',
+            label: 'La cuenta',
+            question: '¿Quién es y cómo entra?',
+            validate: () => {
+              if (!formData.name.trim()) return 'Escribe el nombre completo.';
+              if (!formData.email.trim()) return 'Escribe el correo electrónico.';
+              if (!editingUser && !formData.password) return 'Define una contraseña inicial.';
+              return null;
+            },
+            content: (
+              <>
+                <FField id="usr-name" icon={UserCircle} label="Nombre completo *" error={errors.name}>
+                  <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="name" placeholder="Ej. Ana Pérez López" />
+                </FField>
+                <FField id="usr-email" icon={Mail} label="Correo electrónico *" error={errors.email}>
+                  <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="email" placeholder="nombre@institucion.mx" />
+                </FField>
+                <FField id="usr-password" icon={Lock} label={editingUser ? 'Nueva contraseña (opcional)' : 'Contraseña inicial *'} error={errors.password}>
+                  <input type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="new-password" placeholder={editingUser ? 'Déjala vacía para no cambiarla' : 'Mínimo 8 caracteres'} />
+                </FField>
+              </>
+            ),
+          },
+          {
+            key: 'papel',
+            label: 'Su papel',
+            question: '¿Qué hará en el sistema?',
+            validate: () => (!formData.rol_id ? 'Elige el papel que tendrá.' : null),
+            content: (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FField id="usr-rol" icon={ShieldCheck} label="Papel en el sistema *" error={errors.rol_id}>
+                    <select value={formData.rol_id} onChange={e => setFormData({ ...formData, rol_id: e.target.value })} className="auth-input auth-input-static pl-10 cursor-pointer">
+                      <option value="">Elige…</option>
+                      {catalogs.roles.map((r) => (
+                        <option key={r.id} value={String(r.id)}>{r.nombre}</option>
+                      ))}
+                    </select>
+                  </FField>
+                  <FField id="usr-empresa" icon={Building2} label="Institución">
+                    <select value={formData.empresa_id} onChange={e => setFormData({ ...formData, empresa_id: e.target.value })} className="auth-input auth-input-static pl-10 cursor-pointer">
+                      <option value="">Ninguna (oficina central)</option>
+                      {catalogs.instituciones.map((i) => (
+                        <option key={i.id} value={String(i.id)}>{i.nombre}</option>
+                      ))}
+                    </select>
+                  </FField>
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setShowModal(false); setErrors({}); }}
-                aria-label="Cerrar"
-                className="p-2 rounded-lg text-[var(--app-ink-2)] hover:bg-[var(--app-hover-bg)] transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <FField id="usr-name" icon={UserCircle} label="Nombre completo *" error={errors.name}>
-                <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="name" />
-              </FField>
-
-              <FField id="usr-email" icon={Mail} label="Correo electrónico *" error={errors.email}>
-                <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="email" />
-              </FField>
-
-              <FField id="usr-password" icon={Lock} label={editingUser ? 'Contraseña (vacío = conservar)' : 'Contraseña *'} error={errors.password}>
-                <input type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="new-password" />
-              </FField>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FField id="usr-rol" icon={ShieldCheck} label="Rol del sistema *" error={errors.rol_id}>
-                  <select value={formData.rol_id} onChange={e => setFormData({ ...formData, rol_id: e.target.value })} className="auth-input auth-input-static pl-10 appearance-none cursor-pointer">
-                    <option value="">Selecciona…</option>
-                    {catalogs.roles.map((r) => (
-                      <option key={r.id} value={String(r.id)}>{r.nombre}</option>
-                    ))}
-                  </select>
-                </FField>
-                <FField id="usr-empresa" icon={Building2} label="Institución">
-                  <select value={formData.empresa_id} onChange={e => setFormData({ ...formData, empresa_id: e.target.value })} className="auth-input auth-input-static pl-10 appearance-none cursor-pointer">
-                    <option value="">Ninguna / Central</option>
-                    {catalogs.instituciones.map((i) => (
-                      <option key={i.id} value={String(i.id)}>{i.nombre}</option>
-                    ))}
-                  </select>
-                </FField>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FField id="usr-cargo" icon={Briefcase} label="Cargo">
-                  <input value={formData.cargo} onChange={e => setFormData({ ...formData, cargo: e.target.value })} className="auth-input auth-input-static pl-10" />
-                </FField>
-                <FField id="usr-telefono" icon={Phone} label="Teléfono">
-                  <input value={formData.telefono} onChange={e => setFormData({ ...formData, telefono: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="tel" />
-                </FField>
-              </div>
-
-              {/* Activo: interruptor accesible (checkbox real debajo) */}
-              <label className="flex items-center justify-between gap-4 rounded-[var(--auth-radius-field)] border px-4 py-3 cursor-pointer" style={{ borderColor: 'var(--app-rule)', background: formData.activo ? 'var(--tile-emerald-bg)' : 'var(--app-hover-bg)' }}>
-                <span>
-                  <span className="block text-sm font-semibold text-[var(--app-ink)]">Cuenta activa</span>
-                  <span className="block text-xs text-[var(--app-ink-2)]">Si se desactiva, el usuario no podrá iniciar sesión.</span>
-                </span>
-                <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    aria-checked={formData.activo}
-                    checked={formData.activo}
-                    onChange={e => setFormData({ ...formData, activo: e.target.checked })}
-                    className="peer sr-only"
-                  />
-                  <span className="h-6 w-11 rounded-full transition-colors duration-160" style={{ background: formData.activo ? 'var(--tile-emerald-fg)' : 'var(--auth-rule-strong)' }} />
-                  <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-160" style={{ transform: formData.activo ? 'translateX(20px)' : 'translateX(0)' }} />
-                </span>
-              </label>
-
-              <div className="pt-2 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => { setShowModal(false); setErrors({}); }}
-                  className="flex-1 h-12 rounded-[var(--auth-radius-field)] border font-bold text-sm transition-colors hover:bg-[var(--app-hover-bg)]"
-                  style={{ borderColor: 'var(--app-rule)', color: 'var(--app-ink)' }}
-                >
-                  Cancelar
-                </button>
-                <button type="submit" disabled={submitting} data-state={submitting ? 'loading' : 'idle'} className="auth-submit flex-1">
-                  <span key={submitting ? 'loading' : 'idle'} className="auth-swap flex items-center gap-2.5">
-                    {submitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" /> Guardando…
-                      </>
-                    ) : (
-                      editingUser ? 'Guardar cambios' : 'Crear usuario'
-                    )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FField id="usr-cargo" icon={Briefcase} label="Cargo">
+                    <input value={formData.cargo} onChange={e => setFormData({ ...formData, cargo: e.target.value })} className="auth-input auth-input-static pl-10" placeholder="Ej. Coordinadora de proyectos" />
+                  </FField>
+                  <FField id="usr-telefono" icon={Phone} label="Teléfono">
+                    <input value={formData.telefono} onChange={e => setFormData({ ...formData, telefono: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="tel" placeholder="Ej. 722 123 4567" />
+                  </FField>
+                </div>
+                <label className="flex items-center justify-between gap-4 rounded-[var(--auth-radius-field)] border px-4 py-3 cursor-pointer" style={{ borderColor: 'var(--app-rule)', backgroundColor: formData.activo ? 'var(--tile-emerald-bg)' : 'var(--app-hover-bg)' }}>
+                  <span>
+                    <span className="block text-sm font-semibold text-[var(--app-ink)]">Puede entrar al sistema</span>
+                    <span className="block text-xs text-[var(--app-ink-2)]">Si lo apagas, la cuenta se conserva pero no podrá iniciar sesión.</span>
                   </span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                  <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      aria-checked={formData.activo}
+                      checked={formData.activo}
+                      onChange={e => setFormData({ ...formData, activo: e.target.checked })}
+                      className="peer sr-only"
+                    />
+                    <span className="h-6 w-11 rounded-full transition-colors duration-160" style={{ background: formData.activo ? 'var(--tile-emerald-fg)' : 'var(--auth-rule-strong)' }} />
+                    <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-160" style={{ transform: formData.activo ? 'translateX(20px)' : 'translateX(0)' }} />
+                  </span>
+                </label>
+              </>
+            ),
+          },
+        ]}
+        onClose={() => { setShowModal(false); setErrors({}); }}
+        onSubmit={() => handleSubmit()}
+        submitting={submitting}
+        submitLabel={editingUser ? 'Guardar cambios' : 'Crear usuario'}
+      />
     </div>
   );
 }

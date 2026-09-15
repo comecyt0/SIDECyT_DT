@@ -2,21 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Building, Phone, Briefcase, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Building, Phone, Briefcase, CheckCircle2 } from 'lucide-react';
 import api from '@/lib/api';
-import { AlertBox } from '@/components/ui/alert-box';
 import { INSTITUTION } from '@/lib/institution';
+import StepFrame from '@/components/ui/step-frame';
 
 interface EmpresaOption {
   id: number;
   nombre: string;
   acronimo?: string;
 }
+
+const labelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
+const inputCls = 'auth-input auth-input-static pl-4';
 
 export default function SolicitanteOnboardingPage() {
   const router = useRouter();
@@ -41,11 +40,12 @@ export default function SolicitanteOnboardingPage() {
         const me = await api.get('/auth/me');
         const u = me.data?.user;
         if (u) {
-          setForm({
-            empresa_id: u.empresa_id ? String(u.empresa_id) : '',
-            telefono: u.telefono ?? '',
-            cargo: u.cargo ?? '',
-          });
+          // Precarga sin pisar lo que la persona ya haya escrito mientras cargaba
+          setForm((prev) => ({
+            empresa_id: prev.empresa_id || (u.empresa_id ? String(u.empresa_id) : ''),
+            telefono: prev.telefono || (u.telefono ?? ''),
+            cargo: prev.cargo || (u.cargo ?? ''),
+          }));
           // Si ya tiene institución, redirige al dashboard — onboarding no aplica
           if (u.empresa_id) {
             router.replace('/solicitante/dashboard');
@@ -61,8 +61,7 @@ export default function SolicitanteOnboardingPage() {
     init();
   }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!form.empresa_id) {
       setError('Selecciona la institución a la que perteneces.');
       return;
@@ -85,40 +84,38 @@ export default function SolicitanteOnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-primary/5 dark:from-neutral-950 dark:to-primary/10 flex items-center justify-center p-6">
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-        className="w-full max-w-xl"
-      >
-        <Card className="border-0 shadow-2xl rounded-3xl overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-primary to-[var(--brand-vino-700)] text-white pb-6">
-            <CardTitle className="text-2xl font-extrabold flex items-center gap-2">
-              <CheckCircle2 className="w-6 h-6" />
-              Bienvenido a {INSTITUTION.name}
-            </CardTitle>
-            <CardDescription className="text-white/80">
-              Antes de crear tu primera solicitud necesitamos tres datos de tu institución.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-8 space-y-6">
-            {error && <AlertBox type="error" message={error} onClose={() => setError(null)} />}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6" style={{ background: 'var(--app-bg)' }}>
+      <StepFrame
+        inline
+        hideCancel
+        size="md"
+        title={`Bienvenido a ${INSTITUTION.name}`}
+        icon={<CheckCircle2 className="h-5 w-5" />}
+        intro={<>Antes de tu primera solicitud necesitamos saber <strong>desde qué institución participas</strong> y cómo contactarte. Toma un minuto.</>}
+        onClose={() => undefined}
+        onSubmit={handleSubmit}
+        submitting={saving}
+        submitLabel="Continuar al sistema"
+        error={error}
+        steps={[
+          {
+            key: 'institucion',
+            label: 'Tu institución',
+            question: '¿Desde qué institución participas?',
+            validate: () => (!form.empresa_id ? 'Elige tu institución para continuar.' : null),
+            content: (
               <div className="space-y-1.5">
-                <Label htmlFor="ob-inst" className="flex items-center gap-1 text-sm font-semibold">
-                  <Building className="w-3.5 h-3.5 text-primary" />
-                  Institución <span className="text-red-500">*</span>
+                <Label htmlFor="ob-inst" className={`${labelCls} flex items-center gap-1`}>
+                  <Building className="w-3.5 h-3.5" aria-hidden="true" /> Institución *
                 </Label>
                 {loadingCat ? (
-                  <div className="skeleton h-10 rounded-md" />
+                  <div className="skeleton h-12 rounded-[var(--auth-radius-field)]" />
                 ) : (
                   <select
                     id="ob-inst"
                     value={form.empresa_id}
                     onChange={(e) => setForm({ ...form, empresa_id: e.target.value })}
-                    className="w-full h-10 px-3 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    className={inputCls}
                     required
                   >
                     <option value="">Selecciona una institución…</option>
@@ -129,47 +126,36 @@ export default function SolicitanteOnboardingPage() {
                     ))}
                   </select>
                 )}
-                <p className="text-[10px] text-neutral-500 dark:text-neutral-300">
-                  Si tu institución no está en la lista, contacta a {INSTITUTION.contactEmail}.
+                <p className="text-xs text-[var(--app-ink-2)]">
+                  Si tu institución no está en la lista, escribe a {INSTITUTION.contactEmail}.
                 </p>
               </div>
-
+            ),
+          },
+          {
+            key: 'contacto',
+            label: 'Cómo contactarte',
+            question: '¿Cuál es tu cargo y teléfono?',
+            content: (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="ob-cargo" className="flex items-center gap-1 text-sm font-semibold">
-                    <Briefcase className="w-3.5 h-3.5 text-primary" />
-                    Cargo
+                  <Label htmlFor="ob-cargo" className={`${labelCls} flex items-center gap-1`}>
+                    <Briefcase className="w-3.5 h-3.5" aria-hidden="true" /> Cargo
                   </Label>
-                  <Input
-                    id="ob-cargo"
-                    placeholder="Investigador, Coordinador…"
-                    value={form.cargo}
-                    onChange={(e) => setForm({ ...form, cargo: e.target.value })}
-                  />
+                  <input id="ob-cargo" placeholder="Investigador, Coordinador…" value={form.cargo} onChange={(e) => setForm({ ...form, cargo: e.target.value })} className={inputCls} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="ob-tel" className="flex items-center gap-1 text-sm font-semibold">
-                    <Phone className="w-3.5 h-3.5 text-primary" />
-                    Teléfono
+                  <Label htmlFor="ob-tel" className={`${labelCls} flex items-center gap-1`}>
+                    <Phone className="w-3.5 h-3.5" aria-hidden="true" /> Teléfono
                   </Label>
-                  <Input
-                    id="ob-tel"
-                    type="tel"
-                    placeholder="722 123 4567"
-                    value={form.telefono}
-                    onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                  />
+                  <input id="ob-tel" type="tel" placeholder="722 123 4567" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} className={inputCls} />
                 </div>
+                <p className="sm:col-span-2 text-xs text-[var(--app-ink-2)]">Ambos son opcionales; sirven para que {INSTITUTION.name} pueda localizarte si hay dudas con una solicitud.</p>
               </div>
-
-              <Button type="submit" disabled={saving} className="w-full bg-primary hover:bg-[var(--brand-vino-700)] text-white font-bold py-2.5">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ArrowRight className="w-4 h-4 mr-2" />}
-                Continuar al sistema
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </motion.div>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

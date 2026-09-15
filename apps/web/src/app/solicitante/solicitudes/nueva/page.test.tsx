@@ -18,7 +18,7 @@ vi.mock('@/lib/api', () => ({
 }));
 
 // El hook hace fetch al montar el componente — mockéalo a un estado vacío estable.
-// Para los tests de carga inicial y submit no necesitamos rubros/campos/modalidades.
+// Con el catálogo vacío el asistente tiene 3 pasos: convocatoria → proyecto → revisar.
 vi.mock('@/hooks/useProgramaCatalog', () => ({
   useProgramaCatalog: () => ({
     programa: null,
@@ -64,6 +64,8 @@ function mockInitData() {
   });
 }
 
+const next = () => fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
+
 describe('NuevaSolicitud (solicitante)', () => {
   beforeEach(() => {
     mockedGet.mockReset();
@@ -82,26 +84,21 @@ describe('NuevaSolicitud (solicitante)', () => {
       expect(mockedGet).toHaveBeenCalledWith('/catalogos');
     });
 
-    // Headers visibles
-    expect(screen.getByText(/Nueva Solicitud/i)).toBeInTheDocument();
-    expect(screen.getByText(/Selecciona Convocatoria/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Nueva solicitud/i })).toBeInTheDocument();
+    expect(screen.getByText(/¿A qué convocatoria aplicas\?/i)).toBeInTheDocument();
+    expect(screen.getByText(/Paso 1 de 3/i)).toBeInTheDocument();
   });
 
-  it('muestra error de validación al hacer submit con campos requeridos vacíos', async () => {
+  it('no avanza sin convocatoria y muestra el error del paso', async () => {
     mockInitData();
 
     render(<NuevaSolicitud />);
     await waitFor(() => expect(mockedGet).toHaveBeenCalledWith('/catalogos'));
 
-    // Click Guardar Borrador (submit) sin llenar nada
-    const submitBtn = screen.getByRole('button', { name: /Guardar Borrador/i });
-    fireEvent.click(submitBtn);
+    next();
 
-    // No se llama POST porque validateForm() falla
-    await waitFor(() => {
-      expect(screen.getByText(/El título es obligatorio/i)).toBeInTheDocument();
-    });
-    expect(mockedPost).not.toHaveBeenCalledWith('/solicitudes', expect.anything());
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Selecciona una convocatoria/i);
+    expect(mockedPost).not.toHaveBeenCalled();
   });
 
   it('muestra mensaje de error si la API de carga falla', async () => {
@@ -116,38 +113,54 @@ describe('NuevaSolicitud (solicitante)', () => {
     });
   });
 
-  it('submit con datos básicos válidos llama POST /solicitudes', async () => {
+  it('en el paso del proyecto exige título, área, monto y resumen', async () => {
+    mockInitData();
+
+    render(<NuevaSolicitud />);
+    await waitFor(() => expect(screen.getByText('Convocatoria PROT 2026 (2026)')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText(/^Convocatoria/i), { target: { value: '1' } });
+    next();
+    expect(await screen.findByText(/¿De qué trata tu proyecto\?/i)).toBeInTheDocument();
+
+    next();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/El título es obligatorio/i);
+    expect(screen.getByText(/Selecciona un área/i)).toBeInTheDocument();
+    expect(mockedPost).not.toHaveBeenCalled();
+  });
+
+  it('con los datos básicos completos llega a "Revisar" y hace POST /solicitudes', async () => {
     mockInitData();
     mockedPost.mockResolvedValue({ data: { solicitud: { id: 99 } } });
 
     render(<NuevaSolicitud />);
-    await waitFor(() => expect(mockedGet).toHaveBeenCalledWith('/catalogos'));
+    await waitFor(() => expect(screen.getByText('Convocatoria PROT 2026 (2026)')).toBeInTheDocument());
 
-    // Llenar inputs simples (saltamos el Select de base-ui — el componente acepta state directo
-    // pero como no podemos interactuar con base-ui Select desde jsdom sin gymnastics, este test
-    // sólo confirma que cuando todas las validaciones pasan en el camino más simple, se llama POST.
-    // Inyectamos valores directos a inputs.
-    fireEvent.change(screen.getByLabelText(/Título del Proyecto/i), {
-      target: { value: 'Mi Proyecto Test' },
-    });
-    fireEvent.change(screen.getByLabelText(/Resumen Ejecutivo/i), {
-      target: { value: 'Descripción detallada del proyecto' },
-    });
-    fireEvent.change(screen.getByLabelText(/Monto Solicitado/i), {
-      target: { value: '50000' },
-    });
+    fireEvent.change(screen.getByLabelText(/^Convocatoria/i), { target: { value: '1' } });
+    next();
 
-    // Click submit — sin convocatoria ni área deberá fallar validación. Es OK: confirmamos que
-    // el componente NO hace POST sin convocatoria/área (lo cual es exactamente el camino feliz inverso).
-    fireEvent.click(screen.getByRole('button', { name: /Guardar Borrador/i }));
+    fireEvent.change(await screen.findByLabelText(/Título del proyecto/i), { target: { value: 'Mi Proyecto Test' } });
+    fireEvent.change(screen.getByLabelText(/Área de conocimiento/i), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText(/Monto que solicitas/i), { target: { value: '50000' } });
+    fireEvent.change(screen.getByLabelText(/Resumen del proyecto/i), { target: { value: 'Descripción detallada del proyecto' } });
+    next();
 
-    // Validación bloquea: aparecen errores de convocatoria y área
+    expect(await screen.findByText(/¿Todo en orden\?/i)).toBeInTheDocument();
+    expect(screen.getByText('Mi Proyecto Test')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar solicitud/i }));
+
     await waitFor(() => {
-      expect(screen.getByText(/Selecciona una convocatoria/i)).toBeInTheDocument();
+      expect(mockedPost).toHaveBeenCalledWith(
+        '/solicitudes',
+        expect.objectContaining({
+          convocatoria_id: '1',
+          titulo_proyecto: 'Mi Proyecto Test',
+          area_conocimiento_id: '10',
+          monto_solicitado: 50000,
+        }),
+      );
     });
-    expect(screen.getByText(/Selecciona un área/i)).toBeInTheDocument();
-    // POST nunca se llama
-    expect(mockedPost).not.toHaveBeenCalled();
   });
 
   it('botón Cancelar llama a router.back', async () => {

@@ -31,10 +31,12 @@ describe('AuditLogsClient', () => {
 
   it('renderiza los rows y pinta acción + usuario', () => {
     render(<AuditLogsClient logs={baseLogs} initialFilters={{ action: '', user_id: '', from: '', to: '' }} />);
-    expect(screen.getByText('solicitud.aprobada_documentalmente')).toBeInTheDocument();
+    // 14/09/2026: sin claves técnicas — la acción se muestra en lenguaje llano
+    expect(screen.getByText('Aprobada documentalmente')).toBeInTheDocument();
+    expect(screen.queryByText('solicitud.aprobada_documentalmente')).not.toBeInTheDocument();
     expect(screen.getByText('Juan Revisor')).toBeInTheDocument();
     expect(screen.getByText('juan@x.mx')).toBeInTheDocument();
-    expect(screen.getByText('Solicitud#42')).toBeInTheDocument();
+    expect(screen.getByText('Solicitud nº 42')).toBeInTheDocument();
   });
 
   it('botón Aplicar pushea querystring con los filtros', () => {

@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import StepFrame from '@/components/ui/step-frame';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
@@ -310,25 +311,27 @@ export default function CarruselClient({ slides }: Props) {
         </div>
       </div>
 
-      {/* Create / Edit Modal */}
-      <Dialog open={showModal} onOpenChange={(open) => !saving && !uploading && setShowModal(open)}>
-        <DialogContent className="sm:max-w-[560px] app-card p-6">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]">
-              <Images className="w-5 h-5 text-primary" />
-              {editingSlide ? 'Editar slide' : 'Nuevo slide'}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 mt-2">
-            {error && <AlertBox type="error" message={error} onClose={() => setError('')} />}
-            {success && <AlertBox type="success" message={success} />}
-
-            {!success && (
+      {/* Alta / edición por pasos (StepFrame) */}
+      <StepFrame
+        open={showModal}
+        title={editingSlide ? 'Editar diapositiva' : 'Nueva diapositiva'}
+        icon={<Images className="h-5 w-5" />}
+        intro={<>Cada diapositiva es <strong>una pantalla del carrusel del inicio de sesión</strong>. Primero la foto, luego los textos y al final decides si se muestra.</>}
+        error={error || null}
+        success={success || null}
+        submitting={saving || uploading}
+        submitLabel={editingSlide ? 'Guardar cambios' : 'Publicar diapositiva'}
+        onClose={() => { if (!saving && !uploading) setShowModal(false); }}
+        onSubmit={handleSave}
+        steps={[
+          {
+            key: 'imagen',
+            label: 'La foto',
+            question: '¿Qué imagen se verá de fondo?',
+            content: (
               <>
-                {/* Imagen: zona de arrastrar/soltar + vista previa */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Imagen del slide</label>
+                  <label className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Imagen (opcional)</label>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -399,84 +402,81 @@ export default function CarruselClient({ slides }: Props) {
                   </div>
                   {uploadError && <p className="text-xs" style={{ color: 'var(--auth-danger)' }}>{uploadError}</p>}
                 </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2 space-y-1.5">
-                    <label htmlFor="slide-titulo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Título *</label>
-                    <input id="slide-titulo" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} placeholder="Ej: Gestión de Proyectos Tecnológicos" className={fieldCls} />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label htmlFor="slide-subtitulo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Subtítulo</label>
-                    <input id="slide-subtitulo" value={form.subtitulo} onChange={(e) => setForm({ ...form, subtitulo: e.target.value })} placeholder={`Ej: Plataforma ${INSTITUTION.name}`} className={fieldCls} />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label htmlFor="slide-badge" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Etiqueta</label>
-                    <input id="slide-badge" value={form.badge_texto} onChange={(e) => setForm({ ...form, badge_texto: e.target.value })} placeholder="Ej: Desarrollo Tecnológico" className={fieldCls} />
-                  </div>
-
-                  <div className="col-span-2 space-y-1.5">
-                    <label htmlFor="slide-desc" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Descripción</label>
-                    <textarea
-                      id="slide-desc"
-                      value={form.descripcion}
-                      onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-                      placeholder="Breve descripción del slide (opcional)"
-                      className="w-full px-4 py-3 rounded-[var(--auth-radius-field)] text-sm resize-none h-20 outline-none transition-colors"
-                      style={{ border: '1.5px solid var(--auth-rule)', background: 'var(--auth-field)', color: 'var(--auth-ink)' }}
-                    />
-                  </div>
-
-                  <div className="col-span-2 space-y-1.5">
-                    <label htmlFor="slide-url" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest flex items-center gap-1.5">
-                      <Link2 className="w-3.5 h-3.5" /> O pega una URL de imagen
-                      {form.imagen_url && form.imagen_url.startsWith('http') && (
-                        <a href={form.imagen_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1" aria-label="Abrir imagen">
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                    </label>
-                    <input id="slide-url" value={form.imagen_url} onChange={(e) => setForm({ ...form, imagen_url: e.target.value })} placeholder="https://…edomex.gob.mx/imagen.jpg" className={fieldCls} />
-                    <p className="text-[11px] text-[var(--app-ink-2)]">
-                      Si prefieres una imagen que ya está publicada en un sitio del Gobierno del Estado de México, pega aquí su dirección.
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label htmlFor="slide-orden" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest flex items-center gap-1">
-                      <GripVertical className="w-3.5 h-3.5" /> Orden
-                    </label>
-                    <input id="slide-orden" type="number" min={0} value={form.orden} onChange={(e) => setForm({ ...form, orden: parseInt(e.target.value) || 0 })} className={fieldCls} />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label htmlFor="slide-estado" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Estado</label>
-                    <select id="slide-estado" value={form.activo ? '1' : '0'} onChange={(e) => setForm({ ...form, activo: e.target.value === '1' })} className={`${fieldCls} appearance-none cursor-pointer`}>
-                      <option value="1">Activo (visible)</option>
-                      <option value="0">Inactivo (oculto)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 justify-end pt-2">
-                  <Button variant="outline" onClick={() => setShowModal(false)} disabled={saving || uploading}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleSave} disabled={saving || uploading}>
-                    {saving ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Guardando…
-                      </>
-                    ) : editingSlide ? 'Actualizar slide' : 'Crear slide'}
-                  </Button>
+                <div className="space-y-1.5">
+                  <label htmlFor="slide-url" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest flex items-center gap-1.5">
+                    <Link2 className="w-3.5 h-3.5" /> O usa una imagen ya publicada
+                    {form.imagen_url && form.imagen_url.startsWith('http') && (
+                      <a href={form.imagen_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1" aria-label="Abrir imagen">
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </label>
+                  <input id="slide-url" value={form.imagen_url} onChange={(e) => setForm({ ...form, imagen_url: e.target.value })} placeholder="https://…edomex.gob.mx/imagen.jpg" className={fieldCls} />
+                  <p className="text-[11px] text-[var(--app-ink-2)]">
+                    Si la foto ya está en un sitio del Gobierno del Estado de México, pega aquí su dirección.
+                  </p>
                 </div>
               </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+            ),
+          },
+          {
+            key: 'textos',
+            label: 'Los textos',
+            question: '¿Qué dirá la diapositiva?',
+            validate: () => (!form.titulo.trim() ? 'Escribe el título: es lo primero que lee la persona.' : null),
+            content: (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2 space-y-1.5">
+                  <label htmlFor="slide-titulo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Título *</label>
+                  <input id="slide-titulo" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} placeholder="Ej: Gestión de Proyectos Tecnológicos" className={fieldCls} />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="slide-subtitulo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Subtítulo</label>
+                  <input id="slide-subtitulo" value={form.subtitulo} onChange={(e) => setForm({ ...form, subtitulo: e.target.value })} placeholder={`Ej: Plataforma ${INSTITUTION.name}`} className={fieldCls} />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="slide-badge" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Etiqueta corta</label>
+                  <input id="slide-badge" value={form.badge_texto} onChange={(e) => setForm({ ...form, badge_texto: e.target.value })} placeholder="Ej: Desarrollo Tecnológico" className={fieldCls} />
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <label htmlFor="slide-desc" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Descripción</label>
+                  <textarea
+                    id="slide-desc"
+                    value={form.descripcion}
+                    onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                    placeholder="Una o dos frases (opcional)"
+                    className="w-full px-4 py-3 rounded-[var(--auth-radius-field)] text-sm resize-none h-20 outline-none transition-colors"
+                    style={{ border: '1.5px solid var(--auth-rule)', background: 'var(--auth-field)', color: 'var(--auth-ink)' }}
+                  />
+                </div>
+              </div>
+            ),
+          },
+          {
+            key: 'orden',
+            label: 'Cuándo se ve',
+            question: '¿En qué lugar y se muestra ya?',
+            content: (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label htmlFor="slide-orden" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest flex items-center gap-1">
+                    <GripVertical className="w-3.5 h-3.5" /> Posición
+                  </label>
+                  <input id="slide-orden" type="number" min={0} value={form.orden} onChange={(e) => setForm({ ...form, orden: parseInt(e.target.value) || 0 })} className={fieldCls} />
+                  <p className="text-[11px] text-[var(--app-ink-2)]">Las de número más bajo se ven primero.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="slide-estado" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Visibilidad</label>
+                  <select id="slide-estado" value={form.activo ? '1' : '0'} onChange={(e) => setForm({ ...form, activo: e.target.value === '1' })} className={`${fieldCls} cursor-pointer`}>
+                    <option value="1">Se muestra en el inicio de sesión</option>
+                    <option value="0">Guardada, sin mostrar</option>
+                  </select>
+                </div>
+              </div>
+            ),
+          },
+        ]}
+      />
 
       <ConfirmDialog
         open={!!confirmDelete}
