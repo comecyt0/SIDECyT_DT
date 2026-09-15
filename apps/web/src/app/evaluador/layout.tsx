@@ -9,10 +9,11 @@ import RoleTopLayout from '@/components/layout/RoleTopLayout';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useSessionRefresh } from '@/hooks/useSessionRefresh';
 import { useT } from '@/i18n/I18nProvider';
+import NotificationToast from '@/components/notifications/NotificationToast';
 
 export default function EvaluadorLayout({ children }: { children: React.ReactNode }) {
   const { t } = useT();
-  const { notifs, count, markAsRead, markAllAsRead } = useNotifications();
+  const { notifs, count, markAsRead, markAllAsRead, incoming, dismissIncoming } = useNotifications();
   useSessionRefresh();
 
   const navItems = [
@@ -36,6 +37,11 @@ export default function EvaluadorLayout({ children }: { children: React.ReactNod
       notificationSolicitudHref={(id) => `/evaluador/asignaciones?solicitud=${id}`}
     >
       {children}
+      <NotificationToast
+        notification={incoming}
+        href={incoming?.solicitud_id ? `/evaluador/asignaciones?solicitud=${incoming.solicitud_id}` : '/evaluador/asignaciones'}
+        onClose={dismissIncoming}
+      />
     </RoleTopLayout>
   );
 }

@@ -10,6 +10,7 @@ export interface Notificacion {
   mensaje?: string;
   leida_at?: string;
   created_at?: string;
+  solicitud_id?: number | null;
 }
 
 const DEFAULT_POLL_MS = 60_000;
@@ -31,6 +32,8 @@ export function useNotifications({
 }: UseNotificationsOptions = {}) {
   const [notifs, setNotifs] = useState<Notificacion[]>([]);
   const [count, setCount] = useState(0);
+  /** Última notificación llegada por WebSocket: la capa de la UI la muestra como aviso flotante. */
+  const [incoming, setIncoming] = useState<Notificacion | null>(null);
   const stopped = useRef(false);
 
   useEffect(() => {
@@ -71,8 +74,13 @@ export function useNotifications({
         if (!echo || !userId) return;
 
         const channel = echo.private(`user.${userId}`);
-        channel.listen('.notification.created', () => {
-          // Cuando llega una nueva notificación, refetch para mantener orden + leida_at
+        channel.listen('.notification.created', (payload: Partial<Notificacion> & { id: Notificacion['id'] }) => {
+          if (stopped.current) return;
+          // Pintar al instante con lo que trae el evento; el refetch de abajo corrige orden y leida_at
+          const n: Notificacion = { id: payload.id, asunto: payload.asunto ?? 'Nueva notificación', mensaje: payload.mensaje, created_at: payload.created_at, solicitud_id: payload.solicitud_id ?? null };
+          setNotifs((prev) => (prev.some((x) => x.id === n.id) ? prev : [n, ...prev].slice(0, 5)));
+          setCount((prev) => prev + 1);
+          setIncoming(n);
           fetchOnce();
         });
         cleanupRealtime = () => {
@@ -124,5 +132,7 @@ export function useNotifications({
     }
   };
 
-  return { notifs, count, markAsRead, markAllAsRead };
+  const dismissIncoming = () => setIncoming(null);
+
+  return { notifs, count, markAsRead, markAllAsRead, incoming, dismissIncoming };
 }

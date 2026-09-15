@@ -15,10 +15,11 @@ import RoleTopLayout from '@/components/layout/RoleTopLayout';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useSessionRefresh } from '@/hooks/useSessionRefresh';
 import { useT } from '@/i18n/I18nProvider';
+import NotificationToast from '@/components/notifications/NotificationToast';
 
 export default function SolicitanteLayout({ children }: { children: React.ReactNode }) {
   const { t } = useT();
-  const { notifs, count, markAsRead, markAllAsRead } = useNotifications();
+  const { notifs, count, markAsRead, markAllAsRead, incoming, dismissIncoming } = useNotifications();
   useSessionRefresh();
   const pathname = usePathname();
   const router = useRouter();
@@ -66,6 +67,11 @@ export default function SolicitanteLayout({ children }: { children: React.ReactN
       notificationSolicitudHref={(id) => `/solicitante/solicitudes/${id}`}
     >
       {children}
+      <NotificationToast
+        notification={incoming}
+        href={incoming?.solicitud_id ? `/solicitante/solicitudes/${incoming.solicitud_id}` : '/solicitante/dashboard'}
+        onClose={dismissIncoming}
+      />
     </RoleTopLayout>
   );
 }

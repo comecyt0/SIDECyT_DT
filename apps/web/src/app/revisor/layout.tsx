@@ -11,10 +11,11 @@ import RoleTopLayout from '@/components/layout/RoleTopLayout';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useSessionRefresh } from '@/hooks/useSessionRefresh';
 import { useT } from '@/i18n/I18nProvider';
+import NotificationToast from '@/components/notifications/NotificationToast';
 
 export default function RevisorLayout({ children }: { children: React.ReactNode }) {
   const { t } = useT();
-  const { notifs, count, markAsRead, markAllAsRead } = useNotifications();
+  const { notifs, count, markAsRead, markAllAsRead, incoming, dismissIncoming } = useNotifications();
   useSessionRefresh();
 
   const navItems = [
@@ -40,6 +41,11 @@ export default function RevisorLayout({ children }: { children: React.ReactNode 
       notificationSolicitudHref={(id) => `/revisor/solicitudes/${id}`}
     >
       {children}
+      <NotificationToast
+        notification={incoming}
+        href={incoming?.solicitud_id ? `/revisor/solicitudes/${incoming.solicitud_id}` : '/revisor/solicitudes'}
+        onClose={dismissIncoming}
+      />
     </RoleTopLayout>
   );
 }

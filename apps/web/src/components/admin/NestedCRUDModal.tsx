@@ -1,13 +1,6 @@
 'use client';
 
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import StepFrame, { type StepDef } from '@/components/ui/step-frame';
 import { ListPlus } from 'lucide-react';
 
@@ -73,16 +66,17 @@ export function NestedCRUDModal({
           {field.label} {field.required && '*'}
         </label>
         {field.type === 'select' ? (
-          <Select value={String(value ?? '')} onValueChange={(v) => onFormChange({ ...formData, [field.name]: v })}>
-            <SelectTrigger id={id} className="w-full">
-              <SelectValue placeholder={field.placeholder ?? 'Selecciona…'} />
-            </SelectTrigger>
-            <SelectContent>
-              {field.options?.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <select
+            id={id}
+            value={String(value ?? '')}
+            onChange={(e) => onFormChange({ ...formData, [field.name]: e.target.value })}
+            className="auth-input auth-input-static pl-4"
+          >
+            <option value="">{field.placeholder ?? 'Selecciona…'}</option>
+            {field.options?.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         ) : field.type === 'textarea' ? (
           <textarea
             id={id}

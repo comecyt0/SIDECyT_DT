@@ -295,9 +295,18 @@ calificación criterio por criterio, no un alta de registro.
   `.app-card` (radio 22 px, cabecera con regla) — por eso **ninguna vista debe añadir `border-0 shadow-*
   bg-neutral-50` a una `Card`**. Estados siempre con `estadoLabel()`/`estadoBadgeClass()`; informes,
   ministraciones y asignaciones con sus mapas de etiquetas locales. Fuera del alcance, a propósito: el
-  scorecard de la rúbrica del evaluador (lógica de calificación), los campos del paso 1-2 del asistente de
-  nueva convocatoria (dependen de tests por etiqueta) y el `NestedCRUDModal` de `programas/[id]`, que sigue
-  pidiendo el identificador interno.
+  scorecard de la rúbrica del evaluador (lógica de calificación).
+- **15/09/2026, tarde:** también el paso 1-2 del asistente de nueva convocatoria (campos nativos del
+  sistema, casillas como tarjeta, `Clave corta` propuesta desde el nombre con `claveDesdeNombre` hasta que
+  la persona la edita) y el `NestedCRUDModal` de la ficha de programa (ya no pide `nombre_campo`/`clave`:
+  `programas/[id]/page.tsx` los deriva con `slugify` al guardar si el registro no los tiene; la lista de
+  "Tipo de respuesta" es un `<select>` nativo para que muestre la etiqueta y no el valor interno).
+- **Notificaciones en tiempo real (15/09/2026):** ya existían el evento `NotificacionCreada` (canal privado
+  `user.{id}`, Reverb) y la escucha en `hooks/useNotifications.ts`; lo que faltaba era que se *viera*. Ahora
+  el hook pinta la notificación al instante (`incoming`), sube el contador y los 4 `app/*/layout.tsx`
+  muestran `components/notifications/NotificationToast.tsx` (tarjeta bento abajo a la derecha, 8 s, "Ver
+  ahora" lleva a la solicitud o al historial). Medido en producción: **0.8 s** entre `create()` en Laravel
+  y el aviso en pantalla (cola `database` + Reverb detrás de IIS, `SERVER-STATUS=101`).
 - **Jerga restante**: `obs.campo`/`obs.tipo` (observaciones del revisor) y `etapa_actual` vienen de la API sin
   catálogo en el front; se muestran con un mapa local y un fallback (guion bajo → espacio).
 - El menú, la barra superior y el pie del panel **no entran** en el rediseño (E26).

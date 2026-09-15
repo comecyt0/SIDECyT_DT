@@ -1,23 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import StepFrame from '@/components/ui/step-frame';
 import PageHeader from '@/components/ui/page-header';
 import {
@@ -100,6 +91,8 @@ interface WizardState {
 
 const wizLabelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
 const wizInputCls = 'auth-input auth-input-static pl-4';
+const wizErrCls = 'text-xs font-medium';
+const wizCheckCard = 'flex flex-wrap items-center gap-3 rounded-[14px] border px-4 py-3 cursor-pointer';
 
 const TIPO_CAMPO_LABELS: Record<Campo['tipo_campo'], string> = {
   text: 'Texto corto',
@@ -143,6 +136,12 @@ const slugify = (s: string) =>
     .replace(/^_+|_+$/g, '')
     .slice(0, 50);
 
+// "Prototipos de tecnología" → "PROT": clave corta propuesta con la primera palabra significativa
+const claveDesdeNombre = (nombre: string) => {
+  const palabras = slugify(nombre).split('_').filter((w) => w.length > 2 && !['los', 'las', 'del', 'con', 'para', 'por', 'una', 'uno'].includes(w));
+  return palabras.length ? palabras[0].slice(0, 4).toUpperCase() : '';
+};
+
 const emptyWizardState: WizardState = {
   convocatoria: {
     nombre: '',
@@ -177,6 +176,7 @@ export default function ConvocatoriasNuevaPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [state, setState] = useState<WizardState>(emptyWizardState);
+  const claveTouched = useRef(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saveProgress, setSaveProgress] = useState<string>('');
@@ -631,406 +631,225 @@ export default function ConvocatoriasNuevaPage() {
         </CardHeader>
         <CardContent>
           {currentStep === 1 && (
-            <div className="space-y-6">
-              {validationErrors.nombre && (
-                <AlertBox type="error" message={validationErrors.nombre} />
-              )}
-
+            <div className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="conv_nombre" className="text-neutral-700 dark:text-neutral-200 font-medium">
-                    Nombre de la Convocatoria *
-                  </Label>
-                  <Input
+                <div className="space-y-1.5">
+                  <Label htmlFor="conv_nombre" className={wizLabelCls}>Nombre de la convocatoria *</Label>
+                  <input
                     id="conv_nombre"
                     value={state.convocatoria.nombre}
-                    onChange={(e) =>
-                      setState({
-                        ...state,
-                        convocatoria: { ...state.convocatoria, nombre: e.target.value },
-                      })
-                    }
-                    placeholder="ej. Convocatoria 2026 - PROT"
-                    className="mt-1"
+                    onChange={(e) => setState({ ...state, convocatoria: { ...state.convocatoria, nombre: e.target.value } })}
+                    placeholder="Ej. Convocatoria 2026 · Prototipos de tecnología"
+                    className={wizInputCls}
+                    aria-invalid={validationErrors.nombre ? 'true' : undefined}
                   />
-                  {validationErrors.nombre && (
-                    <p className="text-red-600 text-sm mt-1">{validationErrors.nombre}</p>
-                  )}
+                  {validationErrors.nombre && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.nombre}</p>}
+                  <p className="text-xs text-[var(--app-ink-2)]">Así la verán los solicitantes en la lista de convocatorias abiertas.</p>
                 </div>
-                <div>
-                  <Label htmlFor="ejercicio_fiscal" className="text-neutral-700 dark:text-neutral-200 font-medium">
-                    Ejercicio Fiscal *
-                  </Label>
-                  <Input
+                <div className="space-y-1.5">
+                  <Label htmlFor="ejercicio_fiscal" className={wizLabelCls}>Ejercicio fiscal *</Label>
+                  <input
                     id="ejercicio_fiscal"
+                    inputMode="numeric"
+                    maxLength={4}
                     value={state.convocatoria.ejercicio_fiscal}
-                    onChange={(e) =>
-                      setState({
-                        ...state,
-                        convocatoria: { ...state.convocatoria, ejercicio_fiscal: e.target.value },
-                      })
-                    }
+                    onChange={(e) => setState({ ...state, convocatoria: { ...state.convocatoria, ejercicio_fiscal: e.target.value } })}
                     placeholder="2026"
-                    className="mt-1"
+                    className={wizInputCls}
+                    aria-invalid={validationErrors.ejercicio_fiscal ? 'true' : undefined}
                   />
-                  {validationErrors.ejercicio_fiscal && (
-                    <p className="text-red-600 text-sm mt-1">{validationErrors.ejercicio_fiscal}</p>
-                  )}
+                  {validationErrors.ejercicio_fiscal && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.ejercicio_fiscal}</p>}
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="conv_descripcion" className="text-neutral-700 dark:text-neutral-200 font-medium">
-                  Descripción
-                </Label>
-                <Textarea
+              <div className="space-y-1.5">
+                <Label htmlFor="conv_descripcion" className={wizLabelCls}>Descripción (opcional)</Label>
+                <textarea
                   id="conv_descripcion"
                   value={state.convocatoria.descripcion}
-                  onChange={(e) =>
-                    setState({
-                      ...state,
-                      convocatoria: { ...state.convocatoria, descripcion: e.target.value },
-                    })
-                  }
-                  placeholder="Descripción detallada de la convocatoria"
-                  className="mt-1"
-                  rows={4}
+                  onChange={(e) => setState({ ...state, convocatoria: { ...state.convocatoria, descripcion: e.target.value } })}
+                  placeholder="En dos o tres líneas: a quién va dirigida y qué apoya."
+                  className={`${wizInputCls} !h-auto min-h-[110px] py-3 resize-y`}
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="fecha_apertura" className="text-neutral-700 dark:text-neutral-200 font-medium">
-                    Fecha de Apertura *
-                  </Label>
-                  <Input
+                <div className="space-y-1.5">
+                  <Label htmlFor="fecha_apertura" className={wizLabelCls}>Fecha de apertura *</Label>
+                  <input
                     id="fecha_apertura"
                     type="date"
                     value={state.convocatoria.fecha_apertura}
-                    onChange={(e) =>
-                      setState({
-                        ...state,
-                        convocatoria: { ...state.convocatoria, fecha_apertura: e.target.value },
-                      })
-                    }
-                    className="mt-1"
+                    onChange={(e) => setState({ ...state, convocatoria: { ...state.convocatoria, fecha_apertura: e.target.value } })}
+                    className={wizInputCls}
+                    aria-invalid={validationErrors.fecha_apertura ? 'true' : undefined}
                   />
-                  {validationErrors.fecha_apertura && (
-                    <p className="text-red-600 text-sm mt-1">{validationErrors.fecha_apertura}</p>
-                  )}
+                  {validationErrors.fecha_apertura && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.fecha_apertura}</p>}
                 </div>
-                <div>
-                  <Label htmlFor="fecha_cierre" className="text-neutral-700 dark:text-neutral-200 font-medium">
-                    Fecha de Cierre *
-                  </Label>
-                  <Input
+                <div className="space-y-1.5">
+                  <Label htmlFor="fecha_cierre" className={wizLabelCls}>Fecha de cierre *</Label>
+                  <input
                     id="fecha_cierre"
                     type="date"
                     value={state.convocatoria.fecha_cierre}
-                    onChange={(e) =>
-                      setState({
-                        ...state,
-                        convocatoria: { ...state.convocatoria, fecha_cierre: e.target.value },
-                      })
-                    }
-                    className="mt-1"
+                    onChange={(e) => setState({ ...state, convocatoria: { ...state.convocatoria, fecha_cierre: e.target.value } })}
+                    className={wizInputCls}
+                    aria-invalid={validationErrors.fecha_cierre ? 'true' : undefined}
                   />
-                  {validationErrors.fecha_cierre && (
-                    <p className="text-red-600 text-sm mt-1">{validationErrors.fecha_cierre}</p>
-                  )}
+                  {validationErrors.fecha_cierre && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.fecha_cierre}</p>}
+                  <p className="text-xs text-[var(--app-ink-2)]">Al llegar esta fecha se cierra sola y deja de recibir solicitudes.</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="monto_maximo" className="text-neutral-700 dark:text-neutral-200 font-medium">
-                    Monto Máximo de Apoyo *
-                  </Label>
-                  <Input
+                <div className="space-y-1.5">
+                  <Label htmlFor="monto_maximo" className={wizLabelCls}>Monto máximo de apoyo (MXN) *</Label>
+                  <input
                     id="monto_maximo"
                     type="number"
+                    min={0}
                     value={state.convocatoria.monto_maximo_apoyo}
-                    onChange={(e) =>
-                      setState({
-                        ...state,
-                        convocatoria: {
-                          ...state.convocatoria,
-                          monto_maximo_apoyo: parseFloat(e.target.value) || 0,
-                        },
-                      })
-                    }
-                    className="mt-1"
+                    onChange={(e) => setState({ ...state, convocatoria: { ...state.convocatoria, monto_maximo_apoyo: parseFloat(e.target.value) || 0 } })}
+                    className={wizInputCls}
+                    aria-invalid={validationErrors.monto_maximo_apoyo ? 'true' : undefined}
                   />
-                  {validationErrors.monto_maximo_apoyo && (
-                    <p className="text-red-600 text-sm mt-1">{validationErrors.monto_maximo_apoyo}</p>
-                  )}
+                  {validationErrors.monto_maximo_apoyo && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.monto_maximo_apoyo}</p>}
                 </div>
-                <div>
-                  <Label htmlFor="porcentaje_aportacion" className="text-neutral-700 dark:text-neutral-200 font-medium">
-                    Porcentaje Aportación Concurrente (%)
-                  </Label>
-                  <Input
+                <div className="space-y-1.5">
+                  <Label htmlFor="porcentaje_aportacion" className={wizLabelCls}>Aportación mínima del solicitante (%)</Label>
+                  <input
                     id="porcentaje_aportacion"
                     type="number"
+                    min={0}
+                    max={100}
                     value={state.convocatoria.porcentaje_aportacion_minima}
-                    onChange={(e) =>
-                      setState({
-                        ...state,
-                        convocatoria: {
-                          ...state.convocatoria,
-                          porcentaje_aportacion_minima: parseFloat(e.target.value) || 0,
-                        },
-                      })
-                    }
-                    min="0"
-                    max="100"
-                    className="mt-1"
+                    onChange={(e) => setState({ ...state, convocatoria: { ...state.convocatoria, porcentaje_aportacion_minima: parseFloat(e.target.value) || 0 } })}
+                    className={wizInputCls}
+                    aria-invalid={validationErrors.porcentaje_aportacion_minima ? 'true' : undefined}
                   />
-                  {validationErrors.porcentaje_aportacion_minima && (
-                    <p className="text-red-600 text-sm mt-1">
-                      {validationErrors.porcentaje_aportacion_minima}
-                    </p>
-                  )}
+                  {validationErrors.porcentaje_aportacion_minima && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.porcentaje_aportacion_minima}</p>}
+                  <p className="text-xs text-[var(--app-ink-2)]">Parte del proyecto que la institución cubre con recursos propios.</p>
                 </div>
               </div>
             </div>
           )}
 
           {currentStep === 2 && (
-            <div className="space-y-6">
-              {validationErrors.clave && (
-                <AlertBox type="error" message={validationErrors.clave} />
-              )}
-
+            <div className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="prog_clave" className="text-neutral-700 dark:text-neutral-200 font-medium">
-                    Clave del Programa *
-                  </Label>
-                  <Input
-                    id="prog_clave"
-                    value={state.programa.clave}
-                    onChange={(e) =>
-                      setState({
-                        ...state,
-                        programa: { ...state.programa, clave: e.target.value.toUpperCase() },
-                      })
-                    }
-                    placeholder="ej. PROT, IPFE, VINC"
-                    className="mt-1"
-                  />
-                  {validationErrors.clave && (
-                    <p className="text-red-600 text-sm mt-1">{validationErrors.clave}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="prog_nombre" className="text-neutral-700 dark:text-neutral-200 font-medium">
-                    Nombre del Programa *
-                  </Label>
-                  <Input
+                <div className="space-y-1.5">
+                  <Label htmlFor="prog_nombre" className={wizLabelCls}>Nombre del programa *</Label>
+                  <input
                     id="prog_nombre"
                     value={state.programa.nombre}
-                    onChange={(e) =>
-                      setState({
-                        ...state,
-                        programa: { ...state.programa, nombre: e.target.value },
-                      })
-                    }
-                    placeholder="ej. Prototipos de Tecnología"
-                    className="mt-1"
+                    onChange={(e) => {
+                      const nombre = e.target.value;
+                      const clave = state.programa.clave || claveTouched.current ? state.programa.clave : claveDesdeNombre(nombre);
+                      setState({ ...state, programa: { ...state.programa, nombre, clave } });
+                    }}
+                    placeholder="Ej. Prototipos de tecnología"
+                    className={wizInputCls}
+                    aria-invalid={validationErrors.nombre ? 'true' : undefined}
                   />
-                  {validationErrors.nombre && (
-                    <p className="text-red-600 text-sm mt-1">{validationErrors.nombre}</p>
-                  )}
+                  {validationErrors.nombre && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.nombre}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="prog_clave" className={wizLabelCls}>Clave corta *</Label>
+                  <input
+                    id="prog_clave"
+                    value={state.programa.clave}
+                    maxLength={20}
+                    onChange={(e) => {
+                      claveTouched.current = true;
+                      setState({ ...state, programa: { ...state.programa, clave: e.target.value.toUpperCase() } });
+                    }}
+                    placeholder="Ej. PROT"
+                    className={`${wizInputCls} uppercase`}
+                    aria-invalid={validationErrors.clave ? 'true' : undefined}
+                  />
+                  {validationErrors.clave && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.clave}</p>}
+                  <p className="text-xs text-[var(--app-ink-2)]">Se propone sola a partir del nombre; aparece en folios y reportes.</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="tipo_apoyo" className="text-neutral-700 dark:text-neutral-200 font-medium">
-                    Tipo de Apoyo *
-                  </Label>
-                  <Select
+                <div className="space-y-1.5">
+                  <Label htmlFor="tipo_apoyo" className={wizLabelCls}>Forma del apoyo *</Label>
+                  <select
+                    id="tipo_apoyo"
                     value={state.programa.tipo_apoyo}
-                    onValueChange={(v: any) =>
-                      setState({
-                        ...state,
-                        programa: { ...state.programa, tipo_apoyo: v },
-                      })
-                    }
+                    onChange={(e) => setState({ ...state, programa: { ...state.programa, tipo_apoyo: e.target.value as WizardState['programa']['tipo_apoyo'] } })}
+                    className={wizInputCls}
                   >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="reembolso">Reembolso</SelectItem>
-                      <SelectItem value="concurrente">Concurrente</SelectItem>
-                      <SelectItem value="honorarios">Honorarios</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <option value="reembolso">Reembolso (se paga después de comprobar)</option>
+                    <option value="concurrente">Concurrente (aportan ambas partes)</option>
+                    <option value="honorarios">Honorarios (pago a personas)</option>
+                  </select>
                 </div>
-                <div>
-                  <Label htmlFor="monto_max_prog" className="text-neutral-700 dark:text-neutral-200 font-medium">
-                    Monto Máximo del Programa *
-                  </Label>
-                  <Input
+                <div className="space-y-1.5">
+                  <Label htmlFor="monto_max_prog" className={wizLabelCls}>Monto máximo por proyecto (MXN) *</Label>
+                  <input
                     id="monto_max_prog"
                     type="number"
+                    min={0}
                     value={state.programa.monto_maximo}
-                    onChange={(e) =>
-                      setState({
-                        ...state,
-                        programa: {
-                          ...state.programa,
-                          monto_maximo: parseFloat(e.target.value) || 0,
-                        },
-                      })
-                    }
-                    className="mt-1"
+                    onChange={(e) => setState({ ...state, programa: { ...state.programa, monto_maximo: parseFloat(e.target.value) || 0 } })}
+                    className={wizInputCls}
+                    aria-invalid={validationErrors.monto_maximo ? 'true' : undefined}
                   />
-                  {validationErrors.monto_maximo && (
-                    <p className="text-red-600 text-sm mt-1">{validationErrors.monto_maximo}</p>
-                  )}
+                  {validationErrors.monto_maximo && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.monto_maximo}</p>}
                 </div>
               </div>
 
-              <div className="space-y-3 p-4 bg-neutral-50 dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                <h3 className="font-semibold text-neutral-900 dark:text-neutral-50">Configuración Avanzada</h3>
+              <div className="space-y-3">
+                <p className={wizLabelCls}>Reglas del programa</p>
 
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="tiene_etapas"
-                    checked={state.programa.tiene_etapas}
-                    onCheckedChange={(v) =>
-                      setState({
-                        ...state,
-                        programa: { ...state.programa, tiene_etapas: v as boolean },
-                      })
-                    }
-                  />
-                  <Label htmlFor="tiene_etapas" className="text-neutral-700 dark:text-neutral-200 cursor-pointer">
-                    Este programa tiene etapas
-                  </Label>
+                <label className={wizCheckCard} style={{ borderColor: 'var(--app-rule)', backgroundColor: state.programa.tiene_etapas ? 'var(--tile-sky-bg)' : 'var(--auth-field)' }}>
+                  <Checkbox id="tiene_etapas" checked={state.programa.tiene_etapas} onCheckedChange={(v) => setState({ ...state, programa: { ...state.programa, tiene_etapas: v as boolean } })} />
+                  <span className="flex-1 min-w-[200px]">
+                    <span className="block text-sm font-semibold text-[var(--app-ink)]">El apoyo se entrega por etapas</span>
+                    <span className="block text-xs text-[var(--app-ink-2)]">Cada etapa lleva su propia entrega e informe.</span>
+                  </span>
                   {state.programa.tiene_etapas && (
-                    <Input
-                      type="number"
-                      value={state.programa.num_etapas}
-                      onChange={(e) =>
-                        setState({
-                          ...state,
-                          programa: {
-                            ...state.programa,
-                            num_etapas: parseInt(e.target.value) || 1,
-                          },
-                        })
-                      }
-                      className="w-20 ml-auto"
-                      min="1"
-                      max="10"
-                    />
+                    <span className="flex items-center gap-2 text-xs text-[var(--app-ink-2)]">
+                      Etapas
+                      <input type="number" aria-label="Número de etapas" value={state.programa.num_etapas} onChange={(e) => setState({ ...state, programa: { ...state.programa, num_etapas: parseInt(e.target.value) || 1 } })} min={1} max={10} className={`${wizInputCls} pl-3 !w-20 !min-h-10 !h-10`} />
+                    </span>
                   )}
-                </div>
+                </label>
+                {validationErrors.num_etapas && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.num_etapas}</p>}
 
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="tiene_equipo"
-                    checked={state.programa.tiene_equipo}
-                    onCheckedChange={(v) =>
-                      setState({
-                        ...state,
-                        programa: { ...state.programa, tiene_equipo: v as boolean },
-                      })
-                    }
-                  />
-                  <Label htmlFor="tiene_equipo" className="text-neutral-700 dark:text-neutral-200 cursor-pointer">
-                    Requiere equipo de trabajo
-                  </Label>
+                <label className={wizCheckCard} style={{ borderColor: 'var(--app-rule)', backgroundColor: state.programa.tiene_equipo ? 'var(--tile-sky-bg)' : 'var(--auth-field)' }}>
+                  <Checkbox id="tiene_equipo" checked={state.programa.tiene_equipo} onCheckedChange={(v) => setState({ ...state, programa: { ...state.programa, tiene_equipo: v as boolean } })} />
+                  <span className="flex-1 min-w-[200px]">
+                    <span className="block text-sm font-semibold text-[var(--app-ink)]">Requiere un equipo de trabajo</span>
+                    <span className="block text-xs text-[var(--app-ink-2)]">El solicitante registra a los integrantes del proyecto.</span>
+                  </span>
                   {state.programa.tiene_equipo && (
-                    <div className="ml-auto flex gap-2">
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-neutral-600 dark:text-neutral-300">Min:</span>
-                        <Input
-                          type="number"
-                          value={state.programa.min_miembros_equipo}
-                          onChange={(e) =>
-                            setState({
-                              ...state,
-                              programa: {
-                                ...state.programa,
-                                min_miembros_equipo: parseInt(e.target.value) || 1,
-                              },
-                            })
-                          }
-                          className="w-16"
-                          min="1"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-neutral-600 dark:text-neutral-300">Máx:</span>
-                        <Input
-                          type="number"
-                          value={state.programa.max_miembros_equipo}
-                          onChange={(e) =>
-                            setState({
-                              ...state,
-                              programa: {
-                                ...state.programa,
-                                max_miembros_equipo: parseInt(e.target.value) || 5,
-                              },
-                            })
-                          }
-                          className="w-16"
-                          min="1"
-                        />
-                      </div>
-                    </div>
+                    <span className="flex items-center gap-2 text-xs text-[var(--app-ink-2)]">
+                      De
+                      <input type="number" aria-label="Mínimo de integrantes" value={state.programa.min_miembros_equipo} onChange={(e) => setState({ ...state, programa: { ...state.programa, min_miembros_equipo: parseInt(e.target.value) || 1 } })} min={1} className={`${wizInputCls} pl-3 !w-16 !min-h-10 !h-10`} />
+                      a
+                      <input type="number" aria-label="Máximo de integrantes" value={state.programa.max_miembros_equipo} onChange={(e) => setState({ ...state, programa: { ...state.programa, max_miembros_equipo: parseInt(e.target.value) || 5 } })} min={1} className={`${wizInputCls} pl-3 !w-16 !min-h-10 !h-10`} />
+                    </span>
                   )}
-                </div>
+                </label>
 
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="requiere_evaluacion"
-                    checked={state.programa.requiere_evaluacion_tecnica}
-                    onCheckedChange={(v) =>
-                      setState({
-                        ...state,
-                        programa: {
-                          ...state.programa,
-                          requiere_evaluacion_tecnica: v as boolean,
-                        },
-                      })
-                    }
-                  />
-                  <Label htmlFor="requiere_evaluacion" className="text-neutral-700 dark:text-neutral-200 cursor-pointer">
-                    Requiere evaluación técnica
-                  </Label>
-                </div>
-
-                <div>
-                  <Label htmlFor="puntaje_minimo" className="text-neutral-700 dark:text-neutral-200 font-medium">
-                    Puntaje Mínimo Aprobatorio
-                  </Label>
-                  <Input
-                    id="puntaje_minimo"
-                    type="number"
-                    value={state.programa.puntaje_minimo_aprobatorio}
-                    onChange={(e) =>
-                      setState({
-                        ...state,
-                        programa: {
-                          ...state.programa,
-                          puntaje_minimo_aprobatorio: parseInt(e.target.value) || 80,
-                        },
-                      })
-                    }
-                    min="0"
-                    max="100"
-                    className="mt-1"
-                  />
-                  {validationErrors.puntaje_minimo && (
-                    <p className="text-red-600 text-sm mt-1">{validationErrors.puntaje_minimo}</p>
+                <label className={wizCheckCard} style={{ borderColor: 'var(--app-rule)', backgroundColor: state.programa.requiere_evaluacion_tecnica ? 'var(--tile-emerald-bg)' : 'var(--auth-field)' }}>
+                  <Checkbox id="requiere_evaluacion" checked={state.programa.requiere_evaluacion_tecnica} onCheckedChange={(v) => setState({ ...state, programa: { ...state.programa, requiere_evaluacion_tecnica: v as boolean } })} />
+                  <span className="flex-1 min-w-[200px]">
+                    <span className="block text-sm font-semibold text-[var(--app-ink)]">Pasa por evaluación técnica</span>
+                    <span className="block text-xs text-[var(--app-ink-2)]">Un evaluador califica el proyecto con los criterios del paso 6.</span>
+                  </span>
+                  {state.programa.requiere_evaluacion_tecnica && (
+                    <span className="flex items-center gap-2 text-xs text-[var(--app-ink-2)]">
+                      Aprueba desde
+                      <input id="puntaje_minimo" type="number" aria-label="Calificación mínima para aprobar" value={state.programa.puntaje_minimo_aprobatorio} onChange={(e) => setState({ ...state, programa: { ...state.programa, puntaje_minimo_aprobatorio: parseInt(e.target.value) || 80 } })} min={0} max={100} className={`${wizInputCls} pl-3 !w-20 !min-h-10 !h-10`} />
+                      de 100
+                    </span>
                   )}
-                </div>
+                </label>
+                {validationErrors.puntaje_minimo && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.puntaje_minimo}</p>}
               </div>
             </div>
           )}

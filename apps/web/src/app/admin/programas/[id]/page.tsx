@@ -25,6 +25,10 @@ interface TipoPrograma {
 
 type TabType = 'info' | 'campos' | 'rubros' | 'etapas' | 'modalidades' | 'criterios';
 
+// "Título del proyecto" → "titulo_del_proyecto": identificador interno a partir del texto visible
+const slugify = (s: string) =>
+  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 50);
+
 const TAB_LABELS: Record<TabType, string> = {
   info: 'Datos generales',
   campos: 'Preguntas',
@@ -144,10 +148,14 @@ export default function ProgramaDetailPage() {
     setSaving(true);
     try {
       const url = `/admin/programas/${programaId}/${activeTab}`;
+      // Las claves internas no se piden: se derivan del texto visible si el registro aún no tiene una
+      const payload = { ...formData };
+      if (activeTab === 'campos' && !payload.nombre_campo) payload.nombre_campo = slugify(String(payload.etiqueta ?? ''));
+      if ((activeTab === 'rubros' || activeTab === 'modalidades') && !payload.clave) payload.clave = slugify(String(payload.nombre ?? '')).toUpperCase().slice(0, 20);
       if (modalType === 'create') {
-        await api.post(url, formData);
+        await api.post(url, payload);
       } else {
-        await api.put(`${url}/${editingId}`, formData);
+        await api.put(`${url}/${editingId}`, payload);
       }
       setShowModal(false);
       fetchTabData(activeTab as TabType);
@@ -190,8 +198,7 @@ export default function ProgramaDetailPage() {
     const fieldConfigs: Record<TabType, any[]> = {
       info: [],
       campos: [
-        { name: 'nombre_campo', label: 'Identificador', type: 'text', required: true },
-        { name: 'etiqueta', label: 'Texto de la pregunta', type: 'text', required: true },
+        { name: 'etiqueta', label: 'Texto de la pregunta', type: 'text', required: true, placeholder: 'Ej. Título del proyecto', hint: 'Tal como lo leerá el solicitante. El identificador interno se genera solo.' },
         { name: 'tipo_campo', label: 'Tipo de respuesta', type: 'select', required: true, options: [
           { value: 'text', label: 'Texto corto' },
           { value: 'number', label: 'Número' },
@@ -206,10 +213,9 @@ export default function ProgramaDetailPage() {
         { name: 'activo', label: 'Activa', type: 'checkbox' },
       ],
       rubros: [
-        { name: 'clave', label: 'Clave', type: 'text', required: true },
-        { name: 'nombre', label: 'Nombre', type: 'text', required: true },
-        { name: 'descripcion', label: 'Descripción', type: 'textarea' },
-        { name: 'activo', label: 'Activo', type: 'checkbox' },
+        { name: 'nombre', label: 'Nombre del concepto de gasto', type: 'text', required: true, placeholder: 'Ej. Equipo de cómputo', hint: 'En qué se puede usar el dinero. La clave interna se genera sola.' },
+        { name: 'descripcion', label: 'Qué incluye', type: 'textarea', placeholder: 'Ej. Computadoras, licencias y periféricos.' },
+        { name: 'activo', label: 'Disponible para los solicitantes', type: 'checkbox' },
       ],
       etapas: [
         { name: 'numero_etapa', label: 'Número de etapa', type: 'number', required: true },
@@ -219,10 +225,9 @@ export default function ProgramaDetailPage() {
         { name: 'activo', label: 'Activa', type: 'checkbox' },
       ],
       modalidades: [
-        { name: 'clave', label: 'Clave', type: 'text', required: true },
-        { name: 'nombre', label: 'Nombre', type: 'text', required: true },
-        { name: 'descripcion', label: 'Descripción', type: 'textarea' },
-        { name: 'activo', label: 'Activo', type: 'checkbox' },
+        { name: 'nombre', label: 'Nombre de la modalidad', type: 'text', required: true, placeholder: 'Ej. Proyecto individual', hint: 'Una forma de participar dentro del programa. La clave interna se genera sola.' },
+        { name: 'descripcion', label: 'En qué consiste', type: 'textarea' },
+        { name: 'activo', label: 'Disponible para los solicitantes', type: 'checkbox' },
       ],
       criterios: [
         { name: 'nombre', label: 'Nombre del criterio', type: 'text', required: true },
