@@ -29,7 +29,7 @@ export default function PageHeader({ title, description, icon, eyebrow, actions,
         {icon && !backHref && <span className="app-tile-icon shrink-0 mt-0.5">{icon}</span>}
         <div className="min-w-0">
           {eyebrow && <p className="text-[11px] font-bold uppercase tracking-[0.14em] mb-1" style={{ color: 'var(--auth-vino)' }}>{eyebrow}</p>}
-          <h1 className="text-[clamp(1.5rem,2.4vw,1.875rem)] font-bold tracking-tight text-[var(--app-ink)] leading-tight break-words">{title}</h1>
+          <h1 className="page-title text-[clamp(1.5rem,2.4vw,1.875rem)] font-bold tracking-tight text-[var(--app-ink)] leading-tight break-words">{title}</h1>
           {description && <p className="text-[var(--app-ink-2)] mt-1 text-sm sm:text-base">{description}</p>}
         </div>
       </div>

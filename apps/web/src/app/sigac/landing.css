@@ -39,7 +39,8 @@
   --color-vino: oklch(36% 0.1 358);
   --color-vino-strong: oklch(30% 0.09 358);
   --color-vino-wash: oklch(96.5% 0.014 358);
-  --color-hero-bloom: color-mix(in oklab, var(--color-lavender-violet) 16%, transparent);
+  /* Halo detrás del titular: vino institucional (antes lavanda de la referencia; cambio pedido por el usuario). */
+  --color-hero-bloom: oklch(36% 0.1 358 / 0.13);
 
   /* ── Tipografía ── */
   --font-switzer: var(--font-lp-text), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -384,6 +385,7 @@
 }
 
 /* Campo de correo con el CTA arcoíris embebido */
+.lp-lead-name { color: var(--color-vino); font-weight: 600; }
 .lp-claim { width: 100%; max-width: 560px; margin-top: var(--spacing-32); }
 .lp-claim-field {
   display: flex;

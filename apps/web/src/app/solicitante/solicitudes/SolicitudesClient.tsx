@@ -53,7 +53,7 @@ export default function SolicitudesClient({ solicitudes }: Props) {
         icon={<FolderOpen className="h-5 w-5" />}
         actions={
           <Link href="/solicitante/solicitudes/nueva">
-            <Button>
+            <Button variant="rainbow">
               <PlusCircle className="h-4 w-4" />
               Nueva solicitud
             </Button>

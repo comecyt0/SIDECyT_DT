@@ -1,0 +1,548 @@
+/* Hallmark · system: panel-sigac (unificación de los 4 paneles con la landing /sigac)
+ * theme: studied-DNA (portrait.so) + vino institucional de detalle — el mismo sistema que landing.css
+ * genre: modern-minimal institucional · states: default · hover · focus-visible · active · disabled
+ * pre-emit critique: P4 H4 E4 S5 R5 V4
+ *
+ * 23/09/2026 — Pedido del usuario: llevar el diseño, la interfaz y los colores de la landing a TODOS los
+ * paneles (admin, solicitante, revisor, evaluador). El login queda igual.
+ *
+ * Cómo funciona (léase antes de tocar):
+ *  - TODO va acotado a `.panel-root` (raíz de AdminTopLayout y RoleTopLayout). Las pantallas de acceso
+ *    (login, solicitar acceso, recuperar clave) usan <Button>/<Card> pero están fuera de ese alcance.
+ *  - Se redefinen los tokens que ya consumen las 136 vistas —shadcn (`--primary`…), `--app-*`, `--tile-*`,
+ *    los `--auth-*` que usan los paneles y la escala `neutral` de Tailwind v4— en vez de editar archivo
+ *    por archivo. Tailwind v4 pinta con `var(--color-neutral-500)`, así que redefinir la variable dentro
+ *    del alcance re-tiñe todas sus utilidades.
+ *  - Este archivo NO va en ninguna @layer a propósito: lo que no está en capa gana sobre `@layer
+ *    components` (globals.css) y `@layer utilities` (Tailwind), así que puede corregir radios y sombras
+ *    que las vistas traen como utilidades. Por lo mismo, cada selector apunta a una pieza concreta.
+ *  - Jerarquía de color (igual que la landing): tinta navy #08304c = color principal y de acción;
+ *    lienzo blanco; lavados pastel (cielo / menta / durazno) para los tonos; **vino solo como detalle**
+ *    (`--auth-vino` sigue siendo vino: íconos de encabezado, etiquetas, barra bajo el título).
+ * Documentado en docs/DISENO_UI.md §12.
+ */
+
+.panel-root,
+html.sg-panel body {
+  /* ── Paleta SIGAC (misma que landing.css) ── */
+  --sg-ink: #08304c;
+  --sg-ink-hover: #0e4368;
+  --sg-ink-2: #585858;
+  --sg-canvas: #ffffff;
+  --sg-subtle: #f6f8fb;
+  --sg-mist: #eeeeee;
+  --sg-ash: #dedede;
+  --sg-fog: #c7c7c7;
+  --sg-sky: #e8f1ff;
+  --sg-sky-strong: #d6e6ff;
+  --sg-sky-ink: #0b3f8a;
+  --sg-mint: #d7ffe2;
+  --sg-mint-ink: #0b5a2a;
+  --sg-peach: #ffebd6;
+  --sg-peach-ink: #7a3a06;
+  --sg-danger: #b3261e;
+  --sg-danger-wash: #fdecea;
+  --sg-vino: oklch(36% 0.1 358);
+  --sg-vino-wash: oklch(96.5% 0.014 358);
+  --sg-rainbow: linear-gradient(90deg, rgb(38, 192, 255), rgb(230, 0, 194) 20%, rgb(255, 73, 78) 40%, rgb(255, 161, 62) 60%, rgb(255, 200, 55) 80%, rgb(0, 204, 61));
+  --sg-shadow-md: rgba(0, 0, 0, 0.03) 0px 16px 16px -8px, rgba(0, 0, 0, 0.03) 0px 10px 10px -5px, rgba(0, 0, 0, 0.03) 0px 5px 5px -2.5px, rgba(0, 0, 0, 0.03) 0px 3px 3px -1.5px, rgba(0, 0, 0, 0.03) 0px 2px 2px -1px, rgba(0, 0, 0, 0.03) 0px 1px 1px -0.5px;
+  --sg-shadow-card: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, var(--sg-shadow-md);
+  --sg-shadow-lift: rgba(0, 0, 0, 0.06) 0px 0px 0px 1px, rgba(0, 0, 0, 0.07) 0px 20px 20px -10px, rgba(0, 0, 0, 0.04) 0px 10px 10px -5px, rgba(0, 0, 0, 0.03) 0px 5px 5px -2.5px, rgba(0, 0, 0, 0.03) 0px 3px 3px -1.5px;
+  --sg-shadow-hair: rgba(0, 0, 0, 0.1) 0px 0px 0px 1px;
+  --sg-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --sg-font-text: var(--font-lp-text), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --sg-font-display: var(--font-lp-display), var(--font-lp-text), ui-sans-serif, system-ui, sans-serif;
+
+  /* ── shadcn (HSL sin envoltura, como los consume globals.css) ── */
+  --background: 0 0% 100%;
+  --foreground: 205 81% 16%;
+  --card: 0 0% 100%;
+  --card-foreground: 205 81% 16%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 205 81% 16%;
+  --primary: 205 81% 16%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 339 55% 27%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 216 33% 97%;
+  --muted-foreground: 0 0% 36%;
+  --accent: 216 100% 95%;
+  --accent-foreground: 205 81% 16%;
+  --border: 0 0% 92%;
+  --input: 0 0% 88%;
+  --ring: 205 81% 16%;
+  --radius: 1.5rem;
+
+  /* ── Tokens del shell y de las vistas ── */
+  --app-sidebar-bg: var(--sg-canvas);
+  --app-content-bg: var(--sg-canvas);
+  --app-card-bg: var(--sg-canvas);
+  --app-rule: var(--sg-mist);
+  --app-ink: var(--sg-ink);
+  --app-ink-2: var(--sg-ink-2);
+  --app-active-bg: var(--sg-ink);
+  --app-active-fg: #ffffff;
+  --app-hover-bg: var(--sg-sky);
+
+  --tile-vino-bg: var(--sg-vino-wash);
+  --tile-vino-fg: var(--sg-vino);
+  --tile-gold-bg: var(--sg-peach);
+  --tile-gold-fg: var(--sg-peach-ink);
+  --tile-sky-bg: var(--sg-sky);
+  --tile-sky-fg: var(--sg-sky-ink);
+  --tile-emerald-bg: var(--sg-mint);
+  --tile-emerald-fg: var(--sg-mint-ink);
+
+  /* Los paneles también consumen `--auth-*` (campos, <select>, íconos). El vino se conserva. */
+  --auth-paper: var(--sg-canvas);
+  --auth-white: #ffffff;
+  /* Relleno de campos: gris frío suave (en blanco quedaban invisibles sobre el lienzo blanco). */
+  --auth-field: #f3f6fa;
+  --auth-field-hover: #eaeff5;
+  --auth-ink: var(--sg-ink);
+  --auth-ink-2: var(--sg-ink-2);
+  --auth-rule: #e6e6e6;
+  --auth-rule-strong: var(--sg-fog);
+  --auth-radius-field: 16px;
+  --brand-vino-700: var(--sg-ink-hover);
+
+  /* Tonos de estado (sistema .pill/.tone-* del 21/09): tintas más profundas y fondos pastel. */
+  --tone-ink-L: 38%;
+  --tone-fg-L: 50%;
+  --tone-soft-L: 96.8%;
+  --tone-soft-C: 0.26;
+  --tone-border-L: 90%;
+
+  /* Escala neutral de Tailwind tintada hacia la tinta navy (gris frío, texto secundario ≥ 4.5:1). */
+  --color-neutral-50: #f6f8fb;
+  --color-neutral-100: #eef1f5;
+  --color-neutral-200: #dfe3e8;
+  --color-neutral-300: #c7ccd3;
+  --color-neutral-400: #99a1ab;
+  --color-neutral-500: #626d79;
+  --color-neutral-600: #4c5864;
+  --color-neutral-700: #33414e;
+  --color-neutral-800: #16324a;
+  --color-neutral-900: #08304c;
+  --color-neutral-950: #041c2e;
+
+  color-scheme: light;
+  background: var(--sg-canvas);
+  color: var(--sg-ink);
+  font-family: var(--sg-font-text);
+  font-feature-settings: 'liga' 0;
+}
+
+/* ── Modo oscuro: navy profundo con las mismas relaciones ── */
+.dark .panel-root,
+html.dark.sg-panel body {
+  --sg-ink: #e8f1ff;
+  --sg-ink-hover: #ffffff;
+  --sg-ink-2: #aab6c3;
+  --sg-canvas: #06192a;
+  --sg-subtle: #0a2236;
+  --sg-mist: #15324a;
+  --sg-ash: #1d3d57;
+  --sg-fog: #2c4d68;
+  --sg-sky: #10304d;
+  --sg-sky-strong: #163b5d;
+  --sg-sky-ink: #bcd6ff;
+  --sg-mint: #0d3a24;
+  --sg-mint-ink: #a6f0bf;
+  --sg-peach: #3d2612;
+  --sg-peach-ink: #ffd2a6;
+  --sg-danger: #ffb4ab;
+  --sg-danger-wash: #3b1512;
+  --sg-vino: oklch(78% 0.08 358);
+  --sg-vino-wash: oklch(30% 0.06 358);
+  --sg-shadow-md: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 24px -12px rgba(0, 0, 0, 0.5);
+  --sg-shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06), var(--sg-shadow-md);
+  --sg-shadow-lift: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 20px 32px -16px rgba(0, 0, 0, 0.6);
+  --sg-shadow-hair: 0 0 0 1px rgba(255, 255, 255, 0.1);
+
+  --background: 208 75% 9%;
+  --foreground: 214 100% 95%;
+  --card: 206 64% 12%;
+  --card-foreground: 214 100% 95%;
+  --popover: 206 64% 12%;
+  --popover-foreground: 214 100% 95%;
+  --primary: 214 100% 90%;
+  --primary-foreground: 205 81% 16%;
+  --muted: 206 60% 14%;
+  --muted-foreground: 211 17% 72%;
+  --accent: 208 65% 18%;
+  --accent-foreground: 214 100% 95%;
+  --border: 207 55% 19%;
+  --input: 207 55% 22%;
+  --ring: 214 100% 90%;
+
+  --app-card-bg: #0b2438;
+  --auth-white: #0b2438;
+  --auth-field: #0e2b43;
+  --auth-field-hover: #12334f;
+  --auth-rule: #1d3d57;
+  --app-active-fg: #06192a;
+  --auth-vino: oklch(78% 0.08 358);
+  --tile-vino-fg: var(--sg-vino);
+
+  --tone-ink-L: 86%;
+  --tone-fg-L: 74%;
+  --tone-soft-L: 26%;
+  --tone-soft-C: 0.5;
+  --tone-border-L: 34%;
+
+  /* Misma dirección que en claro (50 = más claro): las vistas ya eligen el extremo con `dark:`
+     (texto `dark:text-neutral-200`, fondo `dark:bg-neutral-900`). Invertirla dejaba texto oscuro sobre
+     oscuro. Solo cambian los tonos de superficie (800–950) para casar con el lienzo navy. */
+  --color-neutral-50: #f4f8fc;
+  --color-neutral-100: #e8f1ff;
+  --color-neutral-200: #d6e0ea;
+  --color-neutral-300: #bccbd8;
+  --color-neutral-400: #9fb1c2;
+  --color-neutral-500: #8298ad;
+  --color-neutral-600: #5f778f;
+  --color-neutral-700: #2c4d68;
+  --color-neutral-800: #10304d;
+  --color-neutral-900: #0b2438;
+  --color-neutral-950: #06192a;
+
+  color-scheme: dark;
+}
+
+/* Tarjeta sólida en oscuro: el tono a luminosidad media (con L 74 % el texto blanco no se leía). */
+:is(.dark .panel-root, html.dark.sg-panel) .stat-tile[data-solid="true"] {
+  background-color: oklch(42% var(--tc) var(--th));
+}
+
+/* ─────────────────────────── Tipografía ─────────────────────────── */
+
+:is(.panel-root, html.sg-panel) h1,
+:is(.panel-root, html.sg-panel) h2,
+:is(.panel-root, html.sg-panel) .stat-value {
+  font-family: var(--sg-font-display);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+:is(.panel-root, html.sg-panel) h3 { letter-spacing: -0.01em; }
+
+/* Título de página (PageHeader): barra vino corta debajo, como los títulos de la landing. */
+:is(.panel-root, html.sg-panel) .page-title::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 4px;
+  margin-top: 12px;
+  border-radius: 4px;
+  background: var(--sg-vino);
+}
+
+:is(.panel-root, html.sg-panel) ::selection { background: var(--sg-vino-wash); color: var(--sg-ink); }
+:is(.panel-root, html.sg-panel) :focus-visible { outline: 2px solid var(--sg-ink); outline-offset: 2px; }
+
+/* ─────────────────────────── Barra superior (solo piel; estructura intacta, E26) ─────────────────────────── */
+
+:is(.panel-root, html.sg-panel) .panel-topbar {
+  background: color-mix(in srgb, var(--sg-canvas) 94%, transparent);
+  border-bottom-color: var(--sg-mist);
+  box-shadow: var(--sg-shadow-md);
+}
+/* Filo vino corto bajo la barra: firma institucional discreta (igual que el pie de la landing). */
+:is(.panel-root, html.sg-panel) .panel-topbar::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  width: 72px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--sg-vino);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+/* Logo recortado: 40 px de alto en escritorio; en teléfono se reduce para que la barra no desborde
+   (con búsqueda, idioma, tema, avisos y avatar no queda más espacio a 375 px). */
+:is(.panel-root, html.sg-panel) .panel-brand img { height: 40px; width: auto; }
+@media (max-width: 639px) { :is(.panel-root, html.sg-panel) .panel-brand img { height: 30px; } }
+@media (max-width: 420px) { :is(.panel-root, html.sg-panel) .panel-brand img { height: 24px; } }
+:is(.panel-root, html.sg-panel) .panel-brand-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--sg-font-display);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--sg-ink);
+}
+:is(.panel-root, html.sg-panel) .panel-brand-sub {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--sg-ink-2);
+}
+:is(.panel-root, html.sg-panel) .panel-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--sg-rainbow);
+}
+
+/* ─────────────────────────── Tarjetas ─────────────────────────── */
+
+:is(.panel-root, html.sg-panel) .app-card {
+  background-color: var(--app-card-bg);
+  background-image: none;
+  border: 0;
+  border-radius: 24px;
+  box-shadow: var(--sg-shadow-card);
+  transition: transform 320ms var(--sg-ease-out), box-shadow 320ms var(--sg-ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(.panel-root, html.sg-panel) .app-card[data-interactive="true"]:hover {
+    transform: translateY(-4px);
+    border-color: transparent;
+    box-shadow: var(--sg-shadow-lift);
+  }
+}
+/* Tarjeta protagonista: tinta navy sólida (antes ciruela). */
+:is(.panel-root, html.sg-panel) .app-card[data-tone="solid"] {
+  background-color: #08304c;
+  background-image: none;
+  color: #ffffff;
+}
+:is(.panel-root, html.sg-panel) [data-slot="card-header"] { border-bottom-color: var(--sg-mist); }
+:is(.panel-root, html.sg-panel) [data-slot="card-title"] { font-weight: 600; letter-spacing: -0.01em; }
+
+:is(.panel-root, html.sg-panel) .tone-card {
+  background-image: none;
+  border: 0;
+  border-radius: 24px;
+  box-shadow: var(--sg-shadow-card);
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(.panel-root, html.sg-panel) .tone-card[data-interactive="true"]:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--sg-shadow-lift);
+  }
+}
+
+:is(.panel-root, html.sg-panel) .stat-tile[data-solid="true"] { background-image: none; }
+
+/* Sobre una tarjeta ya pastel, el chip del ícono va en blanco translúcido (si no, se funde con el fondo). */
+:is(.panel-root, html.sg-panel) :is(.tone-card, .stat-tile) .tone-chip {
+  background: color-mix(in srgb, var(--app-card-bg) 78%, transparent);
+}
+/* Tarjeta sólida: ícono y flecha en blanco sobre vidrio claro — antes quedaban blancos sobre blanco. */
+:is(.panel-root, html.sg-panel) .stat-tile[data-solid="true"] .tone-chip,
+:is(.panel-root, html.sg-panel) .stat-tile[data-solid="true"] .app-nav-icon,
+:is(.panel-root, html.sg-panel) .app-card[data-tone="solid"] .app-tile-icon,
+:is(.panel-root, html.sg-panel) .app-card[data-tone="solid"] .app-nav-icon {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+/* Flecha de las demás tarjetas: blanca translúcida con la tinta del tono. */
+:is(.panel-root, html.sg-panel) .stat-tile:not([data-solid="true"]) .app-nav-icon {
+  background: color-mix(in srgb, var(--app-card-bg) 78%, transparent);
+  color: oklch(var(--tone-ink-L) var(--tc) var(--th));
+}
+
+/* ─────────────────────────── Íconos (planos, pastel; sin vidrio) ─────────────────────────── */
+
+:is(.panel-root, html.sg-panel) .tone-chip {
+  background: oklch(var(--tone-soft-L) calc(var(--tc) * var(--tone-soft-C)) var(--th));
+  border: 0;
+  border-radius: 16px;
+  box-shadow: none;
+}
+:is(.panel-root, html.sg-panel) .app-tile-icon,
+:is(.panel-root, html.sg-panel) .app-nav-icon,
+:is(.panel-root, html.sg-panel) .icon-glass {
+  background: var(--sg-vino-wash);
+  border: 0;
+  box-shadow: none;
+}
+:is(.panel-root, html.sg-panel) .app-tile-icon { border-radius: 16px; }
+
+/* ─────────────────────────── Píldoras de estado ─────────────────────────── */
+
+:is(.panel-root, html.sg-panel) .pill {
+  border-color: transparent;
+  font-weight: 600;
+  padding: 4px 11px;
+}
+:is(.panel-root, html.sg-panel) .accent-rule { background: var(--sg-vino); }
+
+/* ─────────────────────────── Botones (píldora, como la landing) ─────────────────────────── */
+
+:is(.panel-root, html.sg-panel) [data-slot="button"] {
+  border-radius: 9999px;
+  font-weight: 600;
+}
+:is(.panel-root, html.sg-panel) [data-slot="button"]:active:not(:disabled) { transform: scale(0.97); }
+
+/* Principal: tinta navy sólida (sin el canto 3D del 21/09). */
+:is(.panel-root, html.sg-panel) [data-slot="button"][data-variant="default"] {
+  background-color: #08304c;
+  color: #ffffff;
+  box-shadow: none;
+}
+:is(.panel-root, html.sg-panel) [data-slot="button"][data-variant="default"]:hover:not(:disabled) { background-color: #0e4368; transform: none; box-shadow: none; }
+:is(.dark .panel-root, html.dark.sg-panel) [data-slot="button"][data-variant="default"] { background-color: #e8f1ff; color: #06192a; }
+:is(.dark .panel-root, html.dark.sg-panel) [data-slot="button"][data-variant="default"]:hover:not(:disabled) { background-color: #ffffff; }
+
+/* Secundaria: vino como detalle (lavado, no sólido). */
+:is(.panel-root, html.sg-panel) [data-slot="button"][data-variant="secondary"] {
+  background-color: var(--sg-vino-wash);
+  color: var(--sg-vino);
+  box-shadow: none;
+}
+:is(.panel-root, html.sg-panel) [data-slot="button"][data-variant="secondary"]:hover:not(:disabled) { filter: brightness(0.97); transform: none; box-shadow: none; }
+
+:is(.panel-root, html.sg-panel) [data-slot="button"][data-variant="outline"] {
+  background-color: var(--app-card-bg);
+  border: 0;
+  box-shadow: var(--sg-shadow-hair);
+  color: var(--sg-ink);
+}
+:is(.panel-root, html.sg-panel) [data-slot="button"][data-variant="outline"]:hover:not(:disabled) { background-color: var(--sg-sky); }
+
+:is(.panel-root, html.sg-panel) [data-slot="button"][data-variant="ghost"] { color: var(--sg-ink-2); }
+:is(.panel-root, html.sg-panel) [data-slot="button"][data-variant="ghost"]:hover:not(:disabled) { background-color: var(--sg-sky); color: var(--sg-ink); }
+
+/* Ver / editar: lavado cielo con tinta (antes vidrio vino — demasiado vino repetido en tablas). */
+:is(.panel-root, html.sg-panel) [data-slot="button"][data-variant="soft"] {
+  background: var(--sg-sky);
+  border: 0;
+  box-shadow: none;
+  color: var(--sg-sky-ink);
+}
+:is(.panel-root, html.sg-panel) [data-slot="button"][data-variant="soft"]:hover:not(:disabled) { background: var(--sg-sky-strong); color: var(--sg-sky-ink); }
+
+:is(.panel-root, html.sg-panel) [data-slot="button"][data-variant="destructive"] {
+  background: var(--sg-danger-wash);
+  border: 0;
+  box-shadow: none;
+  color: var(--sg-danger);
+}
+:is(.panel-root, html.sg-panel) [data-slot="button"][data-variant="destructive"]:hover:not(:disabled) { filter: brightness(0.97); }
+
+/* CTA principal de una vista: contorno arcoíris de 1.5 px (uno por vista, como la landing). */
+:is(.panel-root, html.sg-panel) .btn-rainbow {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  border: 0;
+  color: var(--sg-ink);
+}
+/* El botón base trae `.btn-liquid`, cuyo ::before arranca en scale(0)/opacidad 0: aquí se neutraliza
+   para que el contorno arcoíris se vea siempre (y no crezca al hover). */
+:is(.panel-root, html.sg-panel) .btn-rainbow::before,
+:is(.panel-root, html.sg-panel) .btn-rainbow:hover::before,
+:is(.panel-root, html.sg-panel) .btn-rainbow:active::before {
+  transform: none;
+  opacity: 1;
+  transition: none;
+}
+:is(.panel-root, html.sg-panel) .btn-rainbow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: var(--sg-rainbow);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+:is(.panel-root, html.sg-panel) .btn-rainbow::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  z-index: -2;
+  border-radius: inherit;
+  background: var(--sg-rainbow);
+  filter: blur(14px);
+  opacity: 0;
+  transition: opacity 320ms var(--sg-ease-out);
+  pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(.panel-root, html.sg-panel) .btn-rainbow:hover::after { opacity: 0.35; }
+}
+:is(.panel-root, html.sg-panel) .btn-rainbow:focus-visible::after { opacity: 0.35; }
+
+/* El canto "sticker" del 21/09 queda fuera del sistema unificado. */
+:is(.panel-root, html.sg-panel) .btn-sticker { box-shadow: none; }
+:is(.panel-root, html.sg-panel) .btn-sticker:active:not(:disabled) { transform: scale(0.97); box-shadow: none; }
+
+/* ─────────────────────────── Campos ─────────────────────────── */
+
+:is(.panel-root, html.sg-panel) [data-slot="input"],
+:is(.panel-root, html.sg-panel) [data-slot="textarea"],
+:is(.panel-root, html.sg-panel) [data-slot="select-trigger"],
+:is(.panel-root, html.sg-panel) select:not([multiple]) {
+  border-radius: 16px;
+  background-color: var(--app-card-bg);
+  border: 1px solid var(--sg-ash);
+}
+:is(.panel-root, html.sg-panel) [data-slot="input"]:focus-visible,
+:is(.panel-root, html.sg-panel) [data-slot="textarea"]:focus-visible,
+:is(.panel-root, html.sg-panel) [data-slot="select-trigger"]:focus-visible,
+:is(.panel-root, html.sg-panel) select:not([multiple]):focus,
+:is(.panel-root, html.sg-panel) select:not([multiple]):focus-visible {
+  outline: none;
+  border-color: var(--sg-ink);
+  box-shadow: 0 0 0 4px var(--sg-sky);
+}
+/* Campos con el dibujo del login (.auth-input) usados dentro de los paneles: filo visible y foco navy. */
+:is(.panel-root, html.sg-panel) .auth-input {
+  border-color: var(--sg-ash);
+  border-radius: 16px;
+}
+:is(.panel-root, html.sg-panel) .auth-input:focus {
+  border-color: var(--sg-ink);
+  box-shadow: 0 0 0 4px var(--sg-sky);
+}
+:is(.panel-root, html.sg-panel) .auth-field:focus-within .auth-field-icon,
+:is(.panel-root, html.sg-panel) .auth-input:focus + .auth-label { color: var(--sg-ink); }
+:is(.panel-root, html.sg-panel) [data-slot="select-content"] {
+  border-radius: 20px;
+  box-shadow: var(--sg-shadow-lift);
+}
+
+/* ─────────────────────────── Tablas ─────────────────────────── */
+
+:is(.panel-root, html.sg-panel) [data-slot="table-container"] {
+  border: 0;
+  border-radius: 24px;
+  box-shadow: var(--sg-shadow-card);
+  background: var(--app-card-bg);
+}
+:is(.panel-root, html.sg-panel) [data-slot="table-header"] { background: var(--sg-subtle); }
+:is(.panel-root, html.sg-panel) [data-slot="table-row"] { border-color: var(--sg-mist); }
+@media (hover: hover) and (pointer: fine) {
+  :is(.panel-root, html.sg-panel) [data-slot="table-body"] [data-slot="table-row"]:hover { background: color-mix(in srgb, var(--sg-sky) 55%, transparent); }
+}
+
+/* ─────────────────────────── Diálogos ─────────────────────────── */
+
+:is(.panel-root, html.sg-panel) [data-slot="dialog-content"],
+html.sg-panel [data-slot="dialog-content"] {
+  border-radius: 28px;
+  box-shadow: var(--sg-shadow-lift);
+}
+
+/* ─────────────────────────── Movimiento ─────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.panel-root, html.sg-panel) .app-card,
+  :is(.panel-root, html.sg-panel) .tone-card,
+  :is(.panel-root, html.sg-panel) .btn-rainbow::after { transition: none; }
+  :is(.panel-root, html.sg-panel) [data-slot="button"]:active:not(:disabled) { transform: none; }
+}

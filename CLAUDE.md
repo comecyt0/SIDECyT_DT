@@ -5,7 +5,10 @@
 
 ## Visión General del Proyecto
 
-**COMECYT** (Consejo Mexiquense de Ciencia y Tecnología) es un sistema integral de gestión de apoyo científico que administra el ciclo completo de convocatorias de financiamiento:
+**SIGAC — Sistema de Gestión de Apoyos Científicos** (nombre confirmado por el usuario el 23/09/2026) es el
+sistema del **COMECYT** (Consejo Mexiquense de Ciencia y Tecnología) que administra el ciclo completo de las
+convocatorias de financiamiento de Apoyo Empresarial. Landing pública: `/sigac` (E36). El dominio conserva el
+nombre anterior (`sidecyt-comecyt.edomex.gob.mx`).
 
 ```
 Convocatoria → Solicitud → Revisión documental → Evaluación técnica
@@ -366,6 +369,10 @@ completo y el barrido vista por vista en `docs/DISENO_UI.md` §10.
 **El menú/nav del panel NO se toca (E26).** `logo.png` es el favicon del sistema completo.
 **23/09/2026 — Landing pública `/sigac`** con sistema visual propio y aislado (ADN de portrait.so, tokens en
 `.lp-root`, fuentes locales Switzer + Satoshi): `docs/LANDING_SIGAC.md` y E36.
+**23/09/2026 — ESE MISMO SISTEMA EN TODOS LOS PANELES (dirección vigente, E39):** tinta navy principal,
+lienzo blanco, pastel, vino solo de detalle, píldoras, Switzer/Satoshi. Capa única
+`src/styles/panel-sigac.css` acotada a `:is(.panel-root, html.sg-panel)`; **el login no cambia**. Sustituye
+la dirección visible "multicolor/Duolingo" del 21/09. Detalle: `docs/DISENO_UI.md` §12.
 
 ### Patrón de descarga de archivos (blob)
 ```typescript
@@ -1311,3 +1318,25 @@ Exchange Online** (solo buzón). Configuración sugerida: `smtp.office365.com`, 
   cargan la configuración al arrancar; sin reiniciarlos seguirían con `log`). La cola es `database`.
 - **Pendiente derivado:** reactivar el 2FA del admin (apagado desde el 14/09 por falta de correo) con el
   usuario presente, y probar de punta a punta el restablecimiento de contraseña por correo.
+
+### E39 — Paneles unificados con el diseño de la landing (sistema SIGAC) [publicado 23-09-2026]
+Pedido del usuario: llevar diseño, interfaz y colores de la landing a todos los paneles; el login igual.
+Detalle completo en `docs/DISENO_UI.md` §12. Lo que un desarrollador debe saber:
+- **Una sola capa:** `src/styles/panel-sigac.css`, importada en `app/layout.tsx`, **sin `@layer`** (gana
+  sobre `globals.css` y Tailwind). Todo selector va con `:is(.panel-root, html.sg-panel)`.
+- **Dos alcances:** `.panel-root` en la raíz de `AdminTopLayout`/`RoleTopLayout` (primer render) y
+  `html.sg-panel`, que pone `usePanelScope()` mientras hay un panel montado — necesario porque diálogos,
+  selects y menús se renderizan en **portales fuera de `.panel-root`**.
+- **Se redefinen tokens, no vistas:** shadcn, `--app-*`, `--tile-*`, los `--auth-*` que usan los paneles,
+  `--tone-*-L` y la escala `--color-neutral-*` de Tailwind v4 (sus utilidades leen la variable).
+- `button.tsx` expone `data-variant` y la variante **`rainbow`** (un CTA por vista). `page-header.tsx` pone
+  `page-title` (barra vino bajo el título). Fuentes en `lib/fonts.ts` (variables en `<html>`).
+- **Trampas encontradas (no repetir):** (1) `.btn-liquid` deja su `::before` en `scale(0)`/opacidad 0 — un
+  pseudo-elemento propio en un botón debe neutralizar `transform`/`opacity`/`transition`; (2) en modo oscuro
+  **no invertir** la escala `neutral`: las vistas ya eligen el extremo con `dark:`; (3) si `--auth-field`
+  es blanco sobre lienzo blanco, los campos desaparecen; (4) un logo más ancho en la barra desborda en
+  teléfono — hay 6 controles a la derecha.
+- **Verificación con sesión sin contraseñas:** tokens JWT emitidos con `auth('api')->login($user)` desde un
+  script de servidor (guardados en archivo, nunca impresos) e **invalidados al terminar**
+  (`->invalidate(true)`). El archivo `F:\COMECYT_CREDENCIALES.txt` está desactualizado (contraseñas del 30/06,
+  rotadas el 14/09) — no usarlo.

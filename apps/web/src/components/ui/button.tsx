@@ -39,6 +39,9 @@ const buttonVariants = cva(
           'icon-glass text-destructive [--auth-vino:var(--color-destructive)] hover:bg-destructive/10 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40',
         // Link: Underlined text link
         link: 'text-primary underline-offset-4 hover:underline dark:text-primary',
+        // CTA principal de una vista (23/09/2026, sistema SIGAC): píldora con contorno arcoíris,
+        // igual que "Iniciar sesión" de la landing. Una por vista como máximo. Estilo en panel-sigac.css.
+        rainbow: 'btn-rainbow bg-[var(--app-card-bg)] text-[var(--app-ink)]',
       },
       size: {
         default: 'h-10 gap-2 px-4 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3',
@@ -81,6 +84,7 @@ function Button({
     >
       <ButtonPrimitive
         data-slot="button"
+        data-variant={variant ?? 'default'}
         disabled={disabled || isLoading}
         className={cn(buttonVariants({ variant, size, className }))}
         {...props}

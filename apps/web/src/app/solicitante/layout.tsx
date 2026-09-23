@@ -16,11 +16,14 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useSessionRefresh } from '@/hooks/useSessionRefresh';
 import { useT } from '@/i18n/I18nProvider';
 import NotificationToast from '@/components/notifications/NotificationToast';
+import { usePanelScope } from '@/hooks/usePanelScope';
 
 export default function SolicitanteLayout({ children }: { children: React.ReactNode }) {
   const { t } = useT();
   const { notifs, count, markAsRead, markAllAsRead, incoming, dismissIncoming } = useNotifications();
   useSessionRefresh();
+  // El onboarding se muestra sin la barra del panel, pero con el mismo sistema visual SIGAC.
+  usePanelScope();
   const pathname = usePathname();
   const router = useRouter();
 

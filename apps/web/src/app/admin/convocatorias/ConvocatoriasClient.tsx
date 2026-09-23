@@ -36,7 +36,7 @@ export default function ConvocatoriasClient({ convocatorias }: Props) {
         icon={<Megaphone className="h-5 w-5" />}
         actions={
           <Link href="/admin/convocatorias/nueva">
-            <Button>
+            <Button variant="rainbow">
               <Plus className="h-4 w-4" /> Nueva convocatoria
             </Button>
           </Link>

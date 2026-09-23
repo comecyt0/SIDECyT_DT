@@ -1,7 +1,8 @@
 # Diseño UI — COMECYT
 
 > **23/09/2026:** nueva landing pública `/sigac` con sistema visual propio (referencia portrait.so) — ver §11
-> y [`LANDING_SIGAC.md`](LANDING_SIGAC.md).
+> y [`LANDING_SIGAC.md`](LANDING_SIGAC.md). **Ese mismo sistema se llevó a todos los paneles** (el login
+> queda igual) — ver §12. Es la dirección vigente; §10 queda como historia de la capa de clases.
 
 Sistema visual y de interacción del front. Empezó con el rediseño del login del **14/09/2026**, se
 extendió ese mismo día al panel (shell + dashboard), a "¿Olvidaste tu clave?", a "Solicitar acceso" y a
@@ -471,6 +472,68 @@ redirige ahí. Documento completo (rutas, archivos, tokens, movimiento, estados,
   de detalle** (barras bajo títulos, números, fechas de cierre, filos de tarjeta; nunca fondos grandes);
   logo ×3 con `public/logo-recortado.png`; convocatorias abiertas en vivo; botón "Ir al sitio" en el login
   (único cambio al login: una píldora con los tokens `--auth-*`).
-- **Pendiente pedido por el usuario:** llevar este lenguaje visual (tinta navy, arcoíris de firma, pastel,
-  vino de detalle, radios 24/28, sombras de capas) a **todos los paneles**, excepto el login — ver §12
-  cuando se haga.
+- **Hecho el mismo día:** este lenguaje visual se llevó a **todos los paneles** (excepto el login) — §12.
+
+---
+
+## 12. Paneles unificados con la landing — sistema SIGAC (23/09/2026)
+
+**Pedido del usuario:** implementar el diseño, la interfaz y los colores de la landing en todos los paneles
+(admin, solicitante, revisor, evaluador) para unificar el sistema; **el login queda igual**. Esto **sustituye**
+la dirección "vivo y multicolor / Duolingo" del 21/09 (§10) como lenguaje visible: las clases de §10
+(`.pill`, `.tone-*`, `.stat-tile`, `data-tone`…) siguen existiendo y funcionando, pero ahora se pintan con
+el sistema SIGAC.
+
+### Cómo está hecho (una capa, sin editar las 136 vistas)
+
+| Pieza | Dónde | Qué hace |
+|---|---|---|
+| `src/styles/panel-sigac.css` | importado en `app/layout.tsx` | Toda la capa. **Sin `@layer`** a propósito: gana sobre `globals.css` y las utilidades de Tailwind, así corrige radios/sombras que las vistas traen como utilidades |
+| `.panel-root` | raíz de `AdminTopLayout` y `RoleTopLayout` | Alcance del sistema en el primer render |
+| `html.sg-panel` | `hooks/usePanelScope.ts` (en ambos layouts y en el onboarding del solicitante) | Alcance para **portales** (diálogos, selects, menús), que se renderizan fuera de `.panel-root`. Se quita al salir del panel |
+| Tokens redefinidos | dentro del alcance | shadcn (`--primary`…), `--app-*`, `--tile-*`, los `--auth-*` que consumen los paneles, `--tone-*-L` y la **escala `neutral` de Tailwind v4** (`--color-neutral-*`, tintada hacia navy) |
+| `lib/fonts.ts` | `<html>` del layout raíz | Switzer + Satoshi para landing y paneles (solo variables: el login sigue en Geist) |
+| `button.tsx` | `data-variant` + variante `rainbow` | El CSS distingue variantes sin afectar las pantallas de acceso |
+| `page-header.tsx` | clase `page-title` | Barra vino corta bajo el título de cada página |
+
+**Por qué así:** las pantallas de acceso (login, solicitar acceso, recuperar clave) usan los mismos `<Button>`
+y `<Card>`; cambiar los componentes las habría alterado. Con la capa acotada, el login sale idéntico
+(verificado: sin `sg-panel` y con Geist).
+
+### Lenguaje visual resultante
+
+- **Color:** lienzo blanco; **tinta navy `#08304c`** como color principal y de acción (`--primary`);
+  lavados pastel para tonos (cielo/menta/durazno); **vino solo como detalle** (`--auth-vino` intacto: ícono
+  del encabezado, etiquetas, barra bajo títulos, filo bajo la barra superior, botón secundario en lavado).
+- **Tipografía:** Switzer en texto, Satoshi 600 con tracking negativo en `h1`, `h2` y cifras de indicadores.
+- **Botones:** píldora. Principal = navy sólido (sin el canto 3D "sticker"); secundario = lavado vino;
+  contorno = blanco con filo; ver/editar (`soft`) = lavado cielo (antes vidrio vino: demasiado vino repetido
+  en tablas); eliminar = lavado rojo; **`variant="rainbow"`** = contorno arcoíris para el CTA principal de
+  una vista (aplicado en "Nueva solicitud" ×2 y "Nueva convocatoria").
+- **Tarjetas:** 24 px, sin borde, sombra de capas de la landing; al pasar el cursor suben 4 px. Tarjeta
+  protagonista (`data-tone="solid"`) en navy.
+- **Íconos:** planos en pastel, sin vidrio; sobre tarjetas de color, chip blanco translúcido.
+- **Píldoras de estado:** sin borde grueso.
+- **Campos:** 16 px, relleno gris frío `#f3f6fa` con filo, foco navy + halo cielo.
+- **Tablas:** contenedor de 24 px con sombra, encabezado `#f6f8fb`, fila con hover cielo.
+- **Barra superior:** **misma estructura y comportamiento (E26)**; cambia la piel (blanco, sombra de capas,
+  filo vino), el logo recortado (40 px; 30/24 px en teléfono) y la marca "SIGAC · Gestión de Apoyos
+  Científicos" con el cuadro arcoíris.
+- **Modo oscuro:** conservado, en navy profundo con las mismas relaciones.
+
+### Verificación (producción, 23/09/2026)
+
+Capturas antes/después con sesión de los 4 roles (tokens temporales emitidos en el servidor e invalidados al
+terminar): admin (dashboard, convocatorias, usuarios, solicitudes), solicitante (panel, solicitudes), revisor
+(panel, bandeja), evaluador (panel); menú desplegable; modo oscuro. **Sin errores de consola, sin scroll
+horizontal a 1440 y 375 px.** 102/102 pruebas del front. Defectos encontrados y corregidos antes de cerrar:
+contorno arcoíris anulado por el `::before` de `.btn-liquid`; ícono blanco sobre blanco en tarjetas sólidas;
+chip que se fundía con la tarjeta pastel; campos invisibles (relleno blanco sobre lienzo blanco); desborde de
+14 px en móvil por el logo; escala `neutral` invertida en oscuro (texto oscuro sobre oscuro).
+
+### Reglas para lo que venga
+
+- Nuevo color o componente del panel → token o regla en `panel-sigac.css`, acotado con
+  `:is(.panel-root, html.sg-panel)`. **Nunca** en `:root` ni en `globals.css` (alcanzaría al login).
+- Un solo `variant="rainbow"` por vista.
+- Vino solo en detalles; si una vista pide un bloque grande de color, usar navy o un lavado pastel.

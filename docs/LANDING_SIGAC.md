@@ -6,7 +6,9 @@
 Página de presentación del sistema **antes del login** y **puerta de entrada a todas las convocatorias de
 Apoyo Empresarial del COMECYT**. Muestra las convocatorias abiertas en vivo, los 4 programas, los sectores,
 los documentos que se preparan, el recorrido de una solicitud y cómo obtener acceso; lleva a `/login` o a
-`/solicitar-acceso`. En la landing el sistema se llama **SIGAC** (pedido del usuario; antes decía SIDECyT).
+`/solicitar-acceso`. En la landing el sistema se llama **SIGAC — Sistema de Gestión de Apoyos Científicos**
+(nombre y significado confirmados por el usuario; antes decía SIDECyT). El nombre completo aparece en el texto
+del hero, en la tarjeta final, en el `title` del logo del nav y en los metadatos de la página.
 
 ## 0. Cambios del 23/09/2026 (tarde), en orden
 
@@ -27,6 +29,9 @@ los documentos que se preparan, el recorrido de una solicitud y cómo obtener ac
    el del encabezado se limita a 40–46 px para que quepa con "SIGAC" y el botón.
 6. **Convocatorias abiertas en vivo** (§10) y píldora del nav "N convocatorias abiertas".
 7. Botón **"Ir al sitio"** en el login (arriba a la izquierda) → `/sigac`.
+8. Nombre completo **"SIGAC, el Sistema de Gestión de Apoyos Científicos"** en el texto del hero (en vino).
+9. **Halo detrás del titular en vino** (`oklch(36% 0.1 358 / 0.13)`), antes lavanda de la referencia.
+10. El mismo sistema visual se llevó a todos los paneles: `DISENO_UI.md` §12.
 
 ---
 
@@ -50,7 +55,7 @@ En IIS no hubo que tocar nada: `/sigac` cae en la regla `NextJsProxy` de `public
 | `apps/web/src/app/sigac/page.tsx` | Página de servidor: metadatos (título, descripción, OpenGraph, canonical) y fuentes locales |
 | `apps/web/src/app/sigac/Landing.tsx` | Componente cliente: nav, hero con collage, etapas, roles, acceso y pie |
 | `apps/web/src/app/sigac/landing.css` | Todos los estilos, con prefijo `.lp-*`. Los tokens viven en `.lp-root`, **no** en `:root` |
-| `apps/web/src/app/sigac/fonts/` | `Switzer-Variable.woff2`, `Satoshi-Variable.woff2` y su licencia (FFL) |
+| `apps/web/src/fonts/` + `apps/web/src/lib/fonts.ts` | `Switzer-Variable.woff2`, `Satoshi-Variable.woff2` y su licencia (FFL). Desde la unificación de paneles (E39) las comparten landing y paneles; el layout raíz pone sus variables en `<html>` (el login sigue en Geist) |
 | `apps/web/src/app/sigac/Landing.a11y.test.tsx` | axe sin violaciones + validación del correo + enlaces a login/acceso |
 | `apps/web/src/proxy.ts` | `/sigac`, `/privacidad` y `/terminos` en `PUBLIC_PATHS`; regla de `/` |
 | `apps/web/src/app/(auth)/login/page.tsx` | Prellenado de `?email=` |

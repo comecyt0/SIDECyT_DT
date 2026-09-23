@@ -21,6 +21,7 @@ import {
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
 import { useT } from '@/i18n/I18nProvider';
 import { formatDate } from '@/lib/format';
+import { usePanelScope } from '@/hooks/usePanelScope';
 
 interface NavItem {
   name: string;
@@ -101,6 +102,7 @@ export default function AdminTopLayout({
   onMarkAsRead,
   onMarkAllAsRead,
 }: AdminTopLayoutProps) {
+  usePanelScope();
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useT();
@@ -182,17 +184,18 @@ export default function AdminTopLayout({
   const activeGroup = getActiveGroup();
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col">
+    // `panel-root`: alcance del sistema visual SIGAC (styles/panel-sigac.css). La estructura del menú no cambia (E26).
+    <div className="panel-root min-h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col">
       {/* ── TOP BAR ── */}
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border-b border-neutral-100 dark:border-neutral-700 shadow-sm">
+      <header className="panel-topbar sticky top-0 z-50 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border-b border-neutral-100 dark:border-neutral-700 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 md:px-8 h-16 flex items-center gap-2 sm:gap-4">
 
-          {/* Logo */}
-          <Link href="/admin/dashboard" className="flex items-center gap-3 shrink-0">
-            <Image src="/logo.png" alt={INSTITUTION.name} width={46} height={36} priority className="h-9 w-auto object-contain" />
+          {/* Logo (recortado, mismo que la landing) + marca SIGAC */}
+          <Link href="/admin/dashboard" className="panel-brand flex items-center gap-3 shrink-0" title="SIGAC — Sistema de Gestión de Apoyos Científicos">
+            <Image src="/logo-recortado.png" alt={INSTITUTION.name} width={99} height={44} priority className="h-10 w-auto object-contain" />
             <div className="hidden sm:block">
-              <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-300 uppercase tracking-[0.15em] block leading-none">Sistema</span>
-              <span className="text-sm font-extrabold text-primary leading-tight block">{INSTITUTION.name}</span>
+              <span className="panel-brand-name">SIGAC<span className="panel-swatch" aria-hidden="true" /></span>
+              <span className="panel-brand-sub">Gestión de Apoyos Científicos</span>
             </div>
           </Link>
 

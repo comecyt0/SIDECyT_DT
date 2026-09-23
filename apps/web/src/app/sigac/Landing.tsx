@@ -36,7 +36,8 @@ import { INSTITUTION, copyrightLine } from '@/lib/institution';
 import { useGlobalLoader } from '@/components/ui/GlobalLoader';
 
 /**
- * Landing pública de SIGAC (/sigac), puerta de entrada a las convocatorias de Apoyo Empresarial. Estilos en ./landing.css (prefijo .lp-*), referencia de
+ * Landing pública de SIGAC — Sistema de Gestión de Apoyos Científicos (/sigac), puerta de entrada a las
+ * convocatorias de Apoyo Empresarial. Estilos en ./landing.css (prefijo .lp-*), referencia de
  * estilo portrait.so y decisiones en docs/LANDING_SIGAC.md.
  *
  * Contenido honesto: nada de cifras inventadas. Las etapas y los roles salen del ciclo real del
@@ -520,7 +521,7 @@ export default function Landing() {
       {/* ── Nav flotante ── */}
       <header className="lp-nav" data-scrolled={scrolled ? 'true' : 'false'}>
         <nav className="lp-nav-bar" aria-label="Principal">
-          <a href="#contenido" className="lp-brand" aria-label="SIGAC, inicio">
+          <a href="#contenido" className="lp-brand" aria-label="SIGAC, Sistema de Gestión de Apoyos Científicos — inicio" title="Sistema de Gestión de Apoyos Científicos">
             {/* logo-recortado.png = logo.png sin el margen transparente (el dibujo ocupa solo la mitad del alto) */}
             {/* eslint-disable-next-line @next/next/no-img-element -- logo institucional */}
             <img src="/logo-recortado.png" alt="" width={176} height={78} />
@@ -565,7 +566,8 @@ export default function Landing() {
                 </span>
               </h1>
               <p className="lp-lead lp-in" style={{ '--i': 8 } as CSSProperties}>
-                SIGAC es la plataforma del {INSTITUTION.name} para las convocatorias de Apoyo Empresarial:
+                <strong className="lp-lead-name">SIGAC, el Sistema de Gestión de Apoyos Científicos</strong>, es la
+                plataforma del {INSTITUTION.name} para las convocatorias de Apoyo Empresarial:
                 postula tu proyecto de ciencia, tecnología e innovación, sigue cada etapa y recibe el apoyo,
                 con todo tu expediente en un solo lugar.
               </p>
@@ -749,7 +751,7 @@ export default function Landing() {
               </span>
               <div className="lp-final-text">
                 <h3>Entra a SIGAC</h3>
-                <p>Usa el correo con el que te registraste.</p>
+                <p>Sistema de Gestión de Apoyos Científicos. Usa el correo con el que te registraste.</p>
               </div>
               <div className="lp-final-actions">
                 <Link href="/solicitar-acceso" className="lp-btn lp-btn-ghost">Solicitar acceso</Link>

@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+// Sistema visual SIGAC de los paneles (23/09/2026). Todo acotado a `.panel-root`: el login no cambia.
+import "../styles/panel-sigac.css";
+import { switzer, satoshi } from "@/lib/fonts";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { GlobalLoaderProvider } from "@/components/ui/GlobalLoader";
@@ -55,7 +58,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
+      className={`${geistSans.variable} ${geistMono.variable} ${switzer.variable} ${satoshi.variable} h-full antialiased scroll-smooth`}
     >
       <head>
         <link rel="manifest" href="/manifest.webmanifest" />

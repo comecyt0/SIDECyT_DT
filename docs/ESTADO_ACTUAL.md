@@ -2,6 +2,12 @@
 
 **Fecha de actualización:** 23 de septiembre de 2026 (versión anterior: 21/09/2026)
 
+> 🎨 **23/09/2026 (tarde) — Paneles unificados con la landing.** Admin, solicitante, revisor y evaluador
+> usan ahora el sistema visual SIGAC de la landing (tinta navy, blanco, pastel, vino de detalle, píldoras,
+> Switzer/Satoshi, logo y marca SIGAC en la barra). El login no cambió. Capa única
+> `src/styles/panel-sigac.css`; verificado en producción con los 4 roles, móvil 375 px y modo oscuro
+> (E39 en `CLAUDE.md`, `DISENO_UI.md` §12). **SIGAC = Sistema de Gestión de Apoyos Científicos.**
+>
 > 📨 **23/09/2026 (tarde) — SMTP institucional FUNCIONANDO.** Infraestructura quitó el autenticador (MFA)
 > de `proyectos.comecyt@edomex.gob.mx` y le asignó licencia Exchange Online. Probado: autenticación,
 > envío real y envío desde Laravel por `smtp.office365.com:587` (STARTTLS). `MAIL_MAILER=smtp` en
@@ -341,6 +347,7 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 
 | Fecha | Cambio |
 |---|---|
+| 2026-09-23 (tarde, 3) | **Paneles unificados con el diseño de la landing** (E39, `DISENO_UI.md` §12); login intacto. Landing: nombre completo "SIGAC — Sistema de Gestión de Apoyos Científicos" y halo vino detrás del titular |
 | 2026-09-23 (tarde, 2) | **SMTP Microsoft 365 funcionando** (E38). **Landing:** SIGAC, programas de Apoyo Empresarial, convocatorias en vivo (endpoint público E37 con throttle y lista blanca), vino de detalle, logo ×3, "Ir al sitio" en el login. **Regla permanente de ciberseguridad** en `CLAUDE.md` §0 |
 | 2026-09-23 (tarde) | **Landing pública `/sigac` publicada** (referencia portrait.so, fuentes Switzer + Satoshi auto-hospedadas). `/` sin sesión → `/sigac`; `/privacidad` y `/terminos` públicas; `?email=` prellena el login. Pruebas axe 3/3, sin scroll horizontal a 375 y 1440 px. Ver `LANDING_SIGAC.md` y `CLAUDE.md` E36 |
 | 2026-09-23 | **Cookie de sesión endurecida** (`Secure`+`Strict`, verificado). **Definida e implementada la transición `aprobada→convenio→ministracion`** (E33), que destapó 3 bugs más en `ConvenioController` nunca antes ejercitados — corregidos y verificados con datos desechables (E34). **Limpieza:** 7.84 GB liberados en respaldos `.next.bak-*`, tarea rota eliminada, `C:\comecyt` borrado. **SMTP institucional probado con credenciales reales — bloqueado por la institución** (E35): dos rutas rechazadas por políticas de Microsoft 365 / red interna, ninguna corregible desde el servidor. **Carrusel:** imágenes reales ya subidas por el usuario. **Cabeceras:** `Server` confirmada oculta; `Cross-Origin-Resource-Policy` activada en `/storage/*` |
