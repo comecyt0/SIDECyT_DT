@@ -24,9 +24,9 @@ export interface ResetRequest {
 }
 
 const statusConfig = {
-  pending:  { label: 'Pendiente',  chip: 'bg-amber-50 text-amber-700',     icon: Clock },
-  approved: { label: 'Aprobada',   chip: 'bg-emerald-50 text-emerald-700', icon: CheckCircle2 },
-  rejected: { label: 'Rechazada',  chip: 'bg-red-50 text-red-700',         icon: XCircle },
+  pending:  { label: 'Pendiente',  tone: 'amber',   icon: Clock },
+  approved: { label: 'Aprobada',   tone: 'emerald', icon: CheckCircle2 },
+  rejected: { label: 'Rechazada',  tone: 'red',     icon: XCircle },
 };
 
 const FILTER_LABELS = { all: 'Todas', pending: 'Pendientes', approved: 'Aprobadas', rejected: 'Rechazadas' } as const;
@@ -153,9 +153,9 @@ export default function ResetRequestsClient({ requests }: Props) {
       <Card>
         <CardContent className="p-0">
         {filtered.length === 0 ? (
-          <div className="text-center py-14">
-            <KeyRound className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-            <p className="font-semibold text-[var(--app-ink)]">Sin solicitudes todavía</p>
+          <div className="empty-state">
+            <span className="tone-chip" data-tone="violet"><KeyRound aria-hidden="true" /></span>
+            <p className="font-bold text-[var(--app-ink)]">Sin solicitudes todavía</p>
             <p className="text-sm text-[var(--app-ink-2)]">Aparecen cuando alguien pide recuperar su contraseña desde la pantalla de inicio de sesión.</p>
           </div>
         ) : (
@@ -183,8 +183,8 @@ export default function ResetRequestsClient({ requests }: Props) {
                           <p className="text-sm font-bold text-[var(--app-ink)] truncate">
                             {req.nombre || req.email}
                           </p>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${cfg.chip} uppercase tracking-tight shrink-0 inline-flex items-center gap-1`}>
-                            <Icon className="w-2.5 h-2.5" /> {cfg.label}
+                          <span className="pill shrink-0" data-tone={cfg.tone}>
+                            <Icon aria-hidden="true" /> {cfg.label}
                           </span>
                         </div>
                         <div className="flex items-center gap-1 text-xs text-[var(--app-ink-2)]">
@@ -209,7 +209,7 @@ export default function ResetRequestsClient({ requests }: Props) {
                       </div>
                     )}
                     {req.status !== 'pending' && (
-                      <span className={`text-xs font-semibold px-3 py-1.5 rounded-[10px] ${cfg.chip} shrink-0 self-start sm:self-auto`}>
+                      <span className="pill shrink-0 self-start sm:self-auto" data-tone={cfg.tone}>
                         {req.status === 'approved' ? 'Enlace enviado' : 'Rechazada'}
                       </span>
                     )}

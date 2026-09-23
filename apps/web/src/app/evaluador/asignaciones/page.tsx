@@ -24,11 +24,11 @@ const item = {
   show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
 };
 
-const estadoConfig: Record<string, { label: string; badge: string }> = {
-  asignado:   { label: 'Por iniciar', badge: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' },
-  notificado: { label: 'Por iniciar', badge: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' },
-  evaluando:  { label: 'En evaluación', badge: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
-  concluido:  { label: 'Dictamen emitido', badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
+const estadoConfig: Record<string, { label: string; tone: string }> = {
+  asignado:   { label: 'Por iniciar', tone: 'sky' },
+  notificado: { label: 'Por iniciar', tone: 'sky' },
+  evaluando:  { label: 'En evaluación', tone: 'amber' },
+  concluido:  { label: 'Dictamen emitido', tone: 'emerald' },
 };
 
 export default function AsignacionesPage() {
@@ -138,9 +138,9 @@ export default function AsignacionesPage() {
       ) : asignaciones.length === 0 ? (
         <Card>
           <CardContent>
-            <div className="text-center py-14">
-              <ClipboardList className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-              <p className="font-semibold text-[var(--app-ink)]">Nada pendiente por ahora</p>
+            <div className="empty-state">
+              <span className="tone-chip" data-tone="violet"><ClipboardList aria-hidden="true" /></span>
+              <p className="font-bold text-[var(--app-ink)]">Nada pendiente por ahora</p>
               <p className="text-sm text-[var(--app-ink-2)]">Cuando el comité técnico te asigne un proyecto, aparecerá aquí.</p>
             </div>
           </CardContent>
@@ -148,9 +148,9 @@ export default function AsignacionesPage() {
       ) : filteredAsignaciones.length === 0 ? (
         <Card>
           <CardContent>
-            <div className="text-center py-14">
-              <Search className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-              <p className="font-semibold text-[var(--app-ink)]">No encontramos proyectos con esos filtros</p>
+            <div className="empty-state">
+              <span className="tone-chip" data-tone="sky"><Search aria-hidden="true" /></span>
+              <p className="font-bold text-[var(--app-ink)]">No encontramos proyectos con esos filtros</p>
               <p className="text-sm text-[var(--app-ink-2)]">Prueba con otro texto o cambia el estado.</p>
             </div>
           </CardContent>
@@ -163,7 +163,7 @@ export default function AsignacionesPage() {
           className="grid grid-cols-1 lg:grid-cols-2 gap-4"
         >
           {filteredAsignaciones.map((asig) => {
-            const cfg = estadoConfig[asig.estado] ?? { label: asig.estado, badge: 'bg-neutral-100 text-neutral-500' };
+            const cfg = estadoConfig[asig.estado] ?? { label: asig.estado, tone: 'neutral' };
             const esConcluido = asig.estado === 'concluido';
             const esNuevo = asig.estado === 'asignado' || asig.estado === 'notificado';
 
@@ -173,7 +173,7 @@ export default function AsignacionesPage() {
                   <CardContent className="flex flex-col gap-4 h-full">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${cfg.badge}`}>
+                        <span className="pill" data-tone={cfg.tone}>
                           {cfg.label}
                         </span>
                         <span className="font-mono text-xs font-semibold" style={{ color: 'var(--auth-vino)' }}>

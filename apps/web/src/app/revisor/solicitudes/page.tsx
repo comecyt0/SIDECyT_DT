@@ -127,9 +127,11 @@ export default function RevisorSolicitudesPage() {
               <Loader2 className="h-8 w-8 animate-spin text-[var(--auth-vino)]" />
             </div>
           ) : filteredSolicitudes.length === 0 ? (
-            <div className="text-center py-14">
-              <CheckCircle2 className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-              <p className="font-semibold text-[var(--app-ink)]">
+            <div className="empty-state">
+              <span className="tone-chip" data-tone={searchTerm ? 'sky' : 'emerald'}>
+                {searchTerm ? <Search aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
+              </span>
+              <p className="font-bold text-[var(--app-ink)]">
                 {searchTerm ? 'No encontramos solicitudes con ese texto' : 'Nada pendiente por ahora'}
               </p>
               <p className="text-sm text-[var(--app-ink-2)]">
@@ -151,7 +153,7 @@ export default function RevisorSolicitudesPage() {
                       <span className="font-mono text-xs font-semibold" style={{ color: 'var(--auth-vino)' }}>
                         {s.folio}
                       </span>
-                      <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${estadoBadgeClass(s.estado)}`}>
+                      <span className={estadoBadgeClass(s.estado)}>
                         {estadoLabel(s.estado)}
                       </span>
                     </div>

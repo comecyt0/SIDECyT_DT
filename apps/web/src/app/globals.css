@@ -909,3 +909,231 @@
     @keyframes route-loading-fade { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.35; } }
   }
 }
+
+/* Hallmark · component: panel-content-system (tiles + pills + sticker buttons + tone cards)
+ * genre: playful (institucional) · theme: custom (vino COMECYT + paleta viva multicolor)
+ * pre-emit critique: P5 H4 E4 S5 R4 V5
+ * states: default · hover · focus-visible · active · disabled · loading · empty
+ * motion: entrada escalonada (una vez) · pop del ícono al hover · presión sticker · solo transform/opacity
+ * 21/09/2026 — Rediseño y UNIFICACIÓN del contenido interno de los 4 paneles (admin, evaluador,
+ * revisor, solicitante). Decisión del usuario: wine sigue como principal/detalle, pero el resto se
+ * vuelve VIVO Y MULTICOLOR (referencia Duolingo) y se ADOPTAN PÍDORAS (rounded-full) tipo sticker.
+ * Todo vive aquí como clases reutilizables para no saturar los archivos ni duplicar tokens.
+ * El menú/topbar/pie NO se tocan (E26). Documentado en docs/DISENO_UI.md §10.
+ */
+:root {
+  /* Matiz (H) y croma (C) base por tono — un solo lugar; las clases derivan L por rol.
+     Mapea 1:1 a los estados del sistema (ver solicitud-estados.ts / color-mapper.ts). */
+  --h-vino: 358;    --c-vino: 0.115;
+  --h-gold: 78;     --c-gold: 0.135;
+  --h-amber: 70;    --c-amber: 0.15;
+  --h-orange: 55;   --c-orange: 0.16;
+  --h-emerald: 158; --c-emerald: 0.15;
+  --h-teal: 190;    --c-teal: 0.13;
+  --h-sky: 232;     --c-sky: 0.15;
+  --h-blue: 258;    --c-blue: 0.16;
+  --h-violet: 300;  --c-violet: 0.15;
+  --h-rose: 12;     --c-rose: 0.15;
+  --h-red: 27;      --c-red: 0.19;
+  --h-neutral: 350; --c-neutral: 0.006;
+
+  /* Lightness por rol (modo claro). El modo oscuro las reescribe abajo. */
+  --tone-ink-L: 44%;     /* texto/valor sobre fondo suave (≥ 4.5:1) */
+  --tone-fg-L: 56%;      /* color vivo del ícono, punto, borde de píldora */
+  --tone-soft-L: 96.5%;  /* fondo suave de tile/píldora suave */
+  --tone-soft-C: 0.42;   /* factor de croma del fondo suave */
+  --tone-border-L: 72%;  /* borde sticker de la píldora */
+}
+
+:root:not([data-theme="light"]) {
+  @media (prefers-color-scheme: dark) {
+    --tone-ink-L: 84%;
+    --tone-fg-L: 72%;
+    --tone-soft-L: 30%;
+    --tone-soft-C: 0.55;
+    --tone-border-L: 46%;
+  }
+}
+:root[data-theme="dark"] {
+  --tone-ink-L: 84%;
+  --tone-fg-L: 72%;
+  --tone-soft-L: 30%;
+  --tone-soft-C: 0.55;
+  --tone-border-L: 46%;
+}
+
+@layer components {
+  /* ── Tono: raíz reutilizable ──────────────────────────────────────────────
+     Cualquier elemento con .tone[data-tone="X"] expone --th (matiz) y --tc (croma).
+     Los átomos (.tone-chip, .pill, .tone-dot, .tone-card) leen esas dos variables
+     y derivan color con las L por rol. Un solo juego de reglas para toda la paleta. */
+  .tone,
+  [data-tone] { --th: var(--h-vino); --tc: var(--c-vino); }
+  [data-tone="vino"]    { --th: var(--h-vino);    --tc: var(--c-vino); }
+  [data-tone="gold"]    { --th: var(--h-gold);    --tc: var(--c-gold); }
+  [data-tone="amber"]   { --th: var(--h-amber);   --tc: var(--c-amber); }
+  [data-tone="orange"]  { --th: var(--h-orange);  --tc: var(--c-orange); }
+  [data-tone="emerald"] { --th: var(--h-emerald); --tc: var(--c-emerald); }
+  [data-tone="teal"]    { --th: var(--h-teal);    --tc: var(--c-teal); }
+  [data-tone="sky"]     { --th: var(--h-sky);     --tc: var(--c-sky); }
+  [data-tone="blue"]    { --th: var(--h-blue);    --tc: var(--c-blue); }
+  [data-tone="violet"]  { --th: var(--h-violet);  --tc: var(--c-violet); }
+  [data-tone="rose"]    { --th: var(--h-rose);    --tc: var(--c-rose); }
+  [data-tone="red"]     { --th: var(--h-red);     --tc: var(--c-red); }
+  [data-tone="neutral"] { --th: var(--h-neutral); --tc: var(--c-neutral); }
+
+  /* ── Píldora de estado (referencia Duolingo: sticker con borde grueso) ──────
+     rounded-full a propósito (decisión 21/09/2026, deroga "nada de píldoras"). */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 24px;
+    padding: 3px 11px;
+    border-radius: 999px;
+    border: 1.5px solid oklch(var(--tone-border-L) calc(var(--tc) * 0.95) var(--th));
+    background: oklch(var(--tone-soft-L) calc(var(--tc) * var(--tone-soft-C)) var(--th));
+    color: oklch(var(--tone-ink-L) var(--tc) var(--th));
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.005em;
+    white-space: nowrap;
+    transition: transform 160ms var(--auth-ease-out), box-shadow 160ms ease;
+  }
+  .pill svg { width: 13px; height: 13px; }
+  /* Punto guía: opt-in con data-dot="on" (no todas las píldoras lo quieren) */
+  .pill[data-dot="on"]::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 999px;
+    background: oklch(var(--tone-fg-L) var(--tc) var(--th));
+    box-shadow: 0 0 0 2px oklch(var(--tone-fg-L) var(--tc) var(--th) / 0.22);
+  }
+  /* Píldora "sólida": fondo vivo, texto claro (para el estado protagonista) */
+  .pill[data-solid="true"] {
+    background: oklch(var(--tone-fg-L) var(--tc) var(--th));
+    border-color: oklch(calc(var(--tone-fg-L) - 8%) var(--tc) var(--th));
+    color: white;
+  }
+  .pill[data-solid="true"]::before { background: white; box-shadow: 0 0 0 2px oklch(100% 0 0 / 0.3); }
+
+  /* ── Chip de ícono por tono (vidrio líquido, sin blur — regla del usuario) ──
+     Reutiliza el dibujo de .icon-glass pero toma el color vivo del tono. */
+  .tone-chip {
+    display: grid;
+    place-items: center;
+    flex: none;
+    color: oklch(var(--tone-fg-L) var(--tc) var(--th));
+    background:
+      linear-gradient(160deg,
+        color-mix(in oklch, var(--auth-white) 62%, transparent) 0%,
+        color-mix(in oklch, var(--auth-white) 16%, transparent) 55%,
+        color-mix(in oklch, currentColor 12%, transparent) 100%),
+      oklch(var(--tone-soft-L) calc(var(--tc) * var(--tone-soft-C)) var(--th));
+    border: 1px solid color-mix(in oklch, var(--auth-white) 70%, currentColor 30%);
+    border-radius: 14px;
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklch, var(--auth-white) 85%, transparent),
+      inset 0 -1px 0 color-mix(in oklch, currentColor 14%, transparent),
+      0 2px 6px -2px color-mix(in oklch, currentColor 30%, transparent);
+    transition: transform 220ms var(--auth-ease-out);
+  }
+  .tone-chip svg { width: 55%; height: 55%; }
+
+  /* Punto de tono para timelines/leyendas */
+  .tone-dot {
+    display: inline-block;
+    width: 9px; height: 9px;
+    border-radius: 999px;
+    background: oklch(var(--tone-fg-L) var(--tc) var(--th));
+    box-shadow: 0 0 0 3px oklch(var(--tone-fg-L) var(--tc) var(--th) / 0.16);
+  }
+
+  /* ── Tarjeta de tono (tile de indicador / módulo colorido) ─────────────────
+     Fondo suave del tono + filo de luz. Hereda las interacciones de .app-card. */
+  .tone-card {
+    background-color: oklch(var(--tone-soft-L) calc(var(--tc) * var(--tone-soft-C)) var(--th));
+    background-image: linear-gradient(180deg, color-mix(in oklch, var(--auth-white) 45%, transparent) 0%, transparent 46%);
+    border: 1px solid oklch(var(--tone-border-L) calc(var(--tc) * 0.6) var(--th) / 0.55);
+    border-radius: 24px;
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklch, var(--auth-white) 70%, transparent),
+      0 12px 30px -22px oklch(var(--tone-fg-L) var(--tc) var(--th) / 0.6);
+    transition: transform 220ms var(--auth-ease-out), box-shadow 220ms var(--auth-ease-out), border-color 220ms ease;
+  }
+  .tone-card[data-interactive="true"] { cursor: pointer; }
+
+  /* ── Interacción compartida: "pop" del ícono y elevación al hover ──────────
+     Solo transform/opacity. Puntero fino: en táctil el hover se queda pegado. */
+  @media (hover: hover) and (pointer: fine) {
+    .app-card[data-interactive="true"]:hover .tone-chip,
+    .tone-card[data-interactive="true"]:hover .tone-chip,
+    .stat-tile:hover .tone-chip,
+    a.pill:hover, button.pill:hover { transform: translateY(-1px) scale(1.06); }
+    a.pill:hover, button.pill:hover { box-shadow: 0 6px 14px -8px oklch(var(--tone-fg-L) var(--tc) var(--th) / 0.7); }
+    .tone-card[data-interactive="true"]:hover {
+      transform: translateY(-3px);
+      border-color: oklch(var(--tone-border-L) var(--tc) var(--th) / 0.9);
+      box-shadow:
+        inset 0 1px 0 color-mix(in oklch, var(--auth-white) 70%, transparent),
+        0 20px 38px -20px oklch(var(--tone-fg-L) var(--tc) var(--th) / 0.85);
+    }
+  }
+
+  /* ── Tile de indicador (StatTile) — clase reutilizable ─────────────────────
+     Reemplaza los estilos inline: el color lo pone data-tone. */
+  .stat-tile { position: relative; overflow: hidden; }
+  .stat-tile .stat-value { color: oklch(var(--tone-ink-L) var(--tc) var(--th)); }
+  .stat-tile[data-solid="true"] {
+    background-color: oklch(var(--tone-fg-L) var(--tc) var(--th));
+    background-image: linear-gradient(160deg, color-mix(in oklch, white 18%, transparent) 0%, transparent 52%, color-mix(in oklch, black 14%, transparent) 100%);
+    border-color: color-mix(in oklch, white 20%, transparent);
+    color: white;
+  }
+  .stat-tile[data-solid="true"] .stat-value,
+  .stat-tile[data-solid="true"] .tone-chip { color: white; }
+  .stat-tile[data-solid="true"] .tone-chip {
+    background: color-mix(in oklch, white 22%, transparent);
+    border-color: color-mix(in oklch, white 45%, transparent);
+  }
+
+  /* ── Botón "sticker" (referencia Duolingo: canto 3D que se hunde al pulsar) ──
+     Se activa con .btn-sticker; el borde inferior es una sombra sólida que la
+     presión colapsa (translateY). Solo transform/box-shadow. */
+  .btn-sticker {
+    box-shadow: 0 4px 0 0 var(--sticker-edge, oklch(30% 0.09 358)), 0 8px 16px -8px oklch(30% 0.09 358 / 0.5);
+    transition: transform 100ms var(--auth-ease-out), box-shadow 100ms var(--auth-ease-out), background-color 180ms ease;
+    will-change: transform;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-sticker:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 5px 0 0 var(--sticker-edge, oklch(30% 0.09 358)), 0 12px 20px -10px oklch(30% 0.09 358 / 0.55); }
+  }
+  .btn-sticker:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 0 var(--sticker-edge, oklch(30% 0.09 358)); }
+  .btn-sticker:disabled { box-shadow: none; }
+
+  /* ── Estado vacío ilustrado (reutilizable en todas las listas) ─────────────*/
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding: 48px 24px;
+  }
+  .empty-state .tone-chip { width: 60px; height: 60px; border-radius: 20px; }
+  .empty-state .tone-chip svg { width: 28px; height: 28px; }
+
+  /* Franja de acento superior para encabezados de sección coloridos */
+  .accent-rule {
+    height: 4px;
+    width: 44px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, oklch(var(--tone-fg-L) var(--tc) var(--th)), oklch(var(--tone-fg-L) calc(var(--tc) * 0.7) calc(var(--th) + 30)));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pill, .tone-chip, .tone-card, .btn-sticker, .stat-tile { transition: none; }
+    .btn-sticker:active:not(:disabled) { transform: none; }
+  }
+}

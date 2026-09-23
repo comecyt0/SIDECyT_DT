@@ -189,9 +189,9 @@ export default function AuditLogsClient({ logs, initialFilters }: Props) {
               {logs.data.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5}>
-                    <div className="text-center py-14">
-                      <Activity className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-                      <p className="font-semibold text-[var(--app-ink)]">Sin eventos para los filtros actuales.</p>
+                    <div className="empty-state">
+                      <span className="tone-chip" data-tone="sky"><Activity aria-hidden="true" /></span>
+                      <p className="font-bold text-[var(--app-ink)]">Sin eventos para los filtros actuales.</p>
                       <p className="text-sm text-[var(--app-ink-2)]">Amplía las fechas o limpia los filtros para ver más.</p>
                     </div>
                   </TableCell>

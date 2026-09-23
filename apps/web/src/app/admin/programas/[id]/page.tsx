@@ -292,9 +292,9 @@ export default function ProgramaDetailPage() {
         </div>
 
         {items.length === 0 ? (
-          <div className="text-center py-14">
-            <Inbox className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-            <p className="font-semibold text-[var(--app-ink)]">Sin registros todavía</p>
+          <div className="empty-state">
+            <span className="tone-chip" data-tone="violet"><Inbox aria-hidden="true" /></span>
+            <p className="font-bold text-[var(--app-ink)]">Sin registros todavía</p>
             <p className="text-sm text-[var(--app-ink-2)]">Usa «Agregar» para crear el primero.</p>
           </div>
         ) : (

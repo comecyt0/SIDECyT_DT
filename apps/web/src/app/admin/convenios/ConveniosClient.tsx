@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import PageHeader from '@/components/ui/page-header';
 import {
   FileSignature, Search, Loader2, Download,
@@ -48,11 +47,11 @@ interface Props {
   pagination: PaginationMeta;
 }
 
-const ESTADO_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  borrador:  { label: 'Borrador',  variant: 'secondary' },
-  firmado:   { label: 'Firmado',   variant: 'default'   },
-  vigente:   { label: 'Vigente',   variant: 'default'   },
-  cerrado:   { label: 'Cerrado',   variant: 'outline'   },
+const ESTADO_CONFIG: Record<string, { label: string; tone: string }> = {
+  borrador:  { label: 'Borrador',  tone: 'neutral' },
+  firmado:   { label: 'Firmado',   tone: 'sky'     },
+  vigente:   { label: 'Vigente',   tone: 'emerald' },
+  cerrado:   { label: 'Cerrado',   tone: 'neutral' },
 };
 
 const FILTER_TABS = [
@@ -200,9 +199,9 @@ export default function ConveniosClient({ convenios, pagination }: Props) {
               return 'amber';
             }}
             emptyState={
-              <div className="text-center py-14">
-                <FileSignature className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-                <p className="font-semibold text-[var(--app-ink)]">
+              <div className="empty-state">
+                <span className="tone-chip" data-tone={convenios.length === 0 ? 'violet' : 'sky'}><FileSignature aria-hidden="true" /></span>
+                <p className="font-bold text-[var(--app-ink)]">
                   {convenios.length === 0 ? 'Sin convenios todavía' : 'Ningún convenio coincide con tu búsqueda'}
                 </p>
                 <p className="text-sm text-[var(--app-ink-2)]">
@@ -217,13 +216,13 @@ export default function ConveniosClient({ convenios, pagination }: Props) {
               return (
                 <div className="pl-3">
                   <div className="flex items-start gap-3 mb-3">
-                    <span className="app-tile-icon shrink-0" style={{ color: 'var(--tile-sky-fg)' }}>
+                    <span className="tone-chip shrink-0 h-11 w-11" data-tone={cfg.tone}>
                       <FileSignature className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                         <span className="font-bold font-mono text-xs" style={{ color: 'var(--auth-vino)' }}>{convenio.numero_convenio}</span>
-                        <Badge variant={cfg.variant}>{cfg.label}</Badge>
+                        <span className="pill" data-tone={cfg.tone}>{cfg.label}</span>
                       </div>
                       <p className="text-sm font-semibold text-[var(--app-ink)] line-clamp-1">
                         {convenio.solicitud?.titulo_proyecto ?? 'Sin título'}

@@ -30,10 +30,11 @@ interface Ministracion {
   };
 }
 
-const estadoConfig: Record<string, { label: string; icon: typeof CheckCircle2; bg: string; fg: string; desc: string; next: string }> = {
+const estadoConfig: Record<string, { label: string; icon: typeof CheckCircle2; tone: string; bg: string; fg: string; desc: string; next: string }> = {
   pendiente:  {
     label: 'Pendiente',
     icon: Clock,
+    tone: 'amber',
     bg: 'var(--tile-gold-bg)',
     fg: 'var(--tile-gold-fg)',
     desc: 'La entrega está registrada y en espera de revisión.',
@@ -42,6 +43,7 @@ const estadoConfig: Record<string, { label: string; icon: typeof CheckCircle2; b
   revision: {
     label: 'En revisión',
     icon: Clock,
+    tone: 'sky',
     bg: 'var(--tile-sky-bg)',
     fg: 'var(--tile-sky-fg)',
     desc: `El equipo de ${INSTITUTION.name} está revisando los datos y documentos.`,
@@ -50,6 +52,7 @@ const estadoConfig: Record<string, { label: string; icon: typeof CheckCircle2; b
   autorizada: {
     label: 'Autorizada',
     icon: CheckCircle2,
+    tone: 'blue',
     bg: 'var(--tile-sky-bg)',
     fg: 'var(--tile-sky-fg)',
     desc: 'El pago ya está autorizado.',
@@ -58,6 +61,7 @@ const estadoConfig: Record<string, { label: string; icon: typeof CheckCircle2; b
   pagada: {
     label: 'Pagada',
     icon: CheckCircle2,
+    tone: 'emerald',
     bg: 'var(--tile-emerald-bg)',
     fg: 'var(--tile-emerald-fg)',
     desc: 'El pago ya se realizó.',
@@ -66,6 +70,7 @@ const estadoConfig: Record<string, { label: string; icon: typeof CheckCircle2; b
   rechazada: {
     label: 'Con correcciones',
     icon: AlertCircle,
+    tone: 'red',
     bg: 'color-mix(in oklch, var(--auth-danger) 10%, transparent)',
     fg: 'var(--auth-danger)',
     desc: 'Hay que corregir los datos bancarios o algún documento.',
@@ -113,9 +118,9 @@ export default function SolicitanteMinistracionesPage() {
       ) : ministraciones.length === 0 ? (
         <Card>
           <CardContent>
-            <div className="text-center py-14">
-              <Banknote className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-              <p className="font-semibold text-[var(--app-ink)]">Todavía no hay pagos registrados</p>
+            <div className="empty-state">
+              <span className="tone-chip" data-tone="teal"><Banknote aria-hidden="true" /></span>
+              <p className="font-bold text-[var(--app-ink)]">Todavía no hay pagos registrados</p>
               <p className="text-sm text-[var(--app-ink-2)]">Aparecerán aquí cuando una de tus solicitudes sea aprobada.</p>
             </div>
           </CardContent>
@@ -138,8 +143,8 @@ export default function SolicitanteMinistracionesPage() {
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <span className="inline-flex h-5 items-center gap-1 rounded-md px-2 text-[11px] font-semibold" style={{ backgroundColor: cfg.bg, color: cfg.fg }}>
-                            <Icon className="h-3 w-3" aria-hidden="true" />
+                          <span className="pill" data-tone={cfg.tone}>
+                            <Icon aria-hidden="true" />
                             {cfg.label}
                           </span>
                           <span className="font-mono text-[11px] font-bold text-[var(--app-ink-2)] bg-[var(--auth-field)] px-2 py-0.5 rounded-md">
@@ -244,7 +249,7 @@ export default function SolicitanteMinistracionesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {Object.entries(estadoConfig).map(([key, cfg]) => (
               <div key={key} className="flex items-start gap-2">
-                <span className="inline-flex h-5 shrink-0 items-center rounded-md px-2 text-[11px] font-semibold whitespace-nowrap" style={{ backgroundColor: cfg.bg, color: cfg.fg }}>
+                <span className="pill shrink-0" data-tone={cfg.tone}>
                   {cfg.label}
                 </span>
                 <p className="text-sm text-[var(--app-ink-2)]">{cfg.desc}</p>

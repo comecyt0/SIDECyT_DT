@@ -115,8 +115,15 @@ export default function CarruselClient({ slides }: Props) {
     try {
       const fd = new FormData();
       fd.append('imagen', file);
-      // Sin fijar Content-Type: axios lo omite para FormData y el navegador pone el boundary.
-      const { data } = await api.post<{ imagen_url: string }>('/admin/carousel/upload', fd);
+      // 21/09/2026 (E30 en CLAUDE.md): la instancia de `api` fija 'Content-Type: application/json'
+      // por defecto (lib/api.ts). Como axios revisa el Content-Type YA puesto antes de decidir qué
+      // hacer con un FormData, con ese default convierte el FormData a JSON en vez de mandarlo como
+      // multipart — el archivo real nunca llega y Laravel responde 422 "el campo imagen es
+      // obligatorio". Hay que anular explícitamente el header con `undefined` (no alcanza con
+      // omitirlo) para que el navegador ponga `multipart/form-data; boundary=...` de verdad.
+      const { data } = await api.post<{ imagen_url: string }>('/admin/carousel/upload', fd, {
+        headers: { 'Content-Type': undefined },
+      });
       setForm((f) => ({ ...f, imagen_url: data.imagen_url }));
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };

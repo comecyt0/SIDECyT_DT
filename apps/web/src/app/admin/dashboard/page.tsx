@@ -113,13 +113,11 @@ const IconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Clock,
 };
 
-/** Rotación de 4 tonos institucionales — ver globals.css §--tile-*. */
-const TILE_TONES = [
-  { bg: 'var(--tile-vino-bg)', fg: 'var(--tile-vino-fg)' },
-  { bg: 'var(--tile-gold-bg)', fg: 'var(--tile-gold-fg)' },
-  { bg: 'var(--tile-sky-bg)', fg: 'var(--tile-sky-fg)' },
-  { bg: 'var(--tile-emerald-bg)', fg: 'var(--tile-emerald-fg)' },
-];
+/** 21/09/2026 — Paleta viva multicolor (referencia Duolingo). Cada tile toma su tono con
+   data-tone; el color lo derivan .tone-card / .tone-chip en globals.css. */
+const TILE_TONES = ['vino', 'sky', 'violet', 'emerald', 'amber', 'teal', 'blue', 'orange', 'rose'] as const;
+/** Color vivo derivado del tono activo (usa las vars que .tone-card expone). */
+const TONE_FG = 'oklch(var(--tone-fg-L) var(--tc) var(--th))';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -329,16 +327,15 @@ export default function AdminDashboard() {
               <motion.div key={p.key} variants={itemVariants}>
                 <Link
                   href={p.href}
-                  className="app-card block p-5 group outline-none focus-visible:ring-4"
+                  className={`${solid ? 'app-card' : 'tone-card'} block p-5 group outline-none focus-visible:ring-4`}
                   data-interactive="true"
-                  data-tone={solid ? 'solid' : undefined}
-                  style={solid ? undefined : { backgroundColor: p.tone.bg }}
+                  data-tone={solid ? 'solid' : p.tone}
                 >
                   <div className="flex items-start justify-between">
-                    <span className="app-tile-icon" style={solid ? undefined : { color: p.tone.fg }}>
+                    <span className={solid ? 'app-tile-icon' : 'tone-chip h-11 w-11'}>
                       <Icon className="h-5 w-5" />
                     </span>
-                    <span className="app-nav-icon !w-8 !h-8 !rounded-lg transition-transform duration-200 group-hover:translate-x-0.5" style={solid ? undefined : { color: p.tone.fg }}>
+                    <span className="app-nav-icon !w-8 !h-8 !rounded-lg transition-transform duration-200 group-hover:translate-x-0.5" style={solid ? undefined : { color: TONE_FG }}>
                       <ArrowRight className="h-4 w-4" />
                     </span>
                   </div>
@@ -368,13 +365,13 @@ export default function AdminDashboard() {
               const tone = TILE_TONES[i % TILE_TONES.length];
               const trendUp = stat.trend?.trim().startsWith('-') !== true;
               return (
-                <motion.div key={stat.title} variants={itemVariants} className="app-card p-4" data-interactive="true">
+                <motion.div key={stat.title} variants={itemVariants} className="tone-card p-4" data-tone={tone} data-interactive="true">
                   <div className="flex items-center justify-between">
-                    <span className="app-tile-icon !w-9 !h-9 !rounded-lg" style={{ color: tone.fg }}>
+                    <span className="tone-chip !w-9 !h-9 !rounded-xl">
                       <Icon className="h-4 w-4" />
                     </span>
                     {stat.trend && (
-                      <span className="flex items-center gap-1 text-[11px] font-bold" style={{ color: tone.fg }}>
+                      <span className="flex items-center gap-1 text-[11px] font-bold" style={{ color: TONE_FG }}>
                         {trendUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                         {stat.trend}
                       </span>

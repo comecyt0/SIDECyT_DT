@@ -4,24 +4,32 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
-// rounded-md a propósito: el 14/09/2026 se retiró la forma de píldora (rounded-full/4xl) de
-// todas las insignias de estado del sistema — ver docs/DISENO_UI.md §2 y §7. Este componente lo
-// usan 27 vistas de los 4 roles, así que cambiarlo aquí los actualiza a todos a la vez.
+// 21/09/2026 — Píldora sticker (rounded-full + borde grueso). Decisión del usuario: se ADOPTAN
+// las píldoras estilo Duolingo (deroga la regla previa "rounded-md"). Wine sigue de principal y
+// el resto es multicolor. Lo usan 26 vistas de los 4 roles: cambiarlo aquí las actualiza a todas.
+// Colores autónomos en className (twMerge) para que estadoBadgeClass() pueda sobreescribir el tono.
 const badgeVariants = cva(
-  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-md border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
+  "group/badge inline-flex min-h-[22px] w-fit shrink-0 items-center justify-center gap-1.5 rounded-full border-[1.5px] px-2.5 py-0.5 text-xs font-bold leading-tight whitespace-nowrap align-middle transition-transform duration-150 [a]:hover:-translate-y-px focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        // Vino de marca — soft pill con borde vivo (principal)
+        default:
+          "border-[oklch(72%_0.11_358)] bg-[oklch(96.5%_0.05_358)] text-[var(--auth-vino)] dark:border-[oklch(50%_0.09_358)] dark:bg-[oklch(32%_0.06_358)] dark:text-[oklch(86%_0.06_358)]",
+        // Dorado institucional
         secondary:
-          "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
+          "border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-500/50 dark:bg-amber-900/40 dark:text-amber-200",
+        // Peligro / rechazo
         destructive:
-          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
+          "border-red-300 bg-red-100 text-red-700 dark:border-red-500/50 dark:bg-red-900/40 dark:text-red-200",
+        // Neutro con borde
         outline:
-          "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
+          "border-[var(--app-rule)] bg-transparent text-[var(--app-ink-2)]",
+        // Discreto
         ghost:
-          "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
-        link: "text-primary underline-offset-4 hover:underline",
+          "border-transparent bg-[var(--auth-field)] text-[var(--app-ink-2)]",
+        // Enlace (sin píldora)
+        link: "border-0 bg-transparent px-0 py-0 text-primary underline-offset-4 hover:underline",
       },
     },
     defaultVariants: {

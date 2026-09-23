@@ -81,14 +81,12 @@ const INFORME_LABEL: Record<string, string> = {
   aprobado: 'Aprobado',
 };
 
-const INFORME_TONE: Record<string, { bg: string; fg: string }> = {
-  pendiente: { bg: 'var(--tile-gold-bg)', fg: 'var(--tile-gold-fg)' },
-  entregado: { bg: 'var(--tile-sky-bg)', fg: 'var(--tile-sky-fg)' },
-  en_revision: { bg: 'var(--tile-sky-bg)', fg: 'var(--tile-sky-fg)' },
-  aprobado: { bg: 'var(--tile-emerald-bg)', fg: 'var(--tile-emerald-fg)' },
+const INFORME_TONE: Record<string, string> = {
+  pendiente: 'amber',
+  entregado: 'sky',
+  en_revision: 'violet',
+  aprobado: 'emerald',
 };
-
-const DANGER_TONE = { bg: 'color-mix(in oklch, var(--auth-danger) 10%, transparent)', fg: 'var(--auth-danger)' };
 
 const TIMELINE_STEPS = [
   { key: 'borrador',      label: 'Borrador' },
@@ -338,7 +336,7 @@ export default function DetalleSolicitudPage() {
 
   const StatusIcon = estadoIcon[solicitud.estado] || FileText;
   const informeEstado = solicitud.estado_informe || 'pendiente';
-  const informeTone = INFORME_TONE[informeEstado] ?? DANGER_TONE;
+  const informeTone = INFORME_TONE[informeEstado] ?? 'red';
 
   // Timeline position
   const timelineOrder = TIMELINE_STEPS.map(s => s.key);
@@ -379,7 +377,7 @@ export default function DetalleSolicitudPage() {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-semibold text-[var(--app-ink)]">Estado actual</p>
-            <span className={`inline-flex h-5 items-center rounded-md px-2 text-[11px] font-semibold ${estadoBadgeClass(solicitud.estado)}`}>
+            <span className={estadoBadgeClass(solicitud.estado)}>
               {estadoLabel(solicitud.estado)}
             </span>
           </div>
@@ -600,7 +598,7 @@ export default function DetalleSolicitudPage() {
             </CardTitle>
             <CardDescription>Sigue el avance del pago y sube los documentos bancarios que hacen falta.</CardDescription>
             <CardAction>
-              <span className="inline-flex h-6 items-center rounded-md px-2.5 text-xs font-semibold" style={{ backgroundColor: 'var(--tile-sky-bg)', color: 'var(--tile-sky-fg)' }}>
+              <span className="pill" data-tone="teal">
                 {MINISTRACION_LABEL[solicitud.ministracion?.estado ?? 'pendiente'] ?? 'Pendiente'}
               </span>
             </CardAction>
@@ -803,7 +801,7 @@ export default function DetalleSolicitudPage() {
                 : `Tu informe está en manos de ${INSTITUTION.name}.`}
             </CardDescription>
             <CardAction>
-              <span className="inline-flex h-6 items-center rounded-md px-2.5 text-xs font-semibold" style={{ backgroundColor: informeTone.bg, color: informeTone.fg }}>
+              <span className="pill" data-tone={informeTone}>
                 {INFORME_LABEL[informeEstado] ?? 'Pendiente'}
               </span>
             </CardAction>

@@ -105,9 +105,11 @@ export default function SolicitudesClient({ solicitudes }: Props) {
         </CardHeader>
         <CardContent className="p-0">
           {filtered.length === 0 ? (
-            <div className="text-center py-14">
-              <FileText className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-              <p className="font-semibold text-[var(--app-ink)]">
+            <div className="empty-state">
+              <span className="tone-chip" data-tone={search ? 'sky' : 'violet'}>
+                {search ? <Search aria-hidden="true" /> : <FileText aria-hidden="true" />}
+              </span>
+              <p className="font-bold text-[var(--app-ink)]">
                 {search ? 'No encontramos resultados' : 'Todavía no tienes solicitudes'}
               </p>
               <p className="text-sm text-[var(--app-ink-2)]">
@@ -127,7 +129,7 @@ export default function SolicitudesClient({ solicitudes }: Props) {
                       <span className="font-mono text-[11px] font-bold text-[var(--app-ink-2)] bg-[var(--auth-field)] px-2 py-0.5 rounded-md">
                         {s.folio}
                       </span>
-                      <span className={`inline-flex h-5 items-center rounded-md px-2 text-[11px] font-semibold ${estadoBadgeClass(s.estado)}`}>
+                      <span className={estadoBadgeClass(s.estado)}>
                         {estadoLabel(s.estado)}
                       </span>
                     </div>

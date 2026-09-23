@@ -132,9 +132,9 @@ export default function SolicitanteDashboard() {
                 <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--auth-vino)' }} />
               </div>
             ) : solicitudes.length === 0 ? (
-              <div className="text-center py-14">
-                <FileText className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-                <p className="font-semibold text-[var(--app-ink)]">Todavía no tienes solicitudes</p>
+              <div className="empty-state">
+                <span className="tone-chip" data-tone="violet"><FileText aria-hidden="true" /></span>
+                <p className="font-bold text-[var(--app-ink)]">Todavía no tienes solicitudes</p>
                 <p className="text-sm text-[var(--app-ink-2)]">Crea la primera desde &quot;Nueva solicitud&quot;.</p>
               </div>
             ) : (
@@ -152,7 +152,7 @@ export default function SolicitanteDashboard() {
                         <span className="font-mono text-[11px] font-bold text-[var(--app-ink-2)] bg-[var(--auth-field)] px-2 py-0.5 rounded-md">
                           {sol.folio}
                         </span>
-                        <span className={`inline-flex h-5 items-center rounded-md px-2 text-[11px] font-semibold ${estadoBadgeClass(sol.estado)}`}>
+                        <span className={estadoBadgeClass(sol.estado)}>
                           {estadoLabel(sol.estado)}
                         </span>
                       </div>

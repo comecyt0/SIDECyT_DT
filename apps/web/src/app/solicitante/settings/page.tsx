@@ -129,7 +129,7 @@ export default function SolicitanteSettingsPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="font-semibold text-[var(--app-ink)] text-lg truncate">{profile?.name ?? '—'}</p>
-                  <span className="inline-flex h-5 items-center rounded-md px-2 text-[11px] font-semibold mt-1" style={{ backgroundColor: 'var(--tile-vino-bg)', color: 'var(--tile-vino-fg)' }}>
+                  <span className="pill mt-1" data-tone="vino">
                     {profile?.rol?.nombre ?? 'Solicitante institucional'}
                   </span>
                 </div>

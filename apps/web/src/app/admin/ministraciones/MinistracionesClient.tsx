@@ -14,12 +14,12 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import PaginationControls from '@/components/ui/pagination-controls';
 import { DataCardGrid } from '@/components/ui/DataCardGrid';
 
-const ESTADO_MINISTRACION: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pendiente: { label: 'Pendiente', variant: 'secondary' },
-  revision: { label: 'En revisión', variant: 'outline' },
-  autorizada: { label: 'Autorizada', variant: 'default' },
-  pagada: { label: 'Pagada', variant: 'default' },
-  rechazada: { label: 'Rechazada', variant: 'destructive' },
+const ESTADO_MINISTRACION: Record<string, { label: string; tone: string }> = {
+  pendiente: { label: 'Pendiente', tone: 'neutral' },
+  revision: { label: 'En revisión', tone: 'amber' },
+  autorizada: { label: 'Autorizada', tone: 'sky' },
+  pagada: { label: 'Pagada', tone: 'emerald' },
+  rechazada: { label: 'Rechazada', tone: 'red' },
 };
 
 const estadoLabel = (estado?: string) => (estado ? ESTADO_MINISTRACION[estado]?.label ?? estado : '—');
@@ -109,9 +109,9 @@ export default function MinistracionesClient({ ministraciones, pagination }: Pro
               return 'neutral';
             }}
             emptyState={
-              <div className="text-center py-14">
-                <Banknote className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-                <p className="font-semibold text-[var(--app-ink)]">Sin ministraciones todavía</p>
+              <div className="empty-state">
+                <span className="tone-chip" data-tone="violet"><Banknote aria-hidden="true" /></span>
+                <p className="font-bold text-[var(--app-ink)]">Sin ministraciones todavía</p>
                 <p className="text-sm text-[var(--app-ink-2)]">Aparecen cuando una solicitud aprobada genera su convenio.</p>
               </div>
             }
@@ -122,7 +122,7 @@ export default function MinistracionesClient({ ministraciones, pagination }: Pro
                 { url: min.constancia_fiscal_url, label: 'Constancia fiscal' },
                 { url: min.factura_institucion_url, label: 'Factura' },
               ].filter((d) => !!d.url);
-              const cfg = ESTADO_MINISTRACION[min.estado] ?? { label: min.estado, variant: 'outline' as const };
+              const cfg = ESTADO_MINISTRACION[min.estado] ?? { label: min.estado, tone: 'neutral' };
               return (
                 <div className="pl-3">
                   <div className="flex items-start justify-between gap-3 mb-3">
@@ -134,7 +134,7 @@ export default function MinistracionesClient({ ministraciones, pagination }: Pro
                         {min.solicitud?.user?.empresa?.nombre || 'Sin empresa'}
                       </h3>
                     </div>
-                    <Badge variant={cfg.variant} className="shrink-0">{cfg.label}</Badge>
+                    <span className="pill shrink-0" data-tone={cfg.tone}>{cfg.label}</span>
                   </div>
                   <div className="mb-2">
                     <span className="text-[10px] uppercase tracking-wider text-[var(--app-ink-2)] block">CLABE</span>

@@ -178,9 +178,9 @@ export default function ProgramasClient({ programas }: Props) {
         </CardHeader>
         <CardContent className="p-0">
           {programas.length === 0 ? (
-            <div className="text-center py-14">
-              <Zap className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-              <p className="font-semibold text-[var(--app-ink)]">Sin programas todavía</p>
+            <div className="empty-state">
+              <span className="tone-chip" data-tone="violet"><Zap aria-hidden="true" /></span>
+              <p className="font-bold text-[var(--app-ink)]">Sin programas todavía</p>
               <p className="text-sm text-[var(--app-ink-2)]">Crea el primero con el botón «Nuevo programa».</p>
             </div>
           ) : (

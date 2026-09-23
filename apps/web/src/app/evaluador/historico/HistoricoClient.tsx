@@ -10,15 +10,13 @@ interface Props {
   asignaciones: AsignacionEvaluador[];
 }
 
-const BADGE = 'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold';
-
 export default function HistoricoClient({ asignaciones }: Props) {
   const resultadoBadge = (dictamen: any) => {
-    if (!dictamen) return <span className={`${BADGE} bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300`}>Sin dictamen</span>;
+    if (!dictamen) return <span className="pill" data-tone="neutral">Sin dictamen</span>;
     if (dictamen.resultado === 'aprobado') {
-      return <span className={`${BADGE} bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300`}>Aprobado <Check className="h-3 w-3" aria-hidden="true" /></span>;
+      return <span className="pill" data-tone="emerald">Aprobado <Check aria-hidden="true" /></span>;
     }
-    return <span className={`${BADGE} bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300`}>Rechazado <X className="h-3 w-3" aria-hidden="true" /></span>;
+    return <span className="pill" data-tone="red">Rechazado <X aria-hidden="true" /></span>;
   };
 
   const total = asignaciones.length;
@@ -53,9 +51,9 @@ export default function HistoricoClient({ asignaciones }: Props) {
               {asignaciones.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="whitespace-normal">
-                    <div className="text-center py-14">
-                      <History className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-                      <p className="font-semibold text-[var(--app-ink)]">Todavía no has emitido dictámenes</p>
+                    <div className="empty-state">
+                      <span className="tone-chip" data-tone="violet"><History aria-hidden="true" /></span>
+                      <p className="font-bold text-[var(--app-ink)]">Todavía no has emitido dictámenes</p>
                       <p className="text-sm text-[var(--app-ink-2)]">Cuando concluyas una evaluación, aparecerá aquí.</p>
                     </div>
                   </TableCell>

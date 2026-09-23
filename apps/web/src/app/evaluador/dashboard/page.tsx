@@ -34,9 +34,6 @@ const item = {
   show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
 };
 
-const BADGE_POR_INICIAR = 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300';
-const BADGE_EN_EVALUACION = 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
-
 export default function EvaluadorDashboard() {
   const [stats, setStats] = useState({ por_iniciar: 0, en_progreso: 0, evaluadas: 0 });
   const [asignaciones, setAsignaciones] = useState<AsignacionEvaluador[]>([]);
@@ -164,9 +161,9 @@ export default function EvaluadorDashboard() {
                 <Loader2 className="h-8 w-8 animate-spin text-[var(--auth-vino)]" />
               </div>
             ) : asignaciones.length === 0 ? (
-              <div className="text-center py-14">
-                <CheckCircle2 className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-                <p className="font-semibold text-[var(--app-ink)]">Nada pendiente por ahora</p>
+              <div className="empty-state">
+                <span className="tone-chip" data-tone="emerald"><CheckCircle2 aria-hidden="true" /></span>
+                <p className="font-bold text-[var(--app-ink)]">Nada pendiente por ahora</p>
                 <p className="text-sm text-[var(--app-ink-2)]">No tienes proyectos esperando evaluación.</p>
               </div>
             ) : (
@@ -186,7 +183,7 @@ export default function EvaluadorDashboard() {
                           <span className="font-mono text-xs font-semibold" style={{ color: 'var(--auth-vino)' }}>
                             {a.solicitud?.folio || 'Sin folio'}
                           </span>
-                          <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${esNuevo ? BADGE_POR_INICIAR : BADGE_EN_EVALUACION}`}>
+                          <span className="pill" data-tone={esNuevo ? 'sky' : 'amber'}>
                             {esNuevo ? 'Por iniciar' : 'En evaluación'}
                           </span>
                         </div>

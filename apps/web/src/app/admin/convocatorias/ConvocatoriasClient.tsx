@@ -66,9 +66,9 @@ export default function ConvocatoriasClient({ convocatorias }: Props) {
               {convocatorias.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6}>
-                    <div className="text-center py-14">
-                      <Megaphone className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-                      <p className="font-semibold text-[var(--app-ink)]">Sin convocatorias todavía</p>
+                    <div className="empty-state">
+                      <span className="tone-chip" data-tone="violet"><Megaphone aria-hidden="true" /></span>
+                      <p className="font-bold text-[var(--app-ink)]">Sin convocatorias todavía</p>
                       <p className="text-sm text-[var(--app-ink-2)]">Crea la primera con el botón «Nueva convocatoria».</p>
                     </div>
                   </TableCell>

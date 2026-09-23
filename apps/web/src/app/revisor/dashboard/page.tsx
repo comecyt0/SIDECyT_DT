@@ -107,7 +107,7 @@ export default function RevisorDashboard() {
             label="Urgentes"
             value={<AnimatedNumber value={stats.pendientes_urgentes} />}
             icon={<AlertCircle className="h-5 w-5" />}
-            tone="sky"
+            tone="orange"
             hint="Llevan más tiempo esperando"
             href="/revisor/solicitudes"
             loading={showLoading}
@@ -168,9 +168,9 @@ export default function RevisorDashboard() {
                 <Loader2 className="h-8 w-8 animate-spin text-[var(--auth-vino)]" />
               </div>
             ) : expedientes.length === 0 ? (
-              <div className="text-center py-14">
-                <CheckCircle2 className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-                <p className="font-semibold text-[var(--app-ink)]">Nada pendiente por ahora</p>
+              <div className="empty-state">
+                <span className="tone-chip" data-tone="emerald"><CheckCircle2 aria-hidden="true" /></span>
+                <p className="font-bold text-[var(--app-ink)]">Nada pendiente por ahora</p>
                 <p className="text-sm text-[var(--app-ink-2)]">No hay solicitudes esperando revisión.</p>
               </div>
             ) : (

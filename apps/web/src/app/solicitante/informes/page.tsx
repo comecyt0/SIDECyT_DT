@@ -21,10 +21,11 @@ interface InformeRow {
 
 const ESTADOS_CON_INFORME: ReadonlyArray<string> = ['ministracion', 'seguimiento', 'cerrada'];
 
-const estadoConfig: Record<InformeEstado, { label: string; icon: typeof CheckCircle2; bg: string; fg: string; desc: string; next: string }> = {
+const estadoConfig: Record<InformeEstado, { label: string; icon: typeof CheckCircle2; tone: string; bg: string; fg: string; desc: string; next: string }> = {
   pendiente: {
     label: 'Pendiente',
     icon: Clock,
+    tone: 'amber',
     bg: 'var(--tile-gold-bg)',
     fg: 'var(--tile-gold-fg)',
     desc: 'Todavía no has subido el informe final.',
@@ -33,6 +34,7 @@ const estadoConfig: Record<InformeEstado, { label: string; icon: typeof CheckCir
   entregado: {
     label: 'En revisión',
     icon: Clock,
+    tone: 'violet',
     bg: 'var(--tile-sky-bg)',
     fg: 'var(--tile-sky-fg)',
     desc: `Recibimos tu informe y el equipo de ${INSTITUTION.name} lo está revisando.`,
@@ -41,6 +43,7 @@ const estadoConfig: Record<InformeEstado, { label: string; icon: typeof CheckCir
   observado: {
     label: 'Con correcciones',
     icon: AlertCircle,
+    tone: 'red',
     bg: 'color-mix(in oklch, var(--auth-danger) 10%, transparent)',
     fg: 'var(--auth-danger)',
     desc: 'El equipo de revisión encontró puntos que debes corregir.',
@@ -49,6 +52,7 @@ const estadoConfig: Record<InformeEstado, { label: string; icon: typeof CheckCir
   aprobado: {
     label: 'Aprobado',
     icon: CheckCircle2,
+    tone: 'emerald',
     bg: 'var(--tile-emerald-bg)',
     fg: 'var(--tile-emerald-fg)',
     desc: 'Tu informe fue aprobado.',
@@ -106,9 +110,9 @@ export default function SolicitanteInformesPage() {
       ) : rows.length === 0 ? (
         <Card>
           <CardContent>
-            <div className="text-center py-14">
-              <FileText className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-              <p className="font-semibold text-[var(--app-ink)]">Todavía no tienes informes por entregar</p>
+            <div className="empty-state">
+              <span className="tone-chip" data-tone="violet"><FileText aria-hidden="true" /></span>
+              <p className="font-bold text-[var(--app-ink)]">Todavía no tienes informes por entregar</p>
               <p className="text-sm text-[var(--app-ink-2)]">Cuando un proyecto tuyo pase a seguimiento, su informe aparecerá aquí.</p>
             </div>
           </CardContent>
@@ -137,8 +141,8 @@ export default function SolicitanteInformesPage() {
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <span className="inline-flex h-5 items-center gap-1 rounded-md px-2 text-[11px] font-semibold" style={{ backgroundColor: cfg.bg, color: cfg.fg }}>
-                            <Icon className="h-3 w-3" aria-hidden="true" />
+                          <span className="pill" data-tone={cfg.tone}>
+                            <Icon aria-hidden="true" />
                             {cfg.label}
                           </span>
                           <span className="font-mono text-[11px] font-bold text-[var(--app-ink-2)] bg-[var(--auth-field)] px-2 py-0.5 rounded-md">
@@ -231,7 +235,7 @@ export default function SolicitanteInformesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {Object.entries(estadoConfig).map(([key, cfg]) => (
               <div key={key} className="flex items-start gap-2">
-                <span className="inline-flex h-5 shrink-0 items-center rounded-md px-2 text-[11px] font-semibold whitespace-nowrap" style={{ backgroundColor: cfg.bg, color: cfg.fg }}>
+                <span className="pill shrink-0" data-tone={cfg.tone}>
                   {cfg.label}
                 </span>
                 <p className="text-sm text-[var(--app-ink-2)]">{cfg.desc}</p>

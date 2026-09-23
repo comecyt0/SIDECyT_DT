@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import PageHeader from '@/components/ui/page-header';
@@ -89,9 +88,9 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
               {evaluadores.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4}>
-                    <div className="text-center py-10">
-                      <ClipboardCheck className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-                      <p className="font-semibold text-[var(--app-ink)]">Sin evaluadores todavía</p>
+                    <div className="empty-state">
+                      <span className="tone-chip" data-tone="violet"><ClipboardCheck aria-hidden="true" /></span>
+                      <p className="font-bold text-[var(--app-ink)]">Sin evaluadores todavía</p>
                       <p className="text-sm text-[var(--app-ink-2)]">Crea usuarios con el papel de evaluador desde Usuarios.</p>
                     </div>
                   </TableCell>
@@ -100,7 +99,7 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
                 <TableRow key={ev.id}>
                   <TableCell className="font-semibold">{ev.name}</TableCell>
                   <TableCell className="text-[var(--app-ink-2)]">{ev.email}</TableCell>
-                  <TableCell><Badge variant="outline" style={{ backgroundColor: 'var(--tile-sky-bg)', color: 'var(--tile-sky-fg)', borderColor: 'transparent' }}>Evaluador</Badge></TableCell>
+                  <TableCell><span className="pill" data-tone="sky">Evaluador</span></TableCell>
                   <TableCell className="text-right">
                     <Button variant="soft" size="sm"
                       onClick={() => { setForm({...emptyForm, evaluador_id: String(ev.id)}); setShowModal(true); }}>
@@ -134,9 +133,9 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
               {revisores.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={3}>
-                    <div className="text-center py-10">
-                      <Users className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-                      <p className="font-semibold text-[var(--app-ink)]">Sin revisores todavía</p>
+                    <div className="empty-state">
+                      <span className="tone-chip" data-tone="violet"><Users aria-hidden="true" /></span>
+                      <p className="font-bold text-[var(--app-ink)]">Sin revisores todavía</p>
                       <p className="text-sm text-[var(--app-ink-2)]">Crea usuarios con el papel de revisor desde Usuarios.</p>
                     </div>
                   </TableCell>
@@ -145,7 +144,7 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
                 <TableRow key={rv.id}>
                   <TableCell className="font-semibold">{rv.name}</TableCell>
                   <TableCell className="text-[var(--app-ink-2)]">{rv.email}</TableCell>
-                  <TableCell><Badge variant="outline" style={{ backgroundColor: 'var(--tile-gold-bg)', color: 'var(--tile-gold-fg)', borderColor: 'transparent' }}>Revisor</Badge></TableCell>
+                  <TableCell><span className="pill" data-tone="gold">Revisor</span></TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -260,9 +260,9 @@ export default function UsuariosClient({ users, pagination }: Props) {
           return 'sky'; // solicitante
         }}
         emptyState={
-          <div className="text-center py-16 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50/40 dark:bg-neutral-900/40">
-            <UserCircle className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto mb-3" />
-            <p className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">Sin usuarios registrados</p>
+          <div className="empty-state">
+            <span className="tone-chip" data-tone="violet"><UserCircle aria-hidden="true" /></span>
+            <p className="font-bold text-[var(--app-ink)]">Sin usuarios registrados</p>
           </div>
         }
         renderCard={(user) => (

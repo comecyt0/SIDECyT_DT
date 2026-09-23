@@ -230,7 +230,7 @@ export default function RevisorDetalleSolicitudPage() {
         title={solicitud.titulo_proyecto}
         description="Revisa los datos y documentos, y decide si la solicitud continúa o regresa con observaciones."
         actions={
-          <span className={`inline-flex rounded-md px-2.5 py-1 text-sm font-semibold ${estadoBadgeClass(solicitud.estado)}`}>
+          <span className={`${estadoBadgeClass(solicitud.estado)} !text-sm !px-3`}>
             {estadoLabel(solicitud.estado)}
           </span>
         }
@@ -438,9 +438,9 @@ export default function RevisorDetalleSolicitudPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             {newObservaciones.length === 0 ? (
-              <div className="text-center py-14">
-                <ShieldCheck className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-                <p className="font-semibold text-[var(--app-ink)]">No hay observaciones nuevas</p>
+              <div className="empty-state">
+                <span className="tone-chip" data-tone="emerald"><ShieldCheck aria-hidden="true" /></span>
+                <p className="font-bold text-[var(--app-ink)]">No hay observaciones nuevas</p>
                 <p className="text-sm text-[var(--app-ink-2)]">Si la solicitud está completa, puedes turnarla a evaluación técnica.</p>
               </div>
             ) : (

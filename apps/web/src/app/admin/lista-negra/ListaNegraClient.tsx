@@ -108,9 +108,9 @@ export default function ListaNegraClient({ sanciones, empresas }: Props) {
             columns={2}
             accentColor={(s) => (s.activa ? 'red' : 'emerald')}
             emptyState={
-              <div className="text-center py-14">
-                <ShieldAlert className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-                <p className="font-semibold text-[var(--app-ink)]">Sin sanciones todavía</p>
+              <div className="empty-state">
+                <span className="tone-chip" data-tone="emerald"><ShieldAlert aria-hidden="true" /></span>
+                <p className="font-bold text-[var(--app-ink)]">Sin sanciones todavía</p>
                 <p className="text-sm text-[var(--app-ink-2)]">Ninguna empresa está bloqueada. Usa «Registrar sanción» si hace falta.</p>
               </div>
             }

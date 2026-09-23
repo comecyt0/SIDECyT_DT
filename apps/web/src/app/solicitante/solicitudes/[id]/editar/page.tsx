@@ -86,7 +86,7 @@ export default function EditarSolicitudPage() {
         title="Corregir mi solicitud"
         description="Atiende cada observación, actualiza los documentos que hagan falta y vuelve a enviarla."
         actions={
-          <span className={`inline-flex h-7 items-center rounded-md px-3 text-xs font-semibold ${estadoBadgeClass(solicitud.estado)}`}>
+          <span className={`${estadoBadgeClass(solicitud.estado)} !text-sm !px-3`}>
             {estadoLabel(solicitud.estado)}
           </span>
         }

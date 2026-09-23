@@ -4,9 +4,8 @@ import { useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import PageHeader from '@/components/ui/page-header';
-import { TILE_TONE_VARS, type TileTone } from '@/components/ui/stat-tile';
+import { type TileTone } from '@/components/ui/stat-tile';
 import { Bell, CheckCheck, Loader2, BellOff, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -104,16 +103,15 @@ export default function NotificacionesClient({ notifs, pagination }: Props) {
         </CardHeader>
         <CardContent className="p-0">
           {notifs.length === 0 ? (
-            <div className="text-center py-14">
-              <BellOff className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-              <p className="font-semibold text-[var(--app-ink)]">Sin notificaciones todavía</p>
+            <div className="empty-state">
+              <span className="tone-chip" data-tone="sky"><BellOff aria-hidden="true" /></span>
+              <p className="font-bold text-[var(--app-ink)]">Sin notificaciones todavía</p>
               <p className="text-sm text-[var(--app-ink-2)]">Aparecen cuando el sistema envía un aviso a alguna persona usuaria.</p>
             </div>
           ) : (
             <div className="divide-y divide-[var(--app-rule)]">
               {notifs.map((n) => {
                 const tipo = tipoInfo(n.tipo);
-                const tone = TILE_TONE_VARS[tipo.tone];
                 return (
                   <div
                     key={n.id}
@@ -123,7 +121,7 @@ export default function NotificacionesClient({ notifs, pagination }: Props) {
                     <div className="mt-1.5 h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: !n.leida_at ? 'var(--tile-sky-fg)' : 'var(--app-rule)' }} aria-hidden="true" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" style={{ backgroundColor: tone.bg, color: tone.fg, borderColor: 'transparent' }}>{tipo.label}</Badge>
+                        <span className="pill" data-tone={tipo.tone}>{tipo.label}</span>
                         <span className="text-xs text-[var(--app-ink-2)]">{n.created_at ? new Date(n.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) : ''}</span>
                       </div>
                       <p className="text-sm font-semibold text-[var(--app-ink)] mt-1.5">{n.asunto}</p>

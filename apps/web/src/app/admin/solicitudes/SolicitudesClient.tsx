@@ -270,9 +270,9 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
               return 'neutral';
             }}
             emptyState={
-              <div className="text-center py-14">
-                <FileText className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-                <p className="font-semibold text-[var(--app-ink)]">
+              <div className="empty-state">
+                <span className="tone-chip" data-tone={searchTerm ? 'sky' : 'violet'}><FileText aria-hidden="true" /></span>
+                <p className="font-bold text-[var(--app-ink)]">
                   {searchTerm ? 'Ninguna solicitud coincide con tu búsqueda' : 'Sin solicitudes todavía'}
                 </p>
                 <p className="text-sm text-[var(--app-ink-2)]">
@@ -287,9 +287,9 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
                     <span className="text-[10px] font-bold uppercase tracking-widest font-mono" style={{ color: 'var(--auth-vino)' }}>{sol.folio}</span>
                     <h3 className="text-sm font-bold text-[var(--app-ink)] leading-tight mt-0.5 line-clamp-2">{sol.titulo_proyecto}</h3>
                   </div>
-                  <Badge variant="outline" className={`shrink-0 border-transparent ${estadoBadgeClass(sol.estado)}`}>
+                  <span className={`shrink-0 ${estadoBadgeClass(sol.estado)}`}>
                     {estadoLabel(sol.estado)}
-                  </Badge>
+                  </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 text-xs">
                   <div>

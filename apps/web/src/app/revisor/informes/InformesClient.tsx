@@ -10,15 +10,15 @@ import PageHeader from '@/components/ui/page-header';
 import { FileText, Eye, Search } from 'lucide-react';
 import api from '@/lib/api';
 
-const INFORME_ESTADO: Record<string, { label: string; badge: string }> = {
-  pendiente: { label: 'Pendiente de entrega', badge: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
-  en_revision: { label: 'En revisión', badge: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
-  aprobado: { label: 'Aprobado', badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
-  rechazado: { label: 'Necesita correcciones', badge: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
+const INFORME_ESTADO: Record<string, { label: string; tone: string }> = {
+  pendiente: { label: 'Pendiente de entrega', tone: 'amber' },
+  en_revision: { label: 'En revisión', tone: 'violet' },
+  aprobado: { label: 'Aprobado', tone: 'emerald' },
+  rechazado: { label: 'Necesita correcciones', tone: 'red' },
 };
 
 const informeEstadoLabel = (estado: string) => INFORME_ESTADO[estado]?.label ?? estado;
-const informeEstadoBadge = (estado: string) => INFORME_ESTADO[estado]?.badge ?? 'bg-neutral-100 text-neutral-500';
+const informeEstadoTone = (estado: string) => INFORME_ESTADO[estado]?.tone ?? 'neutral';
 
 export interface Informe {
   id: number;
@@ -160,9 +160,9 @@ export default function InformesClient({ informes }: Props) {
         </CardHeader>
         <CardContent className="p-0">
           {filteredInformes.length === 0 ? (
-            <div className="text-center py-14">
-              <FileText className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-              <p className="font-semibold text-[var(--app-ink)]">No hay informes que mostrar</p>
+            <div className="empty-state">
+              <span className="tone-chip" data-tone="sky"><FileText aria-hidden="true" /></span>
+              <p className="font-bold text-[var(--app-ink)]">No hay informes que mostrar</p>
               <p className="text-sm text-[var(--app-ink-2)]">Prueba con otro texto o cambia el filtro de estado.</p>
             </div>
           ) : (
@@ -189,7 +189,7 @@ export default function InformesClient({ informes }: Props) {
                         : 'Todavía no'}
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${informeEstadoBadge(informe.estado)}`}>
+                      <span className="pill" data-tone={informeEstadoTone(informe.estado)}>
                         {informeEstadoLabel(informe.estado)}
                       </span>
                     </TableCell>

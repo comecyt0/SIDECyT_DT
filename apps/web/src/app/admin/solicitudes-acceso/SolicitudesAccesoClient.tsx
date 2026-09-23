@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import PageHeader from '@/components/ui/page-header';
 import StatTile from '@/components/ui/stat-tile';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -33,9 +32,9 @@ export interface SolicitudAcceso {
 }
 
 const ESTADO_CONFIG = {
-  pendiente: { label: 'Pendiente', color: 'bg-amber-100 text-amber-700 border-amber-200', icon: Clock },
-  aprobada: { label: 'Aprobada', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
-  rechazada: { label: 'Rechazada', color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
+  pendiente: { label: 'Pendiente', tone: 'amber', color: 'bg-amber-100 text-amber-700 border-amber-200', icon: Clock },
+  aprobada: { label: 'Aprobada', tone: 'emerald', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
+  rechazada: { label: 'Rechazada', tone: 'red', color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
 };
 
 interface Props {
@@ -163,9 +162,11 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
         </CardHeader>
         <CardContent className="p-0">
           {filtered.length === 0 ? (
-            <div className="text-center py-14">
-              <UserCheck className="mx-auto h-10 w-10 mb-3 text-[var(--app-ink-2)]" aria-hidden="true" />
-              <p className="font-semibold text-[var(--app-ink)]">
+            <div className="empty-state">
+              <span className="tone-chip" data-tone={solicitudes.length === 0 ? 'violet' : 'sky'}>
+                {solicitudes.length === 0 ? <UserCheck aria-hidden="true" /> : <Search aria-hidden="true" />}
+              </span>
+              <p className="font-bold text-[var(--app-ink)]">
                 {solicitudes.length === 0 ? 'Sin solicitudes todavía' : 'Ninguna solicitud coincide'}
               </p>
               <p className="text-sm text-[var(--app-ink-2)]">
@@ -193,10 +194,10 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                           <p className="font-bold text-sm text-[var(--app-ink)] truncate">{sol.nombre}</p>
-                          <Badge variant="outline" className={`gap-1 ${cfg.color}`}>
-                            <Icon className="w-3 h-3" />
+                          <span className="pill" data-tone={cfg.tone}>
+                            <Icon aria-hidden="true" />
                             {cfg.label}
-                          </Badge>
+                          </span>
                         </div>
                         <p className="text-xs text-[var(--app-ink-2)] flex items-center gap-3 flex-wrap">
                           <span className="flex items-center gap-1 truncate"><Mail className="w-3 h-3 shrink-0" />{sol.email}</span>
