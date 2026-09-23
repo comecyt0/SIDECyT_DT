@@ -34,7 +34,7 @@ Convocatoria → Solicitud → Revisión documental → Evaluación técnica
 | Base de datos | PostgreSQL 18 |
 | PDF | `barryvdh/laravel-dompdf` |
 | Excel | `maatwebsite/laravel-excel` |
-| Email (dev) | `MAIL_MAILER=log` — escribe en log, no envía |
+| Email | Dev: `MAIL_MAILER=log` (escribe en log). **Producción (desde 23/09/2026): SMTP Microsoft 365** `smtp.office365.com:587` STARTTLS con `proyectos.comecyt@edomex.gob.mx` (E38) |
 
 **Puertos:** Frontend `localhost:3000` | Backend `localhost:8000` | API `localhost:8000/api`
 
@@ -131,6 +131,29 @@ Cada convocatoria tiene su propio `TipoPrograma` exclusivo. Los campos dinámico
 ---
 
 ## Reglas Críticas (errores que ya costaron tiempo)
+
+### 0. CIBERSEGURIDAD OBLIGATORIA EN CADA IMPLEMENTACIÓN (regla permanente, 23/09/2026)
+**Pedido explícito del usuario: toda implementación —nueva o cambio— debe mantener todos los protocolos de
+ciberseguridad necesarios para que el sistema no sea hackeable.** No es opcional ni "para después". El
+sistema es público en Internet (`sidecyt-comecyt.edomex.gob.mx`) y lo audita ADEM con pentest. Antes de dar
+por terminado cualquier cambio, revisar como mínimo:
+
+| Área | Qué exigir |
+|---|---|
+| **Autenticación y autorización** | Toda ruta nueva va en el grupo `api.auth` + middleware de rol, salvo que sea pública **a propósito** y documentada. En el front, rutas públicas solo vía `PUBLIC_PATHS` de `proxy.ts`. Verificar propiedad del recurso (IDOR): un usuario solo ve lo suyo |
+| **Endpoints públicos** | Solo lectura, `throttle:*` obligatorio, **lista blanca de campos armada a mano** (nunca serializar el modelo completo), límite de resultados, sin parámetros que filtren o paginen sin validar. Ejemplo de referencia: `ConvocatoriaPublicaController` (E37) |
+| **Entrada** | Validación en 2 capas (regla 9). Backend con `$request->validate()` y tipos/longitudes. Eloquent o bindings, **nunca SQL concatenado**. Archivos con `ValidatesBinaryMimeTypes` |
+| **Salida / XSS** | React escapa: **nunca `dangerouslySetInnerHTML`** con datos de usuario o de API (si es inevitable, sanitizar). Datos de API se validan en el front antes de pintarlos (`Array.isArray`, tipos, longitudes) |
+| **Secretos** | Nunca en código, `.md`, commits ni logs (el repo es público). Solo en `.env` (con respaldo previo al editarlo). Scripts que usan contraseñas no las imprimen. Revisar el diff antes de cada commit |
+| **Cabeceras y CSP** | No relajar la CSP (`next.config.ts`, `SecurityHeadersMiddleware`, `web.config`): sin comodines `*.dominio`, sin `unsafe-eval`, orígenes explícitos. Recursos externos (fuentes, scripts) **auto-hospedados**. `X-Frame-Options`, `nosniff`, HSTS, CORP deben seguir presentes — verificar con `curl.exe -D -` |
+| **Sesión** | Cookie `comecyt_auth` HttpOnly + Secure + SameSite=Strict; nada sensible en `localStorage` ni cookies JS. Peticiones públicas con `credentials: 'omit'` |
+| **Errores** | Sin trazas ni datos internos al cliente (`APP_DEBUG=false`). Mensajes genéricos hacia fuera, detalle solo en logs |
+| **Enlaces externos** | `target="_blank"` siempre con `rel="noopener noreferrer"` |
+| **Dependencias** | No agregar paquetes sin necesidad; preferir lo que ya está. Nada cargado desde CDN en tiempo de ejecución |
+| **Verificación** | Probar el caso malicioso, no solo el feliz: método no permitido, parámetros inyectados, exceso de peticiones (429), HTML/script en los datos (debe salir como texto). Dejar prueba automatizada cuando aplique |
+
+Si un requisito de negocio choca con un control de seguridad, **no se relaja el control en silencio**: se
+documenta el riesgo aquí y se consulta al usuario.
 
 ### 1. apiResource con plurales españoles en -ones/-es
 Laravel pluraliza mal palabras que terminan en `-ones`, `-es`, `-as`. **Siempre** usar `.parameters()`:
@@ -424,7 +447,7 @@ DB_CONNECTION=pgsql
 DB_HOST=localhost
 DB_DATABASE=comecyt_dev
 
-MAIL_MAILER=log         # Dev: escribe en log. Prod: SMTP real
+MAIL_MAILER=log         # Dev: escribe en log. Prod: smtp (smtp.office365.com:587, STARTTLS, ver E38)
 MAIL_FROM_ADDRESS="noreply@comecyt.gob.mx"
 
 AUTH_LOGIN_RATE_LIMIT=5        # intentos/minuto en /auth/login
@@ -469,6 +492,7 @@ GET /catalogs/programa/{id}/rubros
 GET /catalogs/programa/{id}/etapas
 GET /catalogs/programa/{id}/modalidades
 GET /carousel/slides            → slides activos para login page
+GET /convocatorias/abiertas     → convocatorias vigentes para la landing /sigac (throttle 30/min, lista blanca, E37)
 ```
 
 ### Solicitante
@@ -592,7 +616,7 @@ GET /documentos/convenio/{solicitud_id}
 | Rate limiting endpoints públicos | ✅ | `throttle:3,1` en `forgot-password`, `throttle:3,5` en `solicitar-acceso` |
 | Notificaciones — acceso propio | ✅ | `show()` en `NotificacionLogController` verifica `user_id === auth user id` |
 | Eliminación de usuarios | ✅ | `UserController::destroy()` bloquea auto-eliminación y eliminación del último admin |
-| JWT en HttpOnly cookie | ⚠️ | `AuthController::respondWithToken()` emite cookie `comecyt_auth` (HttpOnly; `Secure` y `SameSite` salen de `COOKIE_SECURE` y `COOKIE_SAME_SITE`). **En el servidor (11/09/2026) el `.env` tiene `COOKIE_SECURE=false` y `COOKIE_SAME_SITE=Lax`: la cookie sale sin `Secure`.** Pendiente poner `true`/`Strict`. `ReadJwtFromCookieMiddleware` lo inyecta como Bearer. `api.ts` usa `withCredentials: true`. Frontend ya no usa `localStorage`. |
+| JWT en HttpOnly cookie | ✅ | `AuthController::respondWithToken()` emite cookie `comecyt_auth` (HttpOnly; `Secure` y `SameSite` salen de `COOKIE_SECURE` y `COOKIE_SAME_SITE`). **Desde el 23/09/2026 el `.env` tiene `COOKIE_SECURE=true` y `COOKIE_SAME_SITE=Strict`** (verificado con un JWT real). `ReadJwtFromCookieMiddleware` lo inyecta como Bearer. `api.ts` usa `withCredentials: true`. Frontend ya no usa `localStorage`. |
 | Bloqueo de cuenta | ✅ | `AuthLoginRateLimitMiddleware` — 2 capas: IP (5/min) + email (10 intentos → 15 min lockout). Progresivo. |
 | Acceso por IP interna y por dominio | ✅ | Un solo build sirve ambos: `NEXT_PUBLIC_API_URL=/api` (relativa) y sin `NEXT_PUBLIC_REVERB_*` (`echo.ts` usa el origen de la página). `serverFetch` usa `API_INTERNAL_URL` del entorno NSSM de `comecyt-web`. HTTP a la IP redirige a `https://10.250.36.241`; el dominio, a sí mismo. Ver E22 (11/09/2026). |
 | Balanceador del dominio | ✅ | `web.config` no redirige lo que llega del ELB con `X-Forwarded-Proto=https` desde 100.64.0.0/10; `TRUSTED_PROXIES=127.0.0.1,100.64.0.0/10` para que Laravel vea la IP real del cliente (rate limit). **Una variable por condición** en esas reglas: ver E22 |
@@ -634,7 +658,8 @@ sudo certbot --nginx -d tudominio.mx
 
 | Ítem | Impacto | Solución |
 |------|---------|---------|
-| **SMTP real de producción** | **Crítico — bloqueado por la institución** | **23/09/2026:** probado con credenciales reales (`proyectos.comecyt@edomex.gob.mx`), dos rutas, ambas rechazadas por políticas del lado de Microsoft 365 / la red institucional, no por el servidor (ver E35). Falta que la institución habilite SMTP AUTH para esa cuenta **o** agregue `10.250.36.241` a la lista blanca de `mail.edomex.gob.mx`. Mientras tanto, `MAIL_MAILER=log` (seguro, no rompe nada) |
+| ~~**SMTP real de producción**~~ | ✅ **Resuelto 23/09/2026 (tarde)** | Infraestructura quitó el autenticador (MFA) de la cuenta de aplicativo y le asignó licencia Exchange Online. `smtp.office365.com:587` + STARTTLS autentica y envía; `MAIL_MAILER=smtp` activo y probado desde Laravel (ver E38) |
+| **2FA del administrador desactivado** | Alto | Quedó apagado el 14/09 por falta de SMTP. Con el correo ya funcionando, reactivarlo **con el usuario presente** (riesgo de dejar al admin fuera si algo falla). Revisar también el flujo de restablecimiento de contraseña por correo de punta a punta |
 | ~~`Cross-Origin-Resource-Policy` en `/storage/*`~~ | ✅ Resuelto 23/09/2026 | Activado tras confirmar con las imágenes reales del carrusel que `/storage/*` la servía sin esta cabecera. Verificado con `curl.exe` por IP y por dominio |
 | CSP con `script-src 'unsafe-inline'` | Medio | El front permite scripts embebidos, que es justo lo que aprovecha un XSS. **No es hallazgo de ADEM hoy, pero es el candidato más probable del próximo escaneo.** Solución de fondo: nonces o hashes, toca código de la app |
 | **Licencia de Windows Server (Evaluation)** | **Crítico, pero con margen** | Verificado el 21/09/2026 (`slmgr /dlv`): alguien hizo `rearm` entre el 15/09 y hoy — quedan **180 días** de gracia y **3 rearmes**. Sigue siendo Evaluation, no Standard: la solución definitiva (`DISM /online /Set-Edition:ServerStandard /ProductKey:<clave> /AcceptEula`) sigue pendiente, solo que ya no es urgente esta semana |
@@ -1234,3 +1259,55 @@ skills de diseño y el ADN visual de portrait.so (entregó su `design.md`). Docu
 - **Verificado:** tsc 0 errores; `Landing.a11y.test.tsx` 3/3 (axe sin violaciones); Edge headless a 1440 y
   375 px sin scroll horizontal y sin errores de consola en producción; `/` → 307 `/sigac` por IP y por
   dominio; cabeceras de seguridad sin cambios.
+- **Segunda y tercera vuelta, mismo día (pedidos del usuario):** el sistema se llama **SIGAC** en la landing
+  (no SIDECyT); contenido de los 4 programas de Apoyo Empresarial tomado de
+  `comecyt.edomex.gob.mx/apoyo-empresarial` (programas, 30 sectores, formatos, contactos); acentos en
+  **vino institucional** (`oklch(36% 0.1 358)`, el de `--auth-vino`) solo en detalles; logo de COMECYT
+  **3 veces más grande** en encabezado y pie usando `public/logo-recortado.png` (el `logo.png` original tiene
+  ~46 % de margen transparente); correo del pie `proyectos.comecyt@edomex.gob.mx`; **convocatorias abiertas
+  en vivo** (E37); botón **"Ir al sitio"** en el login → `/sigac`.
+- **Bug encontrado antes de cerrar:** `useInView` de Framer se conecta al `ref` en el montaje; si el elemento
+  aparece después (la rejilla de convocatorias se pinta cuando llegan los datos), nunca lo observa y las
+  tarjetas se quedaban en opacidad 0. **Regla:** el `ref` de un revelado va en un contenedor que exista
+  desde el primer render.
+
+### E37 — Endpoint público de convocatorias abiertas para la landing [23-09-2026]
+`GET /api/convocatorias/abiertas` → `ConvocatoriaPublicaController@index`, sin autenticación, dentro del
+grupo de `ApiGateway`/`CircuitBreaker`/`RateLimit` y con `throttle:30,1`. Lo consume la landing con `fetch`
+relativo y `credentials: 'omit'`.
+- **Cuándo una convocatoria es "abierta":** `estado = 'activa'` **y** `fecha_apertura <= hoy <= fecha_cierre`
+  **y** `tipo_programa_id` no nulo con programa `activo` **y** `deleted_at` nulo. El doble filtro (estado +
+  fechas) evita anunciar una convocatoria vencida si `convocatorias:close-expired` se atrasa. `deleted_at` va
+  explícito porque el modelo `Convocatoria` **no usa el trait `SoftDeletes`** aunque la columna existe.
+- **Lista blanca de campos armada a mano:** `nombre`, `programa`, `descripcion` (sin HTML, 280 caracteres),
+  `ejercicio_fiscal`, `fecha_apertura`, `fecha_cierre`. Quedan fuera IDs, montos, porcentajes, fianzas y
+  todo dato de solicitudes. Máximo 12. No lee ningún parámetro de la petición.
+- **Caché** de 5 min (`->toArray()`, regla 2) que se invalida en los eventos `saved`/`deleted` del modelo:
+  cubre el CRUD del admin, el asistente de 7 pasos y el cierre automático. `Cache-Control: public, max-age=120`.
+- **Front:** `parseCalls()` valida tipo, formato de fecha y longitud de cada registro y descarta los que no
+  cumplen; todo se pinta como texto (React escapa). Estados de carga (esqueleto), vacío y error.
+- **Verificado:** 200 con solo los 6 campos; cabeceras de seguridad presentes; `POST` rechazado; parámetros
+  inyectados (`?estado=borrador&limit=9999`) ignorados; **429 tras 30 peticiones/min**; prueba automatizada
+  con `<script>` e `<img onerror>` en los datos → salen como texto, nada se inyecta al DOM.
+- **Ojo con los datos:** al 23/09/2026 las 5 convocatorias `activa` de producción parecen **datos de carga
+  inicial** (fechas 01/04–01/10/2026 idénticas, nombres como "Pago de Fórmulas de Paridad de Información" o
+  "Profesionistas Extranjeros"), y el sitio oficial marca las convocatorias 2026 como **cerradas**. La landing
+  muestra lo que dice la base de datos: el admin debe cerrarlas o corregirlas en `/admin/convocatorias` si no
+  son reales.
+
+### E38 — SMTP institucional funcionando [resuelto 23-09-2026]
+Continuación de E35. Infraestructura respondió: la cuenta `proyectos.comecyt@edomex.gob.mx` tenía activado
+el **autenticador (MFA)** — que no corresponde a una cuenta de aplicativo — y se le asignó **licencia de
+Exchange Online** (solo buzón). Configuración sugerida: `smtp.office365.com`, puerto 587, TLS.
+- **Probado en tres niveles:** (1) autenticación con Symfony Mailer directo → `AUTH OK` (antes
+  `535 5.7.3`); (2) envío real a la propia cuenta → aceptado; (3) envío con `Mail::raw()` usando la
+  configuración de Laravel → aceptado.
+- **`.env`** (respaldo previo `apps/api/.env.bak-20260923-presmtp`): `MAIL_MAILER=smtp`,
+  `MAIL_HOST=smtp.office365.com`, `MAIL_PORT=587`, `MAIL_USERNAME`/`MAIL_FROM_ADDRESS` = la cuenta,
+  `MAIL_PASSWORD` entre comillas simples (literal en phpdotenv). `MAIL_SCHEME` sin definir: con 587 Symfony
+  negocia STARTTLS solo. La contraseña se escribió con un script que la lee de `Desktop\correo.txt` sin
+  imprimirla; **no está en ningún `.md` ni commit**.
+- `php artisan config:clear` y **reinicio de `comecyt-queue` y `comecyt-scheduler`** (procesos largos que
+  cargan la configuración al arrancar; sin reiniciarlos seguirían con `log`). La cola es `database`.
+- **Pendiente derivado:** reactivar el 2FA del admin (apagado desde el 14/09 por falta de correo) con el
+  usuario presente, y probar de punta a punta el restablecimiento de contraseña por correo.

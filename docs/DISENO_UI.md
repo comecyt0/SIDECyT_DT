@@ -467,3 +467,10 @@ redirige ahí. Documento completo (rutas, archivos, tokens, movimiento, estados,
   usa `#585858` y no el `#797979` de la referencia —, objetivos táctiles de 44 px, `aria-*` del formulario).
 - Se respeta la regla vigente de pantalla de carga: la entrada animada de la landing espera a que se retire
   el `#boot-splash`.
+- **Tarde del 23/09:** nombre **SIGAC**; contenido de Apoyo Empresarial; **vino institucional como acento
+  de detalle** (barras bajo títulos, números, fechas de cierre, filos de tarjeta; nunca fondos grandes);
+  logo ×3 con `public/logo-recortado.png`; convocatorias abiertas en vivo; botón "Ir al sitio" en el login
+  (único cambio al login: una píldora con los tokens `--auth-*`).
+- **Pendiente pedido por el usuario:** llevar este lenguaje visual (tinta navy, arcoíris de firma, pastel,
+  vino de detalle, radios 24/28, sombras de capas) a **todos los paneles**, excepto el login — ver §12
+  cuando se haga.

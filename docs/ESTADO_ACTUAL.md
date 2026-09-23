@@ -2,6 +2,19 @@
 
 **Fecha de actualización:** 23 de septiembre de 2026 (versión anterior: 21/09/2026)
 
+> 📨 **23/09/2026 (tarde) — SMTP institucional FUNCIONANDO.** Infraestructura quitó el autenticador (MFA)
+> de `proyectos.comecyt@edomex.gob.mx` y le asignó licencia Exchange Online. Probado: autenticación,
+> envío real y envío desde Laravel por `smtp.office365.com:587` (STARTTLS). `MAIL_MAILER=smtp` en
+> producción; `comecyt-queue` y `comecyt-scheduler` reiniciados. Pendiente: reactivar el 2FA del admin con
+> el usuario presente (E38 en `CLAUDE.md`).
+>
+> 📣 **23/09/2026 (tarde) — Landing ampliada.** Nombre **SIGAC**, los 4 programas de Apoyo Empresarial,
+> **convocatorias abiertas en vivo** desde el nuevo endpoint público `GET /api/convocatorias/abiertas`
+> (solo lectura, lista blanca de campos, 30/min, E37), acentos vino, logo ×3 y botón "Ir al sitio" en el
+> login. ⚠️ Las 5 convocatorias `activa` de producción parecen datos de carga inicial: la landing las
+> anuncia; revisarlas en `/admin/convocatorias`. **Nueva regla permanente de ciberseguridad** para toda
+> implementación: `CLAUDE.md`, Reglas Críticas §0.
+>
 > 🌈 **23/09/2026 (tarde) — Landing pública publicada en `/sigac`.** https://sidecyt-comecyt.edomex.gob.mx/sigac
 > presenta el sistema antes del login (qué es, las 8 etapas, los 4 perfiles, cómo obtener acceso) y lleva
 > a `/login` o `/solicitar-acceso`. **`/` sin sesión ahora redirige a `/sigac`** (con sesión, directo al
@@ -221,7 +234,7 @@ Cualquier `Host` fuera de la lista blanca (`HostAllowList` en `web.config`) reci
 | `CORS_ALLOWED_ORIGINS` | `https://sidecyt-comecyt.edomex.gob.mx,https://10.250.36.241,https://comecyt-sistemas.edomex.gob.mx,http://10.250.36.241` | |
 | `TRUSTED_PROXIES` | `127.0.0.1,100.64.0.0/10` | Balanceador. **Debe coincidir con `web.config`** |
 | `DB_DATABASE` | `comecyt_prod` | |
-| `MAIL_MAILER` | `log` | **No envía a propósito** — SMTP real bloqueado por la institución (ver Pendientes, E35 en `CLAUDE.md`) |
+| `MAIL_MAILER` | `smtp` | **Desde el 23/09/2026:** `smtp.office365.com:587` STARTTLS con `proyectos.comecyt@edomex.gob.mx` (contraseña solo en `.env`). Respaldo previo: `.env.bak-20260923-presmtp`. E38 en `CLAUDE.md` |
 | `JWT_TTL` | `1440` (24 h) | |
 | `SESSION_DRIVER` / `QUEUE_CONNECTION` | `database` / `database` | |
 
@@ -300,8 +313,9 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 | **Licencia de Windows Server** | Alta (bajó de Crítica) | Verificado el 21/09/2026: `slmgr /dlv` muestra **180 días** de gracia y **3 rearmes** (alguien hizo `rearm` entre el 15/09 y hoy). **Solución definitiva sigue pendiente:** convertir Evaluation → Standard con la clave institucional: `DISM /online /Set-Edition:ServerStandard /ProductKey:<clave> /AcceptEula` (reinicia el servidor; programar ventana) |
 | **Cuentas de prueba en producción** | **Crítica** | Las 4 cuentas del sistema son las de prueba de `UsuariosPruebaSeeder` **Contraseñas rotadas el 14/09/2026** en las 4 (la del seeder estuvo publicada en el README del repositorio anterior, que es público). **21/09/2026:** se aprobó la única solicitud de acceso pendiente (ver E30 en `CLAUDE.md`), vinculada a una cuenta ya creada a mano — no cambia el fondo del pendiente. **Falta:** crear las cuentas reales y desactivar estas. Decidir primero quién administra el sistema |
 | ~~`Solicitud.estado` nunca llega a `convenio`/`ministracion`~~ | ✅ Resuelto 23/09/2026 | Decidido e implementado (E33 en `CLAUDE.md`): avanza a `convenio` al generar el convenio, y a `ministracion` al firmarlo. Al verificarlo aparecieron 3 bugs más en `ConvenioController`, nunca antes ejercitados — corregidos (E34) |
-| **Correo (SMTP)** | **Crítica — bloqueado por la institución** | **23/09/2026:** probado con credenciales reales de `proyectos.comecyt@edomex.gob.mx`. Dos rutas intentadas, ambas rechazadas por políticas fuera de este servidor (E35 en `CLAUDE.md`): (1) `smtp.office365.com:587` → `535 5.7.3` (SMTP AUTH probablemente deshabilitado para esa cuenta a nivel de tenant M365); (2) `mail.edomex.gob.mx:25` (relevo interno) → cierra la conexión sin banner (IP de este servidor no está en su lista blanca). Falta que la institución resuelva 1 de las 2. **Correo enviado el 23/09/2026**, en espera de respuesta:
-`Desktop\ADEM\_v6_smtp_sep23\CORREO_SMTP_INSTITUCIONAL.md`. Mientras tanto, `MAIL_MAILER=log` (seguro) |
+| ~~**Correo (SMTP)**~~ | ✅ **Resuelto 23/09/2026 (tarde)** | Infraestructura respondió: la cuenta tenía el autenticador (MFA) activo y se le asignó licencia Exchange Online. Tras el cambio, `smtp.office365.com:587` STARTTLS autentica y envía, también desde Laravel. `MAIL_MAILER=smtp` activo (E38 en `CLAUDE.md`) |
+| **2FA del admin desactivado** | Alta | Apagado desde el 14/09 por falta de correo. Ya hay SMTP: reactivarlo con el usuario presente y probar el restablecimiento de contraseña por correo de punta a punta |
+| **Convocatorias `activa` que parecen de prueba** | Media | Las 5 de producción (01/04–01/10/2026) parecen datos de carga inicial y ahora se anuncian en la landing pública. Revisarlas en `/admin/convocatorias` (cerrar o corregir) |
 | **Ruta del balanceador nuevo** | **Crítica — el sitio no se ve por el dominio.** En espera de infraestructura | El VIP `10.200.41.131` (el que resuelve desde la publicación externa del 14/09/2026) devuelve `404`: no tiene registrada la entrega hacia `10.250.36.241:80`. **Solo lo puede hacer infraestructura; correo enviado el 14/09/2026.** Al responder: correr `VerificarDominio.ps1`, y si el origen **no** está en `100.64.0.0/10`, ajustar **el mismo día** las 5 apariciones del patrón en `web.config` (en dos formas distintas) y `TRUSTED_PROXIES` **juntas**, o habrá bucle de redirección. [DOMINIO_BALANCEADOR.md §12 y §9](DOMINIO_BALANCEADOR.md) · `Desktop\ADEM\_v5_publicacion_sep14\LEEME.md` |
 | **Confirmaciones de infraestructura** | Alta | Rango de IPs del balanceador, HTTP→HTTPS en el balanceador, health check, 50 MB, timeouts. Incorporadas al correo del 14/09 (`_v5_publicacion_sep14\`); el original sigue en `Desktop\ADEM\_v4_dominio_sep11\`. [DOMINIO_BALANCEADOR.md §8](DOMINIO_BALANCEADOR.md#8-qué-necesita-hacer-o-confirmar-infraestructura) |
 | **Prueba con usuario real por el dominio** | Alta | Login, navegación por rol, subir y previsualizar documento, notificación. [DOMINIO_BALANCEADOR.md §6](DOMINIO_BALANCEADOR.md#6-lo-que-falta-probar) |
@@ -327,6 +341,7 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 
 | Fecha | Cambio |
 |---|---|
+| 2026-09-23 (tarde, 2) | **SMTP Microsoft 365 funcionando** (E38). **Landing:** SIGAC, programas de Apoyo Empresarial, convocatorias en vivo (endpoint público E37 con throttle y lista blanca), vino de detalle, logo ×3, "Ir al sitio" en el login. **Regla permanente de ciberseguridad** en `CLAUDE.md` §0 |
 | 2026-09-23 (tarde) | **Landing pública `/sigac` publicada** (referencia portrait.so, fuentes Switzer + Satoshi auto-hospedadas). `/` sin sesión → `/sigac`; `/privacidad` y `/terminos` públicas; `?email=` prellena el login. Pruebas axe 3/3, sin scroll horizontal a 375 y 1440 px. Ver `LANDING_SIGAC.md` y `CLAUDE.md` E36 |
 | 2026-09-23 | **Cookie de sesión endurecida** (`Secure`+`Strict`, verificado). **Definida e implementada la transición `aprobada→convenio→ministracion`** (E33), que destapó 3 bugs más en `ConvenioController` nunca antes ejercitados — corregidos y verificados con datos desechables (E34). **Limpieza:** 7.84 GB liberados en respaldos `.next.bak-*`, tarea rota eliminada, `C:\comecyt` borrado. **SMTP institucional probado con credenciales reales — bloqueado por la institución** (E35): dos rutas rechazadas por políticas de Microsoft 365 / red interna, ninguna corregible desde el servidor. **Carrusel:** imágenes reales ya subidas por el usuario. **Cabeceras:** `Server` confirmada oculta; `Cross-Origin-Resource-Policy` activada en `/storage/*` |
 | 2026-09-21 | **Rediseño vivo y multicolor de los 4 paneles, publicado**, más 3 bugs de producción encontrados y corregidos la misma tarde (E30, E31, E32 en `CLAUDE.md`): aprobar accesos daba 500 y nunca cerraba la solicitud; el mismo patrón bloqueaba **las 14 transiciones de estado** del ciclo de vida de `Solicitud` antes de que llegara la primera solicitud real; subir imagen del carrusel daba 422. Licencia de Windows con más margen (180 días, 3 rearmes). Ver `DISENO_UI.md` §10 |

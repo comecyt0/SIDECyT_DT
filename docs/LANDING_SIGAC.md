@@ -1,10 +1,32 @@
-# Landing pública SIDECyT — `/sigac`
+# Landing pública SIGAC — `/sigac`
 
 **Publicada:** 23/09/2026 · **URL:** https://sidecyt-comecyt.edomex.gob.mx/sigac
 (también por VPN: `https://10.250.36.241/sigac`)
 
-Página de presentación del sistema **antes del login**. Explica qué es SIDECyT, el recorrido de una
-solicitud y cómo obtener acceso, y lleva al usuario a `/login` o a `/solicitar-acceso`.
+Página de presentación del sistema **antes del login** y **puerta de entrada a todas las convocatorias de
+Apoyo Empresarial del COMECYT**. Muestra las convocatorias abiertas en vivo, los 4 programas, los sectores,
+los documentos que se preparan, el recorrido de una solicitud y cómo obtener acceso; lleva a `/login` o a
+`/solicitar-acceso`. En la landing el sistema se llama **SIGAC** (pedido del usuario; antes decía SIDECyT).
+
+## 0. Cambios del 23/09/2026 (tarde), en orden
+
+1. Nombre **SIGAC** en toda la landing ("Entra a SIGAC", marca del nav, metadatos).
+2. **Contenido de Apoyo Empresarial** de https://comecyt.edomex.gob.mx/apoyo-empresarial y de la página de
+   cada programa (consultadas el 23/09/2026): 4 programas con público objetivo, descripción, correo y
+   enlace oficial; 30 sectores estratégicos; formatos que piden las convocatorias; Reglas de Operación,
+   Lineamientos del Comité, garantía con afianzadora y reporte del IMPI; dirección y teléfonos del COMECYT.
+   **No se copian fechas ni estatus** de esas páginas: cambian cada año; se enlaza a la página oficial.
+3. Correo del pie: **`proyectos.comecyt@edomex.gob.mx`**.
+4. **Acentos en vino institucional** (`oklch(36% 0.1 358)`, el mismo `--auth-vino` del login), solo en
+   detalles: barra corta bajo cada título, números de etapa, línea "Consejo Mexiquense…", etiqueta "Nuevo"/
+   "Abiertas", "Para:" de los programas, enlaces a convocatorias, fecha de cierre y filo superior de cada
+   convocatoria, números de acceso, viñetas de documentos, título de la tarjeta final, íconos y filo del pie,
+   hover de botones secundarios y selección de texto. Nunca fondos grandes ni botones rellenos.
+5. **Logo de COMECYT 3 veces más grande** en encabezado (dibujo visible ~26 → 78 px) y pie (~35 → 104 px),
+   con `public/logo-recortado.png` (el `logo.png` original tiene ~46 % de margen transparente). En teléfono
+   el del encabezado se limita a 40–46 px para que quepa con "SIGAC" y el botón.
+6. **Convocatorias abiertas en vivo** (§10) y píldora del nav "N convocatorias abiertas".
+7. Botón **"Ir al sitio"** en el login (arriba a la izquierda) → `/sigac`.
 
 ---
 
@@ -67,27 +89,52 @@ sus efectos, animación e interfaz. Se tomó su **ADN**, no sus píxeles ni su c
   Licencia FFL: uso comercial y web permitido.
 - **Texto de ayuda en `#585858`, no `#797979`:** el gris de referencia da 4.48:1 sobre blanco y no llega a
   AA en texto chico. `#797979` queda solo para el placeholder.
+- **Vino institucional como acento secundario** (pedido del usuario): la referencia no lo tiene; se agrega
+  solo en detalles para que la página se reconozca como COMECYT sin saturarla (lista en §0).
 - **El logo de Edomex no aparece** porque producción tiene `NEXT_PUBLIC_EDOMEX_LOGO_URL=none`; la landing
   respeta la misma regla que `DualBranding`.
 
 ## 4. Estructura
 
-1. **Nav flotante** (fija, píldora): logo COMECyT + "SIDECyT" + cuadro arcoíris · anuncio (≥ 900 px) ·
-   "Solicitar acceso" (≥ 560 px) · "Iniciar sesión" con contorno arcoíris. Al hacer scroll gana un filo
-   de 1 px.
+1. **Nav flotante** (fija, píldora): logo COMECyT grande + "SIGAC" + cuadro arcoíris · píldora (≥ 900 px):
+   "N convocatorias abiertas" si hay, o "Conoce los programas de apoyo empresarial" si no · "Solicitar
+   acceso" (≥ 560 px) · "Iniciar sesión" con contorno arcoíris. Al hacer scroll gana un filo de 1 px.
 2. **Hero:** nombre de la institución · titular "Tu proyecto, de la idea al **convenio**" · texto ·
    campo de correo con "Continuar" · "¿Todavía no tienes cuenta? Solicita acceso". Polaroids alrededor
    (≥ 1100 px, 6 tarjetas, algunas recortadas por el borde de la pantalla); en móvil, una tira de 3
-   tarjetas encimadas bajo el formulario.
-3. **Ocho etapas, un mismo expediente:** las 8 etapas reales del ciclo (Convocatoria → Solicitud →
+   tarjetas encimadas bajo el formulario. Las polaroids usan los nombres reales de los formatos.
+3. **Convocatorias abiertas** (en vivo, §10).
+4. **Cuatro programas de apoyo, una sola plataforma:** tarjetas con público objetivo, descripción, correo del
+   programa y "Ver convocatoria y formatos" (abre el sitio oficial en otra pestaña).
+5. **¿Tu proyecto encaja?:** los 30 sectores estratégicos como etiquetas pastel.
+6. **Ocho etapas, un mismo expediente:** las 8 etapas reales del ciclo (Convocatoria → Solicitud →
    Revisión documental → Evaluación técnica → Convenio → Ministración → Informe final → Cierre), con
    quién actúa en cada una. La numeración está justificada: es una secuencia.
-4. **Un lugar para cada quien:** los 4 perfiles (solicitantes, revisión documental, evaluación técnica,
+7. **Lo que vas a preparar:** los 6 formatos habituales y notas (Reglas de Operación, afianzadora, IMPI).
+8. **Un lugar para cada quien:** los 4 perfiles (solicitantes, revisión documental, evaluación técnica,
    administración) con encabezado fijo a la izquierda en escritorio.
-5. **¿Cómo obtengo acceso?:** 3 pasos (solicitar, validación por la administración, entrar) y la tarjeta
-   final "Entra a SIDECyT" con los dos botones.
-6. **Pie:** logo, aviso de privacidad, términos, correo de contacto (`INSTITUTION.contactEmail`) y
-   `copyrightLine()`.
+9. **¿Cómo obtengo acceso?:** 3 pasos (solicitar, validación por la administración, entrar) y la tarjeta
+   final "Entra a SIGAC" con los dos botones.
+10. **Pie:** logo grande, aviso de privacidad, términos, enlace a Apoyo Empresarial del sitio oficial,
+    dirección, teléfonos, `proyectos.comecyt@edomex.gob.mx` y `copyrightLine()`.
+
+## 10. Convocatorias abiertas en vivo
+
+- **Fuente:** `GET /api/convocatorias/abiertas` (`ConvocatoriaPublicaController`, detalle en `CLAUDE.md` E37).
+  Es la misma base de datos que usa el sistema: cuando el admin abre, cierra o edita una convocatoria en
+  `/admin/convocatorias` (o el cierre automático la cierra), la landing lo refleja al instante (la caché se
+  invalida en los eventos del modelo).
+- **Qué cuenta como abierta:** `estado = 'activa'`, fechas vigentes hoy, con programa activo, no borrada.
+- **Qué se muestra:** programa, nombre, descripción corta, "Abre"/"Cierra" y "Quedan N días" (en vino si
+  faltan 7 o menos). Botón "Postular en SIGAC" → `/login`. Sin montos ni IDs.
+- **Estados:** esqueleto mientras carga; "Por ahora no hay convocatorias abiertas" si la lista viene vacía;
+  "No pudimos cargar las convocatorias" si la API falla. La página nunca se rompe por la API.
+- **Seguridad:** `fetch` relativo (CSP `connect-src 'self'`), sin cookies (`credentials: 'omit'`), cada
+  registro se valida en `parseCalls()` y se pinta como texto. Pruebas con `<script>`/`<img onerror>` en los
+  datos: salen como texto.
+- **Atención:** al 23/09/2026 las 5 convocatorias `activa` de producción parecen datos de carga inicial (ver
+  E37). La landing las anuncia porque la base de datos dice que están abiertas; si no son reales, cerrarlas
+  o corregirlas en el panel.
 
 **Contenido honesto:** no hay cifras, testimonios ni logotipos inventados. Nombres, correo y textos
 institucionales salen de `lib/institution.ts` (variables `NEXT_PUBLIC_INSTITUTION_*`).
@@ -122,7 +169,10 @@ aparece dibujada; no hay paralaje. Sin JavaScript, un `<noscript>` deja todo vis
 
 - `tsc --noEmit` sin errores; ESLint 0 errores (2 avisos `set-state-in-effect`, mismo patrón que ya usa
   `login-carousel.tsx` para E7).
-- `vitest`: 3/3 en `Landing.a11y.test.tsx` (axe sin violaciones) y la prueba del login sigue pasando.
+- `vitest`: 5/5 en `Landing.a11y.test.tsx` (axe sin violaciones, validación del correo, convocatorias en
+  vivo con datos maliciosos, estados vacío/error, enlaces) y la prueba del login sigue pasando.
+- Producción tras la tercera vuelta: 5 convocatorias pintadas, píldora "5 convocatorias abiertas", "Ir al
+  sitio" del login lleva a `/sigac`, sin errores de consola, sin scroll horizontal a 1440 y 375 px.
 - Capturas con Edge headless a 1440×900 y 375×812: **sin scroll horizontal** en ninguna.
 - Flujo real: `/` → `/sigac`; correo inválido muestra el error; correo válido abre
   `/login?email=persona%40institucion.edu.mx` con el campo lleno; `/privacidad` y `/terminos` responden
@@ -137,6 +187,9 @@ log en `logs\deploy-landing-20260923.log`). Solo frontend; el backend no cambió
 ## 9. Cómo cambiar cosas
 
 - **Textos de etapas, roles o pasos:** arreglos `STEPS`, `ROLES`, `ACCESS` al inicio de `Landing.tsx`.
+- **Programas, sectores y documentos:** arreglos `PROGRAMS`, `SECTORS`, `DOCUMENTS` (contenido del sitio
+  oficial; revisar cada año contra comecyt.edomex.gob.mx). Correo del pie: `CONTACT_EMAIL`.
+- **Convocatorias abiertas:** no se editan aquí — se administran en `/admin/convocatorias`.
 - **Titular:** `HEADLINE` + `HEADLINE_ACCENT` (la palabra arcoíris; mantener una sola).
 - **Polaroids:** arreglo `PINS` (`slot` a–f fija la posición en escritorio, `r` la inclinación, `depth` la
   intensidad del paralaje).

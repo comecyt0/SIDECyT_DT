@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
 import api from '@/lib/api';
 import Link from 'next/link';
-import { ArrowRight, Check, Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { AlertBox } from '@/components/ui/alert-box';
 import { LoginCarousel } from '@/components/ui/login-carousel';
 import DualBranding from '@/components/branding/DualBranding';
@@ -151,7 +151,15 @@ export default function LoginPage() {
 
       {/* ── Derecha: formulario ── */}
       <main className="flex min-h-screen w-full flex-col lg:w-[45%] xl:w-[42%]">
-        <div className="flex justify-end px-6 pt-5">
+        <div className="flex items-center justify-between gap-3 px-6 pt-5">
+          {/* Regreso a la landing pública (/sigac), pedido del usuario el 23/09/2026. */}
+          <Link
+            href="/sigac"
+            className="group inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[var(--auth-rule)] bg-[var(--auth-white)] px-4 text-sm font-semibold text-[var(--auth-vino)] transition-[transform,background-color] duration-150 ease-out hover:bg-[var(--auth-vino-soft)] active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--auth-vino)]"
+          >
+            <ArrowLeft className="h-4 w-4 transition-transform duration-200 ease-out group-hover:-translate-x-0.5" aria-hidden="true" />
+            Ir al sitio
+          </Link>
           <LanguageSwitcher />
         </div>
 

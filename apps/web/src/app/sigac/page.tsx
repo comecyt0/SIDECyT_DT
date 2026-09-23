@@ -5,7 +5,7 @@ import Landing from './Landing';
 import './landing.css';
 
 /**
- * Landing pública de SIDECyT — https://sidecyt-comecyt.edomex.gob.mx/sigac
+ * Landing pública de SIGAC — https://sidecyt-comecyt.edomex.gob.mx/sigac
  * `/` redirige aquí a quien no tiene sesión (proxy.ts). Documentación: docs/LANDING_SIGAC.md.
  *
  * Fuentes auto-hospedadas (la CSP solo permite `font-src 'self'`): Switzer para texto y Satoshi
@@ -27,13 +27,13 @@ const satoshi = localFont({
 });
 
 export const metadata: Metadata = {
-  title: `SIDECyT · ${INSTITUTION.name} — Proyectos de desarrollo tecnológico y vinculación`,
+  title: `SIGAC · ${INSTITUTION.name} — Convocatorias de Apoyo Empresarial`,
   description:
-    `Plataforma del ${INSTITUTION.fullName} para postular proyectos de desarrollo tecnológico y vinculación, ` +
-    'seguir cada etapa y recibir el apoyo.',
+    `Plataforma del ${INSTITUTION.fullName} para las convocatorias de Apoyo Empresarial: Desarrollo de ` +
+    'Prototipos, Incorporación de Profesionistas, Jóvenes Emprendedores e Innovadores y Vinculación de Empresas.',
   alternates: { canonical: '/sigac' },
   openGraph: {
-    title: `SIDECyT · ${INSTITUTION.name}`,
+    title: `SIGAC · ${INSTITUTION.name}`,
     description: 'Tu proyecto, de la idea al convenio.',
     type: 'website',
     locale: 'es_MX',

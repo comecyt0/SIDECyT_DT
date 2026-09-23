@@ -7,6 +7,7 @@ import { motion, useInView, useMotionValue, useReducedMotion, useSpring, useTran
 import {
   ArrowDown,
   ArrowRight,
+  ArrowUpRight,
   Banknote,
   Building2,
   Check,
@@ -17,19 +18,25 @@ import {
   FilePlus,
   FileText,
   FolderCheck,
+  GraduationCap,
   Handshake,
   Loader2,
   Mail,
+  MapPin,
   Megaphone,
   MessageSquareText,
+  Network,
+  Phone,
+  Rocket,
   Scale,
   Settings2,
+  Wrench,
 } from 'lucide-react';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
 import { useGlobalLoader } from '@/components/ui/GlobalLoader';
 
 /**
- * Landing pública de SIDECyT (/sigac). Estilos en ./landing.css (prefijo .lp-*), referencia de
+ * Landing pública de SIGAC (/sigac), puerta de entrada a las convocatorias de Apoyo Empresarial. Estilos en ./landing.css (prefijo .lp-*), referencia de
  * estilo portrait.so y decisiones en docs/LANDING_SIGAC.md.
  *
  * Contenido honesto: nada de cifras inventadas. Las etapas y los roles salen del ciclo real del
@@ -51,7 +58,7 @@ const HEADLINE = ['Tu', 'proyecto,', 'de', 'la', 'idea', 'al'];
 const HEADLINE_ACCENT = 'convenio';
 
 const STEPS: { title: string; body: string; actor: string; icon: ReactNode; tone: Tone }[] = [
-  { title: 'Convocatoria', body: 'El COMECYT publica la convocatoria con sus requisitos, rubros, documentos y fechas.', actor: 'COMECYT', icon: <Megaphone />, tone: 'sky' },
+  { title: 'Convocatoria', body: 'El COMECYT publica la convocatoria del programa con sus reglas, requisitos, formatos y fechas.', actor: 'COMECYT', icon: <Megaphone />, tone: 'sky' },
   { title: 'Solicitud', body: 'Registras tu proyecto, llenas los campos que pide la convocatoria y adjuntas tus documentos.', actor: 'Solicitante', icon: <FilePlus />, tone: 'mint' },
   { title: 'Revisión documental', body: 'Se valida tu documentación. Si falta algo, recibes observaciones, corriges y reenvías.', actor: 'Revisión', icon: <ClipboardCheck />, tone: 'peach' },
   { title: 'Evaluación técnica', body: 'Especialistas califican el proyecto con los criterios de la convocatoria y emiten un dictamen.', actor: 'Evaluación', icon: <Scale />, tone: 'sky' },
@@ -69,10 +76,222 @@ const ROLES: { title: string; body: string; icon: ReactNode; tone: Tone | 'mist'
 ];
 
 const ACCESS: { title: string; body: string }[] = [
-  { title: 'Solicita acceso', body: 'Llena el formulario con los datos de tu institución y tu correo.' },
+  { title: 'Solicita acceso', body: 'Llena el formulario con los datos de tu empresa o institución y tu correo.' },
   { title: 'Se valida tu solicitud', body: 'La administración del COMECYT revisa tus datos y aprueba el acceso.' },
-  { title: 'Entra a SIDECyT', body: 'Inicia sesión con tu correo y tu contraseña, y registra tu proyecto.' },
+  { title: 'Entra a SIGAC', body: 'Inicia sesión con tu correo y tu contraseña, y registra tu proyecto.' },
 ];
+
+/**
+ * Programas de Apoyo Empresarial. Fuente: https://comecyt.edomex.gob.mx/apoyo-empresarial y la
+ * página de cada programa (consultadas el 23/09/2026). No se ponen fechas ni estatus de convocatoria
+ * aquí porque cambian cada año: cada tarjeta enlaza a la página oficial, que sí los publica.
+ */
+const COMECYT_SITE = 'https://comecyt.edomex.gob.mx';
+
+/** Correo de contacto del pie, indicado por el usuario (23/09/2026). */
+const CONTACT_EMAIL = 'proyectos.comecyt@edomex.gob.mx';
+
+const PROGRAMS: {
+  title: string; audience: string; body: string; email: string; href: string; icon: ReactNode; tone: Tone;
+}[] = [
+  {
+    title: 'Programa para el Desarrollo de Prototipos',
+    audience: 'MiPyMEs, personas físicas con actividad empresarial y cooperativas',
+    body: 'Apoyo económico para desarrollar prototipos que resulten de un desarrollo o una innovación tecnológica susceptible de propiedad intelectual, y fortalecer tus capacidades tecnológicas y productivas.',
+    email: 'dt.prototipos@edomex.gob.mx',
+    href: `${COMECYT_SITE}/apoyo-desarrollo-prototipos`,
+    icon: <Wrench />,
+    tone: 'sky',
+  },
+  {
+    title: 'Incorporación de Profesionistas para el Fortalecimiento Empresarial',
+    audience: 'MiPyMEs y grandes empresas',
+    body: 'Apoyo económico para integrar a tu empresa profesionistas con grado de técnico superior universitario, licenciatura, maestría o doctorado, que desarrollen un proyecto tecnológico o de innovación.',
+    email: 'focacyte@edomex.gob.mx',
+    href: `${COMECYT_SITE}/incorporacion-profesionistas-fortalecimiento-empresarial`,
+    icon: <GraduationCap />,
+    tone: 'mint',
+  },
+  {
+    title: 'Jóvenes Emprendedores e Innovadores',
+    audience: 'Jóvenes de hasta 29 años, estudiantes o egresados de educación superior, que residan en el Estado de México',
+    body: 'Apoyo económico para un proyecto de desarrollo tecnológico o de innovación de un producto, proceso o servicio, con el que emprendas una empresa o negocio.',
+    email: 'vinculacionempresas@edomex.gob.mx',
+    href: `${COMECYT_SITE}/jovenes-emprendedores-innovadores`,
+    icon: <Rocket />,
+    tone: 'peach',
+  },
+  {
+    title: 'Vinculación de Empresas con Instituciones Educativas y Centros de Investigación',
+    audience: 'MiPyMEs y grandes empresas',
+    body: 'Apoyo económico para proyectos de innovación y desarrollo tecnológico hechos en colaboración con instituciones de educación media superior, superior o centros de investigación.',
+    email: 'sceron.comecyt@edomex.gob.mx',
+    href: `${COMECYT_SITE}/vinculacion-empresas`,
+    icon: <Network />,
+    tone: 'sky',
+  },
+];
+
+/** Sectores estratégicos que listan las convocatorias 2026 (mismos en los cuatro programas, salvo Agroquímica). */
+const SECTORS = [
+  'Aeronáutica', 'Agroindustria', 'Agrotecnología', 'Agroquímica', 'Alimentos', 'Ambiental', 'Arquitectura',
+  'Automotriz', 'Bioingeniería', 'Biotecnología', 'Desarrollo sustentable', 'Dispositivos médicos',
+  'Economía circular', 'Eficiencia energética', 'Electromecánica', 'Farmacéutica', 'Gestión integral de residuos',
+  'Informática', 'Inteligencia artificial', 'Logística', 'Manufactura', 'Mecatrónica', 'Movilidad', 'Plásticos',
+  'Química', 'Robótica', 'Salud', 'Textil', 'Tecnologías para el agua', 'Telecomunicaciones',
+];
+const SECTOR_TONES: Tone[] = ['sky', 'mint', 'peach'];
+
+/** Formatos que piden las convocatorias (los nombres exactos y la plantilla cambian por programa). */
+const DOCUMENTS: { title: string; body: string }[] = [
+  { title: 'Ficha técnica', body: 'Los datos generales de tu proyecto.' },
+  { title: 'Plan de trabajo', body: 'Actividades, entregables y tiempos (Anexo 1).' },
+  { title: 'Presupuesto', body: 'Cómo se usará el apoyo, por rubro (Anexo 2).' },
+  { title: 'Carta de intención', body: 'Tu intención de participar en la convocatoria.' },
+  { title: 'Escrito bajo protesta de decir verdad', body: 'O carta compromiso, según el programa.' },
+  { title: 'Resumen de la empresa', body: 'Quién eres y a qué se dedica tu empresa.' },
+];
+
+/* ───────────────────────── Convocatorias abiertas (API pública) ───────────────────────── */
+
+/** Forma que devuelve GET /api/convocatorias/abiertas (lista blanca del backend, E37). */
+type OpenCall = {
+  nombre: string;
+  programa: string | null;
+  descripcion: string | null;
+  ejercicio_fiscal: string;
+  fecha_apertura: string;
+  fecha_cierre: string;
+};
+
+type CallsState = { status: 'loading' | 'ready' | 'error'; items: OpenCall[] };
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const str = (v: unknown, max: number): string | null =>
+  typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null;
+
+/** Valida cada registro antes de pintarlo: el front no confía ciegamente en la respuesta. */
+function parseCalls(raw: unknown): OpenCall[] {
+  const list = raw && typeof raw === 'object' && Array.isArray((raw as { data?: unknown }).data)
+    ? (raw as { data: unknown[] }).data
+    : [];
+  return list.slice(0, 12).flatMap((r) => {
+    if (!r || typeof r !== 'object') return [];
+    const o = r as Record<string, unknown>;
+    const nombre = str(o.nombre, 200);
+    const cierre = str(o.fecha_cierre, 10);
+    const apertura = str(o.fecha_apertura, 10);
+    if (!nombre || !cierre || !DATE_RE.test(cierre) || !apertura || !DATE_RE.test(apertura)) return [];
+    return [{
+      nombre,
+      programa: str(o.programa, 150),
+      descripcion: str(o.descripcion, 280),
+      ejercicio_fiscal: str(o.ejercicio_fiscal, 4) ?? '',
+      fecha_apertura: apertura,
+      fecha_cierre: cierre,
+    }];
+  });
+}
+
+/** 'YYYY-MM-DD' como fecha local (sin el corrimiento de zona horaria de new Date('YYYY-MM-DD')). */
+function localDate(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function daysLeft(iso: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((localDate(iso).getTime() - today.getTime()) / 86_400_000);
+}
+
+const fmtDate = (iso: string) =>
+  localDate(iso).toLocaleDateString(INSTITUTION.locale, { day: 'numeric', month: 'long', year: 'numeric' });
+
+function useOpenCalls(): CallsState {
+  const [state, setState] = useState<CallsState>({ status: 'loading', items: [] });
+  useEffect(() => {
+    const ctrl = new AbortController();
+    // Ruta relativa: mismo origen (la CSP solo permite connect-src 'self'), sin cookies.
+    fetch('/api/convocatorias/abiertas', {
+      signal: ctrl.signal,
+      credentials: 'omit',
+      headers: { Accept: 'application/json' },
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((json: unknown) => setState({ status: 'ready', items: parseCalls(json) }))
+      .catch((e: unknown) => {
+        if ((e as { name?: string })?.name !== 'AbortError') setState({ status: 'error', items: [] });
+      });
+    return () => ctrl.abort();
+  }, []);
+  return state;
+}
+
+function OpenCalls({ state }: { state: CallsState }) {
+  // El observador va en un contenedor que existe desde el primer render: si se pusiera en la rejilla
+  // (que aparece hasta que llegan los datos), useInView nunca la vería y las tarjetas quedarían en opacidad 0.
+  const [ref, inView] = useInViewAttr<HTMLDivElement>();
+  return (
+    <section id="convocatorias" className="lp-section lp-calls-section" aria-labelledby="lp-calls" aria-busy={state.status === 'loading'}>
+      <div ref={ref} className="lp-wrap lp-reveal" data-inview={inView ? 'true' : 'false'}>
+        <div className="lp-head">
+          <h2 id="lp-calls" className="lp-h2">Convocatorias abiertas</h2>
+          <p className="lp-h2-sub">Lo que puedes postular hoy en SIGAC. Esta lista se actualiza sola cuando se abre o cierra una convocatoria.</p>
+        </div>
+
+        {state.status === 'loading' && (
+          <div className="lp-calls" aria-hidden="true">
+            {[0, 1, 2].map((i) => <div key={i} className="lp-call lp-call-skeleton" />)}
+          </div>
+        )}
+
+        {state.status === 'ready' && state.items.length > 0 && (
+          <div className="lp-calls">
+            {state.items.map((c, i) => {
+              const left = daysLeft(c.fecha_cierre);
+              const soon = left <= 7;
+              return (
+                <article key={`${c.nombre}-${c.fecha_cierre}`} className="lp-call lp-reveal-item" style={{ '--i': i } as CSSProperties}>
+                  <div className="lp-call-top">
+                    <span className="lp-call-live"><span aria-hidden="true" />Abierta</span>
+                    <span className="lp-call-left" data-soon={soon ? 'true' : undefined}>
+                      {left <= 0 ? 'Cierra hoy' : left === 1 ? 'Queda 1 día' : `Quedan ${left} días`}
+                    </span>
+                  </div>
+                  {c.programa && <p className="lp-call-program">{c.programa}</p>}
+                  <h3>{c.nombre}</h3>
+                  {c.descripcion && <p className="lp-call-desc">{c.descripcion}</p>}
+                  <dl className="lp-call-dates">
+                    <div><dt>Abre</dt><dd>{fmtDate(c.fecha_apertura)}</dd></div>
+                    <div><dt>Cierra</dt><dd>{fmtDate(c.fecha_cierre)}</dd></div>
+                  </dl>
+                  <Link href="/login" className="lp-btn lp-btn-ghost lp-call-cta">
+                    Postular en SIGAC <ArrowRight className="lp-btn-arrow" aria-hidden="true" />
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+        )}
+
+        {(state.status === 'error' || (state.status === 'ready' && state.items.length === 0)) && (
+          <div className="lp-calls-empty" role="status">
+            <Megaphone aria-hidden="true" />
+            <div>
+              <h3>{state.status === 'error' ? 'No pudimos cargar las convocatorias' : 'Por ahora no hay convocatorias abiertas'}</h3>
+              <p>
+                {state.status === 'error'
+                  ? 'Recarga la página en un momento, o consulta los programas de apoyo más abajo.'
+                  : 'Revisa los programas de apoyo más abajo: cada uno publica en su página cuándo abre su siguiente convocatoria.'}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
 
 /* ───────────────────────── Collage ───────────────────────── */
 
@@ -136,9 +355,9 @@ const PINS: Pin[] = [
     content: (
       <Polaroid tone="sky" title="Expediente" meta="Tus documentos, siempre a la mano">
         <div style={{ display: 'grid', gap: 6 }}>
-          <span className="lp-file"><FileText width={14} height={14} /> Proyecto.pdf</span>
-          <span className="lp-file"><FileText width={14} height={14} /> Presupuesto.pdf</span>
-          <span className="lp-file"><FileText width={14} height={14} /> Carta institucional.pdf</span>
+          <span className="lp-file"><FileText width={14} height={14} /> Ficha técnica.docx</span>
+          <span className="lp-file"><FileText width={14} height={14} /> Plan de trabajo.docx</span>
+          <span className="lp-file"><FileText width={14} height={14} /> Presupuesto.xlsx</span>
         </div>
       </Polaroid>
     ),
@@ -148,7 +367,7 @@ const PINS: Pin[] = [
     content: (
       <Polaroid tone="peach" title="Revisión documental" meta="Observación del revisor">
         <MessageSquareText />
-        <p className="lp-note">Falta la carta de la institución. Corrige y reenvía.</p>
+        <p className="lp-note">Falta firmar la carta de intención. Corrige y reenvía.</p>
       </Polaroid>
     ),
   },
@@ -274,6 +493,9 @@ export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
   const reduceMotion = mounted && Boolean(prefersReducedMotion);
   const [stepsRef, stepsInView] = useInViewAttr<HTMLOListElement>();
+  const [programsRef, programsInView] = useInViewAttr<HTMLUListElement>();
+  const calls = useOpenCalls();
+  const openCount = calls.status === 'ready' ? calls.items.length : 0;
 
   useEffect(() => {
     setMounted(true);
@@ -298,17 +520,26 @@ export default function Landing() {
       {/* ── Nav flotante ── */}
       <header className="lp-nav" data-scrolled={scrolled ? 'true' : 'false'}>
         <nav className="lp-nav-bar" aria-label="Principal">
-          <a href="#contenido" className="lp-brand" aria-label="SIDECyT, inicio">
-            {/* eslint-disable-next-line @next/next/no-img-element -- logo pequeño, mismo archivo que el favicon */}
-            <img src="/logo.png" alt="" width={44} height={34} />
-            <span className="lp-brand-name">SIDECyT</span>
+          <a href="#contenido" className="lp-brand" aria-label="SIGAC, inicio">
+            {/* logo-recortado.png = logo.png sin el margen transparente (el dibujo ocupa solo la mitad del alto) */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- logo institucional */}
+            <img src="/logo-recortado.png" alt="" width={176} height={78} />
+            <span className="lp-brand-name">SIGAC</span>
             <span className="lp-swatch" aria-hidden="true" />
           </a>
-          <a href="#recorrido" className="lp-announce">
-            <span className="lp-eyebrow">Nuevo</span>
-            Conoce el recorrido de tu solicitud
-            <ArrowDown aria-hidden="true" />
-          </a>
+          {openCount > 0 ? (
+            <a href="#convocatorias" className="lp-announce">
+              <span className="lp-eyebrow">Abiertas</span>
+              {openCount === 1 ? '1 convocatoria abierta' : `${openCount} convocatorias abiertas`}
+              <ArrowDown aria-hidden="true" />
+            </a>
+          ) : (
+            <a href="#programas" className="lp-announce">
+              <span className="lp-eyebrow">Nuevo</span>
+              Conoce los programas de apoyo empresarial
+              <ArrowDown aria-hidden="true" />
+            </a>
+          )}
           <div className="lp-nav-actions">
             <Link href="/solicitar-acceso" className="lp-btn lp-btn-ghost lp-nav-ghost">Solicitar acceso</Link>
             <Link href="/login" className="lp-btn lp-btn-rainbow">Iniciar sesión</Link>
@@ -334,8 +565,9 @@ export default function Landing() {
                 </span>
               </h1>
               <p className="lp-lead lp-in" style={{ '--i': 8 } as CSSProperties}>
-                SIDECyT es la plataforma del {INSTITUTION.name} para postular proyectos de desarrollo tecnológico
-                y vinculación, seguir cada etapa y recibir el apoyo, con todo tu expediente en un solo lugar.
+                SIGAC es la plataforma del {INSTITUTION.name} para las convocatorias de Apoyo Empresarial:
+                postula tu proyecto de ciencia, tecnología e innovación, sigue cada etapa y recibe el apoyo,
+                con todo tu expediente en un solo lugar.
               </p>
               <EmailClaim />
               <p className="lp-hero-alt lp-in" style={{ '--i': 10 } as CSSProperties}>
@@ -344,6 +576,70 @@ export default function Landing() {
             </div>
           </div>
           <Collage reduceMotion={reduceMotion} />
+        </section>
+
+        {/* ── Convocatorias abiertas (en vivo desde /api/convocatorias/abiertas) ── */}
+        <OpenCalls state={calls} />
+
+        {/* ── Programas de Apoyo Empresarial (contenido de comecyt.edomex.gob.mx) ── */}
+        <section id="programas" className="lp-section" aria-labelledby="lp-programas">
+          <div className="lp-wrap">
+            <div className="lp-head">
+              <h2 id="lp-programas" className="lp-h2">Cuatro programas de apoyo, una sola plataforma</h2>
+              <p className="lp-h2-sub">
+                El {INSTITUTION.name} brinda a empresas y emprendedores asesoría, capacitación y apoyos económicos
+                para impulsar proyectos de ciencia, tecnología e innovación en el {INSTITUTION.state}. Todas sus
+                convocatorias de Apoyo Empresarial se postulan en SIGAC.
+              </p>
+            </div>
+            <ul ref={programsRef} className="lp-programs lp-reveal" data-inview={programsInView ? 'true' : 'false'}>
+              {PROGRAMS.map((p, i) => (
+                <li
+                  key={p.title}
+                  className="lp-program lp-reveal-item"
+                  style={{ '--i': i, '--r': `${i % 2 === 0 ? -0.8 : 0.8}deg` } as CSSProperties}
+                >
+                  <div className="lp-program-top">
+                    <span className="lp-role-icon" data-tone={p.tone} aria-hidden="true">{p.icon}</span>
+                    <h3>{p.title}</h3>
+                  </div>
+                  <p className="lp-program-audience"><strong>Para:</strong> {p.audience}</p>
+                  <p className="lp-program-body">{p.body}</p>
+                  <div className="lp-program-foot">
+                    <a href={`mailto:${p.email}`} className="lp-program-mail">
+                      <Mail aria-hidden="true" />{p.email}
+                    </a>
+                    <a href={p.href} target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn-ghost lp-program-link">
+                      Ver convocatoria y formatos
+                      <ArrowUpRight className="lp-btn-arrow-up" aria-hidden="true" />
+                      <span className="sr-only">(abre el sitio del {INSTITUTION.name} en otra pestaña)</span>
+                    </a>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <p className="lp-note-line">
+              Las fechas, montos y requisitos de cada convocatoria se publican en su página oficial. Cuando una
+              convocatoria está abierta, la registras aquí en SIGAC.
+            </p>
+          </div>
+        </section>
+
+        {/* ── Sectores estratégicos ── */}
+        <section className="lp-section lp-section-tight" aria-labelledby="lp-sectores">
+          <div className="lp-wrap">
+            <div className="lp-head">
+              <h2 id="lp-sectores" className="lp-h2">¿Tu proyecto encaja?</h2>
+              <p className="lp-h2-sub">
+                Las convocatorias apoyan proyectos en {SECTORS.length} sectores estratégicos para el {INSTITUTION.state}.
+              </p>
+            </div>
+            <ul className="lp-sectors" aria-label="Sectores estratégicos">
+              {SECTORS.map((s, i) => (
+                <li key={s} className="lp-sector" data-tone={SECTOR_TONES[i % SECTOR_TONES.length]}>{s}</li>
+              ))}
+            </ul>
+          </div>
         </section>
 
         {/* ── Recorrido (secuencia real: numeración con sentido) ── */}
@@ -373,6 +669,35 @@ export default function Landing() {
                 </li>
               ))}
             </ol>
+          </div>
+        </section>
+
+        {/* ── Documentos que se preparan ── */}
+        <section className="lp-section" aria-labelledby="lp-documentos">
+          <div className="lp-wrap lp-roles">
+            <div className="lp-roles-head">
+              <h2 id="lp-documentos" className="lp-h2">Lo que vas a preparar</h2>
+              <p className="lp-h2-sub">
+                Cada convocatoria publica sus formatos para descargar y llenar. En general piden estos documentos,
+                que después adjuntas a tu solicitud en SIGAC.
+              </p>
+              <ul className="lp-doc-notes">
+                <li>Consulta antes la convocatoria, sus <strong>Reglas de Operación</strong> y los Lineamientos del Comité de Admisión y Seguimiento.</li>
+                <li>Algunos programas piden una <strong>garantía</strong> con una institución afianzadora.</li>
+                <li>En Desarrollo de Prototipos se pide además el <strong>Reporte de Información Tecnológica del IMPI</strong>.</li>
+              </ul>
+            </div>
+            <ul className="lp-docs">
+              {DOCUMENTS.map((d) => (
+                <li key={d.title} className="lp-doc">
+                  <FileText aria-hidden="true" />
+                  <div>
+                    <h3>{d.title}</h3>
+                    <p>{d.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
@@ -423,7 +748,7 @@ export default function Landing() {
                 <img src="/logo.png" alt="" width={72} height={56} />
               </span>
               <div className="lp-final-text">
-                <h3>Entra a SIDECyT</h3>
+                <h3>Entra a SIGAC</h3>
                 <p>Usa el correo con el que te registraste.</p>
               </div>
               <div className="lp-final-actions">
@@ -441,7 +766,7 @@ export default function Landing() {
         <div className="lp-wrap lp-footer-row">
           <div className="lp-footer-logos">
             {/* eslint-disable-next-line @next/next/no-img-element -- logos institucionales */}
-            <img src="/logo.png" alt={INSTITUTION.name} width={52} height={40} />
+            <img src="/logo-recortado.png" alt={INSTITUTION.name} width={235} height={104} />
             {EDOMEX_LOGO && (
               <>
                 <span aria-hidden="true" />
@@ -450,11 +775,20 @@ export default function Landing() {
               </>
             )}
           </div>
-          <nav className="lp-footer-links" aria-label="Legal y contacto">
+          <nav className="lp-footer-links" aria-label="Legal y enlaces">
             <Link href="/privacidad">Aviso de privacidad</Link>
             <Link href="/terminos">Términos de uso</Link>
-            <a href={`mailto:${INSTITUTION.contactEmail}`}>{INSTITUTION.contactEmail}</a>
+            <a href={`${COMECYT_SITE}/apoyo-empresarial`} target="_blank" rel="noopener noreferrer">Apoyo empresarial en comecyt.edomex.gob.mx</a>
           </nav>
+        </div>
+        {/* Dirección y teléfonos públicos del COMECYT (pie de comecyt.edomex.gob.mx); correo del programa. */}
+        <div className="lp-wrap lp-footer-row lp-footer-contact">
+          <address>
+            <span><MapPin aria-hidden="true" />Paseo Colón 112-A, col. Ciprés, C.P. 50120, Toluca, {INSTITUTION.state}</span>
+            <a href="tel:+527223190009"><Phone aria-hidden="true" />(722) 319 00 09 al 15</a>
+            <a href="tel:8002632628"><Phone aria-hidden="true" />800 2632 628</a>
+            <a href={`mailto:${CONTACT_EMAIL}`}><Mail aria-hidden="true" />{CONTACT_EMAIL}</a>
+          </address>
           <p className="lp-footer-copy">{copyrightLine()}</p>
         </div>
       </footer>
