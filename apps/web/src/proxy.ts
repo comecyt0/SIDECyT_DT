@@ -4,7 +4,11 @@ import type { NextRequest } from 'next/server';
 // Next.js 16: este archivo reemplaza a `middleware.ts` (deprecated).
 // El comportamiento es idéntico — la convención cambió de nombre, no de API.
 
-const PUBLIC_PATHS = ['/login', '/forgot-password', '/reset-password', '/solicitar-acceso'];
+// `/sigac` es la landing pública (23/09/2026). `/privacidad` y `/terminos` se abren a quien no tiene
+// sesión porque la landing los enlaza desde el pie: antes redirigían al login.
+const PUBLIC_PATHS = [
+  '/sigac', '/login', '/forgot-password', '/reset-password', '/solicitar-acceso', '/privacidad', '/terminos',
+];
 
 /** Prefijo de ruta → roles autorizados a entrar.
  *  El rol se lee del JWT (payload no firmado-verificado aquí: el backend
@@ -68,6 +72,13 @@ export function proxy(request: NextRequest) {
   // Permitir API proxy + assets + rutas públicas
   if (path.startsWith('/api/') || PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + '?'))) {
     return NextResponse.next();
+  }
+
+  // La raíz: sin sesión → landing; con sesión → su panel (sin pasar por /login).
+  if (path === '/') {
+    if (!token) return NextResponse.redirect(new URL('/sigac', request.url));
+    const home = userRoleCookie ? (DASHBOARD_BY_ROLE[userRoleCookie] ?? '/login') : '/login';
+    return NextResponse.redirect(new URL(home, request.url));
   }
 
   // Sin token → login

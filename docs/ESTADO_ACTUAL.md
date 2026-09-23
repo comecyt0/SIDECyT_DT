@@ -1,7 +1,71 @@
 # Estado Actual del Sistema COMECYT
 
-**Fecha de actualización:** 14 de septiembre de 2026 (versión anterior: 11/09/2026)
+**Fecha de actualización:** 23 de septiembre de 2026 (versión anterior: 21/09/2026)
 
+> 🌈 **23/09/2026 (tarde) — Landing pública publicada en `/sigac`.** https://sidecyt-comecyt.edomex.gob.mx/sigac
+> presenta el sistema antes del login (qué es, las 8 etapas, los 4 perfiles, cómo obtener acceso) y lleva
+> a `/login` o `/solicitar-acceso`. **`/` sin sesión ahora redirige a `/sigac`** (con sesión, directo al
+> panel). `/privacidad` y `/terminos` pasaron a ser públicas (antes mandaban al login). El campo de correo
+> del hero abre el login con el correo prellenado. Estilo basado en portrait.so a pedido del usuario,
+> aislado del resto del sistema. Solo frontend. Detalle: `docs/LANDING_SIGAC.md`.
+
+> 📧 **23/09/2026 (tarde) — SMTP, carrusel y cabeceras.** El usuario subió las **4 imágenes reales del
+> carrusel** vía `/admin/carrusel` (confirmado en BD) — con eso se probaron y cerraron dos pendientes
+> que esperaban un archivo real: la cabecera `Cross-Origin-Resource-Policy` en `/storage/*` (activada) y
+> se confirmó que `Server` ya estaba oculta desde agosto. **SMTP institucional probado con credenciales
+> reales** (`proyectos.comecyt@edomex.gob.mx`, Microsoft 365): bloqueado por dos políticas del lado de la
+> institución, ninguna corregible desde este servidor (E35 en `CLAUDE.md`). **Correo enviado el
+> 23/09/2026** pidiendo habilitar SMTP AUTH para esa cuenta o autorizar la IP del servidor en el relevo
+> interno — en espera de respuesta:
+> `Desktop\ADEM\_v6_smtp_sep23\CORREO_SMTP_INSTITUCIONAL.md`. Mientras tanto `MAIL_MAILER=log` (seguro).
+>
+> 🔧 **23/09/2026 — Tres pendientes cerrados de fondo.** (1) **Cookie `comecyt_auth` con `Secure` +
+> `SameSite=Strict`** activados en `.env` (antes `false`/`Lax`); verificado con un JWT real que el
+> `Set-Cookie` real trae ambos atributos. `COOKIE_DOMAIN` se queda en `null` a propósito (acceso dual por
+> IP y dominio). (2) **Decidida e implementada la transición `aprobada → convenio → ministracion`** que
+> E31 había dejado como hueco: avanza al generar el convenio y al firmarlo (E33). Al verificarla
+> aparecieron **tres bugs más, nunca antes ejercitados** (0 convenios reales hasta hoy): `generate()`
+> daba 500 siempre (`FOR UPDATE` con función agregada, Postgres lo rechaza), `generateConvenioContent()`
+> usaba una relación inexistente (`$sol->empresa` en vez de `institucion()`, mismo patrón de E25) y el
+> PDF del convenio se guardaba en una ruta distinta a la que `pdf_url` decía (404 garantizado). Los tres
+> corregidos y verificados de punta a punta con una solicitud de prueba desechable (E34 en `CLAUDE.md`).
+> (3) **Limpieza:** 18 respaldos `.next.bak-*` eliminados (**7.84 GB liberados** en `F:`, se conservó el
+> más reciente como red de seguridad) y la tarea programada rota `COMECYT-LimpiarDirectorioViejo`
+> eliminada. **`C:\comecyt` borrado** (el sandbox de Claude Code no podía hacerlo directamente; lo borró
+> el usuario a mano el mismo día, confirmado).
+>
+> 🎨 **21/09/2026 — Rediseño VIVO Y MULTICOLOR de los 4 paneles, publicado.** Contenido interno de
+> admin/evaluador/revisor/solicitante rediseñado (wine principal + paleta amplia, píldoras estilo
+> sticker; deroga "nada de píldoras" y "fondos poco saturados" — el login/auth no se tocó). Barrido
+> vista por vista de las 34 páginas/componentes. `tsc`/`eslint`/`vitest` (97/97) limpios. Publicado
+> (`deploy-web.ps1 -Motivo rediseno-paneles`, luego `-Motivo fix-uploads`). Detalle en
+> [DISENO_UI.md §10](DISENO_UI.md).
+>
+> 🐞 **21/09/2026 — Tres bugs de producción encontrados y corregidos la misma tarde** (ninguno causado
+> por el rediseño; se detectaron al usar el sistema en producción justo después de publicar):
+> 1. **E30:** "Aprobar" en solicitudes de acceso daba `500` (correo duplicado con una cuenta creada a
+>    mano) y, de fondo, **ninguna solicitud de acceso se había cerrado nunca** — un `$guarded` de
+>    seguridad bloqueaba también la propia escritura del controlador.
+> 2. **E31, mismo patrón, mucho más grave:** el modelo `Solicitud` tenía el mismo error en **14 puntos**
+>    de 4 controllers. Antes del fix, **ninguna transición de estado del sistema se habría guardado
+>    nunca** — ni siquiera "enviar" una solicitud desde borrador. No se había notado porque la tabla
+>    `solicitudes` tenía 0 filas (sistema recién publicado). Corregido antes de que llegara la primera
+>    solicitud real.
+> 3. **E32:** subir una imagen en `/admin/carrusel` daba `422` — el cliente HTTP mandaba el archivo como
+>    JSON en vez de multipart. Corregido; **todavía no se ha subido ninguna imagen real**.
+>
+> Detalle técnico completo de los tres en `CLAUDE.md` (E30, E31, E32). Verificado de punta a punta
+> contra datos reales de producción (no simulado): la solicitud de acceso que fallaba quedó
+> correctamente aprobada y vinculada a su cuenta.
+>
+> ⚠️ **Hallazgo nuevo, NO corregido — requiere decisión de producto:** `Solicitud.estado` nunca avanza a
+> `'convenio'` ni `'ministracion'` aunque se genere el convenio o se cree la ministración. Efecto:
+> `iniciarSeguimiento()` y `cerrar()` son inalcanzables hoy. Ver Pendientes y E31 en `CLAUDE.md`.
+>
+> ✅ **21/09/2026 — Licencia de Windows con más margen.** `slmgr /dlv` muestra **180 días** de gracia y
+> **3 rearmes** (alguien hizo `rearm` entre el 15/09 y hoy). Sigue en Evaluation, no Standard — la
+> activación definitiva sigue pendiente, pero deja de ser la urgencia de esta semana.
+>
 > ✅ **14/09/2026 (tarde) — El dominio funciona desde Internet.** Infraestructura corrigió el balanceador.
 > `VerificarDominio.ps1` da exit 0. DNS dividido: interno → `10.200.41.106`, público →
 > `187.189.139.176`/`201.131.40.176`. El tráfico público entra desde `100.127.1.42` (dentro de
@@ -78,7 +142,7 @@
 | Componente | Estado | Detalle |
 |---|---|---|
 | Servidor | Windows Server 2022 Standard **Evaluation** | OpenStack VM, 16 GB RAM, 8 vCPU. IP `10.250.36.241` |
-| Balanceador (infraestructura) | ⚠️ **Sin ruta al servidor desde el 14/09/2026** | El DNS resolvía a `10.200.41.106` (funcionaba: termina TLS y reenvía por HTTP al 80 desde `100.127.0.48`). Con la publicación externa pasó a **`10.200.41.131`**, que devuelve `404` porque no tiene la ruta registrada. Ver [DOMINIO_BALANCEADOR.md §12](DOMINIO_BALANCEADOR.md) |
+| Balanceador (infraestructura) | ✅ **Funciona** (corregido el 14/09/2026 por la tarde, verificado de nuevo el 21/09/2026) | DNS dividido: interno → `10.200.41.106`, público → `187.189.139.176`/`201.131.40.176`. Tráfico público entra desde `100.127.1.42` (dentro de `100.64.0.0/10`). `https://sidecyt-comecyt.edomex.gob.mx/login` y `https://10.250.36.241/login` responden **200**. Ver [DOMINIO_BALANCEADOR.md §12](DOMINIO_BALANCEADOR.md) |
 | Ruta del proyecto | `F:\Desarrollo Tecnologico\` | Junction `F:\comecyt` → `F:\Desarrollo Tecnologico` (para NSSM) |
 | IIS 10 | Activo | Sitio `comecyt`; URL Rewrite 7.2.1993 + ARR. `Default Web Site` detenido |
 | PHP 8.4.22 FastCGI | Activo | `C:\php\php-cgi.exe` vía IIS |
@@ -105,7 +169,8 @@ Entorno de `comecyt-web` (`AppEnvironmentExtra`): `PORT=3000`, `HOSTNAME=127.0.0
 
 | URL | Uso | Notas |
 |---|---|---|
-| `https://sidecyt-comecyt.edomex.gob.mx/` | **Producción** | Detrás del balanceador, certificado válido `*.edomex.gob.mx` |
+| `https://sidecyt-comecyt.edomex.gob.mx/` | **Producción** | Detrás del balanceador, certificado válido `*.edomex.gob.mx`. Sin sesión redirige a `/sigac` |
+| `https://sidecyt-comecyt.edomex.gob.mx/sigac` | **Landing pública** (23/09/2026) | Antes del login; ver `LANDING_SIGAC.md` |
 | `https://10.250.36.241/` | VPN interna | Certificado autofirmado (el navegador advierte) |
 | `http://10.250.36.241/` | — | `302` → `https://10.250.36.241/` |
 | `http://sidecyt-comecyt.edomex.gob.mx/` | — | El balanceador no responde en el puerto 80 (pedido a infraestructura) |
@@ -156,7 +221,7 @@ Cualquier `Host` fuera de la lista blanca (`HostAllowList` en `web.config`) reci
 | `CORS_ALLOWED_ORIGINS` | `https://sidecyt-comecyt.edomex.gob.mx,https://10.250.36.241,https://comecyt-sistemas.edomex.gob.mx,http://10.250.36.241` | |
 | `TRUSTED_PROXIES` | `127.0.0.1,100.64.0.0/10` | Balanceador. **Debe coincidir con `web.config`** |
 | `DB_DATABASE` | `comecyt_prod` | |
-| `MAIL_MAILER` | `smtp` → `127.0.0.1:2525` | **No envía** (SMTP institucional pendiente) |
+| `MAIL_MAILER` | `log` | **No envía a propósito** — SMTP real bloqueado por la institución (ver Pendientes, E35 en `CLAUDE.md`) |
 | `JWT_TTL` | `1440` (24 h) | |
 | `SESSION_DRIVER` / `QUEUE_CONNECTION` | `database` / `database` | |
 
@@ -232,27 +297,29 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 
 | Ítem | Prioridad | Acción requerida |
 |---|---|---|
-| **Licencia de Windows Server** | **Crítica — 7 días** | Vence alrededor del 18/09/2026. **Solución definitiva:** convertir Evaluation → Standard con la clave institucional: `DISM /online /Set-Edition:ServerStandard /ProductKey:<clave> /AcceptEula` (reinicia el servidor; programar ventana). **Puente:** `slmgr /rearm` y reinicio. Al 11/09/2026 quedan **4 rearmes**; cada uno da otro periodo de evaluación. Comprobar antes y después con `slmgr /dlv` |
-| **Cuentas de prueba en producción** | **Crítica** | Las 4 cuentas del sistema son las de prueba de `UsuariosPruebaSeeder` **Contraseñas rotadas el 14/09/2026** en las 4 (la del seeder estuvo publicada en el README del repositorio anterior, que es público). **Falta:** crear las cuentas reales y desactivar estas. Decidir primero quién administra el sistema |
-| **Correo (SMTP)** | **Crítica** | `MAIL_MAILER=smtp` → `127.0.0.1:2525`, sin usuario ni contraseña, y **nada escucha en el 2525**: no sale ningún correo (enlace de restablecimiento que aprueba el admin, aprobación de accesos, notificaciones). Faltan los datos del SMTP institucional (`MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_ENCRYPTION`) |
+| **Licencia de Windows Server** | Alta (bajó de Crítica) | Verificado el 21/09/2026: `slmgr /dlv` muestra **180 días** de gracia y **3 rearmes** (alguien hizo `rearm` entre el 15/09 y hoy). **Solución definitiva sigue pendiente:** convertir Evaluation → Standard con la clave institucional: `DISM /online /Set-Edition:ServerStandard /ProductKey:<clave> /AcceptEula` (reinicia el servidor; programar ventana) |
+| **Cuentas de prueba en producción** | **Crítica** | Las 4 cuentas del sistema son las de prueba de `UsuariosPruebaSeeder` **Contraseñas rotadas el 14/09/2026** en las 4 (la del seeder estuvo publicada en el README del repositorio anterior, que es público). **21/09/2026:** se aprobó la única solicitud de acceso pendiente (ver E30 en `CLAUDE.md`), vinculada a una cuenta ya creada a mano — no cambia el fondo del pendiente. **Falta:** crear las cuentas reales y desactivar estas. Decidir primero quién administra el sistema |
+| ~~`Solicitud.estado` nunca llega a `convenio`/`ministracion`~~ | ✅ Resuelto 23/09/2026 | Decidido e implementado (E33 en `CLAUDE.md`): avanza a `convenio` al generar el convenio, y a `ministracion` al firmarlo. Al verificarlo aparecieron 3 bugs más en `ConvenioController`, nunca antes ejercitados — corregidos (E34) |
+| **Correo (SMTP)** | **Crítica — bloqueado por la institución** | **23/09/2026:** probado con credenciales reales de `proyectos.comecyt@edomex.gob.mx`. Dos rutas intentadas, ambas rechazadas por políticas fuera de este servidor (E35 en `CLAUDE.md`): (1) `smtp.office365.com:587` → `535 5.7.3` (SMTP AUTH probablemente deshabilitado para esa cuenta a nivel de tenant M365); (2) `mail.edomex.gob.mx:25` (relevo interno) → cierra la conexión sin banner (IP de este servidor no está en su lista blanca). Falta que la institución resuelva 1 de las 2. **Correo enviado el 23/09/2026**, en espera de respuesta:
+`Desktop\ADEM\_v6_smtp_sep23\CORREO_SMTP_INSTITUCIONAL.md`. Mientras tanto, `MAIL_MAILER=log` (seguro) |
 | **Ruta del balanceador nuevo** | **Crítica — el sitio no se ve por el dominio.** En espera de infraestructura | El VIP `10.200.41.131` (el que resuelve desde la publicación externa del 14/09/2026) devuelve `404`: no tiene registrada la entrega hacia `10.250.36.241:80`. **Solo lo puede hacer infraestructura; correo enviado el 14/09/2026.** Al responder: correr `VerificarDominio.ps1`, y si el origen **no** está en `100.64.0.0/10`, ajustar **el mismo día** las 5 apariciones del patrón en `web.config` (en dos formas distintas) y `TRUSTED_PROXIES` **juntas**, o habrá bucle de redirección. [DOMINIO_BALANCEADOR.md §12 y §9](DOMINIO_BALANCEADOR.md) · `Desktop\ADEM\_v5_publicacion_sep14\LEEME.md` |
 | **Confirmaciones de infraestructura** | Alta | Rango de IPs del balanceador, HTTP→HTTPS en el balanceador, health check, 50 MB, timeouts. Incorporadas al correo del 14/09 (`_v5_publicacion_sep14\`); el original sigue en `Desktop\ADEM\_v4_dominio_sep11\`. [DOMINIO_BALANCEADOR.md §8](DOMINIO_BALANCEADOR.md#8-qué-necesita-hacer-o-confirmar-infraestructura) |
 | **Prueba con usuario real por el dominio** | Alta | Login, navegación por rol, subir y previsualizar documento, notificación. [DOMINIO_BALANCEADOR.md §6](DOMINIO_BALANCEADOR.md#6-lo-que-falta-probar) |
 | **Windows Update** | Alta | Servicio `wuauserv` detenido; último parche instalado el 27/03/2026. Pendientes: KB5122882 (acumulativa 2026-09), KB5126149 (.NET) y KB890830 (MSRT). Aplicar en ventana de mantenimiento, porque reinicia; conviene hacerlo junto con la activación de la licencia |
 | **Respaldos** | Alta | (1) `comecyt:backup-db` de Laravel **falla cada noche**: llama a `pg_dump` y `gzip` del PATH, que no existen en Windows. La tarea de Windows sí funciona, así que es redundante: corregirlo (`C:\pgsql\bin\pg_dump.exe -Fc`, sin `gzip`) o quitarlo de `routes/console.php`. (2) **No hay copia fuera del servidor**: todos los dumps están en `F:` |
-| **Cookie de sesión sin `Secure`** | Media | El `.env` tiene `COOKIE_SECURE=false` y `COOKIE_SAME_SITE=Lax`. `AuthController` usa esas variables, así que `comecyt_auth` sale sin `Secure` y con `Lax`, cuando el diseño dice `Secure` + `Strict`. Como todo va por HTTPS: poner `COOKIE_SECURE=true` y `COOKIE_SAME_SITE=Strict`, y probar el login por dominio y por IP |
+| ~~Cookie de sesión sin `Secure`~~ | ✅ Resuelto 23/09/2026 | `COOKIE_SECURE=true` y `COOKIE_SAME_SITE=Strict` activados. Verificado con un JWT real: el `Set-Cookie` trae `secure; httponly; samesite=strict`. `COOKIE_DOMAIN` se queda en `null` a propósito (acceso dual IP/dominio) |
 | **`serverFetch` con certificado autofirmado** | Media | Listados renderizados en servidor salen vacíos (ya fallaba antes). [DOMINIO_BALANCEADOR.md §7](DOMINIO_BALANCEADOR.md#7-pendiente-previo-detectado-no-causado-por-el-dominio) |
 | **CSP con `script-src 'unsafe-inline'`** | Media | Candidato probable del próximo escaneo. Ver `CLAUDE.md` |
 | **Permisos del `.env`** | Media | ACL heredada: `BUILTIN\Users` puede leer; `IIS_IUSRS`, `NETWORK SERVICE` y el AppPool pueden escribir. Por web está bloqueado (404). Dejar lectura solo al AppPool `comecyt` y a los servicios, y escritura solo a Administradores. `app:deploy-check` también lo avisa |
 | **Endurecimiento de red pendiente desde agosto** | Media | Firma SMB, cerrar 2179 y 135, restringir RDP a la VPN. Análisis listo pero **sin aplicar**: `Desktop\ADEM\_v2_agosto\ANALISIS_SMB_Y_PUERTOS.md` |
-| **Limpieza `C:\comecyt`** | Baja | La tarea `COMECYT-LimpiarDirectorioViejo` **nunca se ha ejecutado** (resultado `267011`) y el directorio sigue existiendo. Borrarlo a mano tras confirmar que nada lo usa |
-| **Limpieza de `.next.bak-*`** | Baja | Cuando el dominio lleve unas semanas estable |
+| ~~Limpieza `C:\comecyt`~~ | ✅ Resuelto 23/09/2026 | Confirmado vacío y sin referencias; tarea rota eliminada; el directorio lo borró el usuario a mano (el sandbox de Claude Code no podía hacerlo desde ahí) |
+| ~~Limpieza de `.next.bak-*`~~ | ✅ Resuelto 23/09/2026 | 18 respaldos eliminados, **7.84 GB liberados**. Se conservó `.next.bak-20260921-prefix-uploads` (el más reciente) como red de seguridad para un rollback rápido |
 | **Logo Edomex** | Baja | `NEXT_PUBLIC_EDOMEX_LOGO_URL=none` — pendiente imagen oficial |
-| **Carrusel del login** | Baja | Los 4 slides no tienen imagen (`imagen_url` nula). Subir imágenes reales en `/admin/carrusel` |
+| **Carrusel del login** | Baja | Los 4 slides no tienen imagen (`imagen_url` nula). La subida daba 422 (E32, corregido el 21/09/2026) — ya funciona, pero **todavía no se ha subido ninguna imagen real** en `/admin/carrusel` |
 | **Disco C:** | Baja | 6.8 GB libres. Vigilar al aplicar actualizaciones |
 | **Caché de configuración y rutas** | Baja | `app:deploy-check` avisa que no están cacheadas. Cachearlas mejora el rendimiento, pero obliga a correr `config:cache` tras cada cambio de `.env` (ver `CLAUDE.md`, E18) |
 | **Sello de tiempo NOM-151** | Según uso | `TSA_URL` vacío: los documentos no llevan sello de tiempo. Configurar cuando TIC entregue el servicio |
-| **Cabeceras menores** | Baja | Cabecera `Server` en el 403 que genera http.sys (`DisableServerHeader`; requiere reiniciar el servicio HTTP) y `Cross-Origin-Resource-Policy` en `/storage/*` (ver `CLAUDE.md`) |
+| ~~Cabeceras menores~~ | ✅ Resuelto 23/09/2026 | Cabecera `Server`: confirmada ya oculta (`removeServerHeader` aplicado desde agosto, solo faltaba verificarlo con `curl.exe`). `Cross-Origin-Resource-Policy` en `/storage/*`: activada tras confirmar con las imágenes reales del carrusel |
 
 ---
 
@@ -260,6 +327,9 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 
 | Fecha | Cambio |
 |---|---|
+| 2026-09-23 (tarde) | **Landing pública `/sigac` publicada** (referencia portrait.so, fuentes Switzer + Satoshi auto-hospedadas). `/` sin sesión → `/sigac`; `/privacidad` y `/terminos` públicas; `?email=` prellena el login. Pruebas axe 3/3, sin scroll horizontal a 375 y 1440 px. Ver `LANDING_SIGAC.md` y `CLAUDE.md` E36 |
+| 2026-09-23 | **Cookie de sesión endurecida** (`Secure`+`Strict`, verificado). **Definida e implementada la transición `aprobada→convenio→ministracion`** (E33), que destapó 3 bugs más en `ConvenioController` nunca antes ejercitados — corregidos y verificados con datos desechables (E34). **Limpieza:** 7.84 GB liberados en respaldos `.next.bak-*`, tarea rota eliminada, `C:\comecyt` borrado. **SMTP institucional probado con credenciales reales — bloqueado por la institución** (E35): dos rutas rechazadas por políticas de Microsoft 365 / red interna, ninguna corregible desde el servidor. **Carrusel:** imágenes reales ya subidas por el usuario. **Cabeceras:** `Server` confirmada oculta; `Cross-Origin-Resource-Policy` activada en `/storage/*` |
+| 2026-09-21 | **Rediseño vivo y multicolor de los 4 paneles, publicado**, más 3 bugs de producción encontrados y corregidos la misma tarde (E30, E31, E32 en `CLAUDE.md`): aprobar accesos daba 500 y nunca cerraba la solicitud; el mismo patrón bloqueaba **las 14 transiciones de estado** del ciclo de vida de `Solicitud` antes de que llegara la primera solicitud real; subir imagen del carrusel daba 422. Licencia de Windows con más margen (180 días, 3 rearmes). Ver `DISENO_UI.md` §10 |
 | 2026-09-11 | **Dominio `sidecyt-comecyt.edomex.gob.mx` publicado detrás de balanceador.** `web.config` reconoce `X-Forwarded-Proto` del balanceador (una variable por condición; corregido un bucle por caché de URL Rewrite), HSTS vía balanceador, caché de respuestas apagada. Laravel con el dominio y `TRUSTED_PROXIES`. Frontend con API relativa, recompilado. Log de IIS con `X-Forwarded-*`. Nuevo `VerificarDominio.ps1`. Ver `DOMINIO_BALANCEADOR.md` y `CLAUDE.md` E22 |
 | 2026-09-11 (cierre) | Revisión general del servidor, de solo lectura: se detectaron las cuentas de prueba en producción, el SMTP sin servicio, el respaldo de Laravel roto, Windows Update detenido desde marzo, la cookie sin `Secure` y los permisos del `.env`. Documentado en esta página; **sin cambios aplicados** |
 | 2026-08-27 | Enlace `public\storage` (junction) y rebuild del frontend. `Cross-Origin-Resource-Policy` (26/08). Pentest de agosto: 7 de 7 hallazgos cerrados por ADEM el 25/08 |

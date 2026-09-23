@@ -1,5 +1,8 @@
 # Diseño UI — COMECYT
 
+> **23/09/2026:** nueva landing pública `/sigac` con sistema visual propio (referencia portrait.so) — ver §11
+> y [`LANDING_SIGAC.md`](LANDING_SIGAC.md).
+
 Sistema visual y de interacción del front. Empezó con el rediseño del login del **14/09/2026**, se
 extendió ese mismo día al panel (shell + dashboard), a "¿Olvidaste tu clave?", a "Solicitar acceso" y a
 la pantalla de carga del sistema. Es la referencia para cualquier vista nueva o rediseño.
@@ -353,3 +356,114 @@ y `public` a `standalone`, iniciar el servicio. Los `NEXT_PUBLIC_*` se hornean e
 cualquier cambio de `.env.local` requiere recompilar (E24). Script listo:
 `F:\Desarrollo Tecnologico\deploy-web.ps1 -Motivo <texto>` (hace exactamente esto y deja el log en
 `logs\deploy-<texto>-<fecha>.log`).
+
+---
+
+## 10. Rediseño vivo y multicolor de los paneles (21/09/2026)
+
+**Cambio de dirección del usuario** (deroga dos reglas previas, solo para el **contenido interno** de
+los 4 paneles — el login/auth NO se toca, ya estaba hecho):
+
+1. **Vivo y multicolor** (referencia Duolingo). El vino sigue como color principal y de detalle, pero el
+   resto se vuelve colorido y saturado: cada módulo/estado con su color vivo. Se **deroga** "fondos poco
+   saturados" para los paneles.
+2. **Se adoptan las píldoras** (`rounded-full`) tipo sticker con borde grueso en badges/chips de estado.
+   Se **deroga** "nada de píldoras".
+
+Se mantiene: menú/topbar/pie fuera del rediseño (E26); `prefers-reduced-motion`; solo se anima
+`transform`/`opacity`; responsive móvil primero; sin emojis.
+
+### Unificación por capa compartida (cambiar una vez → alcanza a los 4 roles)
+
+Todo vive como **clases y tokens reutilizables**, no repartido por archivo:
+
+| Pieza | Archivo | Qué hace |
+|---|---|---|
+| Sistema de tono | `globals.css` (bloque "panel-content-system") | Tokens `--h-*`/`--c-*` por tono y L por rol (claro/oscuro). Cualquier elemento con `data-tone="X"` expone `--th`/`--tc`; los átomos derivan color |
+| `.pill` | `globals.css` | Píldora sticker: `rounded-full`, borde vivo, fondo suave, texto en tinta del tono (≥ 4.5:1). Punto guía opt-in con `data-dot="on"`; `data-solid="true"` la hace de fondo pleno |
+| `.tone-chip` / `.tone-dot` | `globals.css` | Chip de ícono (vidrio líquido sin blur, color del tono) y punto de leyenda |
+| `.tone-card` | `globals.css` | Tarjeta de módulo con fondo suave del tono + filo de luz; hover eleva y hace "pop" del ícono |
+| `.stat-tile` | `globals.css` + `stat-tile.tsx` | Tile de indicador; el color lo pone `data-tone` (12 tonos), `data-solid` para el protagonista |
+| `.btn-sticker` | `globals.css` + `button.tsx` | Canto 3D que se hunde al pulsar; en variantes `default` (vino) y `secondary` (dorado) |
+| `.empty-state` / `.accent-rule` | `globals.css` | Estado vacío ilustrado y franja de acento coloreada |
+
+Tonos disponibles (`data-tone`): `vino gold amber orange emerald teal sky blue violet rose red neutral`.
+Mapean 1:1 a los estados (ver `solicitud-estados.ts`).
+
+### Primitivas actualizadas (propagan a todas las vistas)
+
+- **`Badge`** (`components/ui/badge.tsx`): ahora es píldora sticker (`rounded-full`, borde 1.5px, negrita).
+  Variantes con tono. Lo usan 26 vistas → todas pasan a píldora sin tocarlas.
+- **`estadoBadgeClass()`** (`lib/solicitud-estados.ts`): devuelve una píldora viva autónoma por estado
+  (forma + color). Como es `className` y `cn` usa twMerge, cualquier `<span>`/`<Badge>` que lo reciba se
+  vuelve píldora.
+- **`StatTile`**: paleta ampliada a 12 tonos; estilos por clase (`.stat-tile.tone-card` + `.tone-chip`),
+  ya no estilos inline. **Nota de migración:** dejó de exportar `TILE_TONE_VARS` (se refactorizó su único
+  uso, `NotificacionesClient`, a `<span className="pill" data-tone={...}>`).
+- **`Button`**: `default` y `secondary` llevan `.btn-sticker`.
+- **Dashboards de los 4 roles**: tiles con `data-tone` multicolor (admin: 7 indicadores en 7 colores;
+  "Pendientes ahora" con `tone-card`). Badges inline del evaluador → `.pill`.
+
+### Verificación y despliegue (21/09/2026)
+
+`npx tsc --noEmit -p .`, `npx eslint` sobre los archivos tocados y `npx vitest run` (28 suites, 97 tests):
+**0 errores**. **Publicado en producción** con `deploy-web.ps1 -Motivo rediseno-paneles` (build 11:59:44,
+sin errores) y una segunda vez con `-Motivo fix-uploads` (11:59:44→11:59:54) para incluir el fix de E32.
+Verificado tras cada publicación: servicio `comecyt-web` `Running`, `https://sidecyt-comecyt.edomex.gob.mx/login`
+y `https://10.250.36.241/login` → 200, `/admin/dashboard` sin sesión → 307 (redirige a login, correcto).
+
+**Justo después de publicar**, al usar el sistema en producción aparecieron tres bugs de backend — **no
+causados por este rediseño** (son de lógica PHP/axios, ajenos a la capa visual), pero encontrados en la
+misma sesión al probar el resultado: E30, E31 y E32 en `CLAUDE.md`. El más grave (E31): el modelo
+`Solicitud` tenía un `$guarded` que bloqueaba en silencio las 14 transiciones de estado del sistema —
+corregido antes de que entrara la primera solicitud real. Ninguno requirió tocar el trabajo de diseño de
+este documento.
+
+### Barrido vista por vista — COMPLETO (21/09/2026)
+
+Se recorrieron las vistas de los 4 roles y se homogeneizaron:
+- **Chips de estado inline** (`inline-flex rounded-md px-2 … ${estadoBadgeClass}` o mapas locales
+  `bg-*-50 text-*-700`) → píldora: `<span className={estadoBadgeClass(x)}>` o `<span className="pill"
+  data-tone="X">`. Los mapas locales de tono `{bg,fg}` se migraron a nombre de tono
+  (`admin/informes`, `admin/convenios`, `admin/ministraciones`, `evaluador/asignaciones`,
+  `evaluador/historico`, `revisor/informes`, `solicitante/informes`, `solicitante/ministraciones`,
+  `solicitante/solicitudes/[id]`, `admin/reset-requests`, `admin/solicitudes-acceso`).
+- **Estados vacíos** `text-center py-14/16` → `.empty-state` con `.tone-chip` coloreado (por color:
+  emerald "al día", sky "sin resultados", violet "aún no hay registros", teal pagos, etc.).
+- **Chips de rol / sección** con `--tile-*` inline → `.pill` con `data-tone`.
+
+Grep final: **0** ocurrencias de `text-center py-14/16` y **0** chips de estado con el patrón viejo en
+`src/app`. Verificado: `tsc --noEmit` 0 errores; `eslint` 0 errores (solo warnings preexistentes de
+`no-explicit-any`/`exhaustive-deps`, ajenos a estos cambios).
+
+Fuera del barrido a propósito: el scorecard de la rúbrica del evaluador (lógica de calificación), el
+asistente exterior de 7 pasos de nueva convocatoria (solo se homogeneizó su `EmptyList`), y los paneles
+informativos con fondo de tono (`--tile-*-bg`) que ya eran coloridos y correctos.
+
+Parte del barrido se hizo con subagentes `fork` en paralelo: 2 completaron sus lotes de admin; 2 se
+confundieron por heredar el contexto del orquestador y no editaron — esos archivos se hicieron a mano.
+**Aprendizaje:** para barridos mecánicos multi-archivo, los `fork` pueden creerse el orquestador; conviene
+subagentes frescos (no-fork) o hacerlo directo.
+
+---
+
+## 11. Landing pública `/sigac` (23/09/2026)
+
+Página de presentación **antes del login** en https://sidecyt-comecyt.edomex.gob.mx/sigac; `/` sin sesión
+redirige ahí. Documento completo (rutas, archivos, tokens, movimiento, estados, cómo editar):
+**[`LANDING_SIGAC.md`](LANDING_SIGAC.md)**.
+
+- **Sistema visual propio y aislado**, a pedido del usuario: ADN de https://portrait.so (el usuario entregó
+  su `design.md`) — lienzo blanco, tinta navy `#08304c`, un arcoíris de firma en tres lugares (CTA, una
+  palabra del titular, cuadro de marca), lavados pastel, nav flotante en píldora, collage de polaroids.
+  Tokens en `.lp-root` dentro de `apps/web/src/app/sigac/landing.css`, **nunca en `:root`**: no toca
+  `--auth-*`, `--app-*` ni `--tile-*`. Login, paneles y menú no cambian.
+- **Fuentes:** Switzer (texto) y Satoshi (titulares, sustituto libre de Basier Circle), auto-hospedadas con
+  `next/font/local`. El servidor no alcanza Google Fonts; Fontshare sí.
+- **Skills aplicadas:** hallmark (ADN estudiado, contenido honesto, sin titulares en cursiva, 320–1440 px
+  sin scroll horizontal), frontend-design (un solo momento orquestado, numeración solo donde hay
+  secuencia), emil-design-eng (curvas propias, `scale(0.97)`, hover tras `(hover: hover)`, solo
+  transform/opacity, `prefers-reduced-motion`), ui-ux-pro-max (contraste AA — por eso el texto de ayuda
+  usa `#585858` y no el `#797979` de la referencia —, objetivos táctiles de 44 px, `aria-*` del formulario).
+- Se respeta la regla vigente de pantalla de carga: la entrada animada de la landing espera a que se retire
+  el `#boot-splash`.

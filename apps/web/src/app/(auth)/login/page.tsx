@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
 import api from '@/lib/api';
 import Link from 'next/link';
@@ -27,6 +27,16 @@ export default function LoginPage() {
   // 2FA challenge state
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [twoFactorCode, setTwoFactorCode] = useState('');
+
+  // La landing (/sigac) manda el correo que escribió el usuario como ?email=. Se lee tras montar
+  // (no useSearchParams, para no exigir un Suspense) y solo si parece un correo.
+  useEffect(() => {
+    const fromLanding = new URLSearchParams(window.location.search).get('email');
+    if (fromLanding && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(fromLanding) && fromLanding.length <= 254) {
+      setEmail(fromLanding);
+      document.getElementById('password')?.focus();
+    }
+  }, []);
 
   const completeLogin = (user: { rol?: { slug?: string }; name?: string }) => {
     const roleSlug = user.rol?.slug || 'solicitante';

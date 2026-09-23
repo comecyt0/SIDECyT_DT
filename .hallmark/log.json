@@ -1,5 +1,15 @@
 [
   {
+    "date": "2026-09-23",
+    "macrostructure": "Marquee Hero centrado + collage de polaroids + rejilla de etapas",
+    "theme": "studied-DNA (source: https://portrait.so, design.md del usuario)",
+    "theme_axes": "light / geometric-sans (Satoshi + Switzer) / cool (navy #08304c + arcoíris de firma)",
+    "enrichment": "Tier-A CSS art (polaroids con piezas del expediente, firma SVG)",
+    "nav": "N5 floating pill",
+    "footer": "Ft1 mínimo",
+    "brief": "SIDECyT · landing pública /sigac antes del login"
+  },
+  {
     "date": "2026-09-14",
     "macrostructure": "Split auth (banner card + form column)",
     "theme": "custom",

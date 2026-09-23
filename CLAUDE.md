@@ -163,10 +163,13 @@ Storage::disk('public')->putFileAs("documentos/{$id}", $file, $filename);
 Storage::disk('public')->url("documentos/{$id}/{$filename}");
 ```
 
-### 4. Rutas públicas en middleware.ts (Next.js)
-Páginas sin auth deben estar en `PUBLIC_PATHS` en `apps/web/src/middleware.ts`. Si no, el middleware las bloquea silenciosamente → el usuario ve que el botón "no hace nada".
+### 4. Rutas públicas en proxy.ts (Next.js 16, antes middleware.ts)
+Páginas sin auth deben estar en `PUBLIC_PATHS` en `apps/web/src/proxy.ts`. Si no, el proxy las bloquea silenciosamente → el usuario ve que el botón "no hace nada".
 ```typescript
-const PUBLIC_PATHS = ['/login', '/forgot-password', '/reset-password', '/solicitar-acceso'];
+const PUBLIC_PATHS = [
+  '/sigac', '/login', '/forgot-password', '/reset-password', '/solicitar-acceso', '/privacidad', '/terminos',
+];
+// y `/` sin sesión → /sigac (landing pública, E36)
 ```
 
 ### 5. Password Reset desde Admin — limpiar token previo
@@ -325,19 +328,21 @@ export default function MiPagina() {
 - Campos de fecha siempre con null-guard: `field ? new Date(field).toLocaleDateString('es-MX') : '—'`
 - `dangerouslySetInnerHTML` siempre con fallback: `{ __html: field ?? '' }`
 
-### Diseño UI — skills y sistema visual (desde 14/09/2026)
+### Diseño UI — skills y sistema visual (desde 14/09/2026, giro multicolor 21/09/2026)
 Todo trabajo de diseño usa las skills `hallmark`, `frontend-design`, `ui-ux-pro-max` y `emil-design-eng`
-(instaladas en `~/.claude/skills`). Sistema, tokens `--auth-*`/`--app-*` y decisiones: **`docs/DISENO_UI.md`**.
-Reglas del usuario: **nada de píldoras** en badges/etiquetas (`rounded-full` sí se conserva en
-afordancias reconocidas: buscador, puntos de paso), fondos poco saturados y translúcidos, logo grande.
-Toda animación respeta `prefers-reduced-motion` y anima solo `transform`/`opacity`.
-Cubierto: login, dashboard de admin (héroe, tiles accionables, anillo de avance, actividad), usuarios,
-carrusel, "¿Olvidaste tu clave?", "Solicitar acceso", insignias sin píldora en las 27 vistas que usan
-`Badge`, tarjetas de `DataCardGrid` (6 vistas) y la pantalla de carga del sistema (`RouteLoadingScreen`:
-`RouteChangeOverlay` global por clic en cualquier enlace interno, ~1.4 s; `loading.tsx` por raíz para la
-primera carga; y `useGlobalLoader()` con mínimo visible de 1 s para acciones explícitas como el login).
-**El menú/nav del panel NO se toca (E26).** **Sin cubrir:** el resto del contenido interno de `/admin/*`
-y de los otros 3 roles — ver `docs/DISENO_UI.md` §7. `logo.png` es el favicon del sistema completo.
+(instaladas en `~/.claude/skills`). Sistema, tokens `--auth-*`/`--app-*`/`--tile-*` y decisiones:
+**`docs/DISENO_UI.md`**. Reglas vigentes del usuario: logo grande, toda animación respeta
+`prefers-reduced-motion` y anima solo `transform`/`opacity`.
+**21/09/2026 — cambio de dirección para el contenido interno de los 4 paneles** (login/auth no se tocó,
+ya estaba resuelto): el sistema pasó a ser **vivo y multicolor** (referencia Duolingo) y se **adoptaron
+las píldoras** (`rounded-full` con borde grueso) en badges/chips de estado — deroga las dos reglas
+previas de "nada de píldoras" y "fondos poco saturados". Wine sigue como color principal y de detalle.
+Capa reutilizable en `globals.css` (`data-tone`, `.pill`, `.tone-chip`, `.tone-card`, `.stat-tile`,
+`.btn-sticker`, `.empty-state`) que alcanza a los 4 roles sin tocarlos archivo por archivo; detalle
+completo y el barrido vista por vista en `docs/DISENO_UI.md` §10.
+**El menú/nav del panel NO se toca (E26).** `logo.png` es el favicon del sistema completo.
+**23/09/2026 — Landing pública `/sigac`** con sistema visual propio y aislado (ADN de portrait.so, tokens en
+`.lp-root`, fuentes locales Switzer + Satoshi): `docs/LANDING_SIGAC.md` y E36.
 
 ### Patrón de descarga de archivos (blob)
 ```typescript
@@ -583,7 +588,7 @@ GET /documentos/convenio/{solicitud_id}
 | Sin divulgación de tecnología | ✅ | No se emiten `Server` ni `X-Powered-By`: `expose_php=Off` (php.ini), `removeServerHeader` + `<remove name="X-Powered-By">` (web.config), `poweredByHeader:false` (next.config.ts) |
 | `X-XSS-Protection` retirada | ✅ | Retirada a propósito el 13/08/2026 (`SecurityHeadersMiddleware.php`). Cabecera obsoleta: Chrome eliminó el XSS Auditor, Firefox nunca la implementó, y OWASP recomienda no enviarla —`1; mode=block` habilitó fugas entre orígenes (XS-Leaks). La protección real la da la CSP. **No volver a agregarla**, aunque un escáner la pida: ver `Desktop\ADEM\_v3_agosto20\LEEME.md` §25/08/2026 |
 | Encuadre de `/storage/*` | ✅ | Excepción `CspStorage` + `XfoStorage` en `public/web.config`: los adjuntos salen con `X-Frame-Options: SAMEORIGIN` y `frame-ancestors 'self'` para que funcione la vista previa en iframe; el resto del sitio sigue con `DENY` / `'none'`. **Las `outboundRules` alcanzan también a los archivos estáticos** — tenerlo presente al agregar cualquier cabecera nueva |
-| `Cross-Origin-Resource-Policy` | ✅ | `same-origin` en tres capas: `SecurityHeadersMiddleware` (API), `next.config.ts` (front) y regla `CorpSiFalta` en `public/web.config` (respuestas que genera IIS). **`/storage/*` queda excluido a propósito** en la regla de IIS: son los archivos que suben los solicitantes y se muestran en un iframe. Observación de ADEM del 25/08/2026, fuera de la matriz |
+| `Cross-Origin-Resource-Policy` | ✅ | `same-origin` en tres capas: `SecurityHeadersMiddleware` (API), `next.config.ts` (front) y regla `CorpSiFalta` en `public/web.config` (respuestas que genera IIS). **Incluye `/storage/*`** desde el 23/09/2026 (antes excluido hasta poder probar con un archivo real; verificado con las imágenes reales del carrusel). Observación de ADEM del 25/08/2026, fuera de la matriz |
 | Rate limiting endpoints públicos | ✅ | `throttle:3,1` en `forgot-password`, `throttle:3,5` en `solicitar-acceso` |
 | Notificaciones — acceso propio | ✅ | `show()` en `NotificacionLogController` verifica `user_id === auth user id` |
 | Eliminación de usuarios | ✅ | `UserController::destroy()` bloquea auto-eliminación y eliminación del último admin |
@@ -629,11 +634,11 @@ sudo certbot --nginx -d tudominio.mx
 
 | Ítem | Impacto | Solución |
 |------|---------|---------|
-| SMTP real de producción | **Crítico** | Verificado el 11/09/2026: `MAIL_MAILER=smtp` → `127.0.0.1:2525`, sin credenciales, y **nada escucha en el 2525**. No sale ningún correo: restablecimiento de contraseña, aprobación de accesos y notificaciones. Faltan los datos del SMTP institucional |
-| `Cross-Origin-Resource-Policy` en `/storage/*` | Bajo | Excluido de `CorpSiFalta` hasta poder probar la vista previa con un archivo real subido por la aplicación. Confirmado eso, incluirlo es cambiar el `negate="true"` por su preCondition en pareja |
+| **SMTP real de producción** | **Crítico — bloqueado por la institución** | **23/09/2026:** probado con credenciales reales (`proyectos.comecyt@edomex.gob.mx`), dos rutas, ambas rechazadas por políticas del lado de Microsoft 365 / la red institucional, no por el servidor (ver E35). Falta que la institución habilite SMTP AUTH para esa cuenta **o** agregue `10.250.36.241` a la lista blanca de `mail.edomex.gob.mx`. Mientras tanto, `MAIL_MAILER=log` (seguro, no rompe nada) |
+| ~~`Cross-Origin-Resource-Policy` en `/storage/*`~~ | ✅ Resuelto 23/09/2026 | Activado tras confirmar con las imágenes reales del carrusel que `/storage/*` la servía sin esta cabecera. Verificado con `curl.exe` por IP y por dominio |
 | CSP con `script-src 'unsafe-inline'` | Medio | El front permite scripts embebidos, que es justo lo que aprovecha un XSS. **No es hallazgo de ADEM hoy, pero es el candidato más probable del próximo escaneo.** Solución de fondo: nonces o hashes, toca código de la app |
-| **Licencia de Windows Server (Evaluation)** | **Crítico** | Al 11/09/2026 quedan **7 días** de gracia (vence ~18/09/2026). Al vencer, el servidor se apaga solo cada hora. Activar Standard con la clave institucional (`DISM /online /Set-Edition:ServerStandard /ProductKey:<clave> /AcceptEula`, reinicia) o, como puente, `slmgr /rearm` + reinicio (quedan 4 rearmes al 11/09/2026). Ver `docs/ESTADO_ACTUAL.md` |
-| **Cuentas de prueba en producción** | **Crítico** | Las 4 cuentas de "Usuarios de Prueba" existen en `comecyt_prod` y son las únicas; contraseñas rotadas el 14/09/2026. Crear cuentas reales y cambiar la contraseña o desactivar estas **antes** de que infraestructura pruebe el dominio |
+| **Licencia de Windows Server (Evaluation)** | **Crítico, pero con margen** | Verificado el 21/09/2026 (`slmgr /dlv`): alguien hizo `rearm` entre el 15/09 y hoy — quedan **180 días** de gracia y **3 rearmes**. Sigue siendo Evaluation, no Standard: la solución definitiva (`DISM /online /Set-Edition:ServerStandard /ProductKey:<clave> /AcceptEula`) sigue pendiente, solo que ya no es urgente esta semana |
+| **Cuentas de prueba en producción** | **Crítico** | Las 4 cuentas de "Usuarios de Prueba" existen en `comecyt_prod` y son las únicas; contraseñas rotadas el 14/09/2026. **21/09/2026:** se cerró la única solicitud de acceso pendiente (ver E30) y quedó vinculada a una cuenta ya creada a mano — sigue sin existir un flujo real de altas más allá de las 4 de prueba. Crear cuentas reales y cambiar la contraseña o desactivar estas **antes** de abrir el sistema a más usuarios |
 | `comecyt:backup-db` falla cada noche | Alto | `BackupDatabase.php` arma `pg_dump ... \| gzip -9 > archivo` y en Windows ninguno está en el PATH (`'pg_dump' is not recognized`). El respaldo real lo hace la tarea `COMECYT-Backup-Diario` (`backup.ps1`, con `C:\pgsql\bin\pg_dump.exe -Fc`), que sí funciona. Corregir el comando o quitarlo de `routes/console.php` |
 | Respaldos sin copia fuera del servidor | Alto | Todos los dumps están en `F:\Desarrollo Tecnologico\backups\`. Si se pierde el servidor, se pierden los respaldos |
 | Windows Update detenido | Alto | Servicio `wuauserv` detenido; último parche el 27/03/2026; 3 pendientes (incluida la acumulativa 2026-09). Aplicar en ventana junto con la licencia |
@@ -641,9 +646,9 @@ sudo certbot --nginx -d tudominio.mx
 | Endurecimiento de red (agosto) | Medio | Firma SMB, puertos 2179/135, RDP solo desde la VPN. Análisis listo **sin aplicar**: `Desktop\ADEM\_v2_agosto\ANALISIS_SMB_Y_PUERTOS.md` |
 | Confirmaciones de infraestructura sobre el balanceador | Alto | Rango de IPs de origen, HTTP→HTTPS en el balanceador, health check, límite de 50 MB, timeouts. Correo listo en `Desktop\ADEM\_v4_dominio_sep11\`. Ver `docs/DOMINIO_BALANCEADOR.md` §8 |
 | `serverFetch` falla con certificado autofirmado | Medio | **Previo al dominio, detectado el 11/09/2026.** Los Server Components llaman a `https://10.250.36.241/api` y Node rechaza el certificado (`DEPTH_ZERO_SELF_SIGNED_CERT`); el `catch` lo oculta y las páginas renderizadas en servidor salen con listas vacías. Opciones: `NODE_EXTRA_CA_CERTS` con el certificado `BBC4F9F9…` en el entorno NSSM. **Ojo:** al funcionar, todas esas llamadas llegan a Laravel desde la IP del servidor, y el rate limit por IP las contaría juntas |
-| C:\comecyt limpieza | Bajo | La tarea `COMECYT-LimpiarDirectorioViejo` **nunca se ha ejecutado** (verificado el 11/09/2026); el directorio sigue ahí, vacío. Borrarlo a mano |
+| ~~C:\comecyt limpieza~~ | ✅ Resuelto 23/09/2026 | Tarea rota `COMECYT-LimpiarDirectorioViejo` eliminada; el directorio lo borró el usuario a mano (el sandbox de Claude Code bloqueaba hacerlo desde ahí) |
 | Página dedicada `/solicitante/informes` | Bajo | El upload está inline en detalle de solicitud |
-| Imágenes del carrusel en producción | Medio | Verificado el 11/09/2026: los 4 slides tienen `imagen_url` nula (no dependen de picsum). Subir imágenes reales vía `/admin/carrusel` |
+| ~~Imágenes del carrusel en producción~~ | ✅ Resuelto 23/09/2026 | Los 4 slides tienen ya imágenes reales subidas vía `/admin/carrusel`, confirmado en la base de datos |
 | Avisos de `app:deploy-check` | Bajo | Config y rutas sin caché: cachearlas obliga a correr `config:cache` tras cada cambio de `.env` (E18). El aviso de "crontab" es falso positivo en Windows, porque lo cubre `comecyt-scheduler`. El de permisos del `.env` está en su fila |
 | Otros menores | Bajo | Disco C: con 6.8 GB libres. `TSA_URL` vacío (sin sello NOM-151). `SENTRY_LARAVEL_DSN` vacío (opcional) |
 
@@ -998,3 +1003,234 @@ renombrado (`grep renameColumn` en `database/migrations/`) antes de otra causa.
 **Lección:** una migración que renombra una columna es una búsqueda de texto completa pendiente, no una
 tarea terminada. Los endpoints sin cobertura de datos reales (0 filas) no lanzan error en desarrollo ni en
 CI — solo al usarse en producción.
+
+### E30 — Aprobar acceso: 500 por correo duplicado y la solicitud nunca se cerraba [resuelto 21-09-2026]
+**Síntoma:** en `/admin/solicitudes-acceso`, "Aprobar" sobre la solicitud de ABRIL FLORES CASTORENA daba
+`500 Internal Server Error` en cada intento.
+**Causa (dos bugs distintos, mismo endpoint):**
+1. El 14/09/2026 alguien había dado de alta la cuenta **a mano** en `/admin/usuarios` con el mismo correo,
+   pero la solicitud original quedó "pendiente" sin cerrarse. `RegistroAccesoController::aprobar()`
+   siempre hacía `User::create()` sin comprobar si el correo ya existía →
+   `SQLSTATE[23505]: duplicate key value violates unique constraint "users_email_unique"`.
+2. Aunque el primer bug no hubiera existido, la solicitud **jamás se habría marcado como aprobada**:
+   `SolicitudAcceso::$guarded` bloquea a propósito `estado`/`revisado_por`/`revisado_at` para que el
+   endpoint público `store()` no los reciba por mass-assignment (SEV-1), pero `aprobar()`/`rechazar()`
+   usaban `->update([...])` sobre esos mismos campos — Eloquent los descarta **en silencio** (no lanza
+   excepción salvo `Model::preventSilentlyDiscardingAttributes()`, que este proyecto no activa). La
+   respuesta decía "Solicitud aprobada" y la fila seguía en `estado='pendiente'` para siempre. Verificado
+   contra la tabla real: **0 solicitudes de acceso se habían cerrado nunca**, ni aprobadas ni rechazadas.
+**Fix:**
+- `aprobar()` busca primero `User::where('email', ...)`; si ya existe, vincula la solicitud a esa cuenta
+  sin duplicarla (y no reenvía el correo de "acceso aprobado" a alguien que ya usa el sistema).
+- `aprobar()`/`rechazar()` usan `->forceFill([...])->save()` en vez de `->update([...])` para los campos
+  guardados — bypassa la protección de mass-assignment solo para esta escritura interna y confiable del
+  controlador; el guard sigue bloqueando cualquier intento desde `store()` con datos del público.
+- Verificado de punta a punta contra la solicitud real (script que invoca `aprobar()` directamente con
+  `Auth::loginUsingId()`, sin necesitar sesión de navegador): pasó de `estado=pendiente` (con 500) a
+  `estado=aprobada`, cuenta vinculada, sin duplicar.
+**Lección:** un `$guarded` pensado para bloquear al público también bloquea al propio controlador si usa
+`update()`/`fill()` en vez de `forceFill()`. Antes de guardar un campo operativo (`estado`, `revisado_por`…)
+revisar si el modelo lo protege, y si el propio flujo interno necesita escribirlo, usar `forceFill()` —
+nunca quitar el guard, que sigue defendiendo contra mass-assignment desde el exterior.
+
+### E31 — El mismo error de E30 bloqueaba TODO el ciclo de vida de `Solicitud` [resuelto 21-09-2026]
+**Síntoma:** ninguno visible todavía — la tabla `solicitudes` tenía **0 filas** en producción (sistema
+recién desplegado). Se encontró al auditar el mismo patrón de E30 en el modelo central del sistema.
+**Causa:** `Solicitud::$guarded` protege a propósito `estado`, `etapa_estado`, `estado_informe`,
+`notas_internas` y `folio` (SEV-1, mismo motivo que `SolicitudAcceso`), pero **14 llamadas** en 4
+controllers usaban `->update([...])` directamente sobre esos campos, así que **ninguna transición de
+estado del sistema habría persistido jamás**, aunque cada endpoint respondiera 200 con el mensaje de
+éxito correcto:
+
+| Controller | Método | Transición que nunca se guardaba |
+|---|---|---|
+| `SolicitudController` | `enviar()` | borrador → enviada |
+| `SolicitudController` | `reenviar()` | observada → enviada |
+| `RevisionController` | `approve()` | enviada/observada → en_evaluacion |
+| `RevisionController` | `observe()` | enviada → observada |
+| `RevisionController` | `approveInforme()` | estado_informe → aprobado, estado → cerrada |
+| `EvaluadorController` | `saveDictamen()` (aprobado) | en_evaluacion → aprobada |
+| `EvaluadorController` | `saveDictamen()` (rechazado) | en_evaluacion → rechazada |
+| `EvaluadorController` | `asignar()` | aprobada → en_evaluacion |
+| `SolicitudController` | `iniciarSeguimiento()` | ministracion → seguimiento |
+| `SolicitudController` | `rechazar()` | * → rechazada |
+| `SolicitudController` | `cancelar()` | * → cancelada |
+| `SolicitudController` | `cerrar()` | ministracion/seguimiento → cerrada |
+
+En otras palabras: **una solicitud real jamás habría podido salir de "borrador"** — el primer botón que
+pulsa cualquier solicitante (`enviar()`) no habría persistido el cambio. Los demás modelos con el mismo
+patrón de `$guarded` (`Empresa`, `Informe`, `ListaNegra`, `Ministracion`, `NotificacionLog`,
+`Comprobante`) están bien: dejan expresamente el campo operativo fuera del guard con un comentario
+explicando por qué (p. ej. `Informe.php`: "`estado` permanece asignable porque el flujo revisor lo
+actualiza"). Solo `Solicitud` y `SolicitudAcceso` guardaron el campo que su propio controller necesita
+escribir.
+**Fix:** las 14 llamadas pasaron a `->forceFill([...])->save()`, igual que en E30. `php -l` en los 4
+archivos y `npx vitest run` (97/97) sin regresiones — no hay suite de PHPUnit en este proyecto para
+correr contra el backend, así que la verificación fue lint + revisión manual de cada punto.
+**Pendiente relacionado, NO corregido (requiere decisión de producto, no es este bug):**
+`ConvenioController::generate()` y `MinistracionController` nunca ponen `Solicitud.estado` en
+`'convenio'` ni `'ministracion'` — crean el `Convenio`/`Ministracion` pero la solicitud se queda en
+`'aprobada'`. Eso significa que `iniciarSeguimiento()` (exige `estado==='ministracion'`) y `cerrar()`
+(exige `ministracion`/`seguimiento`) son **inalcanzables** tal como está hoy, incluso después de este
+fix. Falta decidir en qué momento exacto debe avanzar la solicitud (¿al generar el convenio? ¿al firmarlo?
+¿al crear la primera ministración? ¿al pagarla?) antes de tocar código. Ver Pendientes.
+**Lección:** cuando se encuentra un `$guarded`/`update()` roto en un modelo, buscar el mismo patrón en
+los demás controllers que tocan ese modelo (`grep -rn "->update(\[" | grep NombreModelo`), no solo en el
+punto reportado — la causa raíz suele repetirse en cada transición del mismo flujo.
+
+### E32 — Subir imagen del carrusel: 422 "el campo imagen es obligatorio" [resuelto 21-09-2026]
+**Síntoma:** en `/admin/carrusel`, arrastrar o elegir una imagen daba
+`422 (Unprocessable Content)` sin llegar a mostrar la vista previa. No queda registro en
+`laravel.log` porque los 422 de validación no se registran (solo los 500).
+**Causa:** `lib/api.ts` crea la instancia de axios con `headers: { 'Content-Type': 'application/json' }`
+por defecto. El `transformRequest` de axios **lee el `Content-Type` ya puesto antes de decidir qué hacer
+con un `FormData`**: si ya dice `application/json`, convierte el `FormData` a JSON en vez de mandarlo
+como multipart — el archivo se pierde por completo (`{"imagen":{}}`) y Laravel nunca ve `$_FILES`, así que
+`'imagen' => 'required|file|...'` falla. Reproducido con el propio paquete `axios` instalado
+(`node_modules/axios`), interceptando antes de la red: sin el fix, `data` llega como el string
+`'{"imagen":{}}'`; con el fix, `data` sigue siendo el `FormData` real.
+**Fix:** `CarruselClient.tsx` pasa `headers: { 'Content-Type': undefined }` en esa llamada puntual. Axios
+excluye los headers `undefined` al armar la petición real (`AxiosHeaders.toJSON()` filtra `value != null`),
+así el navegador pone `multipart/form-data; boundary=...` correctamente. **No se tocó** el patrón que ya
+usan `DocumentosAdjuntos.tsx`, `solicitudes/nueva/page.tsx` y `solicitudes/[id]/page.tsx`
+(`headers: { 'Content-Type': 'multipart/form-data' }`, sin boundary): es el patrón establecido y probado
+del sistema (documentos e informes se suben así desde antes), y los navegadores reales completan el
+boundary faltante cuando detectan ese caso — a diferencia de dejar el header en `application/json`, que
+dispara la conversión a JSON de raíz.
+**Lección:** si una instancia de axios fija un `Content-Type` por defecto, **cualquier** subida de
+`FormData` que no lo anule explícitamente se rompe en silencio (parece un problema del backend — 422 sin
+pista — pero el archivo nunca sale del navegador). Antes de depurar un 422 de subida de archivos, revisar
+qué `Content-Type` llega realmente al servidor, no asumir que axios lo omite solo porque el dato es
+`FormData`.
+
+### E33 — Decisión de diseño: cuándo avanza `Solicitud.estado` a `convenio`/`ministracion` [23-09-2026]
+Cierra el hueco que dejó E31 (`ConvenioController::generate()` y `MinistracionController` creaban sus
+registros pero nunca avanzaban el estado de la solicitud).
+**Decisión tomada:**
+- **`aprobada → convenio`**: en el momento en que se **genera** el convenio
+  (`ConvenioController::generate()`), aunque el documento quede en `estado='borrador'`. Es el único
+  evento discreto que existe hoy para marcar "el proyecto entró a la etapa de convenio".
+- **`convenio → ministracion`**: en el momento en que el convenio pasa a `estado='firmado'`
+  (`ConvenioController::update()` con `estado=firmado`), no antes. Es el punto real en que el dinero
+  puede empezar a fluir — la ministración (tranche 1) ya existe desde que se aprobó el dictamen
+  (`EvaluadorController::saveDictamen()`, ver E31), pero no tenía sentido cobrarla sin convenio firmado.
+- Las transiciones ya existentes `iniciarSeguimiento()` (ministracion → seguimiento) y `cerrar()`
+  (ministracion/seguimiento → cerrada) **no se tocaron**: siguen siendo acciones manuales del admin, como
+  ya estaban diseñadas.
+**Implementación:** `forceFill(['estado' => ...])->save()` en ambos puntos (mismo motivo que E30/E31: el
+campo está en `Solicitud::$guarded` a propósito). El de `update()` es idempotente — comprueba
+`$estadoPrevio !== 'firmado'` antes de disparar, y que la solicitud siga en `'convenio'` (defensivo, no
+pisa un estado que avanzó por otro camino) — así que volver a guardar un convenio ya firmado no repite la
+transición ni rompe nada.
+**Si esta decisión cambia:** por ejemplo, si el negocio prefiere disparar `ministracion` cuando el
+convenio llega a `'vigente'` en vez de `'firmado'`, es un cambio de una línea en
+`ConvenioController::update()` (comparar contra `'vigente'` en vez de `'firmado'`).
+
+### E34 — Tres bugs más en `ConvenioController`, encontrados al verificar E33 [resuelto 23-09-2026]
+Ninguno se había notado porque **nunca se había generado un convenio real** (0 filas en `convenios`
+hasta hoy). Aparecieron los tres, uno tras otro, al construir el primer convenio de prueba para verificar
+E33.
+1. **`generate()` daba 500 siempre, en todo intento:**
+   `Convenio::whereYear('created_at', $year)->lockForUpdate()->count()` — PostgreSQL no permite
+   `FOR UPDATE` combinado con una función agregada (`SQLSTATE[0A000]: Feature not supported`). El
+   `lockForUpdate()` era una capa de protección redundante: el retry-on-unique-violation que ya existía
+   alrededor del `Convenio::create()` (catch de `QueryException` 23505/23000) cubre la concurrencia sin
+   necesitar el lock. **Fix:** se quitó `->lockForUpdate()`.
+2. **`generateConvenioContent()` truena con "Attempt to read property 'nombre' on null":**
+   usaba `$sol->empresa`, una relación que **no existe** en `Solicitud` — el nombre correcto es
+   `institucion()` (mismo `empresa_id`, ver E25 — exactamente el patrón que E25 avisó que faltaba barrer).
+   Eloquent no lanza excepción al acceder a una relación inexistente, devuelve `null` en silencio, y el
+   error real aparece una línea después al leer `->nombre`. **Fix:** `$sol->institucion`.
+3. **El PDF del convenio (`pdf_url`) siempre apuntaba a un archivo que no existía:**
+   `Storage::disk('public')` ya tiene su raíz en `storage/app/public` (`config/filesystems.php`), pero el
+   código anteponía `"public/convenios/{id}"` al guardar, escribiendo en
+   `storage/app/public/public/convenios/...` mientras que `pdf_url` apuntaba a
+   `storage/app/public/convenios/...` (sin la carpeta `public` doble) — el enlace de descarga daba 404
+   siempre. **Fix:** quitar el prefijo `"public/"` de la ruta de escritura.
+**Verificado de punta a punta:** script que crea una solicitud de prueba en `'aprobada'`, genera el
+convenio (`generate()` → HTTP 201, `estado='convenio'`), lo firma (`update()` con `estado=firmado` →
+HTTP 200, `estado='ministracion'`), confirma que repetir la firma no vuelve a disparar nada, y comprueba
+que el archivo del convenio existe físicamente en la ruta que dice `pdf_url`. Datos y archivo de prueba
+eliminados al terminar — no queda nada en producción.
+**Lección:** un endpoint con 0 usos reales no es un endpoint probado, aunque tenga buena pinta en el
+código (retry loops, manejo de errores, comentarios explicando la concurrencia). Antes de dar por bueno
+un flujo de "cero filas", ejecutarlo una vez de punta a punta con datos de prueba desechables.
+
+### Cookie `comecyt_auth` — `Secure` + `SameSite=Strict` activados [23-09-2026]
+`apps/api/.env`: `COOKIE_SECURE=true` y `COOKIE_SAME_SITE=Strict` (antes `false`/`Lax`, señalado como
+pendiente Medio desde el 11/09/2026). `COOKIE_DOMAIN` se queda en `null` a propósito: el sistema se usa
+por el dominio y por la IP interna a la vez (E22), y un `Domain` explícito le impediría al navegador
+mandar la cookie contra la IP. Verificado generando un JWT real y llamando
+`AuthController::callRespondWithToken()` directamente (sin necesitar sesión de navegador): el
+`Set-Cookie` real trae `secure; httponly; samesite=strict` y sin atributo `Domain=` (host-only, correcto
+para el acceso dual). Sin cambios de código, solo `.env` + `php artisan config:clear`.
+
+### E35 — SMTP institucional: intentado con datos reales, bloqueado por la institución [23-09-2026]
+El usuario entregó las credenciales reales (`proyectos.comecyt@edomex.gob.mx` + contraseña, en
+`Desktop\correo.txt`, nunca copiadas a este documento ni a memoria). `edomex.gob.mx` usa Microsoft 365
+(MX → `outlook.com`), con un MX secundario propio `mail.edomex.gob.mx` (IP interna `10.10.10.3`, preferencia 50).
+**Dos rutas probadas con datos reales, ambas rechazadas por políticas del lado de la institución:**
+1. `smtp.office365.com:587` (STARTTLS) con esa cuenta → conecta, pero
+   `535 5.7.3 Authentication unsuccessful` al autenticar. Causa más probable: Microsoft 365 deshabilita
+   la autenticación básica SMTP AUTH por defecto desde 2022 para todo el tenant salvo que un admin la
+   habilite cuenta por cuenta (Exchange admin center → esa cuenta → "Autenticación SMTP" → activar). La
+   contraseña puede ser perfectamente correcta y aun así fallar por esto.
+2. `mail.edomex.gob.mx:25` (el MX secundario, sin credenciales — típico patrón de relevo interno para
+   servidores de aplicación) → la conexión TCP abre pero se cierra **sin ningún banner SMTP**, ni
+   siquiera un código de rechazo. Es un firewall o lista blanca de IP a nivel de red: este servidor
+   (`10.250.36.241`) no está autorizado para relevar por ahí.
+**No se puede resolver desde este servidor.** Se necesita que la institución haga una de dos cosas:
+- Habilitar SMTP AUTH para `proyectos.comecyt@edomex.gob.mx` en el tenant de Microsoft 365, **o**
+- Agregar `10.250.36.241` a la lista blanca del relevo interno `mail.edomex.gob.mx`.
+**Correo enviado el 23/09/2026, en espera de respuesta:** `Desktop\ADEM\_v6_smtp_sep23\CORREO_SMTP_INSTITUCIONAL.md`.
+**Estado dejado en el servidor:** `MAIL_MAILER=log` (no rompe nada; escribe en el log en vez de enviar,
+igual que el estado de desarrollo documentado). `MAIL_FROM_ADDRESS` se corrigió a
+`proyectos.comecyt@edomex.gob.mx` de una vez (antes `noreply@comecyt.gob.mx`, un dominio **sin ni un solo
+registro MX** — no es una dirección de correo real; da igual qué SMTP se use al final, ese From nunca
+habría funcionado). En cuanto la institución resuelva 1 o 2, poner `MAIL_MAILER=smtp` con el host que
+corresponda y correr `php artisan config:clear`; no hace falta tocar código.
+**Lección:** una cuenta de correo real no garantiza que SMTP AUTH esté habilitado — es una política de
+tenant independiente de la contraseña. Antes de reportar "credenciales incorrectas", probar la
+autenticación con un mensaje de error explícito (`535 5.7.3` no es lo mismo que `535 5.7.8` de contraseña
+inválida) y verificar el estado de la política de autenticación básica del proveedor.
+
+### Cabeceras técnicas menores — revisadas [23-09-2026]
+Los dos puntos que quedaban en "Cabeceras menores" (Pendientes):
+1. **Cabecera `Server` oculta.** Ya estaba resuelto de antes (`requestFiltering removeServerHeader="true"`
+   en `public/web.config`, aplicado en agosto) — solo faltaba confirmarlo. Verificado con `curl.exe -D -`
+   contra una respuesta normal y contra un 404 de `hiddenSegments` (`.env`): **ninguna trae `Server:`**.
+2. **`Cross-Origin-Resource-Policy` en `/storage/*`** — pendiente desde el 25/08/2026 hasta poder probar
+   con un archivo real. Con las imágenes del carrusel ya subidas (`/admin/carrusel`), se confirmó con
+   `curl.exe` que `/storage/*` servía sin esta cabecera y se activó: se quitó la exclusión de
+   `/storage/` en la precondición `RespuestaSinCorpFueraDeStorage` (renombrada `RespuestaSinCorp`) de
+   `public/web.config`, y `same-origin` se aplica igual en toda ruta — no hacía falta una regla en pareja
+   como con CSP/XFO, porque el valor no cambia entre `/storage/*` y el resto (`same-origin` en ambos
+   casos, a diferencia de CSP/XFO que sí llevan un valor distinto y más relajado solo en `/storage/*`).
+   Verificado con `curl.exe -D -` por IP y por dominio: la imagen real del carrusel ya trae
+   `Cross-Origin-Resource-Policy: same-origin`, y las rutas normales (login, API) siguen igual que antes.
+   `same-origin` nunca bloquea un uso del **mismo** origen (`<img>` o `<iframe>`), así que esto no
+   afecta ni la vista previa de documentos de solicitud (aún sin datos reales) ni las imágenes del
+   carrusel — solo cierra el acceso a un origen externo, que es justo el propósito de la cabecera.
+
+### E36 — Landing pública `/sigac` antes del login [publicada 23-09-2026]
+El usuario pidió una landing previa al login en `https://sidecyt-comecyt.edomex.gob.mx/sigac`, con las
+skills de diseño y el ADN visual de portrait.so (entregó su `design.md`). Documento completo:
+**`docs/LANDING_SIGAC.md`**; resumen de diseño en `docs/DISENO_UI.md` §11.
+- **Rutas:** `/sigac`, `/privacidad` y `/terminos` en `PUBLIC_PATHS` de `proxy.ts`. **`/` sin sesión →
+  `/sigac`**; con sesión → el panel de su rol (antes iba a `/login` y de ahí rebotaba). Las legales eran
+  inaccesibles sin sesión hasta hoy (redirigían al login) aunque la landing y los términos las enlazan.
+- **`/login?email=…`** prellena el correo y enfoca la contraseña (lo usa el campo del hero). Se lee con
+  `window.location.search` tras montar, no con `useSearchParams`, para no exigir un `<Suspense>`.
+- **Estilos aislados:** todo en `src/app/sigac/landing.css` con prefijo `.lp-*` y tokens dentro de
+  `.lp-root`. **Nunca mover esos tokens a `:root` ni a `globals.css`**: chocarían con `--auth-*`/`--app-*`.
+- **Fuentes auto-hospedadas** con `next/font/local` (`src/app/sigac/fonts/`, Switzer + Satoshi, licencia
+  FFL). **El servidor no alcanza `fonts.googleapis.com`** — una fuente nueva con `next/font/google`
+  probablemente rompería el build (Geist funciona porque ya estaba en caché). Fontshare sí responde, con
+  `curl.exe --ssl-no-revoke`.
+- **Animación de entrada:** espera `BOOT_MS` (1100 ms, el mismo de `RouteChangeOverlay`) para no
+  animarse detrás de la pantalla de carga. El revelado de tarjetas usa la propiedad `translate` con
+  `animation-fill-mode: backwards` — con `transform` + transición pisaba la rotación y el hover de cada
+  tarjeta (se detectó antes de publicar).
+- **Verificado:** tsc 0 errores; `Landing.a11y.test.tsx` 3/3 (axe sin violaciones); Edge headless a 1440 y
+  375 px sin scroll horizontal y sin errores de consola en producción; `/` → 307 `/sigac` por IP y por
+  dominio; cabeceras de seguridad sin cambios.
