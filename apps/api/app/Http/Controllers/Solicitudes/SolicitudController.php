@@ -320,9 +320,12 @@ class SolicitudController extends Controller
             }
         }
 
-        $solicitud->update([
+        // forceFill(), no update(): 'estado' está en Solicitud::$guarded (SEV-1) y update() lo
+        // descartaba en silencio — la solicitud se quedaba en "borrador" para siempre aunque la
+        // respuesta dijera "enviada". Ver E31 en CLAUDE.md.
+        $solicitud->forceFill([
             'estado' => 'enviada',
-        ]);
+        ])->save();
 
         // Notificar al solicitante con template profesional
         $solicitud->user->notify(new SolicitudEnviada($solicitud));
@@ -344,9 +347,10 @@ class SolicitudController extends Controller
             return response()->json(['error' => ConfigHelper::msg(Message::SOLICITUD_NO_EDITABLES)], 422);
         }
 
-        $solicitud->update([
+        // forceFill(), no update() — mismo motivo de arriba (E31 en CLAUDE.md).
+        $solicitud->forceFill([
             'estado' => 'enviada',
-        ]);
+        ])->save();
 
         // Notificar al revisor que hay una nueva versión
         $solicitud->user->notify(new SolicitudEstadoActualizado($solicitud));
@@ -464,7 +468,8 @@ class SolicitudController extends Controller
             ], 422);
         }
 
-        $solicitud->update(['estado' => 'seguimiento']);
+        // forceFill(), no update(): 'estado' está en Solicitud::$guarded — ver E31 en CLAUDE.md.
+        $solicitud->forceFill(['estado' => 'seguimiento'])->save();
 
         return response()->json([
             'message' => 'Seguimiento iniciado correctamente.',
@@ -487,10 +492,11 @@ class SolicitudController extends Controller
             'motivo' => 'nullable|string|max:1000',
         ]);
 
-        $solicitud->update([
+        // forceFill(), no update(): 'estado' está en Solicitud::$guarded — ver E31 en CLAUDE.md.
+        $solicitud->forceFill([
             'estado' => 'rechazada',
             'observaciones_informe' => $validated['motivo'] ?? null,
-        ]);
+        ])->save();
 
         return response()->json([
             'message' => 'Solicitud rechazada.',
@@ -513,10 +519,11 @@ class SolicitudController extends Controller
             'motivo' => 'nullable|string|max:1000',
         ]);
 
-        $solicitud->update([
+        // forceFill(), no update(): 'estado' está en Solicitud::$guarded — ver E31 en CLAUDE.md.
+        $solicitud->forceFill([
             'estado' => 'cancelada',
             'observaciones_informe' => $validated['motivo'] ?? null,
-        ]);
+        ])->save();
 
         return response()->json([
             'message' => 'Solicitud cancelada.',
@@ -535,7 +542,8 @@ class SolicitudController extends Controller
             ], 422);
         }
 
-        $solicitud->update(['estado' => 'cerrada']);
+        // forceFill(), no update(): 'estado' está en Solicitud::$guarded — ver E31 en CLAUDE.md.
+        $solicitud->forceFill(['estado' => 'cerrada'])->save();
 
         return response()->json([
             'message' => 'Proyecto cerrado exitosamente.',

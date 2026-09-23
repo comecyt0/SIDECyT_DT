@@ -175,10 +175,12 @@ class EvaluadorController extends Controller
             ]);
 
             // Actualizar estado de la solicitud
+            // forceFill(), no update(): 'estado' está en Solicitud::$guarded (SEV-1) y update()
+            // lo descartaba en silencio — ver E31 en CLAUDE.md.
             if ($dictamen->sujeto_apoyo) {
-                $solicitud->update([
+                $solicitud->forceFill([
                     'estado' => 'aprobada',
-                ]);
+                ])->save();
 
                 // CREACIÓN AUTOMÁTICA DE REGISTRO DE MINISTRACIÓN (tranche 1)
                 Ministracion::firstOrCreate(
@@ -191,7 +193,7 @@ class EvaluadorController extends Controller
                     'dictamen_id' => $dictamen->id,
                 ]);
             } else {
-                $solicitud->update(['estado' => 'rechazada']);
+                $solicitud->forceFill(['estado' => 'rechazada'])->save();
 
                 Audit::log('solicitud.rechazada_tecnica', $solicitud, [
                     'puntaje_total' => $dictamen->puntaje_total,
@@ -278,7 +280,8 @@ class EvaluadorController extends Controller
             'estado' => 'asignado', // Estado canónico inicial
         ]);
 
-        Solicitud::find($validated['solicitud_id'])->update(['estado' => 'en_evaluacion']);
+        // forceFill(), no update(): 'estado' está guardado — mismo motivo (E31 en CLAUDE.md).
+        Solicitud::find($validated['solicitud_id'])->forceFill(['estado' => 'en_evaluacion'])->save();
 
         NotificacionLog::create([
             'user_id' => $validated['evaluador_id'],

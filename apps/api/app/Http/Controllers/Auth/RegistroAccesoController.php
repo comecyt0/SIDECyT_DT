@@ -12,6 +12,7 @@ use App\Notifications\NuevaSolicitudAcceso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
@@ -122,7 +123,9 @@ class RegistroAccesoController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($solicitudAcceso) {
+        $cuentaYaExistiaResp = false;
+
+        DB::transaction(function () use ($solicitudAcceso, &$cuentaYaExistiaResp) {
             $empresaDatos = (array) ($solicitudAcceso->empresa_datos ?? []);
 
             // Find or create empresa con los datos extendidos
@@ -145,32 +148,58 @@ class RegistroAccesoController extends Controller
                 ]))->save();
             }
 
-            // Create the user account (rol_id=4 = solicitante)
-            $user = User::create([
-                'name' => $solicitudAcceso->nombre,
-                'email' => $solicitudAcceso->email,
-                'password' => $solicitudAcceso->password, // already hashed
-                'rol_id' => config('comecyt.roles.solicitante'),
-                'empresa_id' => $empresa->id,
-                'activo' => true,
-                'cargo' => $solicitudAcceso->cargo,
-                'telefono' => $solicitudAcceso->telefono,
-                'terminos_aceptados_at' => $solicitudAcceso->terminos_aceptados ? now() : null,
-            ]);
+            // La cuenta puede existir ya (p. ej. un admin la dio de alta a mano en /admin/usuarios
+            // antes de que alguien aprobara esta misma solicitud). Sin este chequeo, User::create()
+            // truena con "duplicate key value violates unique constraint users_email_unique" (23505)
+            // y la solicitud queda atascada en "pendiente" para siempre — ver docs/ESTADO_ACTUAL.md.
+            $user = User::where('email', $solicitudAcceso->email)->first();
+            $cuentaYaExistia = $user !== null;
+            $cuentaYaExistiaResp = $cuentaYaExistia;
 
-            // Mark request as approved
-            $solicitudAcceso->update([
+            if (! $user) {
+                // Create the user account (rol_id=4 = solicitante)
+                $user = User::create([
+                    'name' => $solicitudAcceso->nombre,
+                    'email' => $solicitudAcceso->email,
+                    'password' => $solicitudAcceso->password, // already hashed
+                    'rol_id' => config('comecyt.roles.solicitante'),
+                    'empresa_id' => $empresa->id,
+                    'activo' => true,
+                    'cargo' => $solicitudAcceso->cargo,
+                    'telefono' => $solicitudAcceso->telefono,
+                    'terminos_aceptados_at' => $solicitudAcceso->terminos_aceptados ? now() : null,
+                ]);
+            } else {
+                Log::warning('RegistroAccesoController::aprobar — cuenta ya existía, se cierra la solicitud sin duplicarla', [
+                    'solicitud_id' => $solicitudAcceso->id,
+                    'email' => $solicitudAcceso->email,
+                    'user_id' => $user->id,
+                ]);
+            }
+
+            // Mark request as approved.
+            // forceFill(), NO update(): 'estado'/'revisado_por'/'revisado_at' están en $guarded a
+            // propósito (SEV-1, evita que el público los mande en store()), pero eso bloqueaba TAMBIÉN
+            // esta escritura legítima del propio controlador — update() los descartaba en silencio y
+            // la solicitud se quedaba en "pendiente" para siempre aunque la respuesta dijera
+            // "aprobada" (E30 en CLAUDE.md; ninguna solicitud de acceso se había cerrado nunca).
+            $solicitudAcceso->forceFill([
                 'estado' => 'aprobada',
                 'revisado_por' => auth()->id(),
                 'revisado_at' => now(),
-            ]);
+            ])->save();
 
-            // Notify applicant
-            $user->notify(new AccesoAprobado($solicitudAcceso));
+            // Notify applicant — solo si la cuenta se creó ahora. Si ya existía y estaba activa,
+            // reenviar "tu acceso fue aprobado" confundiría a alguien que ya usa el sistema.
+            if (! $cuentaYaExistia) {
+                $user->notify(new AccesoAprobado($solicitudAcceso));
+            }
         });
 
         return response()->json([
-            'message' => 'Solicitud aprobada. La cuenta de usuario ha sido creada.',
+            'message' => $cuentaYaExistiaResp
+                ? 'Solicitud aprobada. La cuenta de usuario ya existía y quedó vinculada.'
+                : 'Solicitud aprobada. La cuenta de usuario ha sido creada.',
         ]);
     }
 
@@ -189,12 +218,14 @@ class RegistroAccesoController extends Controller
             ], 422);
         }
 
-        $solicitudAcceso->update([
+        // forceFill(), no update() — mismo motivo que en aprobar(): esos campos están en $guarded
+        // para el público, pero esta escritura es del propio controlador. Ver E30 en CLAUDE.md.
+        $solicitudAcceso->forceFill([
             'estado' => 'rechazada',
             'motivo_rechazo' => $request->motivo_rechazo,
             'revisado_por' => auth()->id(),
             'revisado_at' => now(),
-        ]);
+        ])->save();
 
         // Send rejection email directly via Mail facade (applicant has no User account yet)
         Mail::to($solicitudAcceso->email)

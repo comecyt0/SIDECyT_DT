@@ -75,9 +75,12 @@ class RevisionController extends Controller
         DB::beginTransaction();
         try {
             $estadoPrevio = $solicitud->estado;
-            $solicitud->update([
+            // forceFill(), no update(): 'estado' está en Solicitud::$guarded a propósito (SEV-1,
+            // ver Solicitud.php) para que nadie lo mande por mass-assignment desde afuera, pero eso
+            // también bloqueaba esta escritura legítima del controlador — ver E31 en CLAUDE.md.
+            $solicitud->forceFill([
                 'estado' => 'en_evaluacion',
-            ]);
+            ])->save();
 
             Audit::log('solicitud.aprobada_documentalmente', $solicitud, [
                 'estado_previo' => $estadoPrevio,
@@ -130,9 +133,10 @@ class RevisionController extends Controller
                 ]);
             }
 
-            $solicitud->update([
+            // forceFill(), no update() — mismo motivo de arriba (E31 en CLAUDE.md).
+            $solicitud->forceFill([
                 'estado' => 'observada',
-            ]);
+            ])->save();
 
             // Notificar al solicitante con observaciones detalladas
             if ($solicitud->user) {
@@ -168,10 +172,11 @@ class RevisionController extends Controller
             return response()->json(['error' => 'Solo se pueden aprobar informes en estado entregado.'], 422);
         }
 
-        $solicitud->update([
+        // forceFill(), no update(): 'estado_informe' y 'estado' están guardados — mismo motivo (E31).
+        $solicitud->forceFill([
             'estado_informe' => 'aprobado',
             'estado' => 'cerrada',
-        ]);
+        ])->save();
 
         return response()->json(['message' => 'Informe final aprobado. El proyecto ha sido cerrado oficialmente.']);
     }

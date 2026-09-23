@@ -72,12 +72,16 @@ class ConvenioController extends Controller
             // Generar numero de convenio único. La columna tiene unique constraint a
             // nivel DB; el reintento en caso de unique_violation protege contra el
             // race que existía entre count() y INSERT con creaciones concurrentes.
+            // Sin lockForUpdate() en el count(): PostgreSQL no permite "FOR UPDATE" combinado con una
+            // función agregada ("Feature not supported") — generate() daba 500 SIEMPRE, en todo intento,
+            // desde que se escribió. El retry-on-unique-violation de abajo ya cubre la concurrencia sin
+            // necesitar el lock. Encontrado y corregido el 23/09/2026 (E34 en CLAUDE.md).
             $year = date('Y');
             $convenio = null;
             $maxRetries = 5;
 
             for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
-                $count = Convenio::whereYear('created_at', $year)->lockForUpdate()->count() + 1 + $attempt;
+                $count = Convenio::whereYear('created_at', $year)->count() + 1 + $attempt;
                 $numero_convenio = 'COMECYT-'.$year.'-'.str_pad($count, 3, '0', STR_PAD_LEFT);
                 try {
                     $convenio = Convenio::create([
@@ -102,6 +106,14 @@ class ConvenioController extends Controller
 
             // Generate content
             $this->generateConvenioContent($convenio);
+
+            // La solicitud avanza de 'aprobada' a 'convenio': a partir de aquí el proyecto entra a la
+            // etapa de convenio, aunque el documento siga en 'borrador' hasta que se firme (ver update()
+            // más abajo, que avanza a 'ministracion' cuando eso pasa). forceFill(), no update():
+            // 'estado' está en Solicitud::$guarded a propósito (SEV-1) — mismo motivo que E31 en
+            // CLAUDE.md. Decisión de diseño del 23/09/2026 (E33): cierra el hueco que dejó E31, donde
+            // esta transición nunca ocurría.
+            $solicitud->forceFill(['estado' => 'convenio'])->save();
 
             Audit::log('convenio.generado', $convenio, [
                 'solicitud_id' => $solicitud->id,
@@ -147,7 +159,21 @@ class ConvenioController extends Controller
             'fecha_firma' => 'nullable|date',
         ]);
 
+        $estadoPrevio = $convenio->estado;
         $convenio->update($request->only('estado', 'observaciones', 'fecha_firma'));
+
+        // La solicitud avanza de 'convenio' a 'ministracion' cuando el convenio se firma: es el punto
+        // en que el dinero puede empezar a fluir (las ministraciones/tranches ya existían desde que se
+        // aprobó el dictamen — ver EvaluadorController::saveDictamen() — pero no tenía sentido cobrarlas
+        // sin convenio firmado). Solo dispara en la transición real hacia 'firmado' (evita re-marcar en
+        // ediciones posteriores) y solo si la solicitud sigue en 'convenio' (defensivo: no pisa un
+        // estado que ya avanzó por otro camino). Decisión de diseño del 23/09/2026 (E33 en CLAUDE.md).
+        if ($estadoPrevio !== 'firmado' && $convenio->estado === 'firmado') {
+            $solicitud = $convenio->solicitud;
+            if ($solicitud && $solicitud->estado === 'convenio') {
+                $solicitud->forceFill(['estado' => 'ministracion'])->save();
+            }
+        }
 
         return response()->json(['message' => 'Convenio actualizado.', 'convenio' => $convenio]);
     }
@@ -174,7 +200,10 @@ class ConvenioController extends Controller
     private function generateConvenioContent(Convenio $convenio)
     {
         $sol = $convenio->solicitud;
-        $inst = $sol->empresa;
+        // Solicitud::empresa() no existe — la relación se llama institucion() (mismo empresa_id, ver
+        // E25 en CLAUDE.md). $sol->empresa resolvía en null en silencio y tronaba en $inst->nombre —
+        // nunca se notó porque nunca se había generado un convenio real. Corregido el 23/09/2026 (E34).
+        $inst = $sol->institucion;
 
         $text = "ACUERDO DE ASIGNACION DE RECURSOS\n\n";
         $text .= "Número de Convenio: {$convenio->numero_convenio}\n";
@@ -198,7 +227,11 @@ class ConvenioController extends Controller
         $text .= 'Requiere firma de autoridades competentes para validez legal.';
 
         // Save text file as "PDF"
-        $path = "public/convenios/{$sol->id}";
+        // Storage::disk('public') YA tiene su raíz en storage/app/public (config/filesystems.php) —
+        // anteponer "public/" aquí escribía en storage/app/public/public/convenios/... mientras que
+        // pdf_url (abajo) apunta a storage/app/public/convenios/..., una carpeta distinta que nunca
+        // tuvo el archivo: el enlace de descarga daba 404 siempre. Corregido el 23/09/2026 (E34).
+        $path = "convenios/{$sol->id}";
         Storage::disk('public')->makeDirectory($path);
 
         $filename = "convenio_{$convenio->numero_convenio}.txt";
