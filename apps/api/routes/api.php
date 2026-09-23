@@ -20,6 +20,7 @@ use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Catalogos\CatalogoController;
 use App\Http\Controllers\Catalogos\ProgramaCatalogController;
 use App\Http\Controllers\Convocatorias\ConvocatoriaController;
+use App\Http\Controllers\Convocatorias\ConvocatoriaPublicaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\HealthController;
@@ -100,6 +101,11 @@ Route::middleware([
 
     // Carousel público (login page) — no authentication required
     Route::get('carousel/slides', [CarouselController::class, 'publicIndex']);
+
+    // Convocatorias abiertas para la landing pública /sigac (E37): solo lectura, lista blanca de
+    // campos, caché de 5 min. 30/min por IP basta de sobra para una página que la pide una vez.
+    Route::get('convocatorias/abiertas', [ConvocatoriaPublicaController::class, 'index'])
+        ->middleware('throttle:30,1');
 
     // === PROTECTED ROUTES ===
     Route::group(['middleware' => 'api.auth'], function () {

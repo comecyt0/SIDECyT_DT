@@ -16,6 +16,17 @@ class Convocatoria extends Model
 
     protected $table = 'convocatorias';
 
+    /**
+     * La landing pública cachea las convocatorias abiertas 5 min (ConvocatoriaPublicaController).
+     * Cualquier alta, cambio o baja —desde el admin, el asistente o el cierre automático— la invalida.
+     */
+    protected static function booted(): void
+    {
+        $forget = fn () => \App\Http\Controllers\Convocatorias\ConvocatoriaPublicaController::forgetCache();
+        static::saved($forget);
+        static::deleted($forget);
+    }
+
     public function tipoPrograma(): BelongsTo
     {
         return $this->belongsTo(TipoPrograma::class);
