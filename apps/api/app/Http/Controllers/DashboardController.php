@@ -404,15 +404,23 @@ class DashboardController extends Controller
         }
 
         // 2. Convocatorias por cerrar (en menos de 7 días)
+        // E40: fecha límite efectiva (con prórroga), días enteros en zona de negocio. Antes usaba
+        // `titulo` (no existe: es `nombre`) y fecha_cierre sin prórroga.
+        $hoyNegocio = Convocatoria::hoy();
         $porCerrar = Convocatoria::where('estado', 'activa')
-            ->whereBetween('fecha_cierre', [now(), now()->addDays(7)])
+            ->whereNull('deleted_at')
+            ->whereRaw('COALESCE(fecha_prorroga, fecha_cierre) BETWEEN ? AND ?', [
+                $hoyNegocio, \Illuminate\Support\Carbon::parse($hoyNegocio)->addDays(7)->toDateString(),
+            ])
             ->get();
 
         foreach ($porCerrar as $conv) {
-            $days = now()->diffInDays($conv->fecha_cierre);
+            $days = (int) \Illuminate\Support\Carbon::parse($hoyNegocio)->diffInDays(\Illuminate\Support\Carbon::parse($conv->fecha_cierre_efectiva));
             $alerts[] = [
                 'type' => 'warning',
-                'message' => "La convocatoria \"{$conv->titulo}\" cierra en {$days} días.",
+                'message' => $days === 0
+                    ? "La convocatoria \"{$conv->nombre}\" cierra hoy."
+                    : "La convocatoria \"{$conv->nombre}\" cierra en {$days} días.",
                 'color' => 'bg-blue-50',
                 'dot' => 'bg-blue-500',
             ];

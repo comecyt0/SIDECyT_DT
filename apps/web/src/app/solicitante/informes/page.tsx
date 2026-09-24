@@ -11,6 +11,7 @@ import { INSTITUTION } from '@/lib/institution';
 import PageHeader from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { parseDate } from '@/lib/format';
 
 type InformeEstado = 'pendiente' | 'entregado' | 'observado' | 'aprobado';
 
@@ -123,10 +124,10 @@ export default function SolicitanteInformesPage() {
             const cfg = estadoConfig[estado];
             const Icon = cfg.icon;
             const fechaLimite = solicitud.fecha_limite_informe
-              ? new Date(solicitud.fecha_limite_informe).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })
+              ? parseDate(solicitud.fecha_limite_informe).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })
               : null;
             const fechaEntrega = solicitud.fecha_entrega_informe
-              ? new Date(solicitud.fecha_entrega_informe).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })
+              ? parseDate(solicitud.fecha_entrega_informe).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })
               : null;
 
             return (

@@ -40,7 +40,7 @@ class ConvocatoriaCierreProximo extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject("[{$urgencia}] La convocatoria '{$this->convocatoria->nombre}' cierra {$diasText}")
             ->greeting("Hola {$notifiable->name},")
-            ->line("Te informamos que la convocatoria **{$this->convocatoria->nombre}** cierra {$diasText} ({$this->convocatoria->fecha_cierre}).")
+            ->line("Te informamos que la convocatoria **{$this->convocatoria->nombre}** cierra {$diasText} ({$this->convocatoria->fecha_cierre_efectiva}).")
             ->line('Si tienes solicitudes en borrador o pendientes de subsanación, complétalas antes de la fecha de cierre.')
             ->action('Ver convocatoria', env('NEXT_PUBLIC_APP_URL', 'http://localhost:3000') . '/solicitante/solicitudes')
             ->line("— Equipo {$institutionName}")

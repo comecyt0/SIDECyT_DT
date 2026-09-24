@@ -9,6 +9,7 @@ import StepFrame from '@/components/ui/step-frame';
 import PageHeader from '@/components/ui/page-header';
 import { FileText, Eye, Search } from 'lucide-react';
 import api from '@/lib/api';
+import { parseDate } from '@/lib/format';
 
 const INFORME_ESTADO: Record<string, { label: string; tone: string }> = {
   pendiente: { label: 'Pendiente de entrega', tone: 'amber' },
@@ -185,7 +186,7 @@ export default function InformesClient({ informes }: Props) {
                     <TableCell className="text-[var(--app-ink-2)]">{informe.solicitud?.empresa?.nombre || '—'}</TableCell>
                     <TableCell className="text-[var(--app-ink-2)]">
                       {informe.fecha_entregado
-                        ? new Date(informe.fecha_entregado).toLocaleDateString('es-MX')
+                        ? parseDate(informe.fecha_entregado).toLocaleDateString('es-MX')
                         : 'Todavía no'}
                     </TableCell>
                     <TableCell>
@@ -241,11 +242,11 @@ export default function InformesClient({ informes }: Props) {
                   </div>
                   <div className="rounded-[14px] px-4 py-3" style={{ background: 'var(--auth-field)' }}>
                     <dt className="text-[11px] font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Debía entregarse el</dt>
-                    <dd className="font-semibold text-[var(--app-ink)] mt-0.5">{new Date(selectedInforme.fecha_limite_entrega).toLocaleDateString('es-MX')}</dd>
+                    <dd className="font-semibold text-[var(--app-ink)] mt-0.5">{parseDate(selectedInforme.fecha_limite_entrega).toLocaleDateString('es-MX')}</dd>
                   </div>
                   <div className="rounded-[14px] px-4 py-3" style={{ background: 'var(--auth-field)' }}>
                     <dt className="text-[11px] font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Se entregó el</dt>
-                    <dd className="font-semibold text-[var(--app-ink)] mt-0.5">{selectedInforme.fecha_entregado ? new Date(selectedInforme.fecha_entregado).toLocaleDateString('es-MX') : 'Todavía no'}</dd>
+                    <dd className="font-semibold text-[var(--app-ink)] mt-0.5">{selectedInforme.fecha_entregado ? parseDate(selectedInforme.fecha_entregado).toLocaleDateString('es-MX') : 'Todavía no'}</dd>
                   </div>
                 </dl>
                 {selectedInforme.resultados_obtenidos && (

@@ -4,41 +4,40 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import PageHeader from '@/components/ui/page-header';
-import { Loader2, Calendar, FileText, Coins, Edit } from 'lucide-react';
+import { Loader2, Calendar, FileText, Coins, Edit, CalendarPlus } from 'lucide-react';
 import api from '@/lib/api';
 import type { Convocatoria } from '@/types/api';
-import { formatCurrency } from '@/lib/format';
-
-const ESTADO_CONVOCATORIA: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  borrador: { label: 'Borrador', variant: 'secondary' },
-  activa: { label: 'Activa', variant: 'default' },
-  cerrada: { label: 'Cerrada', variant: 'outline' },
-};
+import { formatCurrency, parseDate } from '@/lib/format';
+import { ESTADO_PUBLICO, estadoPublico, puedeProrrogar } from '@/lib/convocatoria-estado';
+import ProrrogaDialog from '@/components/admin/ProrrogaDialog';
+import BannerManager from '@/components/admin/BannerManager';
 
 const sectionTitleCls = 'text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)] flex items-center gap-2 border-b border-[var(--app-rule)] pb-2';
+const fechaLarga = (v?: string | null) => (v ? parseDate(v).toLocaleDateString('es-MX', { dateStyle: 'long' }) : '—');
+
+type ConvocatoriaConPrograma = Convocatoria & { tipo_programa?: { id: number; nombre: string; banner_url?: string | null } };
 
 export default function VerConvocatoriaPage() {
   const { id } = useParams();
   const router = useRouter();
-  const [convocatoria, setConvocatoria] = useState<Convocatoria | null>(null);
+  const [convocatoria, setConvocatoria] = useState<ConvocatoriaConPrograma | null>(null);
   const [loading, setLoading] = useState(true);
+  const [prorrogaOpen, setProrrogaOpen] = useState(false);
 
   useEffect(() => {
-    fetchConvocatoria();
+    const init = async () => {
+      try {
+        const { data } = await api.get(`/admin/convocatorias/${id}`);
+        setConvocatoria(data);
+      } catch (error) {
+        console.error('Error al obtener convocatoria:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
   }, [id]);
-
-  const fetchConvocatoria = async () => {
-    try {
-      const { data } = await api.get(`/admin/convocatorias/${id}`);
-      setConvocatoria(data);
-    } catch (error) {
-      console.error("Error al obtener convocatoria:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -58,7 +57,9 @@ export default function VerConvocatoriaPage() {
     );
   }
 
-  const estadoCfg = ESTADO_CONVOCATORIA[convocatoria.estado] ?? { label: convocatoria.estado, variant: 'outline' as const };
+  const estado = estadoPublico(convocatoria);
+  const estadoCfg = ESTADO_PUBLICO[estado];
+  const programa = convocatoria.tipo_programa ?? null;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-4xl mx-auto">
@@ -67,11 +68,18 @@ export default function VerConvocatoriaPage() {
         backLabel="Volver a convocatorias"
         eyebrow="Convocatoria"
         title={convocatoria.nombre}
-        description={`Ejercicio fiscal ${convocatoria.ejercicio_fiscal}. Aquí ves las fechas, los montos y la descripción que conocen los solicitantes.`}
+        description={`Ejercicio fiscal ${convocatoria.ejercicio_fiscal}. Aquí ves las fechas, los montos, el banner y la descripción que conocen los solicitantes.`}
         actions={
-          <Button variant="outline" onClick={() => router.push(`/admin/convocatorias/${id}/editar`)}>
-            <Edit className="h-4 w-4" /> Editar
-          </Button>
+          <>
+            {puedeProrrogar(convocatoria) && (
+              <Button variant="secondary" onClick={() => setProrrogaOpen(true)}>
+                <CalendarPlus className="h-4 w-4" /> Dar prórroga
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => router.push(`/admin/convocatorias/${id}/editar`)}>
+              <Edit className="h-4 w-4" /> Editar
+            </Button>
+          </>
         }
       />
 
@@ -81,9 +89,9 @@ export default function VerConvocatoriaPage() {
             <CardTitle>
               <FileText className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Datos generales
             </CardTitle>
-            <CardDescription>Estado actual de la convocatoria y su información pública.</CardDescription>
+            <CardDescription>{estadoCfg.ayuda}</CardDescription>
           </div>
-          <Badge variant={estadoCfg.variant}>{estadoCfg.label}</Badge>
+          <span className="pill" data-tone={estadoCfg.tone} data-dot="on">{estadoCfg.label}</span>
         </CardHeader>
         <CardContent className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -93,13 +101,24 @@ export default function VerConvocatoriaPage() {
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-[var(--app-ink-2)]">Fecha de apertura</p>
-                  <p className="font-semibold text-[var(--app-ink)]">{convocatoria.fecha_apertura ? new Date(convocatoria.fecha_apertura).toLocaleDateString('es-MX', { dateStyle: 'long' }) : '—'}</p>
+                  <p className="text-sm text-[var(--app-ink-2)]">Apertura</p>
+                  <p className="font-semibold text-[var(--app-ink)]">{fechaLarga(convocatoria.fecha_apertura)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-[var(--app-ink-2)]">Fecha de cierre</p>
-                  <p className="font-semibold text-[var(--app-ink)]">{convocatoria.fecha_cierre ? new Date(convocatoria.fecha_cierre).toLocaleDateString('es-MX', { dateStyle: 'long' }) : '—'}</p>
+                  <p className="text-sm text-[var(--app-ink-2)]">{convocatoria.fecha_prorroga ? 'Cierre original' : 'Cierre'}</p>
+                  <p className={`font-semibold ${convocatoria.fecha_prorroga ? 'text-[var(--app-ink-2)] line-through' : 'text-[var(--app-ink)]'}`}>
+                    {fechaLarga(convocatoria.fecha_cierre)}
+                  </p>
                 </div>
+                {convocatoria.fecha_prorroga && (
+                  <div className="sm:col-span-2 rounded-[16px] bg-[var(--auth-field)] p-4">
+                    <p className="text-sm text-[var(--app-ink-2)]">Prórroga: recibe solicitudes hasta</p>
+                    <p className="font-semibold text-[var(--auth-vino)]">{fechaLarga(convocatoria.fecha_prorroga)}</p>
+                    {convocatoria.motivo_prorroga && (
+                      <p className="mt-1 text-sm text-[var(--app-ink)]">Motivo: {convocatoria.motivo_prorroga}</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -134,6 +153,23 @@ export default function VerConvocatoriaPage() {
           </div>
         </CardContent>
       </Card>
+
+      <BannerManager
+        endpoint={`/admin/convocatorias/${convocatoria.id}/banner`}
+        value={convocatoria.banner_url}
+        onChange={(url) => setConvocatoria({ ...convocatoria, banner_url: url })}
+        fallbackUrl={programa?.banner_url}
+        fallbackLabel={programa ? `el banner del programa «${programa.nombre}»` : 'el del programa'}
+        title="Banner de la convocatoria"
+        description="Se muestra en la tarjeta de la convocatoria en la página pública. Si no cargas uno, se usa el del programa."
+      />
+
+      <ProrrogaDialog
+        convocatoria={convocatoria}
+        open={prorrogaOpen}
+        onClose={() => setProrrogaOpen(false)}
+        onDone={(c) => { setConvocatoria({ ...convocatoria, ...c }); setProrrogaOpen(false); }}
+      />
     </div>
   );
 }

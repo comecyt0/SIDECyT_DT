@@ -29,6 +29,7 @@ class TipoPrograma extends Model
         'porcentaje_aportacion_solicitante',
         'puntaje_minimo_aprobatorio',
         'activo',
+        // `banner_url` NO va aquí a propósito (E40): solo lo escribe BannerController (admin) con forceFill.
     ];
 
     protected $casts = [

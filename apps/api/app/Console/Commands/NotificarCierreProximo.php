@@ -25,7 +25,8 @@ class NotificarCierreProximo extends Command
     public function handle(): int
     {
         $dias = $this->option('dias') ?: [7, 3, 1];
-        $hoy = Carbon::today();
+        // E40: "hoy" en zona de negocio (la app corre en UTC).
+        $hoy = Carbon::parse(Convocatoria::hoy());
 
         $this->info("Buscando convocatorias que cierran en " . implode(', ', $dias) . " días…");
 
@@ -34,12 +35,14 @@ class NotificarCierreProximo extends Command
         foreach ($dias as $d) {
             $targetDate = $hoy->copy()->addDays((int) $d);
 
+            // E40: fecha límite efectiva (con prórroga), no solo la de cierre original.
             $convocatorias = Convocatoria::where('estado', 'activa')
-                ->whereDate('fecha_cierre', $targetDate->toDateString())
+                ->whereNull('deleted_at')
+                ->whereRaw('COALESCE(fecha_prorroga, fecha_cierre) = ?', [$targetDate->toDateString()])
                 ->get();
 
             foreach ($convocatorias as $conv) {
-                $this->line("  • {$conv->nombre} (cierre {$conv->fecha_cierre}) — {$d} día(s) antes");
+                $this->line("  • {$conv->nombre} (cierre {$conv->fecha_cierre_efectiva}) — {$d} día(s) antes");
 
                 // Notificar a todos los admins
                 $admins = User::where('rol_id', 1)->where('activo', true)->get();

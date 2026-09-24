@@ -32,10 +32,23 @@ export function currencySymbol(): string {
   }
 }
 
-/** Formato de fecha corto. `date` puede ser ISO string, Date, o null. */
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Convierte a Date. Una fecha SIN hora ('2026-10-01', como las guarda Laravel en columnas `date`) se toma
+ * como fecha LOCAL: `new Date('2026-10-01')` la lee como medianoche UTC y en México cae en el día anterior
+ * (el panel mostraba "30 sep" para un cierre del 1 de octubre — corregido 24/09/2026, E40).
+ */
+export function parseDate(date: string | Date): Date {
+  if (typeof date !== 'string') return date;
+  const m = DATE_ONLY.exec(date);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(date);
+}
+
+/** Formato de fecha corto. `date` puede ser ISO string, 'YYYY-MM-DD', Date, o null. */
 export function formatDate(date: string | Date | null | undefined): string {
   if (!date) return '—';
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = parseDate(date);
   if (Number.isNaN(d.getTime())) return '—';
   return d.toLocaleDateString(LOCALE, { day: '2-digit', month: 'short', year: 'numeric' });
 }
@@ -43,7 +56,7 @@ export function formatDate(date: string | Date | null | undefined): string {
 /** Formato de fecha + hora corto. */
 export function formatDateTime(date: string | Date | null | undefined): string {
   if (!date) return '—';
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = parseDate(date);
   if (Number.isNaN(d.getTime())) return '—';
   return d.toLocaleString(LOCALE, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }

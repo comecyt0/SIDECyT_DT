@@ -118,6 +118,31 @@ return [
     ],
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 🖼  BANNERS DE CONVOCATORIAS Y PROGRAMAS (E40, 24/09/2026)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    // Zona horaria de NEGOCIO para fechas de apertura/cierre/prórroga (E40). La app corre en UTC
+    // (config/app.php); sin esto, a partir de las 18:00 de Toluca el sistema ya "vive" en el día siguiente
+    // y cerraría las convocatorias 6 horas antes. No se cambia app.timezone para no mover timestamps guardados.
+    'timezone_negocio' => env('COMECYT_TIMEZONE_NEGOCIO', 'America/Mexico_City'),
+
+    'banners' => [
+        // Dominios desde los que se acepta un banner por URL. SOLO https y SOLO estos: deben coincidir con
+        // IMG_ORIGINS de apps/web/next.config.ts (CSP img-src). Nunca comodines (*.dominio), hallazgo 7 del
+        // pentest de agosto. Para cualquier otra imagen: subirla desde el panel.
+        'hosts' => [
+            'comecyt.edomex.gob.mx',
+            'images.comecyt.gob.mx',
+            'comecyt-sistemas.edomex.gob.mx',
+            'sidecyt-comecyt.edomex.gob.mx',
+        ],
+        'max_kb' => 5120,
+        'min_width' => 600,
+        'min_height' => 200,
+        'max_side' => 6000,
+    ],
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 🌐 ESTADOS Y ENUM VALORES
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

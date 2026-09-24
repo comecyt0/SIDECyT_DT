@@ -125,9 +125,11 @@ class SolicitudController extends Controller
             ], 403);
         }
 
-        // 🟢 2. Validar que la convocatoria esté activa
+        // 🟢 2. Validar que la convocatoria reciba solicitudes HOY (E40): publicada, ya abrió y no pasó su
+        // fecha límite efectiva (con prórroga). Antes solo miraba estado='activa', así que una convocatoria
+        // "próxima a abrir" habría aceptado solicitudes antes de su apertura.
         $convocatoria = Convocatoria::findOrFail($request->convocatoria_id);
-        if ($convocatoria->estado !== 'activa') {
+        if (! $convocatoria->aceptaSolicitudes()) {
             return response()->json(['message' => ConfigHelper::msg(Message::SOLICITUD_CONVOCATORIA_CERRADA)], 422);
         }
 
@@ -300,6 +302,12 @@ class SolicitudController extends Controller
 
         // Validar que todos los documentos obligatorios hayan sido subidos
         $solicitud->load(['documentos', 'convocatoria.tipoPrograma.documentos']);
+
+        // E40: un borrador solo se envía mientras la convocatoria recibe solicitudes (abierta o con prórroga).
+        // Antes no se revisaba: un borrador podía enviarse después del cierre.
+        if (! $solicitud->convocatoria || ! $solicitud->convocatoria->aceptaSolicitudes()) {
+            return response()->json(['error' => ConfigHelper::msg(Message::SOLICITUD_CONVOCATORIA_CERRADA)], 422);
+        }
 
         $tipoPrograma = $solicitud->convocatoria?->tipoPrograma;
         if ($tipoPrograma) {
@@ -556,8 +564,9 @@ class SolicitudController extends Controller
      */
     public function activeConvocatorias()
     {
+        // E40: solo las que reciben solicitudes hoy (no las "próximas a abrir" ni las vencidas).
         $convocatorias = Convocatoria::with('tipoPrograma')
-            ->where('estado', 'activa')
+            ->aceptandoSolicitudes()
             ->get();
 
         return response()->json($convocatorias);

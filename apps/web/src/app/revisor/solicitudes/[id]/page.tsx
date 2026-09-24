@@ -18,6 +18,7 @@ import { DocumentosAdjuntos } from '@/components/solicitante/DocumentosAdjuntos'
 import type { Solicitud, Observacion } from '@/types/api';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { parseDate } from '@/lib/format';
 
 interface ProgramaCampo {
   id: string;
@@ -347,7 +348,7 @@ export default function RevisorDetalleSolicitudPage() {
                  <span className="app-tile-icon shrink-0" style={{ color: 'var(--tile-sky-fg)' }}><FileText className="h-5 w-5" /></span>
                  <div className="min-w-0">
                    <p className="text-sm font-bold text-[var(--app-ink)]">Informe final entregado</p>
-                   <p className="text-xs text-[var(--app-ink-2)]">Recibido el {solicitud.fecha_entrega_informe ? new Date(solicitud.fecha_entrega_informe).toLocaleDateString('es-MX') : '—'}</p>
+                   <p className="text-xs text-[var(--app-ink-2)]">Recibido el {solicitud.fecha_entrega_informe ? parseDate(solicitud.fecha_entrega_informe).toLocaleDateString('es-MX') : '—'}</p>
                  </div>
                </div>
                {solicitud.informe_final_url && (

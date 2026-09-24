@@ -1,5 +1,5 @@
 /* Hallmark · macrostructure: Marquee Hero centrado + collage de polaroids + rejilla de etapas
- * tone: soft / institucional cercano · anchor hue: navy ink (#08304c) + arcoíris de firma
+ * tone: soft / institucional cercano · anchor hue: navy ink (#08304c) + vino no saturado (antes arcoíris, 24/09/2026)
  * theme: studied-DNA (source: https://portrait.so, design.md provisto por el usuario el 23/09/2026)
  * fonts: Satoshi (display, sustituto libre de Basier Circle) + Switzer (texto) — auto-hospedadas
  * nav: N5 floating pill · footer: Ft1 mínimo · enrichment: Tier-A CSS art (tarjetas del proceso)
@@ -14,7 +14,12 @@
   /* ── Colores (design.md de referencia) ── */
   --color-portrait-ink: #08304c;
   --color-nautical-teal: #084e72;
-  --gradient-rainbow-spectrum: linear-gradient(90deg, rgb(38, 192, 255), rgb(230, 0, 194) 20%, rgb(255, 73, 78) 40%, rgb(255, 161, 62) 60%, rgb(255, 200, 55) 80%, rgb(0, 204, 61));
+  /* 24/09/2026 — el arcoíris de la referencia se sustituye por VINO NO SATURADO (pedido del usuario):
+     degradado suave de vino a rosa viejo, con croma baja. Se usa donde antes iba el arcoíris: contorno del
+     CTA, palabra del titular, cuadro de marca. */
+  --gradient-vino: linear-gradient(120deg, oklch(40% 0.085 358), oklch(52% 0.08 4) 55%, oklch(64% 0.065 12));
+  --gradient-vino-sheen: linear-gradient(100deg, oklch(40% 0.085 358) 0%, oklch(40% 0.085 358) 35%, oklch(68% 0.06 12) 50%, oklch(40% 0.085 358) 65%, oklch(40% 0.085 358) 100%);
+  --color-vino-border: oklch(45% 0.07 358 / 0.5);
   --color-lavender-violet: #8e51ff;
   --color-charcoal-outline: #353535;
   --color-graphite-body: #2c2c2c;
@@ -142,14 +147,14 @@
 
 /* ─────────────────────────── Marca ─────────────────────────── */
 
-/* Cuadro arcoíris: la única marca "icónica" del sistema de referencia. */
+/* Cuadro de marca junto a "SIGAC": degradado vino suave (antes arcoíris de la referencia). */
 .lp-swatch {
   display: inline-block;
   width: 10px;
   height: 10px;
   flex: none;
   border-radius: 3px;
-  background: var(--gradient-rainbow-spectrum);
+  background: var(--gradient-vino);
 }
 
 .lp-brand {
@@ -203,42 +208,50 @@
 .lp-btn:disabled:active { transform: none; }
 .lp-btn svg { width: 18px; height: 18px; flex: none; }
 
-/* Contorno arcoíris de 1.5px: un solo CTA por vista. */
-.lp-btn-rainbow { background: var(--color-white-canvas); }
+/* CTA principal (antes contorno arcoíris): contorno vino suave de 1.5 px. Al pasar el cursor se rellena
+   de lavado vino desde la izquierda (clip-path, sin repintar layout), el texto toma el vino, sube 1 px y
+   aparece un halo vino tenue. Un solo CTA por vista. */
+.lp-btn-rainbow {
+  background: var(--color-white-canvas);
+  color: var(--color-vino);
+  transition: transform var(--dur-press) var(--ease-out), color var(--dur-ui) ease;
+}
 .lp-btn-rainbow::before {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 1;
   border-radius: inherit;
   padding: 1.5px;
-  background: var(--gradient-rainbow-spectrum);
+  background: var(--gradient-vino);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
 }
-/* Resplandor: solo cambia opacidad (sin repintar el borde). */
+/* Relleno de lavado vino que "barre" de izquierda a derecha. */
 .lp-btn-rainbow::after {
   content: '';
   position: absolute;
-  inset: 4px;
-  z-index: -2;
+  inset: 0;
+  z-index: -1;
   border-radius: inherit;
-  background: var(--gradient-rainbow-spectrum);
-  filter: blur(14px);
-  opacity: 0;
-  transition: opacity var(--dur-hover) var(--ease-out);
+  background: var(--color-vino-wash);
+  box-shadow: 0 10px 24px -12px oklch(36% 0.1 358 / 0.45);
+  clip-path: inset(0 100% 0 0 round 9999px);
+  transition: clip-path 420ms var(--ease-out);
   pointer-events: none;
 }
-.lp-btn-rainbow:focus-visible::after { opacity: 0.35; }
+.lp-btn-rainbow:focus-visible::after { clip-path: inset(0 0 0 0 round 9999px); }
 .lp-btn .lp-btn-arrow { transition: transform var(--dur-ui) var(--ease-out); }
 
 .lp-btn-ghost { padding-inline: 14px; }
 .lp-btn-ghost:hover { background: var(--color-vino-wash); color: var(--color-vino); }
 
 @media (hover: hover) and (pointer: fine) {
-  .lp-btn-rainbow:hover::after { opacity: 0.35; }
+  .lp-btn-rainbow:hover { transform: translateY(-1px); }
+  .lp-btn-rainbow:hover::after { clip-path: inset(0 0 0 0 round 9999px); }
+  .lp-btn-rainbow:active { transform: scale(0.97); }
   .lp-btn:hover .lp-btn-arrow { transform: translateX(3px); }
 }
 
@@ -366,13 +379,28 @@
 }
 .lp-display .lp-word { display: inline-block; white-space: pre; }
 
-/* Una sola palabra con relleno arcoíris por titular (romana, nunca cursiva). */
+/* Una sola palabra destacada por titular (romana, nunca cursiva): antes arcoíris, ahora vino suave.
+   Al terminar la entrada del hero la cruza UN destello de luz (una vez, no en bucle). */
 .lp-rainbow-text {
   padding: 0 0.04em 0.08em;
-  background: var(--gradient-rainbow-spectrum);
+  background: var(--gradient-vino-sheen);
+  background-size: 250% 100%;
+  background-position: 100% 0;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+/* `.lp-in.lp-rainbow-text`: más específico que la regla genérica de entrada (.lp-in), que va después. */
+.lp-root[data-ready='true'] .lp-in.lp-rainbow-text {
+  animation: lp-rise var(--dur-enter) var(--ease-out) both, lp-sheen 1600ms var(--ease-in-out) both;
+  animation-delay: calc(var(--i, 0) * 55ms), 1300ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-root[data-ready='true'] .lp-in.lp-rainbow-text { animation: lp-fade 150ms linear both; background-position: 0 0; }
+}
+@keyframes lp-sheen {
+  from { background-position: 100% 0; }
+  to { background-position: 0% 0; }
 }
 
 .lp-lead {
@@ -771,15 +799,15 @@
 
 /* Convocatorias abiertas (datos en vivo) */
 .lp-calls-section { padding-top: var(--spacing-48); }
+/* Columnas de ancho máximo fijo y centradas: con 1 o 2 convocatorias no quedan cargadas a la izquierda. */
 .lp-calls { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--spacing-20); }
-@media (min-width: 720px) { .lp-calls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (min-width: 1080px) { .lp-calls { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 720px) {
+  .lp-calls { grid-template-columns: repeat(auto-fit, minmax(300px, 368px)); justify-content: center; }
+}
 .lp-call {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-8);
-  padding: var(--spacing-24) var(--spacing-20) var(--spacing-16);
   border-radius: var(--radius-cards);
   background: var(--color-white-canvas);
   box-shadow: var(--shadow-subtle-2);
@@ -797,20 +825,106 @@
 @media (hover: hover) and (pointer: fine) {
   .lp-call:hover { transform: translateY(-4px); box-shadow: var(--shadow-subtle-3); }
 }
+/* Banner de la convocatoria (o de su programa): 3:1, recortado, con zoom lento al pasar el cursor. */
+.lp-call-banner {
+  aspect-ratio: 3 / 1;
+  overflow: hidden;
+  background: var(--color-vino-wash);
+}
+.lp-call-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 700ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lp-call:hover .lp-call-banner img { transform: scale(1.04); }
+}
+.lp-call-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-8);
+  padding: var(--spacing-24) var(--spacing-20) var(--spacing-16);
+}
+.lp-call[data-estado='cerrada'] { box-shadow: var(--shadow-subtle-5); }
+.lp-call[data-estado='cerrada']::before { background: var(--color-ash-divider); }
+.lp-call[data-estado='cerrada'] .lp-call-banner img { filter: grayscale(0.6); opacity: 0.85; }
 .lp-call-top { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-8); }
-.lp-call-live {
+
+/* Estado de la convocatoria: píldora por tono (abierta, con prórroga, próxima, cerrada). */
+.lp-call-status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 3px 10px;
   border-radius: var(--radius-tags);
-  background: var(--color-mint-wash);
-  color: var(--color-mint-ink);
   font-size: 12px;
   font-weight: 600;
 }
-.lp-call-live span { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.lp-root[data-ready='true'] .lp-call-live span { animation: lp-pulse 2.4s var(--ease-in-out) infinite; }
+.lp-call-status span { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.lp-call-status[data-tone='abierta'] { background: var(--color-mint-wash); color: var(--color-mint-ink); }
+.lp-call-status[data-tone='prorroga'] { background: var(--color-peach-wash); color: var(--color-peach-ink); }
+.lp-call-status[data-tone='proxima'] { background: var(--color-sky-wash); color: var(--color-sky-ink); }
+.lp-call-status[data-tone='cerrada'] { background: var(--color-mist-hairline); color: var(--color-iron-quiet); }
+.lp-root[data-ready='true'] .lp-call-status:is([data-tone='abierta'], [data-tone='prorroga']) span {
+  animation: lp-pulse 2.4s var(--ease-in-out) infinite;
+}
+.lp-call-original { display: block; margin-top: 2px; color: var(--color-iron-quiet); font-weight: 400; font-size: 12px; }
+
+/* Pestañas de estado: píldora segmentada; la activa en blanco con filo vino inferior. */
+.lp-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-4);
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto var(--spacing-32);
+  padding: 5px;
+  border-radius: var(--radius-tags);
+  background: var(--color-mist-hairline);
+}
+.lp-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-tags);
+  background: transparent;
+  color: var(--color-iron-quiet);
+  font: 600 var(--text-sm)/1 var(--font-switzer);
+  cursor: pointer;
+  transition: background-color var(--dur-ui) ease, color var(--dur-ui) ease, transform var(--dur-press) var(--ease-out);
+}
+.lp-tab:active { transform: scale(0.97); }
+.lp-tab:hover { color: var(--color-portrait-ink); }
+.lp-tab[aria-selected='true'] {
+  background: var(--color-white-canvas);
+  color: var(--color-vino);
+  box-shadow: var(--shadow-subtle-2);
+}
+.lp-tab-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-tags);
+  background: var(--color-white-canvas);
+  color: var(--color-iron-quiet);
+  font-size: 12px;
+}
+.lp-tab[aria-selected='true'] .lp-tab-count { background: var(--color-vino-wash); color: var(--color-vino); }
+/* Teléfono: las tres pestañas en una sola fila ("Próximas" sin "a abrir"). */
+@media (max-width: 480px) {
+  .lp-tabs { flex-wrap: nowrap; gap: 2px; }
+  .lp-tab { gap: 6px; padding: 0 12px; font-size: 13px; }
+  .lp-tab-extra { display: none; }
+}
 @keyframes lp-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 .lp-call-left { color: var(--color-iron-quiet); font-size: 13px; font-weight: 500; }
 .lp-call-left[data-soon] {
@@ -1093,7 +1207,8 @@
   .lp-reveal[data-inview='true'] .lp-reveal-item { animation: lp-fade 150ms linear backwards; }
   .lp-root[data-ready='true'] .lp-signature path { animation: none; stroke-dashoffset: 0; }
   .lp-polaroid, .lp-step, .lp-program, .lp-call, .lp-btn, .lp-announce { transition: none; }
-  .lp-root[data-ready='true'] .lp-call-live span,
+  .lp-root[data-ready='true'] .lp-call-status span,
   .lp-root[data-ready='true'] .lp-call-skeleton { animation: none; }
+  .lp-call-banner img, .lp-tab, .lp-btn-rainbow, .lp-btn-rainbow::after { transition: none; }
   .lp-spin { animation-duration: 1400ms; }
 }

@@ -35,6 +35,8 @@ export interface TipoPrograma {
   clave: string;
   nombre: string;
   descripcion?: string;
+  /** E40: banner del programa (respaldo de las convocatorias que no tienen el suyo). */
+  banner_url?: string | null;
   tipo_apoyo: 'reembolso' | 'concurrente' | 'honorarios';
   tiene_etapas: boolean;
   tiene_equipo: boolean;
@@ -58,7 +60,17 @@ export interface Convocatoria {
   monto_maximo_apoyo?: number;
   porcentaje_aportacion_minima?: number;
   created_at?: string;
+  // E40 (24/09/2026) — prórroga, banner y estado público derivado (lo calcula el backend)
+  fecha_prorroga?: string | null;
+  motivo_prorroga?: string | null;
+  prorroga_at?: string | null;
+  fecha_cierre_efectiva?: string | null;
+  estado_publico?: EstadoPublicoConvocatoria;
+  banner_url?: string | null;
 }
+
+/** Estado que ve el público: se deriva de `estado` + fechas (App\Models\Convocatoria). */
+export type EstadoPublicoConvocatoria = 'borrador' | 'proxima' | 'abierta' | 'prorroga' | 'cerrada';
 
 export interface Observacion {
   id: number;

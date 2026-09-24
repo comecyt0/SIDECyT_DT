@@ -127,6 +127,31 @@ cancelada (desde: borrador | enviada | observada | en_evaluacion)
 - `evaluando`: evaluador abrió la rúbrica (cambia via `PUT /evaluador/asignaciones/{id}/iniciar-evaluacion`)
 - `concluido`: dictamen emitido
 
+### Estado público de una Convocatoria (E40, desde 24/09/2026)
+
+`estado` (columna) solo tiene `borrador | activa | cerrada`; lo que ve el público se **deriva** con las fechas
+en `Convocatoria::getEstadoPublicoAttribute()` (se serializa como `estado_publico`):
+
+```
+borrador            → no se publica
+activa + hoy < apertura                → proxima   ("Próxima a abrir")
+activa + apertura ≤ hoy ≤ límite       → abierta   (o prorroga si tiene fecha_prorroga)
+cerrada, o activa + hoy > límite       → cerrada
+límite = COALESCE(fecha_prorroga, fecha_cierre)   ← `fecha_cierre_efectiva`
+```
+
+- **"Hoy" es la fecha de negocio en America/Mexico_City** (`Convocatoria::hoy()`, config
+  `comecyt.timezone_negocio`). La app corre en UTC: no usar `today()`/`now()` para reglas de convocatoria.
+- **Quién acepta solicitudes:** `aceptaSolicitudes()` / scope `aceptandoSolicitudes()` — usarlos en todo lo que
+  crea, envía o lista convocatorias para solicitantes. Nunca `estado === 'activa'` a secas.
+- **Prórroga:** solo por `POST /admin/convocatorias/{id}/prorroga` (amplía, nunca recorta; motivo obligatorio;
+  reabre si estaba cerrada; queda en bitácora). `fecha_cierre` conserva la original.
+- **Banner:** `banner_url` en convocatorias y en `tipo_programas`, solo por `BannerController` (admin). La
+  landing usa el de la convocatoria o, si no tiene, el de su programa.
+- Prórroga y banner están en `$guarded` (Convocatoria) / fuera de `$fillable` (TipoPrograma): el PUT genérico no
+  puede escribirlos.
+- `deleted_at` existe pero el modelo **no** usa `SoftDeletes`: filtrar `whereNull('deleted_at')` explícito.
+
 ### Convocatoria → TipoPrograma (1:1 único)
 
 Cada convocatoria tiene su propio `TipoPrograma` exclusivo. Los campos dinámicos, documentos, rubros y criterios de evaluación se configuran por convocatoria vía el Wizard de 7 pasos en `/admin/convocatorias/nueva`. Las convocatorias **deben** tener `tipo_programa_id` para que aparezcan al solicitante.
@@ -369,6 +394,8 @@ completo y el barrido vista por vista en `docs/DISENO_UI.md` §10.
 **El menú/nav del panel NO se toca (E26).** `logo.png` es el favicon del sistema completo.
 **23/09/2026 — Landing pública `/sigac`** con sistema visual propio y aislado (ADN de portrait.so, tokens en
 `.lp-root`, fuentes locales Switzer + Satoshi): `docs/LANDING_SIGAC.md` y E36.
+**24/09/2026 — sin arcoíris:** el acento de firma (CTA principal, palabra destacada, cuadro de marca) es
+**vino no saturado** con relleno animado al pasar el cursor, en landing y paneles (E40).
 **23/09/2026 — ESE MISMO SISTEMA EN TODOS LOS PANELES (dirección vigente, E39):** tinta navy principal,
 lienzo blanco, pastel, vino solo de detalle, píldoras, Switzer/Satoshi. Capa única
 `src/styles/panel-sigac.css` acotada a `:is(.panel-root, html.sg-panel)`; **el login no cambia**. Sustituye
@@ -499,7 +526,8 @@ GET /catalogs/programa/{id}/rubros
 GET /catalogs/programa/{id}/etapas
 GET /catalogs/programa/{id}/modalidades
 GET /carousel/slides            → slides activos para login page
-GET /convocatorias/abiertas     → convocatorias vigentes para la landing /sigac (throttle 30/min, lista blanca, E37)
+GET /convocatorias/publicas     → convocatorias agrupadas {abiertas, proximas, cerradas} para la landing (throttle 30/min, lista blanca, E37/E40)
+GET /convocatorias/abiertas     → alias de /publicas (compatibilidad)
 ```
 
 ### Solicitante
@@ -1340,3 +1368,47 @@ Detalle completo en `docs/DISENO_UI.md` §12. Lo que un desarrollador debe saber
   script de servidor (guardados en archivo, nunca impresos) e **invalidados al terminar**
   (`->invalidate(true)`). El archivo `F:\COMECYT_CREDENCIALES.txt` está desactualizado (contraseñas del 30/06,
   rotadas el 14/09) — no usarlo.
+
+### E40 — Estados públicos, prórroga y banners de convocatorias y programas [publicado 24-09-2026]
+Pedido del usuario: cerrar las convocatorias de prueba; que al darse de alta tengan estado para la landing
+(próxima a abrir, abierta, cerrada, con prórroga); configurar la prórroga; banner o imagen por enlace o archivo
+local, para convocatorias **y programas**, **solo admin**. Reglas de negocio: sección "Estado público de una
+Convocatoria" arriba. Documentación de la landing: `docs/LANDING_SIGAC.md` §10.
+- **Datos:** las 5 convocatorias de carga inicial se **cerraron** y luego se **archivaron** (`deleted_at`) para
+  que la landing no las publique en "Cerradas" con nombres erróneos. Reversible (`deleted_at = NULL`). Ambas
+  acciones en la bitácora (`convocatoria.cerrada_datos_prueba`, `convocatoria.archivada_datos_prueba`).
+- **Migración** `2026_09_24_000001_…`: `convocatorias.fecha_prorroga, motivo_prorroga, prorroga_at,
+  prorroga_por (FK users), banner_url`; `tipo_programas.banner_url`. Respaldo previo con `backup.ps1`.
+- **Endpoints (grupo admin, throttle 20/min):** `POST /admin/convocatorias/{c}/prorroga`,
+  `POST|DELETE /admin/convocatorias/{c}/banner`, `POST|DELETE /admin/programas/{p}/banner`.
+- **Banner — seguridad:** archivo JPG/PNG/WebP ≤ 5 MB con **MIME real** (finfo), dimensiones reales 600×200 a
+  6000 px por lado (evita bombas de descompresión), nombre aleatorio de 32 caracteres, SVG prohibido; **o**
+  enlace solo `https` de `config('comecyt.banners.hosts')` (= CSP img-src, sin comodines, sin usuario/puerto).
+  El servidor **no descarga** URLs (sin SSRF). Al reemplazar/quitar borra el archivo anterior solo si es suyo.
+  Toda acción queda en la bitácora. La landing vuelve a filtrar el banner en backend (`safeBanner`) y front
+  (`bannerSeguro`).
+- **Bugs encontrados y corregidos al hacerlo:**
+  1. `convocatorias:close-expired` comparaba la fecha con `now()` con hora → cerraba **el mismo día** del
+     cierre; ignoraba la prórroga; registraba `titulo` (no existe). Ahora `COALESCE(prorroga, cierre) < hoy`.
+  2. La app corre en **UTC**: desde las 18:00 de Toluca todo "vivía" en el día siguiente. Fecha de negocio
+     explícita para convocatorias.
+  3. `SolicitudController::enviar()` **no revisaba** si la convocatoria seguía abierta (se podía enviar tras el
+     cierre). `store()` solo miraba `estado='activa'` (habría aceptado solicitudes en "próxima a abrir").
+     `activeConvocatorias()` listaba próximas y vencidas. Los tres usan ahora `aceptaSolicitudes()`.
+  4. **Front, todo el sistema:** `new Date('2026-10-01')` se lee como medianoche UTC y en México muestra el día
+     anterior ("30 sep" para un cierre del 1 de octubre). `lib/format.ts` tiene `parseDate()`, que lee
+     'AAAA-MM-DD' como fecha local; `formatDate()` lo usa y se corrigieron 15 usos en 8 vistas.
+  5. `DashboardController` (alertas "por cerrar") y `NotificarCierreProximo` ignoraban la prórroga y usaban UTC;
+     el dashboard además usaba `titulo`.
+- **Landing:** sección "Convocatorias" con pestañas Abiertas / Próximas a abrir / Cerradas (conteo en cada
+  una), banner 3:1 por tarjeta, píldora de estado, "Prórroga hasta" con la fecha original tachada, CTA según
+  estado. **El arcoíris se sustituyó por vino no saturado** en landing y paneles (pedido del usuario): contorno
+  del CTA con relleno de lavado vino que barre al pasar el cursor, palabra del titular con un destello único.
+- **Verificación:** prueba de punta a punta en producción con datos desechables — **50/50** (estados, prórroga,
+  banners, 401/403/422, SVG con script, PNG falso, imagen diminuta, dominio no autorizado/parecido, http,
+  `usuario@`, archivo+enlace, PUT genérico que intenta escribir prórroga/banner, 429 del throttle). Front
+  103/103 pruebas; capturas de landing (3 pestañas, móvil 375 px) y admin (lista, ficha, diálogo, programa) sin
+  errores de consola ni scroll horizontal. Todo el dato temporal se borró; tokens invalidados.
+- **Nota de throttle:** el contador de `throttle:X,1` de Laravel es por usuario (o IP) y se **comparte entre
+  rutas**; 20 acciones de banner/prórroga por minuto por admin sobran para uso humano, pero una prueba
+  automatizada debe espaciar las peticiones.

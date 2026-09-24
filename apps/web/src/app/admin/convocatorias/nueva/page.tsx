@@ -523,7 +523,7 @@ export default function ConvocatoriasNuevaPage() {
       }
 
       setSaveProgress('Creando convocatoria...');
-      await api.post('/admin/convocatorias', {
+      const { data: creada } = await api.post('/admin/convocatorias', {
         nombre: state.convocatoria.nombre,
         ejercicio_fiscal: state.convocatoria.ejercicio_fiscal,
         estado: 'activa',
@@ -535,9 +535,12 @@ export default function ConvocatoriasNuevaPage() {
         tipo_programa_id: programaId,
       });
 
-      setSaveProgress('¡Convocatoria creada exitosamente!');
+      setSaveProgress('¡Convocatoria creada! Abriendo su ficha para que cargues el banner…');
+      // E40: se publica como 'activa'; su estado público (próxima/abierta/cerrada) sale de las fechas.
+      // Se abre la ficha para cargar el banner ahí mismo.
+      const nuevaId = creada?.convocatoria?.id;
       setTimeout(() => {
-        router.push('/admin/convocatorias');
+        router.push(nuevaId ? `/admin/convocatorias/${nuevaId}` : '/admin/convocatorias');
       }, 1500);
     } catch (error: any) {
       console.error('Error:', error);

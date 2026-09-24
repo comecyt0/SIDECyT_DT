@@ -531,9 +531,18 @@ contorno arcoíris anulado por el `::before` de `.btn-liquid`; ícono blanco sob
 chip que se fundía con la tarjeta pastel; campos invisibles (relleno blanco sobre lienzo blanco); desborde de
 14 px en móvil por el logo; escala `neutral` invertida en oscuro (texto oscuro sobre oscuro).
 
+### 24/09/2026 — sin arcoíris
+
+A pedido del usuario, el arcoíris de firma se sustituyó por **vino no saturado** en landing y paneles:
+`--gradient-vino` (landing) y `--sg-rainbow` (paneles; se conservó el nombre de la variable) =
+`linear-gradient(120deg, oklch(40% .085 358), oklch(52% .08 4) 55%, oklch(64% .065 12))`. El CTA
+(`variant="rainbow"` / `.lp-btn-rainbow`) tiene contorno vino de 1.5 px y al pasar el cursor se rellena de lavado
+vino con `clip-path` (sin tocar el layout) y sube 1 px. Nuevos componentes de admin con este lenguaje:
+`BannerManager` (vista previa 3:1, pestañas archivo/enlace, quitar con confirmación) y `ProrrogaDialog`.
+
 ### Reglas para lo que venga
 
 - Nuevo color o componente del panel → token o regla en `panel-sigac.css`, acotado con
   `:is(.panel-root, html.sg-panel)`. **Nunca** en `:root` ni en `globals.css` (alcanzaría al login).
-- Un solo `variant="rainbow"` por vista.
+- Un solo `variant="rainbow"` por vista (hoy es vino; el nombre de la variante se mantiene).
 - Vino solo en detalles; si una vista pide un bloque grande de color, usar navy o un lavado pastel.

@@ -123,23 +123,46 @@ sus efectos, animación e interfaz. Se tomó su **ADN**, no sus píxeles ni su c
 10. **Pie:** logo grande, aviso de privacidad, términos, enlace a Apoyo Empresarial del sitio oficial,
     dirección, teléfonos, `proyectos.comecyt@edomex.gob.mx` y `copyrightLine()`.
 
-## 10. Convocatorias abiertas en vivo
+## 10. Convocatorias en vivo, por estado (E37 → E40, 24/09/2026)
 
-- **Fuente:** `GET /api/convocatorias/abiertas` (`ConvocatoriaPublicaController`, detalle en `CLAUDE.md` E37).
-  Es la misma base de datos que usa el sistema: cuando el admin abre, cierra o edita una convocatoria en
-  `/admin/convocatorias` (o el cierre automático la cierra), la landing lo refleja al instante (la caché se
-  invalida en los eventos del modelo).
-- **Qué cuenta como abierta:** `estado = 'activa'`, fechas vigentes hoy, con programa activo, no borrada.
-- **Qué se muestra:** programa, nombre, descripción corta, "Abre"/"Cierra" y "Quedan N días" (en vino si
-  faltan 7 o menos). Botón "Postular en SIGAC" → `/login`. Sin montos ni IDs.
-- **Estados:** esqueleto mientras carga; "Por ahora no hay convocatorias abiertas" si la lista viene vacía;
-  "No pudimos cargar las convocatorias" si la API falla. La página nunca se rompe por la API.
-- **Seguridad:** `fetch` relativo (CSP `connect-src 'self'`), sin cookies (`credentials: 'omit'`), cada
-  registro se valida en `parseCalls()` y se pinta como texto. Pruebas con `<script>`/`<img onerror>` en los
-  datos: salen como texto.
-- **Atención:** al 23/09/2026 las 5 convocatorias `activa` de producción parecen datos de carga inicial (ver
-  E37). La landing las anuncia porque la base de datos dice que están abiertas; si no son reales, cerrarlas
-  o corregirlas en el panel.
+- **Fuente:** `GET /api/convocatorias/publicas` (alias `/abiertas`), `ConvocatoriaPublicaController`. Es la misma
+  base de datos del sistema: cuando el admin publica, edita, da prórroga, cambia el banner o el cierre
+  automático cierra una convocatoria, la landing lo refleja al instante (caché invalidada por eventos).
+- **Estados** (los calcula el backend con las fechas en hora de Toluca — ver `CLAUDE.md`, "Estado público"):
+  | Estado | Cuándo | Cómo se ve |
+  |---|---|---|
+  | Próxima a abrir | publicada y aún no llega su apertura | píldora cielo, "Abre en N días", botón "Prepárate: solicita acceso" |
+  | Abierta | entre apertura y cierre | píldora menta con punto que late, "Quedan N días" (vino si ≤ 7), "Postular en SIGAC" |
+  | Con prórroga | abierta con plazo ampliado | píldora durazno, "Prórroga hasta X" y la fecha original tachada |
+  | Cerrada | cerrada a mano o pasó su fecha límite (últimos 180 días) | píldora gris, banner desaturado, sin botón |
+- **Pestañas:** Abiertas / Próximas a abrir / Cerradas con su conteo; abre en la primera que tenga
+  convocatorias. Flechas ←/→ para moverse entre pestañas (`role="tablist"`). En teléfono la etiqueta se acorta a
+  "Próximas" y el nombre accesible completo va en `aria-label`.
+- **Banner:** el de la convocatoria o, si no tiene, el de su programa. 3:1, con zoom lento al pasar el cursor.
+  Solo se pinta si es una ruta propia `/storage/banners/…` o `https` de un dominio autorizado (doble filtro:
+  `safeBanner` en el backend y `bannerSeguro` en el front); cualquier otro valor → sin imagen.
+- **Píldora del menú:** "N convocatorias abiertas"; si no hay abiertas pero sí próximas, "N convocatorias por
+  abrir"; si no hay ninguna, "Conoce los programas de apoyo empresarial".
+- **Estados de la sección:** esqueleto mientras carga; "Por ahora no hay convocatorias publicadas" si no hay
+  nada; "No pudimos cargar las convocatorias" si la API falla.
+- **Seguridad:** `fetch` relativo (CSP `connect-src 'self'`), sin cookies, cada registro validado en
+  `parseGrupo()` (tipos, fechas, estado dentro de la lista permitida) y pintado como texto.
+- **Datos de prueba:** las 5 convocatorias de carga inicial se cerraron y archivaron el 24/09/2026 (E40); hoy la
+  landing no muestra ninguna hasta que el admin publique una real.
+
+### Cómo publica el admin
+
+1. **Alta** en `/admin/convocatorias/nueva` (asistente): se publica sola con sus fechas; al terminar abre la
+   ficha. Si la apertura es futura, la landing la muestra como "Próxima a abrir".
+2. **Banner** en la ficha de la convocatoria (y/o en la ficha del programa): subir JPG/PNG/WebP (≤ 5 MB, mínimo
+   600×200, recomendado 1600×540) o pegar un enlace `https` de un dominio institucional autorizado.
+3. **Prórroga** con "Dar prórroga" (lista o ficha): nueva fecha posterior a la vigente + motivo.
+4. **Cerrar antes de tiempo:** editar y elegir "Cerrada".
+
+**Acento de firma:** desde el 24/09/2026 el arcoíris de la referencia se sustituyó por **vino no saturado**
+(`--gradient-vino`): contorno del CTA con relleno de lavado vino que barre de izquierda a derecha al pasar el
+cursor, cuadro de marca y la palabra "convenio" del titular, que recibe un destello de luz una sola vez al
+terminar la entrada.
 
 **Contenido honesto:** no hay cifras, testimonios ni logotipos inventados. Nombres, correo y textos
 institucionales salen de `lib/institution.ts` (variables `NEXT_PUBLIC_INSTITUTION_*`).

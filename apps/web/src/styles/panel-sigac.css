@@ -44,7 +44,9 @@ html.sg-panel body {
   --sg-danger-wash: #fdecea;
   --sg-vino: oklch(36% 0.1 358);
   --sg-vino-wash: oklch(96.5% 0.014 358);
-  --sg-rainbow: linear-gradient(90deg, rgb(38, 192, 255), rgb(230, 0, 194) 20%, rgb(255, 73, 78) 40%, rgb(255, 161, 62) 60%, rgb(255, 200, 55) 80%, rgb(0, 204, 61));
+  /* Antes el arcoíris de la referencia; desde el 24/09/2026 vino no saturado (mismo que la landing).
+     Se conserva el nombre de la variable para no tocar cada regla que la usa. */
+  --sg-rainbow: linear-gradient(120deg, oklch(40% 0.085 358), oklch(52% 0.08 4) 55%, oklch(64% 0.065 12));
   --sg-shadow-md: rgba(0, 0, 0, 0.03) 0px 16px 16px -8px, rgba(0, 0, 0, 0.03) 0px 10px 10px -5px, rgba(0, 0, 0, 0.03) 0px 5px 5px -2.5px, rgba(0, 0, 0, 0.03) 0px 3px 3px -1.5px, rgba(0, 0, 0, 0.03) 0px 2px 2px -1px, rgba(0, 0, 0, 0.03) 0px 1px 1px -0.5px;
   --sg-shadow-card: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, var(--sg-shadow-md);
   --sg-shadow-lift: rgba(0, 0, 0, 0.06) 0px 0px 0px 1px, rgba(0, 0, 0, 0.07) 0px 20px 20px -10px, rgba(0, 0, 0, 0.04) 0px 10px 10px -5px, rgba(0, 0, 0, 0.03) 0px 5px 5px -2.5px, rgba(0, 0, 0, 0.03) 0px 3px 3px -1.5px;
@@ -430,13 +432,18 @@ html.dark.sg-panel body {
 }
 :is(.panel-root, html.sg-panel) [data-slot="button"][data-variant="destructive"]:hover:not(:disabled) { filter: brightness(0.97); }
 
-/* CTA principal de una vista: contorno arcoíris de 1.5 px (uno por vista, como la landing). */
+/* CTA principal de una vista (uno por vista, como la landing). 24/09/2026: el contorno arcoíris pasó a
+   VINO NO SATURADO; al pasar el cursor se rellena de lavado vino de izquierda a derecha y sube 1 px. */
 :is(.panel-root, html.sg-panel) .btn-rainbow {
   position: relative;
   isolation: isolate;
-  overflow: visible;
+  overflow: hidden;
   border: 0;
-  color: var(--sg-ink);
+  color: var(--sg-vino);
+  transition: transform 140ms var(--sg-ease-out), color 220ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(.panel-root, html.sg-panel) .btn-rainbow:hover:not(:disabled) { transform: translateY(-1px); }
 }
 /* El botón base trae `.btn-liquid`, cuyo ::before arranca en scale(0)/opacidad 0: aquí se neutraliza
    para que el contorno arcoíris se vea siempre (y no crezca al hover). */
@@ -451,7 +458,7 @@ html.dark.sg-panel body {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 1;
   border-radius: inherit;
   padding: 1.5px;
   background: var(--sg-rainbow);
@@ -460,22 +467,22 @@ html.dark.sg-panel body {
   mask-composite: exclude;
   pointer-events: none;
 }
+/* Relleno de lavado vino que barre de izquierda a derecha (clip-path: no toca el layout). */
 :is(.panel-root, html.sg-panel) .btn-rainbow::after {
   content: '';
   position: absolute;
-  inset: 4px;
-  z-index: -2;
+  inset: 0;
+  z-index: -1;
   border-radius: inherit;
-  background: var(--sg-rainbow);
-  filter: blur(14px);
-  opacity: 0;
-  transition: opacity 320ms var(--sg-ease-out);
+  background: var(--sg-vino-wash);
+  clip-path: inset(0 100% 0 0 round 9999px);
+  transition: clip-path 420ms var(--sg-ease-out);
   pointer-events: none;
 }
 @media (hover: hover) and (pointer: fine) {
-  :is(.panel-root, html.sg-panel) .btn-rainbow:hover::after { opacity: 0.35; }
+  :is(.panel-root, html.sg-panel) .btn-rainbow:hover::after { clip-path: inset(0 0 0 0 round 9999px); }
 }
-:is(.panel-root, html.sg-panel) .btn-rainbow:focus-visible::after { opacity: 0.35; }
+:is(.panel-root, html.sg-panel) .btn-rainbow:focus-visible::after { clip-path: inset(0 0 0 0 round 9999px); }
 
 /* El canto "sticker" del 21/09 queda fuera del sistema unificado. */
 :is(.panel-root, html.sg-panel) .btn-sticker { box-shadow: none; }

@@ -173,9 +173,14 @@ export default function EditarConvocatoriaPage() {
                   <Label htmlFor="estado" className={labelCls}>Estado</Label>
                   <select id="estado" value={formData.estado} onChange={(e) => setFormData({ ...formData, estado: e.target.value })} className={inputCls}>
                     <option value="borrador">Borrador (nadie la ve todavía)</option>
-                    <option value="activa">Abierta (recibe solicitudes)</option>
-                    <option value="cerrada">Cerrada (ya no recibe)</option>
+                    <option value="activa">Publicada (se abre y se cierra sola según sus fechas)</option>
+                    <option value="cerrada">Cerrada (ya no recibe, aunque falten días)</option>
                   </select>
+                  <p className="text-xs text-[var(--app-ink-2)]">
+                    Publicada se muestra en la página pública como <strong>Próxima a abrir</strong>, <strong>Abierta</strong>{' '}
+                    o <strong>Cerrada</strong> según las fechas. Para ampliar el plazo usa «Dar prórroga» en la ficha;
+                    el banner también se carga desde la ficha.
+                  </p>
                 </div>
               </>
             ),

@@ -35,6 +35,7 @@ import PageHeader from '@/components/ui/page-header';
 import type { Solicitud } from '@/types/api';
 import { INSTITUTION } from '@/lib/institution';
 import { estadoBadgeClass, estadoLabel } from '@/lib/solicitud-estados';
+import { parseDate } from '@/lib/format';
 
 const estadoIcon: Record<string, React.ElementType> = {
   borrador: FileText,
@@ -287,7 +288,7 @@ export default function DetalleSolicitudPage() {
 
     // Validar que no haya pasado la fecha límite
     if (solicitud.fecha_limite_informe) {
-      const fechaLimite = new Date(solicitud.fecha_limite_informe);
+      const fechaLimite = parseDate(solicitud.fecha_limite_informe);
       if (new Date() > fechaLimite) {
         setInformeError('La fecha límite para entregar el informe ya pasó.');
         return;
@@ -815,7 +816,7 @@ export default function DetalleSolicitudPage() {
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--app-ink-2)]">Fecha límite de entrega</p>
                 <p className="text-sm font-bold text-[var(--app-ink)] mt-0.5">
-                  {solicitud.fecha_limite_informe ? new Date(solicitud.fecha_limite_informe).toLocaleDateString('es-MX', {
+                  {solicitud.fecha_limite_informe ? parseDate(solicitud.fecha_limite_informe).toLocaleDateString('es-MX', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
@@ -826,7 +827,7 @@ export default function DetalleSolicitudPage() {
                 <div className="sm:ml-auto">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--app-ink-2)]">Entregado</p>
                   <p className="text-sm font-bold mt-0.5" style={{ color: 'var(--tile-emerald-fg)' }}>
-                    {new Date(solicitud.fecha_entrega_informe).toLocaleDateString('es-MX')}
+                    {parseDate(solicitud.fecha_entrega_informe).toLocaleDateString('es-MX')}
                   </p>
                 </div>
               )}

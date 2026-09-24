@@ -16,6 +16,7 @@ import type { ListaNegra, Empresa } from '@/types/api';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataCardGrid } from '@/components/ui/DataCardGrid';
+import { parseDate } from '@/lib/format';
 
 const emptyForm = {
   empresa_id: '',
@@ -135,11 +136,11 @@ export default function ListaNegraClient({ sanciones, empresas }: Props) {
                 <div className="grid grid-cols-2 gap-3 text-xs mb-3">
                   <div>
                     <span className="text-[10px] uppercase tracking-wider text-[var(--app-ink-2)] block">Desde</span>
-                    <span className="text-[var(--app-ink)]">{s.fecha_inicio_sancion ? new Date(s.fecha_inicio_sancion).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
+                    <span className="text-[var(--app-ink)]">{s.fecha_inicio_sancion ? parseDate(s.fecha_inicio_sancion).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
                   </div>
                   <div>
                     <span className="text-[10px] uppercase tracking-wider text-[var(--app-ink-2)] block">Hasta</span>
-                    <span className="text-[var(--app-ink)]">{s.fecha_fin_sancion ? new Date(s.fecha_fin_sancion).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Sin fecha final'}</span>
+                    <span className="text-[var(--app-ink)]">{s.fecha_fin_sancion ? parseDate(s.fecha_fin_sancion).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Sin fecha final'}</span>
                   </div>
                 </div>
                 {s.activa && (

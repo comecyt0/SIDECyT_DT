@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import PageHeader from '@/components/ui/page-header';
 import SavedFiltersBar from '@/components/filters/SavedFiltersBar';
+import { parseDate } from '@/lib/format';
 
 const container = {
   hidden: { opacity: 0 },
@@ -195,7 +196,7 @@ export default function AsignacionesPage() {
                       {asig.fecha_limite && (
                         <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--auth-danger)' }}>
                           <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                          Vence el {new Date(asig.fecha_limite).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          Vence el {parseDate(asig.fecha_limite).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </div>
                       )}
                       {asig.solicitud?.modalidad && (

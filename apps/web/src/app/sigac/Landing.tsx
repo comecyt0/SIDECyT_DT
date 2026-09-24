@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, useInView, useMotionValue, useReducedMotion, useSpring, useTransform, type MotionValue } from 'framer-motion';
@@ -153,45 +153,85 @@ const DOCUMENTS: { title: string; body: string }[] = [
   { title: 'Resumen de la empresa', body: 'Quién eres y a qué se dedica tu empresa.' },
 ];
 
-/* ───────────────────────── Convocatorias abiertas (API pública) ───────────────────────── */
+/* ───────────────────────── Convocatorias por estado (API pública) ───────────────────────── */
 
-/** Forma que devuelve GET /api/convocatorias/abiertas (lista blanca del backend, E37). */
-type OpenCall = {
+type EstadoCall = 'abierta' | 'prorroga' | 'proxima' | 'cerrada';
+
+/** Forma que devuelve GET /api/convocatorias/publicas (lista blanca del backend, E37 + E40). */
+type Call = {
   nombre: string;
   programa: string | null;
   descripcion: string | null;
   ejercicio_fiscal: string;
+  estado: EstadoCall;
   fecha_apertura: string;
   fecha_cierre: string;
+  fecha_prorroga: string | null;
+  fecha_limite: string;
+  banner_url: string | null;
 };
 
-type CallsState = { status: 'loading' | 'ready' | 'error'; items: OpenCall[] };
+type Grupo = 'abiertas' | 'proximas' | 'cerradas';
+type CallsState = { status: 'loading' | 'ready' | 'error'; grupos: Record<Grupo, Call[]> };
 
+const VACIO: Record<Grupo, Call[]> = { abiertas: [], proximas: [], cerradas: [] };
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const ESTADOS: EstadoCall[] = ['abierta', 'prorroga', 'proxima', 'cerrada'];
 const str = (v: unknown, max: number): string | null =>
   typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null;
+const fecha = (v: unknown): string | null => {
+  const s = str(v, 10);
+  return s && DATE_RE.test(s) ? s : null;
+};
+
+/**
+ * Banner seguro: solo rutas propias (/storage/banners/…) o https de un dominio que la CSP permite.
+ * El backend ya filtra; esto es la segunda capa (regla 9) para que nunca se pinte otra cosa.
+ */
+const BANNER_HOSTS = ['comecyt.edomex.gob.mx', 'images.comecyt.gob.mx', 'comecyt-sistemas.edomex.gob.mx', 'sidecyt-comecyt.edomex.gob.mx'];
+function bannerSeguro(v: unknown): string | null {
+  const s = str(v, 500);
+  if (!s) return null;
+  if (/^\/storage\/banners\/(convocatorias|programas)\/[a-z0-9]+\.(jpg|png|webp)$/.test(s)) return s;
+  try {
+    const u = new URL(s);
+    return u.protocol === 'https:' && !u.username && !u.port && BANNER_HOSTS.includes(u.hostname) ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Valida cada registro antes de pintarlo: el front no confía ciegamente en la respuesta. */
-function parseCalls(raw: unknown): OpenCall[] {
-  const list = raw && typeof raw === 'object' && Array.isArray((raw as { data?: unknown }).data)
-    ? (raw as { data: unknown[] }).data
-    : [];
-  return list.slice(0, 12).flatMap((r) => {
+function parseGrupo(list: unknown, max: number): Call[] {
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, max).flatMap((r) => {
     if (!r || typeof r !== 'object') return [];
     const o = r as Record<string, unknown>;
     const nombre = str(o.nombre, 200);
-    const cierre = str(o.fecha_cierre, 10);
-    const apertura = str(o.fecha_apertura, 10);
-    if (!nombre || !cierre || !DATE_RE.test(cierre) || !apertura || !DATE_RE.test(apertura)) return [];
+    const apertura = fecha(o.fecha_apertura);
+    const cierre = fecha(o.fecha_cierre);
+    const limite = fecha(o.fecha_limite) ?? cierre;
+    const estado = ESTADOS.includes(o.estado as EstadoCall) ? (o.estado as EstadoCall) : null;
+    if (!nombre || !apertura || !cierre || !limite || !estado) return [];
     return [{
       nombre,
       programa: str(o.programa, 150),
       descripcion: str(o.descripcion, 280),
       ejercicio_fiscal: str(o.ejercicio_fiscal, 4) ?? '',
+      estado,
       fecha_apertura: apertura,
       fecha_cierre: cierre,
+      fecha_prorroga: fecha(o.fecha_prorroga),
+      fecha_limite: limite,
+      banner_url: bannerSeguro(o.banner_url),
     }];
   });
+}
+
+function parseCalls(raw: unknown): Record<Grupo, Call[]> {
+  if (!raw || typeof raw !== 'object') return VACIO;
+  const o = raw as Record<string, unknown>;
+  return { abiertas: parseGrupo(o.abiertas, 12), proximas: parseGrupo(o.proximas, 12), cerradas: parseGrupo(o.cerradas, 6) };
 }
 
 /** 'YYYY-MM-DD' como fecha local (sin el corrimiento de zona horaria de new Date('YYYY-MM-DD')). */
@@ -200,7 +240,7 @@ function localDate(iso: string): Date {
   return new Date(y, m - 1, d);
 }
 
-function daysLeft(iso: string): number {
+function daysFromToday(iso: string): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return Math.round((localDate(iso).getTime() - today.getTime()) / 86_400_000);
@@ -209,36 +249,121 @@ function daysLeft(iso: string): number {
 const fmtDate = (iso: string) =>
   localDate(iso).toLocaleDateString(INSTITUTION.locale, { day: 'numeric', month: 'long', year: 'numeric' });
 
-function useOpenCalls(): CallsState {
-  const [state, setState] = useState<CallsState>({ status: 'loading', items: [] });
+function useCalls(): CallsState {
+  const [state, setState] = useState<CallsState>({ status: 'loading', grupos: VACIO });
   useEffect(() => {
     const ctrl = new AbortController();
     // Ruta relativa: mismo origen (la CSP solo permite connect-src 'self'), sin cookies.
-    fetch('/api/convocatorias/abiertas', {
+    fetch('/api/convocatorias/publicas', {
       signal: ctrl.signal,
       credentials: 'omit',
       headers: { Accept: 'application/json' },
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((json: unknown) => setState({ status: 'ready', items: parseCalls(json) }))
+      .then((json: unknown) => setState({ status: 'ready', grupos: parseCalls(json) }))
       .catch((e: unknown) => {
-        if ((e as { name?: string })?.name !== 'AbortError') setState({ status: 'error', items: [] });
+        if ((e as { name?: string })?.name !== 'AbortError') setState({ status: 'error', grupos: VACIO });
       });
     return () => ctrl.abort();
   }, []);
   return state;
 }
 
-function OpenCalls({ state }: { state: CallsState }) {
-  // El observador va en un contenedor que existe desde el primer render: si se pusiera en la rejilla
-  // (que aparece hasta que llegan los datos), useInView nunca la vería y las tarjetas quedarían en opacidad 0.
+const PESTANAS: { key: Grupo; label: string; vacio: string }[] = [
+  { key: 'abiertas', label: 'Abiertas', vacio: 'Por ahora no hay convocatorias abiertas.' },
+  { key: 'proximas', label: 'Próximas a abrir', vacio: 'No hay convocatorias anunciadas por abrir.' },
+  { key: 'cerradas', label: 'Cerradas', vacio: 'No hay convocatorias cerradas recientemente.' },
+];
+
+function CallCard({ c, i }: { c: Call; i: number }) {
+  const hastaCierre = daysFromToday(c.fecha_limite);
+  const hastaApertura = daysFromToday(c.fecha_apertura);
+  const abierta = c.estado === 'abierta' || c.estado === 'prorroga';
+
+  let badge: { label: string; tone: string };
+  let aviso: string | null = null;
+  if (c.estado === 'prorroga') {
+    badge = { label: 'Con prórroga', tone: 'prorroga' };
+    aviso = hastaCierre <= 0 ? 'Cierra hoy' : hastaCierre === 1 ? 'Queda 1 día' : `Quedan ${hastaCierre} días`;
+  } else if (c.estado === 'abierta') {
+    badge = { label: 'Abierta', tone: 'abierta' };
+    aviso = hastaCierre <= 0 ? 'Cierra hoy' : hastaCierre === 1 ? 'Queda 1 día' : `Quedan ${hastaCierre} días`;
+  } else if (c.estado === 'proxima') {
+    badge = { label: 'Próxima a abrir', tone: 'proxima' };
+    aviso = hastaApertura <= 1 ? 'Abre mañana' : `Abre en ${hastaApertura} días`;
+  } else {
+    badge = { label: 'Cerrada', tone: 'cerrada' };
+  }
+
+  return (
+    <article className="lp-call lp-reveal-item" data-estado={c.estado} style={{ '--i': i } as CSSProperties}>
+      {c.banner_url && (
+        <div className="lp-call-banner">
+          {/* eslint-disable-next-line @next/next/no-img-element -- banner propio (/storage) o de dominio autorizado por la CSP */}
+          <img src={c.banner_url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
+        </div>
+      )}
+      <div className="lp-call-body">
+        <div className="lp-call-top">
+          <span className="lp-call-status" data-tone={badge.tone}><span aria-hidden="true" />{badge.label}</span>
+          {aviso && (
+            <span className="lp-call-left" data-soon={abierta && hastaCierre <= 7 ? 'true' : undefined}>{aviso}</span>
+          )}
+        </div>
+        {c.programa && <p className="lp-call-program">{c.programa}</p>}
+        <h3>{c.nombre}</h3>
+        {c.descripcion && <p className="lp-call-desc">{c.descripcion}</p>}
+        <dl className="lp-call-dates">
+          <div><dt>{c.estado === 'proxima' ? 'Abre' : 'Abrió'}</dt><dd>{fmtDate(c.fecha_apertura)}</dd></div>
+          {c.fecha_prorroga ? (
+            <div>
+              <dt>{c.estado === 'cerrada' ? 'Cerró (con prórroga)' : 'Prórroga hasta'}</dt>
+              <dd>{fmtDate(c.fecha_prorroga)} <s className="lp-call-original">{fmtDate(c.fecha_cierre)}</s></dd>
+            </div>
+          ) : (
+            <div><dt>{c.estado === 'cerrada' ? 'Cerró' : 'Cierra'}</dt><dd>{fmtDate(c.fecha_cierre)}</dd></div>
+          )}
+        </dl>
+        {abierta && (
+          <Link href="/login" className="lp-btn lp-btn-ghost lp-call-cta">
+            Postular en SIGAC <ArrowRight className="lp-btn-arrow" aria-hidden="true" />
+          </Link>
+        )}
+        {c.estado === 'proxima' && (
+          <Link href="/solicitar-acceso" className="lp-btn lp-btn-ghost lp-call-cta">
+            Prepárate: solicita acceso <ArrowRight className="lp-btn-arrow" aria-hidden="true" />
+          </Link>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function Calls({ state }: { state: CallsState }) {
+  // El observador va en un contenedor que existe desde el primer render (ver E36: useInView y elementos tardíos).
   const [ref, inView] = useInViewAttr<HTMLDivElement>();
+  const { grupos } = state;
+  // Pestaña inicial: la primera que tenga convocatorias (abiertas → próximas → cerradas).
+  const inicial: Grupo = grupos.abiertas.length ? 'abiertas' : grupos.proximas.length ? 'proximas' : grupos.cerradas.length ? 'cerradas' : 'abiertas';
+  const [elegida, setElegida] = useState<Grupo | null>(null);
+  const tab = elegida ?? inicial;
+  const lista = grupos[tab];
+  const total = grupos.abiertas.length + grupos.proximas.length + grupos.cerradas.length;
+
+  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const idx = PESTANAS.findIndex((p) => p.key === tab);
+    const next = PESTANAS[(idx + (e.key === 'ArrowRight' ? 1 : PESTANAS.length - 1)) % PESTANAS.length].key;
+    setElegida(next);
+    document.getElementById(`lp-tab-${next}`)?.focus();
+  };
+
   return (
     <section id="convocatorias" className="lp-section lp-calls-section" aria-labelledby="lp-calls" aria-busy={state.status === 'loading'}>
       <div ref={ref} className="lp-wrap lp-reveal" data-inview={inView ? 'true' : 'false'}>
         <div className="lp-head">
-          <h2 id="lp-calls" className="lp-h2">Convocatorias abiertas</h2>
-          <p className="lp-h2-sub">Lo que puedes postular hoy en SIGAC. Esta lista se actualiza sola cuando se abre o cierra una convocatoria.</p>
+          <h2 id="lp-calls" className="lp-h2">Convocatorias</h2>
+          <p className="lp-h2-sub">Lo que puedes postular hoy, lo que viene y lo que ya cerró. Esta lista se actualiza sola desde SIGAC.</p>
         </div>
 
         {state.status === 'loading' && (
@@ -247,40 +372,45 @@ function OpenCalls({ state }: { state: CallsState }) {
           </div>
         )}
 
-        {state.status === 'ready' && state.items.length > 0 && (
-          <div className="lp-calls">
-            {state.items.map((c, i) => {
-              const left = daysLeft(c.fecha_cierre);
-              const soon = left <= 7;
-              return (
-                <article key={`${c.nombre}-${c.fecha_cierre}`} className="lp-call lp-reveal-item" style={{ '--i': i } as CSSProperties}>
-                  <div className="lp-call-top">
-                    <span className="lp-call-live"><span aria-hidden="true" />Abierta</span>
-                    <span className="lp-call-left" data-soon={soon ? 'true' : undefined}>
-                      {left <= 0 ? 'Cierra hoy' : left === 1 ? 'Queda 1 día' : `Quedan ${left} días`}
-                    </span>
-                  </div>
-                  {c.programa && <p className="lp-call-program">{c.programa}</p>}
-                  <h3>{c.nombre}</h3>
-                  {c.descripcion && <p className="lp-call-desc">{c.descripcion}</p>}
-                  <dl className="lp-call-dates">
-                    <div><dt>Abre</dt><dd>{fmtDate(c.fecha_apertura)}</dd></div>
-                    <div><dt>Cierra</dt><dd>{fmtDate(c.fecha_cierre)}</dd></div>
-                  </dl>
-                  <Link href="/login" className="lp-btn lp-btn-ghost lp-call-cta">
-                    Postular en SIGAC <ArrowRight className="lp-btn-arrow" aria-hidden="true" />
-                  </Link>
-                </article>
-              );
-            })}
-          </div>
+        {state.status === 'ready' && total > 0 && (
+          <>
+            <div className="lp-tabs" role="tablist" aria-label="Convocatorias por estado" onKeyDown={onKey}>
+              {PESTANAS.map((p) => (
+                <button
+                  key={p.key}
+                  id={`lp-tab-${p.key}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === p.key}
+                  aria-controls="lp-tabpanel"
+                  tabIndex={tab === p.key ? 0 : -1}
+                  // Nombre accesible completo: en teléfono "a abrir" se oculta con display:none y saldría del nombre.
+                  aria-label={`${p.label}: ${grupos[p.key].length}`}
+                  className="lp-tab"
+                  onClick={() => setElegida(p.key)}
+                >
+                  {p.key === 'proximas' ? <>Próximas<span className="lp-tab-extra"> a abrir</span></> : p.label}
+                  <span className="lp-tab-count">{grupos[p.key].length}</span>
+                </button>
+              ))}
+            </div>
+            <div id="lp-tabpanel" role="tabpanel" aria-labelledby={`lp-tab-${tab}`}>
+              {lista.length > 0 ? (
+                <div className="lp-calls" key={tab}>
+                  {lista.map((c, i) => <CallCard key={`${c.nombre}-${c.fecha_apertura}`} c={c} i={i} />)}
+                </div>
+              ) : (
+                <p className="lp-note-line">{PESTANAS.find((p) => p.key === tab)?.vacio}</p>
+              )}
+            </div>
+          </>
         )}
 
-        {(state.status === 'error' || (state.status === 'ready' && state.items.length === 0)) && (
+        {(state.status === 'error' || (state.status === 'ready' && total === 0)) && (
           <div className="lp-calls-empty" role="status">
             <Megaphone aria-hidden="true" />
             <div>
-              <h3>{state.status === 'error' ? 'No pudimos cargar las convocatorias' : 'Por ahora no hay convocatorias abiertas'}</h3>
+              <h3>{state.status === 'error' ? 'No pudimos cargar las convocatorias' : 'Por ahora no hay convocatorias publicadas'}</h3>
               <p>
                 {state.status === 'error'
                   ? 'Recarga la página en un momento, o consulta los programas de apoyo más abajo.'
@@ -293,6 +423,7 @@ function OpenCalls({ state }: { state: CallsState }) {
     </section>
   );
 }
+
 
 /* ───────────────────────── Collage ───────────────────────── */
 
@@ -495,8 +626,9 @@ export default function Landing() {
   const reduceMotion = mounted && Boolean(prefersReducedMotion);
   const [stepsRef, stepsInView] = useInViewAttr<HTMLOListElement>();
   const [programsRef, programsInView] = useInViewAttr<HTMLUListElement>();
-  const calls = useOpenCalls();
-  const openCount = calls.status === 'ready' ? calls.items.length : 0;
+  const calls = useCalls();
+  const openCount = calls.status === 'ready' ? calls.grupos.abiertas.length : 0;
+  const nextCount = calls.status === 'ready' ? calls.grupos.proximas.length : 0;
 
   useEffect(() => {
     setMounted(true);
@@ -532,6 +664,12 @@ export default function Landing() {
             <a href="#convocatorias" className="lp-announce">
               <span className="lp-eyebrow">Abiertas</span>
               {openCount === 1 ? '1 convocatoria abierta' : `${openCount} convocatorias abiertas`}
+              <ArrowDown aria-hidden="true" />
+            </a>
+          ) : nextCount > 0 ? (
+            <a href="#convocatorias" className="lp-announce">
+              <span className="lp-eyebrow">Próximamente</span>
+              {nextCount === 1 ? '1 convocatoria por abrir' : `${nextCount} convocatorias por abrir`}
               <ArrowDown aria-hidden="true" />
             </a>
           ) : (
@@ -580,8 +718,8 @@ export default function Landing() {
           <Collage reduceMotion={reduceMotion} />
         </section>
 
-        {/* ── Convocatorias abiertas (en vivo desde /api/convocatorias/abiertas) ── */}
-        <OpenCalls state={calls} />
+        {/* ── Convocatorias por estado (en vivo desde /api/convocatorias/publicas, E40) ── */}
+        <Calls state={calls} />
 
         {/* ── Programas de Apoyo Empresarial (contenido de comecyt.edomex.gob.mx) ── */}
         <section id="programas" className="lp-section" aria-labelledby="lp-programas">

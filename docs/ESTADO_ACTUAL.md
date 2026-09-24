@@ -1,6 +1,15 @@
 # Estado Actual del Sistema COMECYT
 
-**Fecha de actualización:** 23 de septiembre de 2026 (versión anterior: 21/09/2026)
+**Fecha de actualización:** 24 de septiembre de 2026 (versión anterior: 23/09/2026)
+
+> 🗓 **24/09/2026 — Convocatorias con estado público, prórroga y banners (E40).** Las 5 convocatorias de prueba
+> se **cerraron y archivaron** (la landing ya no las muestra). Las convocatorias ahora se ven en la landing como
+> **Próxima a abrir / Abierta / Con prórroga / Cerrada** según sus fechas; el admin puede **dar prórroga**
+> (con motivo, en bitácora) y **cargar un banner** por archivo o enlace institucional en convocatorias **y
+> programas** (solo admin). Se corrigieron 5 bugs de fechas encontrados al hacerlo (cierre automático el mismo
+> día, zona UTC, envío de solicitudes tras el cierre, fechas mostradas un día antes en todo el panel, alertas
+> sin prórroga). En landing y paneles el **arcoíris pasó a vino no saturado**. Pruebas: backend 50/50 de punta a
+> punta en producción, front 103/103. Migración aplicada con respaldo previo.
 
 > 🎨 **23/09/2026 (tarde) — Paneles unificados con la landing.** Admin, solicitante, revisor y evaluador
 > usan ahora el sistema visual SIGAC de la landing (tinta navy, blanco, pastel, vino de detalle, píldoras,
@@ -321,7 +330,8 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 | ~~`Solicitud.estado` nunca llega a `convenio`/`ministracion`~~ | ✅ Resuelto 23/09/2026 | Decidido e implementado (E33 en `CLAUDE.md`): avanza a `convenio` al generar el convenio, y a `ministracion` al firmarlo. Al verificarlo aparecieron 3 bugs más en `ConvenioController`, nunca antes ejercitados — corregidos (E34) |
 | ~~**Correo (SMTP)**~~ | ✅ **Resuelto 23/09/2026 (tarde)** | Infraestructura respondió: la cuenta tenía el autenticador (MFA) activo y se le asignó licencia Exchange Online. Tras el cambio, `smtp.office365.com:587` STARTTLS autentica y envía, también desde Laravel. `MAIL_MAILER=smtp` activo (E38 en `CLAUDE.md`) |
 | **2FA del admin desactivado** | Alta | Apagado desde el 14/09 por falta de correo. Ya hay SMTP: reactivarlo con el usuario presente y probar el restablecimiento de contraseña por correo de punta a punta |
-| **Convocatorias `activa` que parecen de prueba** | Media | Las 5 de producción (01/04–01/10/2026) parecen datos de carga inicial y ahora se anuncian en la landing pública. Revisarlas en `/admin/convocatorias` (cerrar o corregir) |
+| ~~**Convocatorias `activa` que parecen de prueba**~~ | ✅ Resuelto 24/09/2026 | Cerradas y archivadas (`deleted_at`) a pedido del usuario; ya no aparecen en la landing ni en la lista del admin. Reversibles (E40) |
+| **Publicar convocatorias reales** | Media | Hoy no hay ninguna publicada: la landing muestra "Por ahora no hay convocatorias publicadas" hasta que el admin dé de alta la primera |
 | **Ruta del balanceador nuevo** | **Crítica — el sitio no se ve por el dominio.** En espera de infraestructura | El VIP `10.200.41.131` (el que resuelve desde la publicación externa del 14/09/2026) devuelve `404`: no tiene registrada la entrega hacia `10.250.36.241:80`. **Solo lo puede hacer infraestructura; correo enviado el 14/09/2026.** Al responder: correr `VerificarDominio.ps1`, y si el origen **no** está en `100.64.0.0/10`, ajustar **el mismo día** las 5 apariciones del patrón en `web.config` (en dos formas distintas) y `TRUSTED_PROXIES` **juntas**, o habrá bucle de redirección. [DOMINIO_BALANCEADOR.md §12 y §9](DOMINIO_BALANCEADOR.md) · `Desktop\ADEM\_v5_publicacion_sep14\LEEME.md` |
 | **Confirmaciones de infraestructura** | Alta | Rango de IPs del balanceador, HTTP→HTTPS en el balanceador, health check, 50 MB, timeouts. Incorporadas al correo del 14/09 (`_v5_publicacion_sep14\`); el original sigue en `Desktop\ADEM\_v4_dominio_sep11\`. [DOMINIO_BALANCEADOR.md §8](DOMINIO_BALANCEADOR.md#8-qué-necesita-hacer-o-confirmar-infraestructura) |
 | **Prueba con usuario real por el dominio** | Alta | Login, navegación por rol, subir y previsualizar documento, notificación. [DOMINIO_BALANCEADOR.md §6](DOMINIO_BALANCEADOR.md#6-lo-que-falta-probar) |
@@ -347,6 +357,7 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 
 | Fecha | Cambio |
 |---|---|
+| 2026-09-24 | **E40:** estados públicos de convocatorias (próxima/abierta/con prórroga/cerrada), prórroga, banners de convocatorias y programas (solo admin, validación de MIME real y dominios), convocatorias de prueba cerradas y archivadas, 5 bugs de fechas corregidos, arcoíris → vino en landing y paneles. Migración `2026_09_24_000001` con respaldo previo |
 | 2026-09-23 (tarde, 3) | **Paneles unificados con el diseño de la landing** (E39, `DISENO_UI.md` §12); login intacto. Landing: nombre completo "SIGAC — Sistema de Gestión de Apoyos Científicos" y halo vino detrás del titular |
 | 2026-09-23 (tarde, 2) | **SMTP Microsoft 365 funcionando** (E38). **Landing:** SIGAC, programas de Apoyo Empresarial, convocatorias en vivo (endpoint público E37 con throttle y lista blanca), vino de detalle, logo ×3, "Ir al sitio" en el login. **Regla permanente de ciberseguridad** en `CLAUDE.md` §0 |
 | 2026-09-23 (tarde) | **Landing pública `/sigac` publicada** (referencia portrait.so, fuentes Switzer + Satoshi auto-hospedadas). `/` sin sesión → `/sigac`; `/privacidad` y `/terminos` públicas; `?email=` prellena el login. Pruebas axe 3/3, sin scroll horizontal a 375 y 1440 px. Ver `LANDING_SIGAC.md` y `CLAUDE.md` E36 |

@@ -35,7 +35,13 @@ const respond = (body: unknown, ok = true) =>
 
 beforeEach(() => {
   fetchMock.mockReset();
-  respond({ data: [], total: 0 });
+  respond({ abiertas: [], proximas: [], cerradas: [] });
+});
+
+const conv = (o: Record<string, unknown>) => ({
+  programa: 'Programa de Prototipos', descripcion: null, ejercicio_fiscal: '2027',
+  fecha_apertura: '2027-01-10', fecha_cierre: '2099-12-31', fecha_prorroga: null, fecha_limite: '2099-12-31',
+  banner_url: null, estado: 'abierta', ...o,
 });
 
 describe('Landing /sigac', () => {
@@ -62,18 +68,20 @@ describe('Landing /sigac', () => {
 
   it('pinta las convocatorias abiertas, descarta registros inválidos y no ejecuta HTML', async () => {
     respond({
-      data: [
-        { nombre: 'Convocatoria PROT 2027', programa: 'Programa de Prototipos', descripcion: '<img src=x onerror=alert(1)>',
-          ejercicio_fiscal: '2027', fecha_apertura: '2027-01-10', fecha_cierre: '2099-12-31' },
-        { nombre: 'Sin fechas' },
-        { nombre: '<script>alert(1)</script>', programa: null, descripcion: null,
-          ejercicio_fiscal: '2027', fecha_apertura: '2027-01-10', fecha_cierre: '2099-12-31' },
+      abiertas: [
+        conv({ nombre: 'Convocatoria PROT 2027', descripcion: '<img src=x onerror=alert(1)>' }),
+        { nombre: 'Sin fechas', estado: 'abierta' },
+        conv({ nombre: 'Estado inventado', estado: 'hackeado' }),
+        conv({ nombre: '<script>alert(1)</script>', programa: null }),
       ],
+      proximas: [],
+      cerradas: [],
     });
     const { container } = render(<Landing />);
     expect(await screen.findByText('Convocatoria PROT 2027')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith('/api/convocatorias/abiertas', expect.objectContaining({ credentials: 'omit' }));
+    expect(fetchMock).toHaveBeenCalledWith('/api/convocatorias/publicas', expect.objectContaining({ credentials: 'omit' }));
     expect(screen.queryByText('Sin fechas')).toBeNull();
+    expect(screen.queryByText('Estado inventado')).toBeNull();
     // El HTML de los datos llega como texto plano: ningún <script> ni <img> inyectado en el DOM.
     expect(screen.getByText('<script>alert(1)</script>')).toBeTruthy();
     expect(container.querySelector('#convocatorias script, #convocatorias img')).toBeNull();
@@ -82,9 +90,35 @@ describe('Landing /sigac', () => {
     expect(results).toHaveNoViolations();
   });
 
+  it('agrupa por estado en pestañas y solo pinta banners seguros', async () => {
+    respond({
+      abiertas: [conv({ nombre: 'Con prórroga', estado: 'prorroga', fecha_prorroga: '2099-12-31', fecha_cierre: '2099-06-30',
+        banner_url: '/storage/banners/convocatorias/abc123.png' })],
+      proximas: [conv({ nombre: 'Por abrir', estado: 'proxima', fecha_apertura: '2099-01-10', banner_url: 'https://evil.example/x.png' })],
+      cerradas: [conv({ nombre: 'Ya cerró', estado: 'cerrada', fecha_cierre: '2026-01-10', fecha_limite: '2026-01-10',
+        banner_url: 'javascript:alert(1)' })],
+    });
+    const { container } = render(<Landing />);
+    expect(await screen.findByText('Con prórroga', { selector: 'h3' })).toBeTruthy();
+    expect(screen.getByText('Prórroga hasta')).toBeTruthy();
+    expect(container.querySelector('#convocatorias img')?.getAttribute('src')).toBe('/storage/banners/convocatorias/abc123.png');
+
+    fireEvent.click(screen.getByRole('tab', { name: /Próximas a abrir/ }));
+    expect(screen.getByText('Por abrir')).toBeTruthy();
+    // Dominio no autorizado → sin imagen.
+    expect(container.querySelector('#convocatorias img')).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: /Cerradas/ }));
+    expect(screen.getByText('Ya cerró')).toBeTruthy();
+    expect(container.querySelector('#convocatorias img')).toBeNull();
+    expect(container.querySelector('#convocatorias a[href="/login"]')).toBeNull(); // cerrada: sin «Postular»
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
   it('muestra un mensaje claro si no hay convocatorias o si falla la API', async () => {
     const { unmount } = render(<Landing />);
-    expect(await screen.findByText('Por ahora no hay convocatorias abiertas')).toBeTruthy();
+    expect(await screen.findByText('Por ahora no hay convocatorias publicadas')).toBeTruthy();
     unmount();
     respond({}, false);
     render(<Landing />);

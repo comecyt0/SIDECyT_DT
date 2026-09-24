@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\CarouselController;
 use App\Http\Controllers\Admin\ConvenioController;
 use App\Http\Controllers\Admin\ProgramaCampoController;
@@ -102,8 +103,11 @@ Route::middleware([
     // Carousel público (login page) — no authentication required
     Route::get('carousel/slides', [CarouselController::class, 'publicIndex']);
 
-    // Convocatorias abiertas para la landing pública /sigac (E37): solo lectura, lista blanca de
-    // campos, caché de 5 min. 30/min por IP basta de sobra para una página que la pide una vez.
+    // Convocatorias para la landing pública /sigac (E37, E40): solo lectura, lista blanca de campos,
+    // agrupadas por estado público, caché de 5 min. 30/min por IP basta para una página que la pide una vez.
+    // `/abiertas` queda como alias de la versión anterior (misma respuesta).
+    Route::get('convocatorias/publicas', [ConvocatoriaPublicaController::class, 'index'])
+        ->middleware('throttle:30,1');
     Route::get('convocatorias/abiertas', [ConvocatoriaPublicaController::class, 'index'])
         ->middleware('throttle:30,1');
 
@@ -183,6 +187,12 @@ Route::middleware([
             Route::delete('programas/{tipoPrograma}/criterios/{criterio}', [ProgramaCriterioEvaluacionController::class, 'destroy']);
 
             Route::apiResource('convocatorias', ConvocatoriaController::class);
+            // E40 — prórroga y banner (solo admin: este grupo lleva middleware `admin`)
+            Route::post('convocatorias/{convocatoria}/prorroga', [ConvocatoriaController::class, 'prorroga'])->middleware('throttle:20,1');
+            Route::post('convocatorias/{convocatoria}/banner', [BannerController::class, 'storeConvocatoria'])->middleware('throttle:20,1');
+            Route::delete('convocatorias/{convocatoria}/banner', [BannerController::class, 'destroyConvocatoria'])->middleware('throttle:20,1');
+            Route::post('programas/{tipoPrograma}/banner', [BannerController::class, 'storePrograma'])->middleware('throttle:20,1');
+            Route::delete('programas/{tipoPrograma}/banner', [BannerController::class, 'destroyPrograma'])->middleware('throttle:20,1');
             Route::apiResource('usuarios', UserController::class)->parameters(['usuarios' => 'user']);
             Route::apiResource('convenios', ConvenioController::class);
             Route::apiResource('ministraciones', MinistracionController::class)->parameters(['ministraciones' => 'ministracion']);

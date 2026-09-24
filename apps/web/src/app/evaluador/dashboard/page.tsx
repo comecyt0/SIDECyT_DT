@@ -16,6 +16,7 @@ import StatTile from '@/components/ui/stat-tile';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMinLoadingDuration } from '@/hooks/useMinLoadingDuration';
+import { parseDate } from '@/lib/format';
 
 type EvaluadorChartPoint = {
   label: string;
@@ -198,7 +199,7 @@ export default function EvaluadorDashboard() {
                           {a.fecha_limite && (
                             <span className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--auth-danger)' }}>
                               <Calendar className="h-3 w-3" aria-hidden="true" />
-                              Vence el {new Date(a.fecha_limite).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
+                              Vence el {parseDate(a.fecha_limite).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
                             </span>
                           )}
                         </div>

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import PageHeader from '@/components/ui/page-header';
+import BannerManager from '@/components/admin/BannerManager';
 import { Loader2, Plus, Edit, Trash2, Check, Inbox } from 'lucide-react';
 import api from '@/lib/api';
 import { NestedCRUDModal } from '@/components/admin/NestedCRUDModal';
@@ -18,6 +19,7 @@ interface TipoPrograma {
   clave: string;
   nombre: string;
   descripcion?: string;
+  banner_url?: string | null;
   tiene_etapas?: boolean;
   tiene_equipo?: boolean;
   activo?: boolean;
@@ -411,6 +413,15 @@ export default function ProgramaDetailPage() {
         eyebrow="Programa"
         title={programa.nombre}
         description="Ajusta las preguntas, los conceptos de gasto, las etapas, las modalidades y los criterios de evaluación de este programa."
+      />
+
+      {/* E40: banner del programa (solo admin). Las convocatorias del programa sin banner propio usan este. */}
+      <BannerManager
+        endpoint={`/admin/programas/${programa.id}/banner`}
+        value={programa.banner_url}
+        onChange={(url) => setPrograma({ ...programa, banner_url: url })}
+        title="Banner del programa"
+        description="Imagen representativa del programa. Se usa en la página pública para las convocatorias de este programa que no tengan banner propio."
       />
 
       <Card>
