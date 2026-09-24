@@ -11,6 +11,8 @@ export interface NotificationDetail {
   mensaje?: string;
   tipo?: string;
   solicitud_id?: number | null;
+  /** E45: aviso del buzón → hilo al que pertenece. */
+  conversacion_id?: number | null;
   solicitud?: { id: number; folio: string } | null;
   created_at?: string;
   leida_at?: string;

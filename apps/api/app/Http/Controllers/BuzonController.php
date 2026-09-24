@@ -147,6 +147,9 @@ class BuzonController extends Controller
         $user = $request->user();
         abort_unless(Buzon::participa($user, $conversacion), 404);
         $n = $this->mensajesDelOtroLado($conversacion, $user)->whereNull('leido_at')->update(['leido_at' => now()]);
+        // Leer el hilo apaga también sus avisos en la campana (solo los propios).
+        NotificacionLog::where('user_id', $user->id)->where('conversacion_id', $conversacion->id)
+            ->whereNull('leida_at')->update(['leida_at' => now()]);
 
         return response()->json(['leidos' => $n]);
     }
@@ -199,6 +202,7 @@ class BuzonController extends Controller
             NotificacionLog::create([
                 'user_id' => $uid,
                 'tipo' => 'buzon_mensaje',
+                'conversacion_id' => $c->id,
                 'asunto' => 'Nuevo mensaje en el buzón: '.mb_substr($c->asunto, 0, 100),
                 'mensaje' => $autor->name.' escribió en «'.mb_substr($c->asunto, 0, 100).'».',
                 'correo_destino' => User::find($uid)?->email ?? '',

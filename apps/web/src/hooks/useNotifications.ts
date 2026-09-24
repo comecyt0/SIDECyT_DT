@@ -11,6 +11,8 @@ export interface Notificacion {
   leida_at?: string;
   created_at?: string;
   solicitud_id?: number | null;
+  tipo?: string;
+  conversacion_id?: number | null;
 }
 
 const DEFAULT_POLL_MS = 60_000;

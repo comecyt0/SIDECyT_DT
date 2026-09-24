@@ -33,6 +33,7 @@ class NotificacionCreada implements ShouldBroadcast
             'mensaje' => $this->notificacion->mensaje,
             'tipo' => $this->notificacion->tipo,
             'solicitud_id' => $this->notificacion->solicitud_id,
+            'conversacion_id' => $this->notificacion->conversacion_id,
             'created_at' => $this->notificacion->created_at?->toIso8601String(),
         ];
     }

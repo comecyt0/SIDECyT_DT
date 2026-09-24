@@ -18,6 +18,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useSessionRefresh } from '@/hooks/useSessionRefresh';
 import { useT } from '@/i18n/I18nProvider';
 import NotificationToast from '@/components/notifications/NotificationToast';
+import { hrefBuzon } from '@/lib/notificaciones';
 import { usePanelScope } from '@/hooks/usePanelScope';
 
 export default function SolicitanteLayout({ children }: { children: React.ReactNode }) {
@@ -76,7 +77,8 @@ export default function SolicitanteLayout({ children }: { children: React.ReactN
       {children}
       <NotificationToast
         notification={incoming}
-        href={incoming?.solicitud_id ? `/solicitante/solicitudes/${incoming.solicitud_id}` : '/solicitante/dashboard'}
+        href={(incoming && hrefBuzon(incoming, '/solicitante/buzon'))
+          || (incoming?.solicitud_id ? `/solicitante/solicitudes/${incoming.solicitud_id}` : '/solicitante/dashboard')}
         onClose={dismissIncoming}
       />
     </RoleTopLayout>

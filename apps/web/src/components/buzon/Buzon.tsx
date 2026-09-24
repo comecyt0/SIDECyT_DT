@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Inbox, Loader2, MessageSquarePlus, RotateCcw, Send } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { getEcho } from '@/lib/echo';
 import UserAvatar from '@/components/ui/user-avatar';
@@ -62,11 +63,13 @@ export default function Buzon({ modo }: { modo: 'solicitante' | 'equipo' }) {
 
   useEffect(() => { void cargarHilos(); }, [cargarHilos]);
 
-  // ?hilo=ID (enlace del correo de aviso)
+  // ?hilo=ID (correo de aviso, campana, notificación push). Depende de la URL, no solo del montaje: si ya estás en
+  // el buzón y pulsas otro aviso, Next cambia la búsqueda sin volver a montar el componente.
+  const hiloParam = useSearchParams().get('hilo');
   useEffect(() => {
-    const h = Number(new URLSearchParams(window.location.search).get('hilo'));
-    if (Number.isInteger(h) && h > 0) setActivo(h);
-  }, []);
+    const h = Number(hiloParam);
+    if (Number.isInteger(h) && h > 0) { setNuevo(false); setActivo(h); }
+  }, [hiloParam]);
 
   useEffect(() => {
     if (modo !== 'solicitante') return;
@@ -81,16 +84,20 @@ export default function Buzon({ modo }: { modo: 'solicitante' | 'equipo' }) {
       await api.post(`/buzon/${id}/leer`).catch(() => {});
       setHilos((hs) => hs.map((h) => (h.id === id ? { ...h, no_leidos: 0 } : h)));
     } catch (e) {
-      setAviso(err(e, 'No se pudo abrir el hilo.'));
+      const st = (e as { response?: { status?: number } })?.response?.status;
+      setAviso(st === 404 ? 'Esa conversación ya no existe o no tienes acceso a ella.' : err(e, 'No se pudo abrir el hilo.'));
+      setActivo(null);
       setDetalle(null);
     }
   }, []);
 
   useEffect(() => { if (activo) void abrir(activo); }, [activo, abrir]);
 
-  // Tiempo real: canal privado del hilo abierto (el servidor autoriza solo a participantes).
+  // Tiempo real: canal privado del hilo abierto (el servidor autoriza solo a participantes). Se suscribe solo cuando
+  // el hilo ya cargó: con un ?hilo= inexistente o ajeno no se intenta el canal (daba 403 en /broadcasting/auth).
+  const hiloCargado = detalle?.id ?? null;
   useEffect(() => {
-    if (!activo) return;
+    if (!activo || hiloCargado !== activo) return;
     const echo = getEcho(API_BASE);
     if (!echo) return;
     const canal = `conversacion.${activo}`;
@@ -100,7 +107,7 @@ export default function Buzon({ modo }: { modo: 'solicitante' | 'equipo' }) {
       void api.post(`/buzon/${activo}/leer`).catch(() => {});
     });
     return () => { echo.leave(canal); };
-  }, [activo]);
+  }, [activo, hiloCargado]);
 
   useEffect(() => { fondo.current?.scrollTo({ top: fondo.current.scrollHeight }); }, [detalle?.mensajes.length]);
 

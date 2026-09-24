@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { hrefBuzon } from '@/lib/notificaciones';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
 import { cerrarSesion } from '@/lib/logout';
@@ -118,6 +119,7 @@ export default function AdminTopLayout({
 }: AdminTopLayoutProps) {
   usePanelScope();
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useT();
   const [localUserName, setLocalUserName] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -405,9 +407,12 @@ export default function AdminTopLayout({
                               type="button"
                               key={n.id ?? i}
                               onClick={() => {
-                                setSelectedNotif(n as NotificationDetail);
                                 setShowNotifs(false);
                                 if (isUnread) onMarkAsRead?.(n.id);
+                                // Aviso del buzón → directo a su hilo (E45); el resto abre el detalle.
+                                const destino = hrefBuzon(n as NotificationDetail, '/admin/buzon');
+                                if (destino) router.push(destino);
+                                else setSelectedNotif(n as NotificationDetail);
                               }}
                               className={`w-full text-left p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer ${isUnread ? 'bg-amber-50/40 dark:bg-amber-900/20' : ''}`}
                             >

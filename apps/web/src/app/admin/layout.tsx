@@ -6,13 +6,16 @@ import AdminTopLayout from '@/components/layout/AdminTopLayout';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useSessionRefresh } from '@/hooks/useSessionRefresh';
 import NotificationToast from '@/components/notifications/NotificationToast';
+import { hrefBuzon } from '@/lib/notificaciones';
 
-/** Campana del panel /admin (E45: el admin de convocatoria y la consulta ven solo SUS notificaciones). */
+/** Campana del panel /admin: cada quien ve solo SUS notificaciones. */
 function AdminShell({ children, esAdmin, userName }: { children: React.ReactNode; esAdmin: boolean; userName: string }) {
+  // 24/09/2026: la campana muestra solo las notificaciones PROPIAS, también al admin. Antes el admin veía las de
+  // todos (/admin/notificaciones); las ajenas no las puede marcar como leídas (403), así que se quedaban "nuevas"
+  // para siempre — p. ej. la copia del aviso del buzón que recibe cada admin de convocatoria. El historial completo
+  // sigue en la página /admin/notificaciones.
   const { notifs, count, markAsRead, markAllAsRead, incoming, dismissIncoming } = useNotifications(
-    esAdmin
-      ? { endpoint: '/admin/notificaciones?all=true', basePath: '/admin/notificaciones' }
-      : { endpoint: '/mis-notificaciones?all=true', basePath: '/mis-notificaciones' },
+    { endpoint: '/mis-notificaciones?all=true', basePath: '/mis-notificaciones' },
   );
 
   return (
@@ -25,7 +28,11 @@ function AdminShell({ children, esAdmin, userName }: { children: React.ReactNode
       onMarkAllAsRead={markAllAsRead}
     >
       {children}
-      <NotificationToast notification={incoming} href={esAdmin ? '/admin/notificaciones' : '/admin/buzon'} onClose={dismissIncoming} />
+      <NotificationToast
+        notification={incoming}
+        href={(incoming && hrefBuzon(incoming, '/admin/buzon')) || (esAdmin ? '/admin/notificaciones' : '/admin/buzon')}
+        onClose={dismissIncoming}
+      />
     </AdminTopLayout>
   );
 }

@@ -1552,6 +1552,12 @@ seguridad nuevas: ampliación del §0. Para desarrollo:
   (`documentos_fijos_config`).
 - **Buzón:** canal privado `conversacion.{id}` autorizado por `Buzon::participa`; evento `MensajeBuzonEnviado`
   (ShouldBroadcastNow); job `AvisoMensajeNoLeido` a los 30 min (el correo no lleva el texto del mensaje).
+  **Avisos de la campana ligados al hilo** (`notificaciones_log.conversacion_id`, FK con borrado en cascada, migración
+  `2026_09_24_000004`): al pulsarlos llevan a `…/buzon?hilo=ID` (`lib/notificaciones.ts` `hrefBuzon`), leer el hilo los
+  marca leídos, y si el hilo se borra se van con él. Antes quedaban huérfanos ("tengo mensajes nuevos y el buzón está
+  vacío", reportado por el usuario tras borrar los datos de prueba). **La campana del admin muestra solo sus
+  notificaciones** (antes las de todos, y las ajenas no se podían marcar leídas → 403 y "nuevas" para siempre); el
+  historial completo sigue en `/admin/notificaciones`. El chat se suscribe al canal solo cuando el hilo ya cargó.
 - **Folios públicos:** instantánea en `folios_publicados` tras confirmación (`confirmar: accepted`);
   `GET /api/folios-aprobados` público con lista blanca, caché 5 min y throttle 30.
 - **Bugs de fondo encontrados al probar con datos reales:** (1) `SolicitudController::store` usaba `Solicitud::create`

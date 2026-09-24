@@ -121,7 +121,11 @@ límite de entradas y de tamaño descomprimido) y descargados como adjunto; endp
 1. `SolicitudController::store` usaba `Solicitud::create` con `folio`/`estado` en `$guarded` → violación NOT NULL: **nadie podía crear una solicitud**. Ahora `forceFill` (mismo patrón que E30/E31).
 2. `adminShowFull` cargaba `criteriosEvaluacion` e `informe`, que no existían → 500 al abrir cualquier solicitud en admin. Corregido (`criterios`, relaciones `informes()`/`informe()`).
 3. `throttle:*` corría **antes** que la autenticación: contaba por IP y con un contador compartido entre rutas. Prioridad de middlewares corregida en `bootstrap/app.php` + `setUserResolver` en `ApiAuthenticate`.
-4. En la vista: iniciales "P(" para nombres con paréntesis, botón "Nuevo" del buzón cortado a 375 px y el menú del delegado decía "Administrador". Corregidos.
+4. **Campana del buzón (reporte del usuario, 24/09 16:20):** los avisos de "nuevo mensaje" no sabían de qué hilo eran;
+   al borrar los hilos de prueba quedaron 4 huérfanos y el buzón aparecía vacío. Ahora `conversacion_id` con borrado en
+   cascada, clic → hilo abierto, leer el hilo apaga sus avisos, hilo inexistente → aviso claro. La campana del admin
+   muestra solo sus notificaciones (antes las de todos, sin poder marcarlas leídas). Verificado en navegador 6/6.
+5. En la vista: iniciales "P(" para nombres con paréntesis, botón "Nuevo" del buzón cortado a 375 px y el menú del delegado decía "Administrador". Corregidos.
 
 ## 9. Pendiente / fuera de alcance
 

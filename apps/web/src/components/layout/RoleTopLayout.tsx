@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { hrefBuzon } from '@/lib/notificaciones';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
 import { cerrarSesion } from '@/lib/logout';
@@ -87,6 +88,7 @@ export default function RoleTopLayout({
   // Pastel de la sección por rol (el mismo de su dashboard): solicitante blush, revisor menta, evaluador mantequilla.
   const sectionTone = homeHref.startsWith('/revisor') ? 'mint' : homeHref.startsWith('/evaluador') ? 'butter' : 'blush';
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useT();
   const { perfil } = useMiPerfil();
   // Ruta de "Mi cuenta" de este rol (E45): /solicitante/cuenta, /revisor/cuenta, /evaluador/cuenta.
@@ -370,9 +372,12 @@ export default function RoleTopLayout({
                               type="button"
                               key={n.id ?? i}
                               onClick={() => {
-                                setSelectedNotif(n as NotificationDetail);
                                 setShowNotifs(false);
                                 if (isUnread) onMarkAsRead?.(n.id);
+                                // Aviso del buzón → directo a su hilo (E45). Solo el solicitante tiene buzón en estos paneles.
+                                const destino = pathname.startsWith('/solicitante') ? hrefBuzon(n as NotificationDetail, '/solicitante/buzon') : null;
+                                if (destino) router.push(destino);
+                                else setSelectedNotif(n as NotificationDetail);
                               }}
                               className={`w-full text-left p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer ${isUnread ? 'bg-amber-50/40 dark:bg-amber-900/20' : ''}`}
                             >
