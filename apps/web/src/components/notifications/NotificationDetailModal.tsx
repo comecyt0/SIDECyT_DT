@@ -79,10 +79,12 @@ export default function NotificationDetailModal({ notification, onClose, solicit
 
             <div className="p-6 space-y-4">
               {notification.mensaje ? (
-                <div
-                  className="text-sm text-neutral-700 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{ __html: notification.mensaje }}
-                />
+                // SEGURIDAD (24/09/2026): texto plano, nunca HTML. El mensaje viene de la API y algunos se arman con
+                // datos que escribe el público (p. ej. el nombre en "solicitar acceso"): como HTML sería XSS
+                // almacenado en el panel del admin. Si llega con etiquetas, se quitan y se muestra el texto.
+                <p className="text-sm text-neutral-700 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap">
+                  {notification.mensaje.replace(/<[^>]*>/g, '')}
+                </p>
               ) : (
                 <p className="text-sm text-neutral-500 dark:text-neutral-300 italic">Sin contenido adicional.</p>
               )}

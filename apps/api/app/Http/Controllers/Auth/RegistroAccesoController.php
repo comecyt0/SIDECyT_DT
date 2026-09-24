@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Validation\Rule;
 
 class RegistroAccesoController extends Controller
 {
@@ -31,18 +30,14 @@ class RegistroAccesoController extends Controller
     {
         $request->validate([
             'nombre' => 'required|string|max:255',
-            'email' => [
-                'required',
-                'email',
-                'max:255',
-                Rule::unique('users', 'email'),
-                Rule::unique('solicitudes_acceso', 'email'),
-            ],
-            'password' => 'required|string|min:8|confirmed',
+            // SEGURIDAD (24/09/2026): sin Rule::unique — su 422 "ya está registrado" revelaba qué correos tienen
+            // cuenta. El duplicado se detecta abajo y recibe la misma respuesta que una solicitud nueva.
+            'email' => ['required', 'email', 'max:255'],
+            'password' => ['required', 'string', 'confirmed', \Illuminate\Validation\Rules\Password::defaults()],
             'empresa_nombre' => 'required|string|max:255',
             'cargo' => 'nullable|string|max:255',
             'telefono' => 'nullable|string|max:20',
-            'motivo' => 'nullable|string',
+            'motivo' => 'nullable|string|max:2000',
 
             // Datos de la empresa
             'empresa_datos' => 'nullable|array',
@@ -72,7 +67,22 @@ class RegistroAccesoController extends Controller
             'terminos_aceptados.accepted' => 'Debes aceptar los términos y condiciones para continuar.',
         ]);
 
-        $solicitudAcceso = SolicitudAcceso::create([
+        $respuesta = [
+            'message' => 'Tu solicitud de acceso ha sido recibida. Te notificaremos por correo cuando sea revisada.',
+        ];
+
+        $email = mb_strtolower(trim((string) $request->email));
+        $yaExiste = User::whereRaw('LOWER(email) = ?', [$email])->exists()
+            // Cualquier estado: la columna es única en BD; un create() duplicado daría 500 (otra forma de enumerar).
+            || SolicitudAcceso::whereRaw('LOWER(email) = ?', [$email])->exists();
+        if ($yaExiste) {
+            Log::channel('security')->info('Solicitud de acceso duplicada ignorada', ['ip' => $request->ip()]);
+
+            return response()->json($respuesta, 201);
+        }
+
+        try {
+            $solicitudAcceso = SolicitudAcceso::create([
             'nombre' => $request->nombre,
             'email' => $request->email,
             'password' => $request->password, // cast 'hashed' del modelo se encarga
@@ -84,7 +94,11 @@ class RegistroAccesoController extends Controller
             'contactos' => $request->contactos,
             'terminos_aceptados' => true,
             'estado' => 'pendiente',
-        ]);
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Dos envíos simultáneos con el mismo correo: mismo trato que un duplicado.
+            return response()->json($respuesta, 201);
+        }
 
         // Notify all admin users
         $admins = User::where('rol_id', 1)->where('activo', true)->get();
@@ -92,10 +106,7 @@ class RegistroAccesoController extends Controller
             $admin->notify(new NuevaSolicitudAcceso($solicitudAcceso));
         }
 
-        return response()->json([
-            'message' => 'Tu solicitud de acceso ha sido recibida. Te notificaremos por correo cuando sea revisada.',
-            'solicitud_id' => $solicitudAcceso->id,
-        ], 201);
+        return response()->json($respuesta, 201);
     }
 
     /**

@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Upload, Check, Loader2, Download, Trash2, Eye, X, FileText, HardDrive, CheckCircle2, Paperclip } from 'lucide-react';
 import api from '@/lib/api';
+import { safeUrl } from '@/lib/safe-url';
 
 export interface Documento {
   id: number;
@@ -78,19 +79,9 @@ export function DocumentosAdjuntos({
     }
   }, [tipoProgramaId]);
 
-  const getAbsoluteUrl = (url: string) => {
-    if (url.startsWith('http')) return url;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-
-    // Storage files are at /storage/..., not /api/storage/...
-    // Remove /api from the base URL if URL starts with /storage/
-    if (url.startsWith('/storage/')) {
-      const baseUrl = apiUrl.replace('/api', '');
-      return `${baseUrl}${url}`;
-    }
-
-    return `${apiUrl}${url}`;
-  };
+  // SEGURIDAD (24/09/2026): los documentos se descargan por /api/archivos/... (privado, con sesión). safeUrl solo
+  // acepta rutas del propio sitio: un valor raro de la API (p. ej. `javascript:`) no llega a href/src.
+  const getAbsoluteUrl = (url: string) => safeUrl(url) ?? '#';
 
   const documentosPorClave = Object.fromEntries(
     tiposDocumento.map(tipo => [
@@ -367,7 +358,7 @@ export function DocumentosAdjuntos({
                 src={getAbsoluteUrl(previewingDoc.url)}
                 className="w-full h-full"
                 title={previewingDoc.nombre_original}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                referrerPolicy="no-referrer"
               />
             )}
           </div>

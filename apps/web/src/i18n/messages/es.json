@@ -145,7 +145,7 @@
     "email_required": "El correo electrónico es requerido.",
     "email_invalid": "Correo electrónico inválido.",
     "password_required": "La contraseña es requerida.",
-    "password_min": "La contraseña debe tener al menos 8 caracteres.",
+    "password_min": "La contraseña debe tener al menos 10 caracteres, con mayúsculas, minúsculas y un número.",
     "password_mismatch": "Las contraseñas no coinciden.",
     "institution_label": "Institución",
     "institution_required": "El nombre de la institución es requerido.",

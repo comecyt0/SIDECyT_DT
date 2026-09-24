@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
+import { cerrarSesion } from '@/lib/logout';
 import PageTransition from '@/components/ui/PageTransition';
 import GlobalSearch from '@/components/admin/GlobalSearch';
 import ThemeToggle from '@/components/ui/ThemeToggle';
@@ -107,7 +108,6 @@ export default function AdminTopLayout({
 }: AdminTopLayoutProps) {
   usePanelScope();
   const pathname = usePathname();
-  const router = useRouter();
   const { t } = useT();
   const [localUserName, setLocalUserName] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -166,11 +166,9 @@ export default function AdminTopLayout({
     setMenuOpen(false);
   }, [pathname]);
 
+  // Cierre de sesión real: invalida el JWT en el backend y limpia cachés (lib/logout.ts).
   const handleLogout = () => {
-    Cookies.remove('token');
-    Cookies.remove('userRole');
-    Cookies.remove('userName');
-    router.push('/login');
+    void cerrarSesion();
   };
 
   const userInitial = localUserName.substring(0, 2).toUpperCase() || 'AD';

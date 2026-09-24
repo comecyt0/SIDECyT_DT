@@ -12,13 +12,19 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Dos capas de protección:
  *   1. Por IP   — 5 intentos / 60s (bloqueo temporal)
- *   2. Por email — 10 intentos acumulados → lockout de 15 min (progresivo)
+ *   2. Por cuenta+IP — 10 intentos fallidos desde la MISMA IP → bloqueo de 15 min para ese par
+ *   3. Por cuenta (global) — 50 intentos fallidos desde cualquier IP → bloqueo de 15 min de la cuenta
+ *
+ * SEGURIDAD (24/09/2026): antes 10 intentos por correo, vinieran de donde vinieran, bloqueaban la cuenta. Cualquiera
+ * podía dejar fuera al administrador a propósito con 10 contraseñas malas. Ahora un atacante desde una IP solo se
+ * bloquea a sí mismo; el bloqueo global de la cuenta exige un ataque distribuido (50) y queda en el log.
  *
  * Configuración en .env:
  *   AUTH_LOGIN_RATE_LIMIT   (default 5)   — intentos por IP por ventana
  *   AUTH_LOGIN_RATE_WINDOW  (default 60)  — segundos de la ventana IP
  *   AUTH_ACCOUNT_LOCKOUT    (default 10)  — intentos hasta lockout de cuenta
  *   AUTH_LOCKOUT_MINUTES    (default 15)  — minutos de lockout de cuenta
+ *   AUTH_ACCOUNT_LOCKOUT_GLOBAL (default 50) — intentos (todas las IP) hasta bloquear la cuenta
  */
 class AuthLoginRateLimitMiddleware
 {
@@ -30,6 +36,8 @@ class AuthLoginRateLimitMiddleware
 
     private const LOCKOUT_MINUTES = 15;
 
+    private const LOCKOUT_GLOBAL = 50;
+
     public function handle(Request $request, Closure $next): Response
     {
         $ip = $request->ip();
@@ -39,12 +47,15 @@ class AuthLoginRateLimitMiddleware
         $lockoutLimit = (int) env('AUTH_ACCOUNT_LOCKOUT', self::LOCKOUT_ATTEMPTS);
         $lockoutMins = (int) env('AUTH_LOCKOUT_MINUTES', self::LOCKOUT_MINUTES);
 
+        $lockoutGlobal = (int) env('AUTH_ACCOUNT_LOCKOUT_GLOBAL', self::LOCKOUT_GLOBAL);
         $ipKey = "auth_login_attempts:{$ip}";
-        $emailKey = "auth_account_attempts:{$email}";
-        $lockoutKey = "auth_account_locked:{$email}";
+        $emailKey = "auth_account_attempts:{$email}|{$ip}";
+        $lockoutKey = "auth_account_locked:{$email}|{$ip}";
+        $globalKey = "auth_account_attempts_global:{$email}";
+        $globalLockKey = "auth_account_locked_global:{$email}";
 
-        // ── 1. Verificar lockout de cuenta ───────────────────────────────
-        if ($email && Cache::has($lockoutKey)) {
+        // ── 1. Verificar bloqueo de cuenta (este par cuenta+IP, o la cuenta entera) ──
+        if ($email && (Cache::has($lockoutKey) || Cache::has($globalLockKey))) {
             $ttl = Cache::get($lockoutKey.'_ttl', $lockoutMins * 60);
 
             return response()->json([
@@ -99,6 +110,17 @@ class AuthLoginRateLimitMiddleware
                         'attempts' => $emailAttempts,
                     ]);
                 }
+
+                $globalAttempts = (int) Cache::get($globalKey, 0) + 1;
+                Cache::put($globalKey, $globalAttempts, $lockoutMins * 60);
+                if ($globalAttempts >= $lockoutGlobal) {
+                    Cache::put($globalLockKey, true, $lockoutMins * 60);
+                    Cache::forget($globalKey);
+                    \Log::channel('security')->critical('Cuenta bloqueada por intentos desde muchas IP', [
+                        'email' => $email,
+                        'attempts' => $globalAttempts,
+                    ]);
+                }
             }
 
             $remaining = max(0, $maxAttempts - ($ipAttempts + 1));
@@ -109,6 +131,7 @@ class AuthLoginRateLimitMiddleware
                 Cache::forget($emailKey);
                 Cache::forget($lockoutKey);
                 Cache::forget($lockoutKey.'_ttl');
+                Cache::forget($globalKey);
             }
             $remaining = $maxAttempts;
         }

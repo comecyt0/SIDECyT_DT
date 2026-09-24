@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { User, Mail, Building2, ShieldCheck, Phone, Briefcase, KeyRound, Loader2, Info, UserCog } from 'lucide-react';
 import api from '@/lib/api';
+import { validarPassword, PASSWORD_HINT, PASSWORD_MIN } from '@/lib/password-policy';
 import { AlertBox } from '@/components/ui/alert-box';
 import PageHeader from '@/components/ui/page-header';
 import TwoFactorSetup from '@/components/auth/TwoFactorSetup';
@@ -70,8 +71,9 @@ export default function SolicitanteSettingsPage() {
       return;
     }
 
-    if (pwForm.new_password.length < 8) {
-      setPwValidationError('La nueva contraseña debe tener al menos 8 caracteres.');
+    const problemaPw = validarPassword(pwForm.new_password);
+    if (problemaPw) {
+      setPwValidationError(problemaPw);
       return;
     }
 
@@ -209,7 +211,7 @@ export default function SolicitanteSettingsPage() {
         inline
         title="Cambiar contraseña"
         icon={<KeyRound className="h-5 w-5" />}
-        intro={<>Primero confirmamos que eres tú con tu contraseña de hoy; después eliges la nueva. Mínimo <strong>8 caracteres</strong>; mezcla letras, números y símbolos.</>}
+        intro={<>Primero confirmamos que eres tú con tu contraseña de hoy; después eliges la nueva. <strong>{PASSWORD_HINT}</strong></>}
         onClose={() => { setPwForm({ current_password: '', new_password: '', new_password_confirmation: '' }); setPwError(null); setPwValidationError(null); }}
         onSubmit={handlePwSubmit}
         submitting={pwLoading}
@@ -243,7 +245,7 @@ export default function SolicitanteSettingsPage() {
             label: 'La nueva',
             question: '¿Cuál será tu nueva contraseña?',
             validate: () => {
-              if (pwForm.new_password.length < 8) return 'La nueva contraseña debe tener al menos 8 caracteres.';
+              { const p = validarPassword(pwForm.new_password); if (p) return p; }
               if (pwForm.new_password !== pwForm.new_password_confirmation) return 'La nueva contraseña y su confirmación no coinciden.';
               return null;
             },
@@ -258,7 +260,7 @@ export default function SolicitanteSettingsPage() {
                     autoComplete="new-password"
                     value={pwForm.new_password}
                     onChange={handlePwChange}
-                    placeholder="Mínimo 8 caracteres"
+                    placeholder={`Mínimo ${PASSWORD_MIN} caracteres`}
                     disabled={pwLoading}
                     className={pwInputCls}
                   />

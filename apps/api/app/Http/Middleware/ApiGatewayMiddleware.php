@@ -5,14 +5,18 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * ApiGatewayMiddleware
+ * ApiGatewayMiddleware — MONITOREO de tráfico (ya no bloquea).
  *
- * Analiza patrones de tráfico completos.
- * Si se detectan >= 1000 IPs distintas en una ventana de 60 segundos,
- * activa modo "lockdown" durante 5 minutos bloqueando todo el tráfico.
+ * SEGURIDAD (24/09/2026): antes, al ver >= 1000 IPs distintas en 60 s, apagaba TODA la API para TODOS durante
+ * 5 minutos (503). Eso convertía cualquier botnet —o el tráfico legítimo del día de cierre de una convocatoria—
+ * en una caída total del servicio: una denegación de servicio que el propio sistema se hacía. Ahora solo registra
+ * la anomalía (una vez por ventana) en el canal `security`. La protección contra abuso la dan los límites por IP y
+ * por ruta (RateLimitMiddleware, `throttle:*`, AuthLoginRateLimitMiddleware), que castigan al que abusa sin tirar
+ * a los demás.
  */
 class ApiGatewayMiddleware
 {
@@ -20,59 +24,28 @@ class ApiGatewayMiddleware
 
     private const IP_WINDOW_SECONDS = 60;
 
-    private const LOCKDOWN_CACHE_KEY = 'api_gateway_lockdown';
-
     private const IPS_SET_KEY = 'api_gateway_ips';
 
     public function handle(Request $request, Closure $next): Response
     {
-        // Verificar si hay lockdown activo
-        if (Cache::has(self::LOCKDOWN_CACHE_KEY)) {
-            $ttl = Cache::get(self::LOCKDOWN_CACHE_KEY.'_ttl', 0);
-
-            return response()->json([
-                'error' => 'Service Unavailable',
-                'message' => 'El sistema está temporalmente no disponible por actividad inusual. Intenta más tarde.',
-                'code' => 503,
-            ], 503, [
-                'Retry-After' => $ttl,
-            ]);
-        }
-
-        $ip = $request->ip();
-        $ipsKey = self::IPS_SET_KEY;
+        $ip = (string) $request->ip();
         $maxIps = (int) env('API_GATEWAY_MAX_IPS', self::MAX_DISTINCT_IPS);
-        $lockdownMinutes = (int) env('API_GATEWAY_LOCKDOWN_MINUTES', 5);
+        $ahora = now()->timestamp;
 
-        // Registrar IP única en ventana de tiempo
-        $ips = Cache::get($ipsKey, []);
-        $ips[$ip] = now()->timestamp;
+        $ips = Cache::get(self::IPS_SET_KEY, []);
+        // Solo se escribe si la IP es nueva o su marca tiene más de 10 s: menos escrituras en la caché (BD).
+        if (! isset($ips[$ip]) || $ahora - $ips[$ip] > 10) {
+            $ips[$ip] = $ahora;
+            $cutoff = $ahora - self::IP_WINDOW_SECONDS;
+            $ips = array_filter($ips, fn ($ts) => $ts >= $cutoff);
+            Cache::put(self::IPS_SET_KEY, $ips, self::IP_WINDOW_SECONDS + 10);
 
-        // Purgar IPs fuera de la ventana de tiempo
-        $cutoff = now()->timestamp - self::IP_WINDOW_SECONDS;
-        $ips = array_filter($ips, fn ($ts) => $ts >= $cutoff);
-
-        Cache::put($ipsKey, $ips, self::IP_WINDOW_SECONDS + 10);
-
-        $distinctIpCount = count($ips);
-
-        // Activar lockdown si se superan el umbral
-        if ($distinctIpCount >= $maxIps) {
-            $lockdownSeconds = $lockdownMinutes * 60;
-            Cache::put(self::LOCKDOWN_CACHE_KEY, true, $lockdownSeconds);
-            Cache::put(self::LOCKDOWN_CACHE_KEY.'_ttl', $lockdownSeconds, $lockdownSeconds);
-
-            \Log::critical('API GATEWAY LOCKDOWN ACTIVADO', [
-                'distinct_ips' => $distinctIpCount,
-                'threshold' => $maxIps,
-                'lockdown_min' => $lockdownMinutes,
-            ]);
-
-            return response()->json([
-                'error' => 'Service Unavailable',
-                'message' => 'El sistema detectó actividad anormal y está en modo de protección.',
-                'code' => 503,
-            ], 503);
+            if (count($ips) >= $maxIps && Cache::add('api_gateway_alerta', true, self::IP_WINDOW_SECONDS)) {
+                Log::channel('security')->critical('Tráfico inusual: muchas IPs distintas en 60 s', [
+                    'distinct_ips' => count($ips),
+                    'threshold' => $maxIps,
+                ]);
+            }
         }
 
         return $next($request);

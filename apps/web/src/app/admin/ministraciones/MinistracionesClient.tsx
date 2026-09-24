@@ -13,6 +13,7 @@ import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import PaginationControls from '@/components/ui/pagination-controls';
 import { DataCardGrid } from '@/components/ui/DataCardGrid';
+import { safeUrl } from '@/lib/safe-url';
 
 const ESTADO_MINISTRACION: Record<string, { label: string; tone: string }> = {
   pendiente: { label: 'Pendiente', tone: 'neutral' },
@@ -146,7 +147,7 @@ export default function MinistracionesClient({ ministraciones, pagination }: Pro
                     <span className="text-[10px] uppercase tracking-wider text-[var(--app-ink-2)] block mb-1">Documentos</span>
                     <div className="flex gap-1 flex-wrap">
                       {documentos.length > 0 ? documentos.map((d, i) => (
-                        <a key={i} href={d.url} target="_blank" rel="noreferrer">
+                        <a key={i} href={safeUrl(d.url) ?? '#'} target="_blank" rel="noopener noreferrer">
                           <Badge variant="outline" className="gap-1 cursor-pointer">
                             <ExternalLink className="h-2.5 w-2.5" />{d.label}
                           </Badge>

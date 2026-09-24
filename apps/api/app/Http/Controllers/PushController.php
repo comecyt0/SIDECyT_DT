@@ -35,10 +35,21 @@ class PushController extends Controller
     public function subscribe(Request $request)
     {
         $data = $request->validate([
-            'endpoint' => 'required|string',
-            'keys.p256dh' => 'required|string',
-            'keys.auth' => 'required|string',
+            'endpoint' => 'required|string|max:1000|url:https',
+            'keys.p256dh' => 'required|string|max:200',
+            'keys.auth' => 'required|string|max:100',
         ]);
+
+        // SEGURIDAD (24/09/2026): el servidor hace POST a este endpoint cada vez que hay una notificación. Con texto
+        // libre, un usuario podía registrar una URL interna (http://10.x…, 127.0.0.1) y usar al servidor como puente
+        // (SSRF). Solo se aceptan los servicios de push de los navegadores.
+        $host = strtolower((string) parse_url($data['endpoint'], PHP_URL_HOST));
+        $permitido = in_array($host, ['fcm.googleapis.com', 'updates.push.services.mozilla.com', 'web.push.apple.com'], true)
+            || str_ends_with($host, '.notify.windows.com')
+            || str_ends_with($host, '.push.apple.com');
+        if (! $permitido) {
+            return response()->json(['error' => 'Servicio de notificaciones no reconocido.'], 422);
+        }
 
         $sub = PushSubscription::updateOrCreate(
             ['user_id' => $request->user()->id, 'endpoint' => $data['endpoint']],

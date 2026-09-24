@@ -84,7 +84,8 @@ Route::middleware([
     Route::post('auth/solicitar-acceso', [RegistroAccesoController::class, 'store'])->middleware('throttle:3,5');
 
     // === PUBLIC CATALOGS (No authentication required) ===
-    Route::group(['prefix' => 'catalogs/programa'], function () {
+    // throttle propio (24/09/2026): endpoints públicos sin límite de ruta; el global de 300/min era el único freno.
+    Route::group(['prefix' => 'catalogs/programa', 'middleware' => 'throttle:60,1'], function () {
         Route::get('{tipo_programa_id}/campos', [ProgramaCatalogController::class, 'campos']);
         Route::get('{tipo_programa_id}/documentos', [ProgramaCatalogController::class, 'documentos']);
         Route::get('{tipo_programa_id}/criterios', [ProgramaCatalogController::class, 'criterios']);
@@ -290,7 +291,8 @@ Route::middleware([
         Route::post('mis-notificaciones/leer-todas', [NotificacionLogController::class, 'marcarTodasLeidas']);
 
         // CATALOGS - Cache management (requires authentication/admin)
-        Route::delete('catalogs/programa/{tipo_programa_id}/cache', [ProgramaCatalogController::class, 'clearCache']);
+        // SEGURIDAD (24/09/2026): antes cualquier usuario con sesión podía vaciar esta caché.
+        Route::delete('catalogs/programa/{tipo_programa_id}/cache', [ProgramaCatalogController::class, 'clearCache'])->middleware('admin');
 
         // SOLICITANTE INSTITUCIONAL (4)
         Route::group(['prefix' => 'solicitudes'], function () {
@@ -311,5 +313,11 @@ Route::middleware([
         // convenio: admin or the solicitud owner
         Route::get('documentos/dictamen/{dictamen}', [DocumentoController::class, 'downloadDictamen']);
         Route::get('documentos/convenio/{solicitud}', [DocumentoController::class, 'downloadConvenio']);
+
+        // Archivos de solicitud en almacenamiento privado (24/09/2026): permiso por rol dentro del controlador
+        // (admin, revisor, dueño, evaluador asignado). El nombre solo acepta el formato que genera el sistema.
+        Route::get('archivos/solicitudes/{solicitud}/{archivo}', [\App\Http\Controllers\ArchivoSolicitudController::class, 'descargar'])
+            ->where('archivo', \App\Http\Controllers\ArchivoSolicitudController::PATRON_NOMBRE)
+            ->middleware('throttle:120,1');
     });
 });

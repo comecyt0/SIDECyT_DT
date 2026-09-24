@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 // Sistema visual SIGAC de los paneles (23/09/2026). Todo acotado a `.panel-root`: el login no cambia.
@@ -50,7 +51,7 @@ export const metadata: Metadata = {
  * aparece un ChunkLoadError, o a los 15 s el splash sigue visible, se recarga UNA vez (bandera en
  * sessionStorage, ventana de 60 s: nunca en bucle) con un parámetro nuevo en la URL, para saltarse
  * cualquier copia vieja guardada por un proxy. Tras cargar bien, el parámetro se limpia de la barra.
- * Script en línea permitido por la CSP (`script-src 'self' 'unsafe-inline'`); no usa datos externos.
+ * Lleva el nonce de la CSP por petición (proxy.ts + lib/csp.ts, 24/09/2026); no usa datos externos.
  */
 const RECUPERAR_CARGA = `(function(){try{
 var K='sg-reload-at',P='_r';
@@ -69,11 +70,14 @@ export const viewport: Viewport = {
   colorScheme: "light dark",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Nonce por petición que genera proxy.ts. Leer headers() además vuelve dinámico el render de todas las
+  // páginas, requisito para que cada respuesta lleve su propio nonce.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html
       lang="es"
@@ -84,7 +88,7 @@ export default function RootLayout({
         <meta name="theme-color" content="var(--brand-vino)" />
         <meta name="color-scheme" content="light dark" />
         {/* Recuperación de "se queda cargando" (E42). Constante propia, sin datos de usuario. */}
-        <script dangerouslySetInnerHTML={{ __html: RECUPERAR_CARGA }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: RECUPERAR_CARGA }} />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {/* Splash de arranque: mismo dibujo que RouteLoadingScreen, pero impreso por el servidor

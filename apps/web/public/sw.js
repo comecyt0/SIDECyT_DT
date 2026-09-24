@@ -7,13 +7,17 @@
  *   - Network-first → /api/* (never cache sensitive data; offline ⇒ fallback to cached if any GET)
  *   - Network-only → everything else (HTML navigations) with a graceful offline message
  *
+ * SEGURIDAD (24/09/2026): las páginas del panel llevan datos personales renderizados en el servidor. NUNCA se
+ * guardan en caché (la versión anterior sí lo hacía: quedaban en disco tras cerrar sesión, visibles en un equipo
+ * compartido). Tampoco se cachea /storage/* (documentos subidos). Subir CACHE_VERSION purga lo guardado.
+ *
  * No third-party FCM/OneSignal — only the W3C Push API. VAPID keys are provided
  * by the backend at runtime and consumed via PushManager.subscribe().
  */
 
-const CACHE_VERSION = 'comecyt-v1';
+// v3 (24/09/2026): bytes nuevos para que todo navegador reinstale el SW con la CSP correcta de sw.js.
+const CACHE_VERSION = 'comecyt-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
-const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
 const STATIC_ASSETS = [
   '/logo.png',
@@ -48,8 +52,17 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+self.addEventListener('message', (event) => {
+  if (event.origin && event.origin !== self.location.origin) return;
+  if (event.data && event.data.type === 'CLEAR_CACHES') {
+    event.waitUntil(caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))));
+  }
+});
+
 function isStaticAsset(url) {
   if (url.origin !== self.location.origin) return false;
+  // Documentos e imágenes subidos por usuarios: jamás al disco del navegador.
+  if (url.pathname.startsWith('/storage/')) return false;
   if (url.pathname === '/logo.png') return true;
   if (url.pathname === '/favicon.ico') return true;
   if (url.pathname === '/manifest.webmanifest') return true;
@@ -124,13 +137,9 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       (async () => {
         try {
-          const fresh = await fetch(request);
-          const cache = await caches.open(RUNTIME_CACHE);
-          cache.put(request, fresh.clone());
-          return fresh;
+          // Solo red: el HTML nunca se guarda (puede contener datos del usuario).
+          return await fetch(request);
         } catch {
-          const cached = await caches.match(request);
-          if (cached) return cached;
           return new Response(
             '<html><body style="font-family:system-ui;padding:2rem;text-align:center"><h1>Sin conexión</h1><p>No hay conexión a internet. Inténtalo de nuevo cuando estés en línea.</p></body></html>',
             { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
@@ -170,7 +179,15 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+  const raw = (event.notification.data && event.notification.data.url) || '/';
+  // Solo rutas del propio sitio: un payload con URL externa no debe abrir otro dominio.
+  let targetUrl = '/';
+  try {
+    const u = new URL(raw, self.location.origin);
+    if (u.origin === self.location.origin) targetUrl = u.pathname + u.search + u.hash;
+  } catch {
+    targetUrl = '/';
+  }
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

@@ -41,10 +41,37 @@ class User extends Authenticatable implements JWTSubject
             'activo' => 'boolean',
             'ultimo_acceso' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
+            'password_changed_at' => 'datetime',
             // Secret y recovery codes se guardan encriptados en DB
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
         ];
+    }
+
+    /**
+     * SEGURIDAD (24/09/2026): cualquier cambio de contraseña —propio, restablecimiento por correo, admin o SSO—
+     * marca el momento. ApiAuthenticate rechaza los JWT emitidos antes: cierra las sesiones abiertas en otros
+     * equipos. Va en el modelo para que ningún camino se quede sin hacerlo.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (User $user) {
+            if ($user->isDirty('password') && $user->exists) {
+                $user->password_changed_at = now();
+            }
+        });
+    }
+
+    /** ¿Este JWT (claim `iat`) se emitió antes del último cambio de contraseña? */
+    public function tokenAnteriorAlCambioDeClave(?int $iat): bool
+    {
+        if (! $this->password_changed_at || $iat === null) {
+            return false;
+        }
+
+        // Comparación en segundos (resolución de `iat`): un token emitido en el mismo segundo del cambio es válido
+        // — es el que se entrega justo después de cambiarla.
+        return $iat < $this->password_changed_at->getTimestamp();
     }
 
     /** Helper: ¿el usuario tiene 2FA activo? */

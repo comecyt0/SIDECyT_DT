@@ -15,7 +15,9 @@ class CatalogoController extends Controller
         $bancos = DB::table('bancos')->where('activo', true)->get();
         $municipios = DB::table('municipios')->where('activo', true)->get();
         $areas = DB::table('areas_conocimiento')->where('activo', true)->get();
-        $empresas = DB::table('empresas')->where('activo', true)->get();
+        // SEGURIDAD (24/09/2026): solo lo que usan los selectores. Antes se enviaban TODAS las columnas de todas las
+        // empresas (RFC, domicilio, contactos…) a cualquier usuario con sesión.
+        $empresas = DB::table('empresas')->where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'acronimo']);
         $roles = DB::table('roles')->get();
         $modalidades = DB::table('modalidades')->where('activo', true)->get();
 

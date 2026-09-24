@@ -410,6 +410,11 @@ class SolicitudController extends Controller
             return response()->json(['error' => ConfigHelper::msg(Message::AUTH_UNAUTHORIZED)], 403);
         }
 
+        // SEGURIDAD (24/09/2026): el informe final solo se entrega con el proyecto en ejecución.
+        if (! in_array($solicitud->estado, ['ministracion', 'seguimiento'], true)) {
+            return response()->json(['error' => 'El informe final solo se entrega cuando el proyecto está en ministración o seguimiento.'], 422);
+        }
+
         // Validar que la solicitud no haya superado la fecha límite para informe
         if ($solicitud->fecha_limite_informe && now() > $solicitud->fecha_limite_informe) {
             return response()->json([
@@ -431,7 +436,8 @@ class SolicitudController extends Controller
 
         // ✅ SEGURIDAD: Validar MIME type binario (no solo extensión)
         try {
-            $this->validateBinaryMimeType($file->getRealPath());
+            // getPathname(), no getRealPath(): en este IIS realpath del temporal devuelve false (E28).
+            $this->validateBinaryMimeType($file->getPathname());
         } catch (ValidationException $e) {
             return response()->json([
                 'error' => ConfigHelper::msg(Message::DOCUMENTO_MIME_INVALIDO),
@@ -439,28 +445,29 @@ class SolicitudController extends Controller
             ], 422);
         }
 
-        $filename = "{$solicitud->folio}_informe_final_".time().'.pdf';
-
         try {
-            // Store in public disk: storage/app/public/documentos/{solicitud_id}
-            Storage::disk('public')->putFileAs("documentos/{$solicitud->id}", $file, $filename);
-            $publicUrl = Storage::disk('public')->url("documentos/{$solicitud->id}/{$filename}");
+            // SEGURIDAD (24/09/2026): almacenamiento privado + descarga autenticada (antes disco `public`, sin sesión).
+            $url = \App\Http\Controllers\ArchivoSolicitudController::guardar($file, $solicitud);
+            \App\Http\Controllers\ArchivoSolicitudController::borrarPorUrl($solicitud->informe_final_url, $solicitud);
 
-            $solicitud->update([
-                'informe_final_url' => $publicUrl,
+            // forceFill: `estado_informe` está en $guarded (E31) — con update() se descartaba en silencio.
+            $solicitud->forceFill([
+                'informe_final_url' => $url,
                 'estado_informe' => 'entregado',
                 'fecha_entrega_informe' => now(),
                 'resultados_obtenidos' => $request->resultados_obtenidos,
-            ]);
+            ])->save();
 
             return response()->json([
                 'message' => ConfigHelper::msg(Message::SUCCESS_INFORME_ENTREGADO),
                 'solicitud' => $solicitud,
             ]);
         } catch (\Throwable $e) {
+            // El detalle va al log, nunca al cliente (revela rutas internas).
+            \Illuminate\Support\Facades\Log::error('submitInforme: '.$e->getMessage(), ['solicitud' => $solicitud->id]);
+
             return response()->json([
                 'error' => ConfigHelper::msg(Message::ERROR_STORAGE),
-                'detail' => $e->getMessage(),
             ], 500);
         }
     }

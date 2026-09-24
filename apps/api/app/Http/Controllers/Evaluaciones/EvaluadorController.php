@@ -69,6 +69,17 @@ class EvaluadorController extends Controller
         $solicitud = $asignacion->solicitud;
         $tipoPrograma = $solicitud->convocatoria?->tipoPrograma;
 
+        // SEGURIDAD (24/09/2026): un dictamen solo se emite UNA vez, sobre una asignación abierta y una solicitud
+        // que sigue en evaluación. Antes se podía volver a enviar después de concluido y reescribir el resultado
+        // de una solicitud ya en convenio o cerrada.
+        if (! in_array($asignacion->estado, ['asignado', 'evaluando'], true)
+            || Dictamen::where('asignacion_id', $asignacion->id)->exists()) {
+            return response()->json(['error' => 'Esta evaluación ya fue concluida.'], 422);
+        }
+        if (! $solicitud || $solicitud->estado !== 'en_evaluacion') {
+            return response()->json(['error' => 'La solicitud ya no está en evaluación.'], 422);
+        }
+
         // Determinar si el programa tiene criterios dinámicos
         $isDynamic = false;
         if ($tipoPrograma) {
@@ -89,6 +100,25 @@ class EvaluadorController extends Controller
                 'comentarios_justificacion' => 'nullable|string|max:2000',
                 'carta_imparcialidad_aceptada' => 'required|boolean|accepted',
             ]);
+
+            // SEGURIDAD (24/09/2026): cada criterio debe ser DE ESTE programa, sin repetirse, y cada puntaje no puede
+            // pasar su máximo. Antes `puntaje_obtenido` solo tenía min:0: con 9999 en un criterio de cualquier programa
+            // la solicitud quedaba aprobada.
+            $criterios = ProgramaCriterioEvaluacion::where('tipo_programa_id', $tipoPrograma->id)
+                ->get(['id', 'puntaje_maximo'])
+                ->keyBy('id');
+            $vistos = [];
+            foreach ($request->criterios_puntajes as $cp) {
+                $id = (int) $cp['criterio_id'];
+                $criterio = $criterios->get($id);
+                if (! $criterio || isset($vistos[$id])) {
+                    return response()->json(['error' => 'Hay criterios que no pertenecen a este programa o están repetidos.'], 422);
+                }
+                $vistos[$id] = true;
+                if ($criterio->puntaje_maximo !== null && (float) $cp['puntaje_obtenido'] > (float) $criterio->puntaje_maximo) {
+                    return response()->json(['error' => 'Un puntaje supera el máximo de su criterio.'], 422);
+                }
+            }
 
             // Validar que no todos los puntajes sean 0
             $totalPuntaje = 0;
@@ -222,8 +252,10 @@ class EvaluadorController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            // Detalle solo al log (antes se devolvía el mensaje de la excepción al navegador).
+            \Illuminate\Support\Facades\Log::error('saveDictamen', ['asignacion' => $asignacion->id, 'error' => $e->getMessage()]);
 
-            return response()->json(['error' => 'Error al guardar dictamen: '.$e->getMessage()], 500);
+            return response()->json(['error' => 'No se pudo guardar el dictamen. Intenta de nuevo.'], 500);
         }
     }
 

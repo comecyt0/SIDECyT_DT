@@ -11,7 +11,6 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 class ConvenioController extends Controller
 {
@@ -141,9 +140,11 @@ class ConvenioController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            // Detalle solo al log: el mensaje de una excepción de BD revela tablas y columnas.
+            Log::error('Error al generar convenio', ['solicitud' => $solicitud->id ?? null, 'error' => $e->getMessage()]);
 
             return response()->json([
-                'error' => 'Error al generar convenio: '.$e->getMessage(),
+                'error' => 'No se pudo generar el convenio. Intenta de nuevo o revisa el registro del sistema.',
             ], 500);
         }
     }
@@ -231,14 +232,13 @@ class ConvenioController extends Controller
         // anteponer "public/" aquí escribía en storage/app/public/public/convenios/... mientras que
         // pdf_url (abajo) apunta a storage/app/public/convenios/..., una carpeta distinta que nunca
         // tuvo el archivo: el enlace de descarga daba 404 siempre. Corregido el 23/09/2026 (E34).
-        $path = "convenios/{$sol->id}";
-        Storage::disk('public')->makeDirectory($path);
-
-        $filename = "convenio_{$convenio->numero_convenio}.txt";
-        Storage::disk('public')->put("{$path}/{$filename}", $text);
-
+        // SEGURIDAD (24/09/2026): ya no se escribe una copia en el disco `public`. Con el número de convenio
+        // secuencial (CONV-AAAA-NNNN), /storage/convenios/{id}/convenio_{numero}.txt se podía adivinar y se
+        // descargaba SIN sesión (nombres, montos). El documento se genera al vuelo, con permisos, en
+        // DocumentoController::downloadConvenio (admin o dueño de la solicitud).
+        unset($text);
         $convenio->update([
-            'pdf_url' => "/storage/convenios/{$sol->id}/{$filename}",
+            'pdf_url' => "/api/documentos/convenio/{$sol->id}",
         ]);
     }
 }

@@ -100,7 +100,10 @@ class RevisionController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return response()->json(['error' => 'Error al aprobar: '.$e->getMessage()], 500);
+            // Detalle solo al log: el mensaje de la excepción revela estructura interna.
+            \Illuminate\Support\Facades\Log::error('Revision aprobar', ['error' => $e->getMessage()]);
+
+            return response()->json(['error' => 'No se pudo aprobar la solicitud. Intenta de nuevo.'], 500);
         }
     }
 
@@ -159,7 +162,9 @@ class RevisionController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return response()->json(['error' => 'Error al observar: '.$e->getMessage()], 500);
+            \Illuminate\Support\Facades\Log::error('Revision observar', ['error' => $e->getMessage()]);
+
+            return response()->json(['error' => 'No se pudo registrar la observación. Intenta de nuevo.'], 500);
         }
     }
 

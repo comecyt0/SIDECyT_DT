@@ -15,7 +15,7 @@ class SolicitudesExport implements FromCollection, WithHeadings, WithMapping
      */
     public function collection()
     {
-        return Solicitud::with(['user', 'empresa', 'convocatoria'])->get();
+        return Solicitud::with(['user:id,name', 'empresa:id,nombre', 'convocatoria:id,nombre'])->get();
     }
 
     public function headings(): array
@@ -35,14 +35,26 @@ class SolicitudesExport implements FromCollection, WithHeadings, WithMapping
     public function map($solicitud): array
     {
         return [
-            $solicitud->folio,
-            $solicitud->titulo_proyecto,
-            $solicitud->user->name,
-            $solicitud->empresa->nombre ?? 'N/A',
-            $solicitud->convocatoria->nombre ?? 'N/A',
-            '$'.number_format($solicitud->monto_solicitado, 2),
-            strtoupper($solicitud->estado),
-            $solicitud->created_at->format('d/m/Y'),
+            self::celda($solicitud->folio),
+            self::celda($solicitud->titulo_proyecto),
+            self::celda($solicitud->user?->name),
+            self::celda($solicitud->empresa?->nombre ?? 'N/A'),
+            self::celda($solicitud->convocatoria?->nombre ?? 'N/A'),
+            '$'.number_format((float) $solicitud->monto_solicitado, 2),
+            strtoupper((string) $solicitud->estado),
+            $solicitud->created_at?->format('d/m/Y'),
         ];
+    }
+
+    /**
+     * SEGURIDAD (24/09/2026): inyección de fórmulas (CSV/Excel injection). Un solicitante que titula su proyecto
+     * `=HYPERLINK("https://sitio-malo", "Ver")` hacía que la fórmula se ejecutara en el Excel del admin. Todo texto
+     * que empiece con = + - @ tabulador o retorno se antepone con un apóstrofo: Excel lo muestra como texto.
+     */
+    public static function celda(?string $valor): string
+    {
+        $valor = (string) $valor;
+
+        return preg_match('/^[=+\-@\t\r]/', $valor) ? "'".$valor : $valor;
     }
 }

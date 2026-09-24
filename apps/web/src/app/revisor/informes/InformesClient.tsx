@@ -10,6 +10,7 @@ import PageHeader from '@/components/ui/page-header';
 import { FileText, Eye, Search } from 'lucide-react';
 import api from '@/lib/api';
 import { parseDate } from '@/lib/format';
+import { safeUrl } from '@/lib/safe-url';
 
 const INFORME_ESTADO: Record<string, { label: string; tone: string }> = {
   pendiente: { label: 'Pendiente de entrega', tone: 'amber' },
@@ -260,12 +261,12 @@ export default function InformesClient({ informes }: Props) {
                 {(selectedInforme.archivo_informe_url || selectedInforme.archivo_evidencias_url) && (
                   <div className="flex flex-wrap gap-2">
                     {selectedInforme.archivo_informe_url && (
-                      <a href={selectedInforme.archivo_informe_url} target="_blank" rel="noreferrer" className="btn-liquid inline-flex items-center gap-2 h-10 px-4 rounded-[14px] border text-sm font-semibold" style={{ borderColor: 'var(--app-rule)', color: 'var(--app-ink)' }}>
+                      <a href={safeUrl(selectedInforme.archivo_informe_url) ?? '#'} target="_blank" rel="noopener noreferrer" className="btn-liquid inline-flex items-center gap-2 h-10 px-4 rounded-[14px] border text-sm font-semibold" style={{ borderColor: 'var(--app-rule)', color: 'var(--app-ink)' }}>
                         <FileText className="h-4 w-4" aria-hidden="true" /> Abrir el informe
                       </a>
                     )}
                     {selectedInforme.archivo_evidencias_url && (
-                      <a href={selectedInforme.archivo_evidencias_url} target="_blank" rel="noreferrer" className="btn-liquid inline-flex items-center gap-2 h-10 px-4 rounded-[14px] border text-sm font-semibold" style={{ borderColor: 'var(--app-rule)', color: 'var(--app-ink)' }}>
+                      <a href={safeUrl(selectedInforme.archivo_evidencias_url) ?? '#'} target="_blank" rel="noopener noreferrer" className="btn-liquid inline-flex items-center gap-2 h-10 px-4 rounded-[14px] border text-sm font-semibold" style={{ borderColor: 'var(--app-rule)', color: 'var(--app-ink)' }}>
                         <FileText className="h-4 w-4" aria-hidden="true" /> Abrir las evidencias
                       </a>
                     )}

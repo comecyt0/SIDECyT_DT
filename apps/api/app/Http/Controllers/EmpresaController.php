@@ -15,7 +15,7 @@ class EmpresaController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre' => 'required|string|max:255|unique:instituciones,nombre',
+            'nombre' => 'required|string|max:255|unique:empresas,nombre',
             'acronimo' => 'nullable|string|max:20',
             'municipio_id' => 'nullable|exists:municipios,id',
             'activo' => 'boolean',
@@ -41,7 +41,7 @@ class EmpresaController extends Controller
     public function update(Request $request, Institucion $empresa)
     {
         $validated = $request->validate([
-            'nombre' => 'sometimes|string|max:255|unique:instituciones,nombre,'.$empresa->id,
+            'nombre' => 'sometimes|string|max:255|unique:empresas,nombre,'.$empresa->id,
             'acronimo' => 'nullable|string|max:20',
             'municipio_id' => 'nullable|exists:municipios,id',
             'activo' => 'boolean',

@@ -140,6 +140,23 @@ class SsoController extends Controller
             return response()->json(['error' => 'El IdP no devolvió email en los claims.'], 422);
         }
 
+        // SEGURIDAD (24/09/2026, hoy el SSO está apagado: OIDC_ENABLED no está en .env):
+        //  - el correo debe venir VERIFICADO por el IdP; si no, alguien con un correo sin verificar en el IdP tomaría la
+        //    cuenta local con ese correo;
+        //  - una cuenta local desactivada no entra por SSO;
+        //  - las cuentas de admin o con 2FA no se abren por SSO: se saltaría su segundo factor.
+        if (($claims['email_verified'] ?? false) !== true) {
+            return response()->json(['error' => 'El proveedor de identidad no ha verificado este correo.'], 403);
+        }
+        $existente = User::where('email', $email)->first();
+        if ($existente && (! $existente->activo
+            || $existente->hasTwoFactorEnabled()
+            || (int) $existente->rol_id === (int) config('comecyt.roles.admin'))) {
+            Log::channel('security')->warning('SSO rechazado para cuenta local protegida', ['user_id' => $existente->id]);
+
+            return response()->json(['error' => 'Esta cuenta debe iniciar sesión con correo y contraseña.'], 403);
+        }
+
         // 3. JIT provisioning — crear usuario si no existe
         $defaultRoleSlug = env('OIDC_DEFAULT_ROLE_SLUG', 'solicitante');
         $rol = Rol::where('slug', $defaultRoleSlug)->first();

@@ -25,13 +25,23 @@ describe('NotificationDetailModal', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('renderiza asunto y mensaje con HTML', () => {
-    render(<NotificationDetailModal notification={base} onClose={() => {}} />);
+  it('renderiza asunto y mensaje como TEXTO, sin inyectar HTML (24/09/2026)', () => {
+    const { container } = render(<NotificationDetailModal notification={base} onClose={() => {}} />);
 
     expect(screen.getByText('Asunto de prueba')).toBeInTheDocument();
-    // dangerouslySetInnerHTML: el <strong> debe haberse inyectado
-    expect(screen.getByText('Hola').tagName).toBe('STRONG');
+    // Antes se inyectaba con dangerouslySetInnerHTML (XSS almacenado). Ahora se ve el texto y no hay <strong>.
+    expect(screen.getByText(/Hola/)).toBeInTheDocument();
     expect(screen.getByText(/mundo/)).toBeInTheDocument();
+    expect(container.querySelector('strong')).toBeNull();
+  });
+
+  it('un <script> o <img onerror> en el mensaje no llega al DOM', () => {
+    const malicioso = { ...base, mensaje: 'Aviso <img src=x onerror="alert(1)"><script>alert(2)</script> fin' };
+    const { container } = render(<NotificationDetailModal notification={malicioso} onClose={() => {}} />);
+
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('script')).toBeNull();
+    expect(screen.getByText(/Aviso/)).toBeInTheDocument();
   });
 
   it('clic en el botón X llama onClose', () => {

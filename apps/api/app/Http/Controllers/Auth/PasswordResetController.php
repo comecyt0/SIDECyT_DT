@@ -24,12 +24,17 @@ class PasswordResetController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        // Verify the email belongs to a registered user
+        // SEGURIDAD (24/09/2026): misma respuesta exista o no la cuenta. Antes un 404 "no está registrado" permitía
+        // averiguar qué correos tienen cuenta (enumeración). Si no existe, no se crea nada y nadie es notificado.
+        $respuesta = [
+            'message' => 'Si el correo está registrado, tu solicitud llegará al administrador. Recibirás el enlace de recuperación cuando la apruebe. Si todavía no tienes cuenta, usa "Solicitar acceso".',
+        ];
+
         $user = User::where('email', $request->email)->first();
         if (! $user) {
-            return response()->json([
-                'message' => 'Este correo electrónico no está registrado en el sistema. Si necesitas acceso, usa la opción "Solicitar Acceso".',
-            ], 404);
+            Log::channel('security')->info('Password reset requested for unknown email', ['ip' => $request->ip()]);
+
+            return response()->json($respuesta);
         }
 
         // Create or replace pending request (only one active at a time per email)
@@ -53,9 +58,7 @@ class PasswordResetController extends Controller
             Log::warning('SolicitudResetPassword notification failed', ['error' => $e->getMessage()]);
         }
 
-        return response()->json([
-            'message' => 'Tu solicitud ha sido enviada al administrador. Recibirás el enlace de recuperación una vez que sea aprobada.',
-        ]);
+        return response()->json($respuesta);
     }
 
     /**
@@ -119,7 +122,7 @@ class PasswordResetController extends Controller
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
-            'password' => 'required|min:8|confirmed',
+            'password' => ['required', 'confirmed', \Illuminate\Validation\Rules\Password::defaults()],
         ]);
 
         $status = Password::reset(

@@ -648,7 +648,10 @@ GET /documentos/convenio/{solicitud_id}
 | Code quality | ✅ | Pre-commit hooks: ESLint (frontend) + Laravel Pint (backend) |
 | Middleware capas | ✅ | `ApiGatewayMiddleware` + `CircuitBreakerMiddleware` + `RateLimitMiddleware` global |
 | Security headers | ✅ | `SecurityHeadersMiddleware` — X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, HSTS (HTTPS only), CSP `default-src 'none'`. **No incluye `X-XSS-Protection`** — ver fila más abajo |
-| CSP sin comodines | ✅ | `next.config.ts` — orígenes explícitos en `img-src`/`connect-src`. **Nunca usar `*.dominio`**: lo levanta el pentest (hallazgo 7, ago-2026) |
+| CSP sin comodines | ✅ | `src/lib/csp.ts` (desde el 24/09/2026; antes `next.config.ts`) — orígenes explícitos en `img-src`/`connect-src`. **Nunca usar `*.dominio`**: lo levanta el pentest (hallazgo 7, ago-2026) |
+| CSP con nonce (sin `unsafe-inline` en scripts) | ✅ | `src/proxy.ts` genera un nonce por petición; Next etiqueta sus scripts y `layout.tsx` el suyo. `sw.js` tiene su propia CSP en `next.config.ts` (un SW obedece la CSP de su archivo, E44). `style-src` sigue con `'unsafe-inline'` |
+| Documentos privados | ✅ | Disco `local` + descarga autenticada `ArchivoSolicitudController` (E44). Nada de usuarios en `/storage/` salvo banners y carrusel (públicos a propósito) |
+| Sesión: cierre real e invalidación | ✅ | `cerrarSesion()` llama `/auth/logout`; cambiar contraseña invalida JWT anteriores (`password_changed_at`); cuentas inactivas rechazadas en login, 2FA y cada petición (E44) |
 | API sin sesiones ni cookies JS | ✅ | Grupo `web` sin `StartSession`/`PreventRequestForgery` en `bootstrap/app.php`. No se emite `XSRF-TOKEN` ni `comecyt-session` (hallazgo 4, ago-2026) |
 | Lista blanca de Host | ✅ | Regla `HostAllowList` en `public/web.config` — cualquier `Host` no autorizado recibe 404 vacío (hallazgo 5, ago-2026) |
 | Certificado RDP | ✅ | Listener 3389 con cert `CN=10.250.36.241` (SAN con la IP) + NLA + cifrado alto (hallazgo 3, ago-2026) |
@@ -704,16 +707,16 @@ sudo certbot --nginx -d tudominio.mx
 | ~~**SMTP real de producción**~~ | ✅ **Resuelto 23/09/2026 (tarde)** | Infraestructura quitó el autenticador (MFA) de la cuenta de aplicativo y le asignó licencia Exchange Online. `smtp.office365.com:587` + STARTTLS autentica y envía; `MAIL_MAILER=smtp` activo y probado desde Laravel (ver E38) |
 | **2FA del administrador desactivado** | Alto | Quedó apagado el 14/09 por falta de SMTP. Con el correo ya funcionando, reactivarlo **con el usuario presente** (riesgo de dejar al admin fuera si algo falla). Revisar también el flujo de restablecimiento de contraseña por correo de punta a punta |
 | ~~`Cross-Origin-Resource-Policy` en `/storage/*`~~ | ✅ Resuelto 23/09/2026 | Activado tras confirmar con las imágenes reales del carrusel que `/storage/*` la servía sin esta cabecera. Verificado con `curl.exe` por IP y por dominio |
-| CSP con `script-src 'unsafe-inline'` | Medio | El front permite scripts embebidos, que es justo lo que aprovecha un XSS. **No es hallazgo de ADEM hoy, pero es el candidato más probable del próximo escaneo.** Solución de fondo: nonces o hashes, toca código de la app |
+| ~~CSP con `script-src 'unsafe-inline'`~~ | ✅ Resuelto 24/09/2026 | Nonce por petición (E44). Queda `style-src 'unsafe-inline'` (React/Framer escriben estilos en línea; riesgo bajo) |
 | **Licencia de Windows Server (Evaluation)** | **Crítico, pero con margen** | Verificado el 21/09/2026 (`slmgr /dlv`): alguien hizo `rearm` entre el 15/09 y hoy — quedan **180 días** de gracia y **3 rearmes**. Sigue siendo Evaluation, no Standard: la solución definitiva (`DISM /online /Set-Edition:ServerStandard /ProductKey:<clave> /AcceptEula`) sigue pendiente, solo que ya no es urgente esta semana |
 | **Cuentas de prueba en producción** | **Crítico** | Las 4 cuentas de "Usuarios de Prueba" existen en `comecyt_prod` y son las únicas; contraseñas rotadas el 14/09/2026. **21/09/2026:** se cerró la única solicitud de acceso pendiente (ver E30) y quedó vinculada a una cuenta ya creada a mano — sigue sin existir un flujo real de altas más allá de las 4 de prueba. Crear cuentas reales y cambiar la contraseña o desactivar estas **antes** de abrir el sistema a más usuarios |
 | `comecyt:backup-db` falla cada noche | Alto | `BackupDatabase.php` arma `pg_dump ... \| gzip -9 > archivo` y en Windows ninguno está en el PATH (`'pg_dump' is not recognized`). El respaldo real lo hace la tarea `COMECYT-Backup-Diario` (`backup.ps1`, con `C:\pgsql\bin\pg_dump.exe -Fc`), que sí funciona. Corregir el comando o quitarlo de `routes/console.php` |
 | Respaldos sin copia fuera del servidor | Alto | Todos los dumps están en `F:\Desarrollo Tecnologico\backups\`. Si se pierde el servidor, se pierden los respaldos |
 | Windows Update detenido | Alto | Servicio `wuauserv` detenido; último parche el 27/03/2026; 3 pendientes (incluida la acumulativa 2026-09). Aplicar en ventana junto con la licencia |
-| Permisos del `.env` | Medio | `BUILTIN\Users` lo lee e `IIS_IUSRS` lo escribe (ACL heredada). Restringir |
-| Endurecimiento de red (agosto) | Medio | Firma SMB, puertos 2179/135, RDP solo desde la VPN. Análisis listo **sin aplicar**: `Desktop\ADEM\_v2_agosto\ANALISIS_SMB_Y_PUERTOS.md` |
+| ~~Permisos del `.env`~~ | ✅ Resuelto 24/09/2026 | Solo SYSTEM, Administradores y lectura para `IIS APPPOOL\comecyt` (E44) |
+| Endurecimiento de red (agosto) | Bajo (parcial) | **24/09/2026:** firma SMB y cierre de 5357/2179/135 aplicados (E44). Falta restringir **RDP (3389) y WinRM (5985) por IP** — requiere el rango de VPN confirmado por infraestructura; con un rango equivocado el servidor queda inaccesible |
 | Confirmaciones de infraestructura sobre el balanceador | Alto | Rango de IPs de origen, HTTP→HTTPS en el balanceador, health check, límite de 50 MB, timeouts. Correo listo en `Desktop\ADEM\_v4_dominio_sep11\`. Ver `docs/DOMINIO_BALANCEADOR.md` §8 |
-| `serverFetch` falla con certificado autofirmado | Medio | **Previo al dominio, detectado el 11/09/2026.** Los Server Components llaman a `https://10.250.36.241/api` y Node rechaza el certificado (`DEPTH_ZERO_SELF_SIGNED_CERT`); el `catch` lo oculta y las páginas renderizadas en servidor salen con listas vacías. Opciones: `NODE_EXTRA_CA_CERTS` con el certificado `BBC4F9F9…` en el entorno NSSM. **Ojo:** al funcionar, todas esas llamadas llegan a Laravel desde la IP del servidor, y el rate limit por IP las contaría juntas |
+| ~~`serverFetch` falla con certificado autofirmado~~ | ✅ Resuelto (verificado 24/09/2026) | `NODE_EXTRA_CA_CERTS` en NSSM ya lo resolvía; ahora además reenvía la IP real (E44). Texto original: | **Previo al dominio, detectado el 11/09/2026.** Los Server Components llaman a `https://10.250.36.241/api` y Node rechaza el certificado (`DEPTH_ZERO_SELF_SIGNED_CERT`); el `catch` lo oculta y las páginas renderizadas en servidor salen con listas vacías. Opciones: `NODE_EXTRA_CA_CERTS` con el certificado `BBC4F9F9…` en el entorno NSSM. **Ojo:** al funcionar, todas esas llamadas llegan a Laravel desde la IP del servidor, y el rate limit por IP las contaría juntas |
 | ~~C:\comecyt limpieza~~ | ✅ Resuelto 23/09/2026 | Tarea rota `COMECYT-LimpiarDirectorioViejo` eliminada; el directorio lo borró el usuario a mano (el sandbox de Claude Code bloqueaba hacerlo desde ahí) |
 | Página dedicada `/solicitante/informes` | Bajo | El upload está inline en detalle de solicitud |
 | ~~Imágenes del carrusel en producción~~ | ✅ Resuelto 23/09/2026 | Los 4 slides tienen ya imágenes reales subidas vía `/admin/carrusel`, confirmado en la base de datos |
@@ -1374,8 +1377,8 @@ Detalle completo en `docs/DISENO_UI.md` §12. Lo que un desarrollador debe saber
   teléfono — hay 6 controles a la derecha.
 - **Verificación con sesión sin contraseñas:** tokens JWT emitidos con `auth('api')->login($user)` desde un
   script de servidor (guardados en archivo, nunca impresos) e **invalidados al terminar**
-  (`->invalidate(true)`). El archivo `F:\COMECYT_CREDENCIALES.txt` está desactualizado (contraseñas del 30/06,
-  rotadas el 14/09) — no usarlo.
+  (`->invalidate(true)`). El archivo `F:\COMECYT_CREDENCIALES.txt` (contraseñas del 30/06, rotadas el 14/09) se
+  **borró el 24/09/2026** a pedido del usuario (E44).
 
 ### E40 — Estados públicos, prórroga y banners de convocatorias y programas [publicado 24-09-2026]
 Pedido del usuario: cerrar las convocatorias de prueba; que al darse de alta tengan estado para la landing
@@ -1460,3 +1463,55 @@ Detalle en `docs/DISENO_UI.md` §14. Para desarrollo:
 - **Dashboard admin:** `ReverbStatusWidget` y "Buenas prácticas" ya no se montan (pedido del usuario); el
   componente y su endpoint siguen existiendo.
 - Ganchos de clase nuevos en StepFrame, paginación, DataCardGrid, SavedFiltersBar y pestañas del programa.
+
+### E44 — Auditoría de ciberseguridad de todo el código + endurecimiento [publicado 24-09-2026]
+Pedido del usuario: "revisa, analiza y corrige ... todo el sistema a nivel código de ciberseguridad", más CSP,
+permisos del `.env`, red, `serverFetch` y borrar `F:\COMECYT_CREDENCIALES.txt`. Dos auditorías (backend y front) y
+corrección de todo lo confirmado. Verificado: **38/38** pruebas de punta a punta del backend en producción (datos
+desechables, borrados), **28/28** en navegador real (landing, login, 4 paneles, logout), vitest 104/104.
+
+**Críticos / altos corregidos**
+| Hallazgo | Corrección |
+|---|---|
+| `DatabaseSeeder` hacía `updateOrCreate` del admin con contraseña publicada, y `deploy.sh` lo corre con `--force`: **cada despliegue devolvía el admin de producción a esa contraseña** | Solo crea el admin si no existe (clave de `ADMIN_INITIAL_PASSWORD` o aleatoria mostrada una vez). `deploy.sh` solo siembra en la primera instalación (`RUN_SEEDERS=1` para forzar). `UsuariosPruebaSeeder` se bloquea solo fuera de local/testing |
+| Documentos de solicitantes (carátula bancaria, constancia fiscal, facturas, informe) en el disco `public`: **se descargaban sin sesión** con nombres adivinables; el borrado no borraba | Disco `local` + `ArchivoSolicitudController`: `GET /api/archivos/solicitudes/{id}/{40 alfanum}.pdf`, con sesión y permiso (admin, revisor, dueño, evaluador asignado; a los demás 404). XFO `SAMEORIGIN` solo ahí (vista previa en iframe). Convenios: ya no se escribe copia pública; `pdf_url` → `/api/documentos/convenio/{id}` |
+| Cerrar sesión solo borraba cookies JS: el JWT HttpOnly seguía vivo 24 h (equipo compartido = sesión ajena) | `lib/logout.ts` `cerrarSesion()`: `POST /auth/logout` (lista negra + cookie expirada) y limpieza de Cache Storage |
+| Service worker guardaba el HTML de cada página del panel (datos personales) en disco | `sw.js` v3: HTML solo red; `/storage/*` nunca se cachea; mensaje `CLEAR_CACHES`; clic en push solo a rutas propias |
+| Cuentas desactivadas podían iniciar sesión y seguir usando su token | `attempt(+activo)`, chequeo en `ApiAuthenticate` y en el reto 2FA |
+| `/mis-notificaciones` daba a revisores y evaluadores las de **todos**; `per_page` sin tope | Filtro por `user_id` salvo la ruta `/admin/*`; `per_page` 1..100 |
+| Evaluador podía reenviar dictamen (reescribir resultados cerrados) y puntuar 9999 con criterios de otro programa | Solo asignación abierta + solicitud `en_evaluacion`; un dictamen por asignación; criterios del programa, sin repetir, ≤ `puntaje_maximo` |
+
+**Medios / bajos corregidos:** CSP con **nonce por petición** (`proxy.ts` + `lib/csp.ts`, `script-src 'self' 'nonce-…'
+'strict-dynamic'`, sin `unsafe-inline` en scripts; `style-src` lo conserva); `tipo` de documento en lista blanca y
+extensión fija `.pdf` (antes path traversal `../` y `.html` servido como HTML); reglas por estado para subir/borrar
+documentos; enumeración de correos cerrada (forgot-password y solicitar-acceso responden igual); `ApiGatewayMiddleware`
+ya **no apaga la API** para todos (solo registra); cambiar/restablecer contraseña **invalida los JWT anteriores**
+(`users.password_changed_at` vs `iat`) y se entrega token nuevo; `Password::defaults()` = 10+, mayúsculas, minúsculas,
+número (antes 8 cualesquiera) con mensajes en español (`lang/es/validation.php`) y el mismo chequeo en el front
+(`lib/password-policy.ts`); inyección de fórmulas en el Excel; bloqueo de cuenta por par correo+IP (10) y global (50)
+en vez de 10 desde cualquier IP (antes se podía dejar fuera al admin a propósito); notificaciones como texto (antes
+`dangerouslySetInnerHTML`); `proxy.ts` ya no confía en las cookies JS `token`/`userRole` (bastaban para ver la UI de
+/admin) y trata el JWT vencido como sin sesión; matcher con extensiones ancladas; `safeUrl()` para URLs de la API en
+`href`/`src`/`window.open`; `rel="noopener noreferrer"`; cookies JS con `secure`+`SameSite=Strict`; `remotePatterns`
+sin hosts internos en producción; push solo a servicios reales (SSRF); `/catalogos` solo `id,nombre,acronimo` de
+empresas; limpiar caché de catálogo solo admin; throttle 60/min en catálogos públicos; `empresa_id` se elige una sola
+vez y nunca una empresa en lista negra; SSO (apagado) exige `email_verified` y no abre cuentas admin/2FA/inactivas;
+errores internos solo al log. Contraseña por defecto quitada de `generate-selfsigned-cert.ps1` (el PFX no existía).
+**Bugs funcionales encontrados de paso:** `Solicitud::empresa()` no existía (Excel y PDF habrían dado 500 con la
+primera solicitud); `exists:instituciones` (tabla renombrada) daba 500 en 5 validaciones; la subida de documentos usaba
+`getRealPath()` (falla en este IIS, E28); el convenio firmado ya no se podía descargar (estado `ministracion`).
+
+**Infraestructura:** ACL de `.env`, `.env.local` y sus respaldos: solo SYSTEM, Administradores y (solo el `.env`
+de la API, lectura) `IIS APPPOOL\comecyt` — respaldo en `backups\20260924-seguridad\acl-*.txt`. Red: firma SMB
+requerida; reglas 5357 (WSD), 2179 y 135 (Hyper-V) deshabilitadas; RDP/WinRM **sin tocar** (falta rango de VPN);
+reversión en `backups\20260924-seguridad\red-cambios.txt`. `serverFetch`: el certificado ya estaba resuelto
+(`NODE_EXTRA_CA_CERTS=C:\ProgramData\COMECYT\iis-10.250.36.241.pem` en NSSM); ahora además reenvía
+`X-Forwarded-For` y `TRUSTED_PROXIES` incluye `10.250.36.241`, para que el límite por IP no sea uno solo para todos.
+`F:\COMECYT_CREDENCIALES.txt` **borrado**.
+
+**Incidente durante el despliegue (no repetir):** al mover la CSP de `next.config.ts` a `proxy.ts`, `sw.js` (que no
+pasa por el proxy) quedó con la CSP de IIS `default-src 'none'`. **Un service worker obedece la CSP de su propio
+archivo**: no pudo hacer `fetch()` y la API respondía 503 "Sin conexión" en navegadores con el SW instalado
+(~14:06–14:17). Fix: regla de cabeceras propia para `/sw.js` en `next.config.ts` + versión nueva del SW (bytes
+distintos obligan a reinstalarlo). **Regla:** toda CSP nueva se prueba en navegador con el SW activo y navegando
+entre páginas del mismo contexto, no solo con `curl` o con la primera visita.

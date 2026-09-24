@@ -14,6 +14,7 @@ import { AlertBox } from '@/components/ui/alert-box';
 import PaginationControls from '@/components/ui/pagination-controls';
 import { formatCurrency } from '@/lib/format';
 import { DataCardGrid } from '@/components/ui/DataCardGrid';
+import { safeUrl } from '@/lib/safe-url';
 
 export interface Convenio {
   id: number;
@@ -99,9 +100,9 @@ export default function ConveniosClient({ convenios, pagination }: Props) {
     } catch {
       // Fallback: open the pdf_url directly in a new tab if available
       if (convenio.pdf_url) {
-        const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/api$/, '');
-        const fullUrl = convenio.pdf_url.startsWith('http') ? convenio.pdf_url : `${apiBase}${convenio.pdf_url}`;
-        window.open(fullUrl, '_blank');
+        // Solo rutas del propio sitio, y sin darle a la pestaña nueva acceso a esta (noopener).
+        const url = safeUrl(convenio.pdf_url);
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
       } else {
         setFeedback({ type: 'error', message: 'No se pudo descargar el convenio.' });
       }

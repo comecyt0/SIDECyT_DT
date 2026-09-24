@@ -66,7 +66,10 @@ class DocumentoController extends Controller
 
         $solicitud->load(['user', 'empresa', 'convocatoria', 'convenio']);
 
-        if ($solicitud->estado !== 'aprobada' && $solicitud->estado !== 'convenio') {
+        // Antes solo 'aprobada' y 'convenio': al firmar, la solicitud pasa a 'ministracion' (E33) y el convenio
+        // firmado ya no se podía descargar. Ahora ya no hay copia pública (ConvenioController), así que esta es
+        // la única vía y debe servir en toda la vida posterior del proyecto.
+        if (! in_array($solicitud->estado, ['aprobada', 'convenio', 'ministracion', 'seguimiento', 'cerrada'], true)) {
             return response()->json(['error' => 'La solicitud debe estar aprobada para generar el convenio.'], 403);
         }
 

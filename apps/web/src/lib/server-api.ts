@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { cookies } from 'next/headers';
+import { cookies, headers as nextHeaders } from 'next/headers';
 
 // En el navegador NEXT_PUBLIC_API_URL es relativa ("/api"), pero fetch desde el servidor de Next
 // necesita una URL absoluta. API_INTERNAL_URL se lee en tiempo de ejecución (entorno del servicio
@@ -35,6 +35,12 @@ export async function serverFetch<T = unknown>(
     // Reenvía la cookie tal cual; Laravel la lee desde Cookie header
     headers.set('Cookie', `comecyt_auth=${auth}`);
   }
+  // 24/09/2026: estas llamadas salen del propio servidor (10.250.36.241), así que sin esto Laravel contaba a TODOS
+  // los usuarios en un solo cubo de su límite por IP (300/min) y con carga respondía 429. Se reenvía la cadena
+  // X-Forwarded-For que armaron el balanceador e IIS; Laravel confía en ella solo si la petición viene de un proxy
+  // listado en TRUSTED_PROXIES y toma la IP no confiable más a la derecha, así que el cliente no puede falsificarla.
+  const xff = (await nextHeaders()).get('x-forwarded-for');
+  if (xff && !headers.has('X-Forwarded-For')) headers.set('X-Forwarded-For', xff);
 
   const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
   const res = await fetch(url, {

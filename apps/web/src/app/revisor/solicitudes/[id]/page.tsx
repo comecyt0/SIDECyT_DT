@@ -19,6 +19,7 @@ import type { Solicitud, Observacion } from '@/types/api';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { parseDate } from '@/lib/format';
+import { safeUrl } from '@/lib/safe-url';
 
 interface ProgramaCampo {
   id: string;
@@ -351,8 +352,8 @@ export default function RevisorDetalleSolicitudPage() {
                    <p className="text-xs text-[var(--app-ink-2)]">Recibido el {solicitud.fecha_entrega_informe ? parseDate(solicitud.fecha_entrega_informe).toLocaleDateString('es-MX') : '—'}</p>
                  </div>
                </div>
-               {solicitud.informe_final_url && (
-                 <Link href={solicitud.informe_final_url} target="_blank" className="shrink-0">
+               {safeUrl(solicitud.informe_final_url) && (
+                 <Link href={safeUrl(solicitud.informe_final_url)!} target="_blank" rel="noopener noreferrer" className="shrink-0">
                    <Button variant="soft" size="sm">
                      <Eye className="h-4 w-4" /> Abrir el documento
                    </Button>

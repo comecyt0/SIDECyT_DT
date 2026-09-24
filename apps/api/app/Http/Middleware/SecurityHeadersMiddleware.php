@@ -12,8 +12,13 @@ class SecurityHeadersMiddleware
     {
         $response = $next($request);
 
+        // Única excepción al DENY (24/09/2026): la descarga autenticada de archivos de solicitud
+        // (ArchivoSolicitudController) marca SAMEORIGIN para la vista previa en <iframe> del propio sitio.
+        $mismoOrigen = $response->headers->get('X-Frame-Options') === 'SAMEORIGIN'
+            && $request->is('api/archivos/*');
+
         $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('X-Frame-Options', 'DENY');
+        $response->headers->set('X-Frame-Options', $mismoOrigen ? 'SAMEORIGIN' : 'DENY');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
         // Cross-Origin-Resource-Policy (observación de ADEM del 25/08/2026, fuera de la matriz).
@@ -47,7 +52,9 @@ class SecurityHeadersMiddleware
         // La UI la sirve Next.js, que define su propia CSP en next.config.ts.
         $response->headers->set(
             'Content-Security-Policy',
-            "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+            $mismoOrigen
+                ? "default-src 'none'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'"
+                : "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
         );
 
         // Only send HSTS on HTTPS (not on local HTTP dev)

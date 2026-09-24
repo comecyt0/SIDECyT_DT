@@ -12,6 +12,7 @@ import {
   Hash, Users, Scale, FileCheck, Wrench, Shield, ClipboardList
 } from 'lucide-react';
 import api from '@/lib/api';
+import { validarPassword } from '@/lib/password-policy';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
 import { useT } from '@/i18n/I18nProvider';
 
@@ -106,7 +107,7 @@ export default function SolicitarAccesoPage() {
       if (!form.email.trim()) return t('request_access.email_required');
       if (!form.email.includes('@')) return t('request_access.email_invalid');
       if (!form.password) return t('request_access.password_required');
-      if (form.password.length < 8) return t('request_access.password_min');
+      if (validarPassword(form.password)) return validarPassword(form.password);
       if (form.password !== form.password_confirmation) return t('request_access.password_mismatch');
     }
     if (step === 1) {

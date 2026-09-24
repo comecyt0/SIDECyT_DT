@@ -76,8 +76,15 @@ php artisan migrate --force
 info "Migraciones ejecutadas"
 
 section "5. Seeders básicos (roles, institución COMECYT, admin)"
-php artisan db:seed --class=DatabaseSeeder --force
-info "Seeders ejecutados (APP_ENV=production omite UsuariosPruebaSeeder automáticamente)"
+# SEGURIDAD (24/09/2026): solo en la PRIMERA instalación. Los seeders usan updateOrCreate sobre catálogos y
+# programas: correrlos en cada despliegue pisaría lo que el admin configuró en producción.
+# Para forzarlos a propósito: RUN_SEEDERS=1 bash deploy.sh
+if [ "${RUN_SEEDERS:-0}" = "1" ] || [ "$(php artisan tinker --execute='echo \App\Models\User::count();' 2>/dev/null | tail -n1)" = "0" ]; then
+  php artisan db:seed --class=DatabaseSeeder --force
+  info "Seeders ejecutados (APP_ENV=production omite UsuariosPruebaSeeder automáticamente)"
+else
+  info "Seeders omitidos: la base ya tiene usuarios (usa RUN_SEEDERS=1 para forzarlos)"
+fi
 
 section "6. Storage symlink"
 php artisan storage:link 2>/dev/null || warn "Storage link ya existe — OK"

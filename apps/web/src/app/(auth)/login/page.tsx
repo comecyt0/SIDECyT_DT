@@ -40,8 +40,11 @@ export default function LoginPage() {
 
   const completeLogin = (user: { rol?: { slug?: string }; name?: string }) => {
     const roleSlug = user.rol?.slug || 'solicitante';
-    Cookies.set('userRole', roleSlug, { expires: 1, path: '/' });
-    Cookies.set('userName', user.name ?? '', { expires: 1, path: '/' });
+    // Cookies de interfaz (no dan acceso: proxy.ts y el backend solo confían en el JWT HttpOnly). `secure` fuera de
+    // desarrollo y SameSite=Strict para que no viajen a otros sitios (24/09/2026).
+    const opts = { expires: 1, path: '/', sameSite: 'strict' as const, secure: window.location.protocol === 'https:' };
+    Cookies.set('userRole', roleSlug, opts);
+    Cookies.set('userName', user.name ?? '', opts);
     const dashboardMap: Record<string, string> = {
       admin: '/admin/dashboard',
       revisor: '/revisor/solicitudes',

@@ -11,7 +11,7 @@
 # Resultado:
 #   - Cert importado en LocalMachine\My
 #   - Cert exportado a:  C:\inetpub\comecyt\selfsigned.pfx
-#   - Password del PFX:  ComecytLocal2026
+#   - Password del PFX:  la que se pida al ejecutar (nunca escrita en el script)
 #
 # Después:
 #   1. IIS Manager → Sitio "comecyt" → Bindings → Add → https → 443 → seleccionar
@@ -27,8 +27,8 @@ param(
     [Parameter(Mandatory=$false)]
     [string]$ExportPath = "C:\inetpub\comecyt\selfsigned.pfx",
 
-    [Parameter(Mandatory=$false)]
-    [string]$Password = "ComecytLocal2026",
+    [Parameter(Mandatory=$true, HelpMessage="Contrasena para proteger el .pfx exportado")]
+    [SecureString]$Password,
 
     [Parameter(Mandatory=$false)]
     [int]$ValidDays = 365
@@ -81,7 +81,7 @@ try {
 # Exportar como PFX (PKCS#12)
 try {
     Write-Host "[2/3] Exportando a $ExportPath..." -ForegroundColor Yellow
-    $securePwd = ConvertTo-SecureString -String $Password -Force -AsPlainText
+    $securePwd = $Password  # SecureString pedido al ejecutar; no hay contrasena por defecto
     Export-PfxCertificate -Cert "cert:\LocalMachine\My\$($cert.Thumbprint)" -FilePath $ExportPath -Password $securePwd | Out-Null
     Write-Host "      OK" -ForegroundColor Green
 } catch {

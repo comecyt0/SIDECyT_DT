@@ -2,6 +2,15 @@
 
 **Fecha de actualización:** 24 de septiembre de 2026, noche (versión anterior: 23/09/2026)
 
+> 🔒 **24/09/2026 (noche, 2) — Auditoría de ciberseguridad de todo el código (E44).** Se corrigieron, entre otros:
+> el seeder que en cada despliegue devolvía la contraseña del admin a una publicada; documentos de solicitantes que
+> se descargaban **sin sesión** (ahora privados, con permiso por rol); cerrar sesión que no terminaba la sesión; el
+> service worker que guardaba páginas con datos personales; cuentas desactivadas que seguían entrando; notificaciones
+> ajenas visibles para revisores/evaluadores; dictámenes que se podían reescribir o inflar; CSP con nonce (adiós
+> `unsafe-inline` en scripts); enumeración de correos; auto-apagado de la API; política de contraseñas. Permisos del
+> `.env` restringidos, firma SMB y 3 puertos cerrados, `F:\COMECYT_CREDENCIALES.txt` borrado. Verificado 38/38
+> (backend en producción) y 28/28 (navegador). Ver `CLAUDE.md` E44.
+>
 > 🧭 **24/09/2026 (noche) — "El dominio se queda cargando" (E42) y vistas internas + menú + pie (E43).**
 > La pantalla de carga infinita la causaba HTML viejo guardado en una caché intermedia que pedía scripts ya
 > borrados; se corrigió en tres capas (HTML sin caché compartida en IIS, el despliegue conserva los scripts
@@ -352,10 +361,11 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 | **Windows Update** | Alta | Servicio `wuauserv` detenido; último parche instalado el 27/03/2026. Pendientes: KB5122882 (acumulativa 2026-09), KB5126149 (.NET) y KB890830 (MSRT). Aplicar en ventana de mantenimiento, porque reinicia; conviene hacerlo junto con la activación de la licencia |
 | **Respaldos** | Alta | (1) `comecyt:backup-db` de Laravel **falla cada noche**: llama a `pg_dump` y `gzip` del PATH, que no existen en Windows. La tarea de Windows sí funciona, así que es redundante: corregirlo (`C:\pgsql\bin\pg_dump.exe -Fc`, sin `gzip`) o quitarlo de `routes/console.php`. (2) **No hay copia fuera del servidor**: todos los dumps están en `F:` |
 | ~~Cookie de sesión sin `Secure`~~ | ✅ Resuelto 23/09/2026 | `COOKIE_SECURE=true` y `COOKIE_SAME_SITE=Strict` activados. Verificado con un JWT real: el `Set-Cookie` trae `secure; httponly; samesite=strict`. `COOKIE_DOMAIN` se queda en `null` a propósito (acceso dual IP/dominio) |
-| **`serverFetch` con certificado autofirmado** | Media | Listados renderizados en servidor salen vacíos (ya fallaba antes). [DOMINIO_BALANCEADOR.md §7](DOMINIO_BALANCEADOR.md#7-pendiente-previo-detectado-no-causado-por-el-dominio) |
-| **CSP con `script-src 'unsafe-inline'`** | Media | Candidato probable del próximo escaneo. Ver `CLAUDE.md` |
-| **Permisos del `.env`** | Media | ACL heredada: `BUILTIN\Users` puede leer; `IIS_IUSRS`, `NETWORK SERVICE` y el AppPool pueden escribir. Por web está bloqueado (404). Dejar lectura solo al AppPool `comecyt` y a los servicios, y escritura solo a Administradores. `app:deploy-check` también lo avisa |
-| **Endurecimiento de red pendiente desde agosto** | Media | Firma SMB, cerrar 2179 y 135, restringir RDP a la VPN. Análisis listo pero **sin aplicar**: `Desktop\ADEM\_v2_agosto\ANALISIS_SMB_Y_PUERTOS.md` |
+| ~~`serverFetch` con certificado autofirmado~~ | ✅ Verificado 24/09/2026 | `NODE_EXTRA_CA_CERTS` en el servicio ya lo resolvía (el render en servidor trae datos); ahora además reenvía la IP real del cliente (E44) |
+| ~~CSP con `script-src 'unsafe-inline'`~~ | ✅ Resuelto 24/09/2026 | Nonce por petición (E44). Queda `style-src 'unsafe-inline'` (bajo riesgo) |
+| ~~Permisos del `.env`~~ | ✅ Resuelto 24/09/2026 | Solo SYSTEM, Administradores y lectura del AppPool `comecyt` (E44). Respaldo de ACL en `backups\20260924-seguridad\` |
+| **Endurecimiento de red** | Baja (parcial) | **24/09/2026:** firma SMB requerida y reglas 5357/2179/135 cerradas (E44). **Falta:** restringir RDP (3389) y WinRM (5985) a la VPN — necesita el rango confirmado por infraestructura |
+| **`Desktop\correo.txt`** | Media | Contiene la contraseña SMTP vigente en texto plano (solo la lee el administrador). Ya está en el `.env`: borrarlo cuando el usuario lo confirme |
 | ~~Limpieza `C:\comecyt`~~ | ✅ Resuelto 23/09/2026 | Confirmado vacío y sin referencias; tarea rota eliminada; el directorio lo borró el usuario a mano (el sandbox de Claude Code no podía hacerlo desde ahí) |
 | ~~Limpieza de `.next.bak-*`~~ | ✅ Resuelto 23/09/2026 | 18 respaldos eliminados, **7.84 GB liberados**. Se conservó `.next.bak-20260921-prefix-uploads` (el más reciente) como red de seguridad para un rollback rápido |
 | **Logo Edomex** | Baja | `NEXT_PUBLIC_EDOMEX_LOGO_URL=none` — pendiente imagen oficial |
@@ -371,6 +381,7 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 
 | Fecha | Cambio |
 |---|---|
+| 2026-09-24 (noche, 2) | **E44 — Auditoría de ciberseguridad** de backend y front: documentos privados, cierre de sesión real, SW sin HTML, cuentas inactivas, notificaciones propias, dictamen blindado, CSP con nonce, seeder sin contraseña publicada, enumeración, política de contraseñas, invalidación de JWT al cambiar clave, `.env` con ACL restringida, firma SMB y 3 puertos cerrados, credenciales sueltas borradas. Migración `2026_09_24_000002` con respaldo previo. Incidente de 11 min con el SW (CSP de `sw.js`), corregido |
 | 2026-09-24 (noche) | **E42 — carga infinita por el dominio** corregida en 3 capas (IIS: HTML `private, no-store`; `deploy-web.ps1` conserva los chunks anteriores; script de recuperación en `layout.tsx`). **E43 — vistas internas, menú y pie** rediseñados (marco pastel por sección, menú en bloques pastel, pie con logo ×5), bloque de Reverb/"Buenas prácticas" quitado del dashboard, botón "Menú" con nombre accesible en móvil |
 | 2026-09-24 (tarde) | **E41 — Paneles v3:** barra flotante, `PageHeader` héroe, `PastelFrame`, `StatTile` v3, dashboards reestructurados, lienzo papel con salpicaduras; login sin cambios |
 | 2026-09-24 | **E40:** estados públicos de convocatorias (próxima/abierta/con prórroga/cerrada), prórroga, banners de convocatorias y programas (solo admin, validación de MIME real y dominios), convocatorias de prueba cerradas y archivadas, 5 bugs de fechas corregidos, arcoíris → vino en landing y paneles. Migración `2026_09_24_000001` con respaldo previo |

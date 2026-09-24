@@ -25,7 +25,9 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        if (! $token = auth()->guard('api')->attempt($credentials)) {
+        // SEGURIDAD (24/09/2026): solo cuentas activas. Una desactivada recibe el mismo mensaje que una contraseña
+        // incorrecta (no se revela que existe).
+        if (! $token = auth()->guard('api')->attempt($credentials + ['activo' => true])) {
             Log::channel('security')->warning('Failed login attempt', [
                 'email' => $request->email,
                 'ip' => $request->ip(),
@@ -84,7 +86,8 @@ class AuthController extends Controller
 
         /** @var User|null $user */
         $user = User::find($userId);
-        if (! $user || ! $user->hasTwoFactorEnabled()) {
+        // `activo`: si el admin la desactivó entre el primer paso y el código, no se emite el token.
+        if (! $user || ! $user->activo || ! $user->hasTwoFactorEnabled()) {
             return response()->json(['error' => 'Usuario inválido.'], 422);
         }
 
@@ -169,7 +172,8 @@ class AuthController extends Controller
     {
         $request->validate([
             'current_password' => 'required|string',
-            'new_password' => 'required|string|min:8|confirmed',
+            // Misma política que el alta de usuarios (Password::defaults, AppServiceProvider). Antes solo min:8.
+            'new_password' => ['required', 'string', 'confirmed', \Illuminate\Validation\Rules\Password::defaults()],
         ]);
 
         $user = auth('api')->user();
@@ -178,9 +182,20 @@ class AuthController extends Controller
             return response()->json(['error' => 'La contraseña actual no es correcta.'], 422);
         }
 
+        // El hook de User marca password_changed_at: los JWT anteriores (otros equipos) dejan de valer.
         $user->update(['password' => Hash::make($request->new_password)]);
+        Audit::log('user.password_changed', $user);
 
-        return response()->json(['message' => 'Contraseña actualizada correctamente.']);
+        // El token de ESTA sesión también es anterior al cambio: se invalida y se entrega uno nuevo en la cookie,
+        // para que quien cambió la contraseña siga dentro.
+        try {
+            auth()->guard('api')->invalidate(true);
+        } catch (\Throwable $e) {
+            // ya inválido
+        }
+        $token = auth()->guard('api')->login($user->fresh());
+
+        return $this->respondWithToken($token)->setData(['message' => 'Contraseña actualizada correctamente.']);
     }
 
     /**
@@ -194,12 +209,31 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'empresa_id' => 'sometimes|nullable|exists:instituciones,id',
+            // `instituciones` se renombró a `empresas` (E25): la regla anterior daba 500 siempre.
+            'empresa_id' => 'sometimes|nullable|integer|exists:empresas,id',
             'telefono' => 'sometimes|nullable|string|max:20',
             'cargo' => 'sometimes|nullable|string|max:255',
         ]);
 
         $user = auth('api')->user();
+
+        // SEGURIDAD (24/09/2026): la empresa se elige UNA vez (onboarding del solicitante). Después solo la cambia el
+        // admin; si no, cualquiera podría declararse de otra empresa y saltarse la lista negra.
+        if (array_key_exists('empresa_id', $data)) {
+            $cambiaEmpresa = (int) ($data['empresa_id'] ?? 0) !== (int) ($user->empresa_id ?? 0);
+            if ($cambiaEmpresa && $user->empresa_id) {
+                return response()->json(['error' => 'Tu empresa ya está registrada. Para cambiarla, escribe al administrador.'], 422);
+            }
+            if ($cambiaEmpresa && ! empty($data['empresa_id'])
+                && \Illuminate\Support\Facades\Schema::hasTable('lista_negra')
+                && \Illuminate\Support\Facades\DB::table('lista_negra')->where('empresa_id', $data['empresa_id'])->exists()) {
+                return response()->json(['error' => 'No es posible asociar tu cuenta a esa empresa. Escribe al administrador.'], 422);
+            }
+            if (! $cambiaEmpresa) {
+                unset($data['empresa_id']);
+            }
+        }
+
         $user->update($data);
         $user->loadMissing('rol', 'empresa');
 

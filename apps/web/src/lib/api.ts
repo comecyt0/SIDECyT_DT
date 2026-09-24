@@ -153,6 +153,8 @@ const NO_REFRESH_PATHS = ['/auth/login', '/auth/refresh', '/auth/logout', '/auth
 let refreshInFlight: Promise<unknown> | null = null;
 
 function redirectToLogin() {
+  // Sesión vencida: también se vacía Cache Storage (sin importar lib/logout para evitar un ciclo de imports).
+  try { if (typeof caches !== 'undefined') void caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k)))); } catch { /* sin Cache Storage */ }
   Cookies.remove('userRole');
   Cookies.remove('userName');
   if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {

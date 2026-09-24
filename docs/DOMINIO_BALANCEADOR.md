@@ -260,6 +260,13 @@ Get-Content $f.FullName -Tail 20 | Select-String 'sidecyt-comecyt'
 
 ## 7. Pendiente previo detectado (no causado por el dominio)
 
+> **Resuelto — verificado el 24/09/2026 (E44).** El servicio `comecyt-web` ya tiene
+> `NODE_EXTRA_CA_CERTS=C:\ProgramData\COMECYT\iis-10.250.36.241.pem` en su entorno NSSM y el render en servidor trae
+> datos (probado con `/admin/audit-logs`). El efecto secundario descrito abajo (todas las llamadas desde la IP del
+> servidor, un solo cubo de rate limit) se corrigió: `serverFetch` reenvía `X-Forwarded-For` y `TRUSTED_PROXIES`
+> incluye `10.250.36.241`. Laravel toma la IP no confiable más a la derecha de la cadena: el cliente no puede
+> falsificarla. Se conserva el texto original como historia.
+
 **`serverFetch` falla con el certificado autofirmado.** Los Server Components (listados de admin,
 revisor, evaluador y solicitante) llaman desde Node a `https://10.250.36.241/api`. Node rechaza el
 certificado (`DEPTH_ZERO_SELF_SIGNED_CERT`), el `catch` lo oculta y esas páginas se renderizan con

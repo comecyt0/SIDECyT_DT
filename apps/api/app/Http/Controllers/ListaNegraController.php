@@ -15,7 +15,7 @@ class ListaNegraController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'empresa_id' => 'required|exists:instituciones,id',
+            'empresa_id' => 'required|exists:empresas,id',
             'solicitud_id' => 'nullable|exists:solicitudes,id',
             'motivo' => 'required|string',
             'fecha_inicio_sancion' => 'required|date',

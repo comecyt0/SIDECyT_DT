@@ -12,6 +12,7 @@ import PageHeader from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { parseDate } from '@/lib/format';
+import { safeUrl } from '@/lib/safe-url';
 
 type InformeEstado = 'pendiente' | 'entregado' | 'observado' | 'aprobado';
 
@@ -195,7 +196,7 @@ export default function SolicitanteInformesPage() {
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         {solicitud.informe_final_url && (
-                          <a href={solicitud.informe_final_url} target="_blank" rel="noopener noreferrer">
+                          <a href={safeUrl(solicitud.informe_final_url) ?? '#'} target="_blank" rel="noopener noreferrer">
                             <Button variant="soft" size="sm">
                               <FileText className="h-3.5 w-3.5" />
                               Ver informe

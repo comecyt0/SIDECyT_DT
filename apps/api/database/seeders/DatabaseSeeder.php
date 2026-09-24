@@ -38,23 +38,39 @@ class DatabaseSeeder extends Seeder
         );
 
         // 3. Admin principal
+        // SEGURIDAD (24/09/2026): antes era updateOrCreate con una contraseña fija publicada en el repositorio,
+        // y deploy.sh corre este seeder con --force: cada despliegue devolvía el admin de PRODUCCIÓN a esa
+        // contraseña. Ahora solo se CREA si no existe y NUNCA se tocan los datos de una cuenta existente.
+        // Contraseña inicial: ADMIN_INITIAL_PASSWORD del entorno o, si no está, una aleatoria que se muestra
+        // una sola vez en la consola de quien instala (hay que cambiarla al entrar).
         $adminRol = Rol::where('slug', 'admin')->first();
+        $adminEmail = env('ADMIN_INITIAL_EMAIL', 'admin@comecyt.gob.mx');
 
-        User::updateOrCreate(
-            ['email' => 'admin@comecyt.gob.mx'],
-            [
+        if (! User::where('email', $adminEmail)->exists()) {
+            $inicial = (string) env('ADMIN_INITIAL_PASSWORD', '');
+            $generada = $inicial === '';
+            if ($generada) {
+                $inicial = Str::password(24);
+            }
+
+            User::create([
                 'name' => 'Super Administrador',
-                'password' => Hash::make('password123'),
+                'email' => $adminEmail,
+                'password' => Hash::make($inicial),
                 'rol_id' => $adminRol->id,
                 'empresa_id' => $comecyt->id,
                 'cargo' => 'Director',
-                'telefono' => '7221234567',
                 'email_verified_at' => now(),
                 'remember_token' => Str::random(10),
-            ]
-        );
+            ]);
 
-        $this->command->info('Seeders básicos ejecutados: Roles, Institucion COMECYT y Usuario admin (admin@comecyt.gob.mx / password123)');
+            $this->command->info("Usuario admin creado: {$adminEmail}");
+            if ($generada) {
+                $this->command->warn("Contraseña inicial (se muestra UNA vez, cámbiala al entrar): {$inicial}");
+            }
+        } else {
+            $this->command->info("Usuario admin ya existe ({$adminEmail}): no se modifica.");
+        }
 
         // 3.5 Usuarios de prueba — SOLO en entornos locales/testing
         // NUNCA crear estos usuarios en producción: tienen contraseñas públicas conocidas

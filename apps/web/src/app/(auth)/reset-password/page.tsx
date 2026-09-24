@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { AlertBox } from '@/components/ui/alert-box';
 import { Loader2, Lock, Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react';
 import api from '@/lib/api';
+import { validarPassword, PASSWORD_HINT, PASSWORD_MIN } from '@/lib/password-policy';
 import { INSTITUTION } from '@/lib/institution';
 
 function ResetPasswordForm() {
@@ -34,8 +35,9 @@ function ResetPasswordForm() {
       setError('Las contraseñas no coinciden.');
       return;
     }
-    if (form.password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres.');
+    const problema = validarPassword(form.password);
+    if (problema) {
+      setError(problema);
       return;
     }
     setLoading(true);
@@ -70,7 +72,7 @@ function ResetPasswordForm() {
               <Lock className="w-6 h-6" />
             </div>
             <h1 className="text-2xl font-extrabold text-neutral-900 mb-1.5">Nueva Contraseña</h1>
-            <p className="text-sm text-neutral-500">Elige una contraseña segura de al menos 8 caracteres.</p>
+            <p className="text-sm text-neutral-500">{PASSWORD_HINT}</p>
           </div>
 
           {error && <AlertBox type="error" message={error} onClose={() => setError('')} />}
@@ -86,7 +88,7 @@ function ResetPasswordForm() {
                   type={showPass ? 'text' : 'password'}
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder={`Mínimo ${PASSWORD_MIN} caracteres`}
                   required
                   className="pl-10 pr-10 h-12 rounded-xl bg-neutral-50 border-neutral-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />

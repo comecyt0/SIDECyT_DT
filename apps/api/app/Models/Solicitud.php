@@ -68,6 +68,17 @@ class Solicitud extends Model
         return $this->belongsTo(Empresa::class, 'empresa_id');
     }
 
+    /**
+     * 24/09/2026: el comentario de arriba la llama "alias de empresa()", pero empresa() NO existía. La cargan
+     * SolicitudesExport (Excel), DocumentoController (PDF de convenio y dictamen) y el front (`sol.empresa`):
+     * con la primera solicitud real, todas esas rutas habrían dado 500 (RelationNotFoundException). Con 0 filas
+     * Laravel no intenta la carga ansiosa, por eso no se había visto.
+     */
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class, 'empresa_id');
+    }
+
     public function areaConocimiento()
     {
         return $this->belongsTo(AreaConocimiento::class, 'area_conocimiento_id');

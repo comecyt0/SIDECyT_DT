@@ -20,6 +20,15 @@ class UsuariosPruebaSeeder extends Seeder
      */
     public function run(): void
     {
+        // SEGURIDAD (24/09/2026): segunda barrera. DatabaseSeeder ya lo omite fuera de local/testing, pero
+        // `db:seed --class=UsuariosPruebaSeeder --force` lo invocaría directo y crearía cuentas con
+        // contraseñas publicadas en el repositorio.
+        if (! (app()->isLocal() || app()->environment('testing'))) {
+            $this->command->error('UsuariosPruebaSeeder bloqueado en entorno: '.app()->environment());
+
+            return;
+        }
+
         $comecyt = Empresa::where('acronimo', 'COMECYT')->first();
         $revisorRol = Rol::where('slug', 'revisor')->first();
         $evaluadorRol = Rol::where('slug', 'evaluador')->first();

@@ -4,35 +4,74 @@ namespace App\Http\Controllers;
 
 use App\Http\Traits\ValidatesBinaryMimeTypes;
 use App\Models\Ministracion;
+use App\Models\ProgramaDocumento;
 use App\Models\Solicitud;
 use App\Models\SolicitudDocumento;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Subida y borrado de documentos de una solicitud.
+ *
+ * SEGURIDAD (24/09/2026), cambios frente a la versión anterior:
+ *  - Almacenamiento privado y descarga autenticada (ArchivoSolicitudController). Antes: disco `public`, sin sesión.
+ *  - `tipo` en lista blanca (claves del programa de la convocatoria + tipos especiales). Antes era texto libre y
+ *    entraba al nombre del archivo: `tipo=../../../7/x` escribía en la carpeta de OTRA solicitud.
+ *  - Extensión fija `.pdf` (antes la del cliente: un PDF llamado `.html` se servía como HTML del dominio).
+ *  - Reglas por estado: los anexos solo se cambian en borrador/observada; los financieros, de aprobada a
+ *    ministración; el informe final, en ministración/seguimiento. Antes se podían cambiar tras enviar.
+ *  - MIME real con getPathname() (getRealPath() devuelve false en este IIS, E28) y borrado que sí encuentra el
+ *    archivo (antes armaba `documentos/documentos/...` y el archivo "borrado" seguía público).
+ */
 class DocumentoUploadController extends Controller
 {
     use ValidatesBinaryMimeTypes;
 
+    private const FINANCIEROS = ['carta_compromiso', 'caratula_banco', 'constancia_fiscal', 'factura_institucion'];
+
+    private const ESTADOS_ANEXOS = ['borrador', 'observada'];
+
+    private const ESTADOS_FINANCIEROS = ['aprobada', 'convenio', 'ministracion'];
+
+    private const ESTADOS_INFORME = ['ministracion', 'seguimiento'];
+
     public function upload(Request $request, Solicitud $solicitud)
     {
         $request->validate([
-            'file' => 'required|file|mimes:pdf|max:5120', // 5MB limit (5120 KB)
-            'tipo' => 'required|string|max:100',
+            'file' => 'required|file|mimes:pdf|max:5120', // 5 MB
+            'tipo' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9_]+$/'],
         ]);
 
         $user = auth()->user();
-
-        // Verification: must be the owner of the request or an admin
-        if ($user->rol_id !== config('comecyt.roles.admin') && $solicitud->user_id !== $user->id) {
+        $esAdmin = (int) $user->rol_id === (int) config('comecyt.roles.admin');
+        if (! $esAdmin && (int) $solicitud->user_id !== (int) $user->id) {
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
-        $file = $request->file('file');
+        $tipo = (string) $request->input('tipo');
+        $esFinanciero = in_array($tipo, self::FINANCIEROS, true);
+        $esInforme = $tipo === 'informe_final';
 
-        // ✅ SEGURIDAD: Validar MIME type real (no solo extensión)
+        if (! $esFinanciero && ! $esInforme) {
+            $clavesPrograma = ProgramaDocumento::where('tipo_programa_id', $solicitud->convocatoria?->tipo_programa_id)
+                ->where('activo', true)
+                ->pluck('clave')
+                ->all();
+            if (! in_array($tipo, $clavesPrograma, true)) {
+                return response()->json(['error' => 'Tipo de documento no válido para este programa.'], 422);
+            }
+        }
+
+        if (! $esAdmin) {
+            $permitidos = $esInforme ? self::ESTADOS_INFORME : ($esFinanciero ? self::ESTADOS_FINANCIEROS : self::ESTADOS_ANEXOS);
+            if (! in_array($solicitud->estado, $permitidos, true)) {
+                return response()->json(['error' => 'Este documento ya no se puede cambiar en el estado actual de la solicitud.'], 422);
+            }
+        }
+
+        $file = $request->file('file');
         try {
-            $this->validateBinaryMimeType($file->getRealPath());
+            $this->validateBinaryMimeType($file->getPathname());
         } catch (ValidationException $e) {
             return response()->json([
                 'error' => 'Archivo inválido',
@@ -40,97 +79,57 @@ class DocumentoUploadController extends Controller
             ], 422);
         }
 
-        $tipo = $request->input('tipo');
-        $extension = $file->getClientOriginalExtension();
-        // ✅ SEGURIDAD: Usar nombre aleatorio en lugar de basarse en input
-        $filename = "{$solicitud->folio}_{$tipo}_".time().".{$extension}";
+        $url = ArchivoSolicitudController::guardar($file, $solicitud);
 
-        // Store in public disk: storage/app/public/documentos/{solicitud_id}
-        // Use explicit disk('public') to avoid storing in storage/app/private
-        Storage::disk('public')->putFileAs("documentos/{$solicitud->id}", $file, $filename);
-
-        // This generates /storage/documentos/{id}/{filename} via the public disk symlink
-        $publicUrl = Storage::disk('public')->url("documentos/{$solicitud->id}/{$filename}");
-
-        // Tipos de documentos con almacenamiento especial
-        $tiposEspeciales = [
-            'informe_final',
-            'carta_compromiso',
-            'caratula_banco',
-            'constancia_fiscal',
-            'factura_institucion',
-        ];
-
-        if ($tipo === 'informe_final') {
-            // Documento de informe final
-            $solicitud->informe_final_url = $publicUrl;
-            $solicitud->fecha_entrega_informe = now();
-            $solicitud->estado_informe = 'entregado';
-            $solicitud->save();
-        } elseif (in_array($tipo, ['carta_compromiso', 'caratula_banco', 'constancia_fiscal', 'factura_institucion'])) {
-            // Documento financiero (Ministracion)
+        if ($esInforme) {
+            ArchivoSolicitudController::borrarPorUrl($solicitud->informe_final_url, $solicitud);
+            $solicitud->forceFill([
+                'informe_final_url' => $url,
+                'fecha_entrega_informe' => now(),
+                'estado_informe' => 'entregado',
+            ])->save();
+        } elseif ($esFinanciero) {
             $ministracion = Ministracion::firstOrCreate(
                 ['solicitud_id' => $solicitud->id],
                 ['estado' => 'pendiente']
             );
-
-            switch ($tipo) {
-                case 'carta_compromiso':
-                    $ministracion->carta_compromiso_url = $publicUrl;
-                    break;
-                case 'caratula_banco':
-                    $ministracion->caratula_banco_url = $publicUrl;
-                    break;
-                case 'constancia_fiscal':
-                    $ministracion->constancia_fiscal_url = $publicUrl;
-                    break;
-                case 'factura_institucion':
-                    $ministracion->factura_institucion_url = $publicUrl;
-                    break;
-            }
+            $campo = "{$tipo}_url";
+            ArchivoSolicitudController::borrarPorUrl($ministracion->{$campo}, $solicitud);
+            $ministracion->{$campo} = $url;
             $ministracion->save();
         } else {
-            // Todos los demás documentos van a solicitud_documentos (programa-específicos)
             SolicitudDocumento::create([
                 'solicitud_id' => $solicitud->id,
                 'tipo' => $tipo,
-                'nombre_original' => $file->getClientOriginalName(),
-                'url' => $publicUrl,
+                'nombre_original' => mb_substr(basename((string) $file->getClientOriginalName()), 0, 200),
+                'url' => $url,
             ]);
         }
 
         return response()->json([
             'message' => 'Documento subido con exito',
-            'url' => $publicUrl,
+            'url' => $url,
             'tipo' => $tipo,
         ]);
     }
 
-    /**
-     * Delete a document from a solicitud
-     */
     public function destroy(Request $request, Solicitud $solicitud, SolicitudDocumento $documento)
     {
-        // Verify authorization
         $user = auth()->user();
-        if ($user->rol_id !== config('comecyt.roles.admin') && $solicitud->user_id !== $user->id) {
+        $esAdmin = (int) $user->rol_id === (int) config('comecyt.roles.admin');
+        if (! $esAdmin && (int) $solicitud->user_id !== (int) $user->id) {
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
-        // Verify the document belongs to this solicitud
-        if ($documento->solicitud_id !== $solicitud->id) {
+        if ((int) $documento->solicitud_id !== (int) $solicitud->id) {
             return response()->json(['error' => 'Documento no encontrado'], 404);
         }
 
-        // Extract filename from URL and delete from storage
-        // URLs are like /storage/documentos/{id}/{filename}
-        // We need to convert to public/documentos/{id}/{filename} for the public disk
-        $path = str_replace('/storage/', 'documentos/', $documento->url);
-        if (Storage::disk('public')->exists($path)) {
-            Storage::disk('public')->delete($path);
+        if (! $esAdmin && ! in_array($solicitud->estado, self::ESTADOS_ANEXOS, true)) {
+            return response()->json(['error' => 'Los documentos ya no se pueden quitar en el estado actual de la solicitud.'], 422);
         }
 
-        // Soft delete the record
+        ArchivoSolicitudController::borrarPorUrl($documento->url, $solicitud);
         $documento->delete();
 
         return response()->json(['message' => 'Documento eliminado exitosamente']);
