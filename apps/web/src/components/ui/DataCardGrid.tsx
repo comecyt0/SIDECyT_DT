@@ -100,7 +100,7 @@ export function DataCardGrid<T>({
       variants={container}
       initial="hidden"
       animate="show"
-      className={cn('grid gap-4', gridCols, className)}
+      className={cn('data-grid grid gap-4', gridCols, className)}
     >
       {items.map((it) => {
         const color: AccentColor = accentColor?.(it) ?? 'primary';
@@ -115,7 +115,7 @@ export function DataCardGrid<T>({
             onClick={onCardClick ? () => onCardClick(it) : undefined}
             data-interactive={onCardClick ? 'true' : undefined}
             className={cn(
-              'app-card relative',
+              'app-card data-card relative',
               'shadow-sm hover:border-primary/20',
               glowCls,
               'before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[3px] before:rounded-r-full',

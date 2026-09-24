@@ -49,12 +49,12 @@ export default function PaginationControls({
   const pages = getPageNumbers(currentPage, lastPage);
 
   const btnBase =
-    'inline-flex items-center justify-center h-8 w-8 rounded-md text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed';
+    'pager-btn inline-flex items-center justify-center h-8 w-8 rounded-md text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed';
   const btnGhost =
     `${btnBase} bg-white border border-neutral-200 text-neutral-600 hover:border-primary/40 hover:text-primary`;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-3 border-t border-neutral-100">
+    <div className="pager flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-3 border-t border-neutral-100">
       {/* Info + per-page selector */}
       <div className="flex items-center gap-3 text-sm text-neutral-500">
         <span>
@@ -127,6 +127,7 @@ export default function PaginationControls({
                     : undefined
                 }
                 disabled={p === currentPage}
+                aria-current={p === currentPage ? 'page' : undefined}
               >
                 {p}
               </button>

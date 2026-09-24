@@ -43,6 +43,25 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * E42 (24/09/2026) — Recuperación cuando la pantalla de carga se queda para siempre.
+ * Pasaba si una caché intermedia entregaba HTML de un despliegue anterior que pedía scripts que ya no
+ * existen: React no arranca y el #boot-splash nunca se retira. Si falla un script de /_next/static, o
+ * aparece un ChunkLoadError, o a los 15 s el splash sigue visible, se recarga UNA vez (bandera en
+ * sessionStorage, ventana de 60 s: nunca en bucle) con un parámetro nuevo en la URL, para saltarse
+ * cualquier copia vieja guardada por un proxy. Tras cargar bien, el parámetro se limpia de la barra.
+ * Script en línea permitido por la CSP (`script-src 'self' 'unsafe-inline'`); no usa datos externos.
+ */
+const RECUPERAR_CARGA = `(function(){try{
+var K='sg-reload-at',P='_r';
+try{var u0=new URL(location.href);if(u0.searchParams.has(P)){u0.searchParams.delete(P);history.replaceState(history.state,'',u0.pathname+u0.search+u0.hash);}}catch(_){}
+function recargar(){try{var t=Number(sessionStorage.getItem(K)||0);if(Date.now()-t<60000)return;sessionStorage.setItem(K,String(Date.now()));}catch(_){return;}
+var u=new URL(location.href);u.searchParams.set(P,String(Date.now()));location.replace(u.toString());}
+window.addEventListener('error',function(e){var s=e&&e.target;if(s&&s.tagName==='SCRIPT'&&/\\/_next\\/static\\//.test(s.src||''))recargar();},true);
+window.addEventListener('unhandledrejection',function(e){var r=e&&e.reason;var m=String((r&&(r.name||r.message))||'');if(/ChunkLoadError|Loading chunk|dynamically imported module/i.test(m))recargar();});
+setTimeout(function(){var s=document.getElementById('boot-splash');if(s&&s.style.display!=='none'&&!s.classList.contains('route-loading-out'))recargar();},15000);
+}catch(_){}})();`;
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -64,6 +83,8 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.webmanifest" />
         <meta name="theme-color" content="var(--brand-vino)" />
         <meta name="color-scheme" content="light dark" />
+        {/* Recuperación de "se queda cargando" (E42). Constante propia, sin datos de usuario. */}
+        <script dangerouslySetInnerHTML={{ __html: RECUPERAR_CARGA }} />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {/* Splash de arranque: mismo dibujo que RouteLoadingScreen, pero impreso por el servidor

@@ -587,3 +587,44 @@ foco navy visible). Todo respeta `prefers-reduced-motion`.
   `:is(.panel-root, html.sg-panel)`. **Nunca** en `:root` ni en `globals.css` (alcanzaría al login).
 - Un solo `variant="rainbow"` por vista (hoy es vino; el nombre de la variante se mantiene).
 - Vino solo en detalles; si una vista pide un bloque grande de color, usar navy o un lavado pastel.
+
+## 14. Contenido interno de las vistas, menú y pie (E43, 24/09/2026)
+
+Pedido del usuario: "rediseña el contenido interno de las demás vistas igual y el menú, todo menos el login y la
+landing", más "mejora el diseño del footer de todos los paneles y haz 5 veces más grande el logo del footer" y
+quitar del dashboard del admin el bloque "Notificaciones al instante / Información para soporte / Buenas
+prácticas". Todo en `panel-sigac.css`, bloque "E43", acotado a `:is(.panel-root, html.sg-panel)`.
+
+### Qué cambió
+
+| Pieza | Antes | Ahora |
+|---|---|---|
+| **Menú desplegable** (`.panel-menu*`) | Mega-dropdown con cabecera vino | Tarjeta blanca flotante (radio 28): cabecera con píldora del rol, título en Satoshi; **cada grupo es un bloque pastel** (lavanda, cielo, menta, mantequilla); opciones con chip de ícono, nombre y descripción; al pasar el cursor se vuelven panel blanco, se desplazan 2 px y aparece la flecha; **la página actual** va en blanco con filo vino e ícono vino; "Cerrar sesión" en píldora vino suave. Máx. alto de pantalla con scroll en escritorio. La lógica (grupos, móvil, cierre) no cambió |
+| **Botón "Menú"** | Sin nombre accesible en móvil (texto oculto) y vino sólido abierto | `aria-label`, `aria-expanded`, `aria-haspopup`; abierto en tinta navy |
+| **Tono de sección** | — | `<main data-section-tone>`: en admin, el pastel del grupo del menú al que pertenece la página; en los otros roles, el de su dashboard (solicitante blush, revisor menta, evaluador mantequilla). Menú y vista "casan" |
+| **Tarjeta principal de las listas** | Tarjeta blanca | **Marco pastel** del tono de sección (radio 32, sin sombra), título grande en Satoshi con el ícono en chip blanco; su contenido (rejilla, tabla, estado vacío) queda en paneles blancos. Se aplica con `:has()` a la `Card` de primer nivel que contiene `.data-grid`, una tabla o `.empty-state`: **~30 vistas sin tocar su JSX**; tarjetas anidadas y de detalle no cambian |
+| **Tarjetas de datos** (`DataCardGrid` → `.data-card`) | Brillo de color al hover | Panel blanco radio 20; al pasar el cursor, sombra flotante y el filo de color crece a lo alto |
+| **Tarjetas de detalle** | Título en Switzer | Título en Satoshi, filo de cabecera suave |
+| **Buscador de listas** | Campo gris, placeholder invisible | Píldora blanca de 48 px con sombra suave; placeholder visible |
+| **Filtros guardados** (`.saved-filters`) | Mayúsculas espaciadas | Texto normal, chips blancos |
+| **Tablas** | Cabecera gris | Cabecera transparente, texto 12 px sin mayúsculas |
+| **Paginación** (`.pager`) | Cuadros con borde, página actual vino | Botones redondos blancos, página actual en tinta navy (`aria-current="page"`) |
+| **Pestañas del programa** (`.seg-tabs`) | Subrayado | Control segmentado en píldora; activa en lavado vino |
+| **StepFrame** | Pasos sobre blanco, "Siguiente" vino sólido | Lista de pasos sobre papel, paso actual en panel blanco con número vino, pregunta en Satoshi 22 px, aviso en mantequilla, botones en píldora y "Siguiente" en tinta navy |
+| **Pie** (`PanelFooter.tsx`, nuevo, común a los 4 paneles) | Logo 28 px + dos líneas de texto | Tarjeta blanca (radio 32) con salpicadura vino tenue: **logo recortado a 76 px** (≈5× el visible anterior: `logo.png` a 28 px tiene ~46 % de margen), "SIGAC" + barra vino, nombre completo del sistema e institución; enlaces en píldora (Sitio público, Aviso de privacidad, Términos, correo de proyectos). Línea legal debajo. En oscuro el logo lleva placa clara |
+| **Dashboard admin** | Estado de Reverb + "Buenas prácticas" | Quitados (el widget `ReverbStatusWidget` sigue en el código, solo no se monta) |
+
+### Ganchos de clase agregados (sin tocar lógica)
+`step-frame`, `step-frame-head/foot/title`, `step-intro`, `step-list`, `step-item`, `step-num`, `step-count`,
+`step-question`, `step-back` (StepFrame) · `pager`, `pager-btn` (paginación) · `data-grid`, `data-card`
+(DataCardGrid) · `saved-filters` · `seg-tabs` (pestañas de programa).
+
+### Verificación (producción)
+tsc 0 errores, vitest 103/103. Capturas con sesión (tokens temporales, invalidados) en 11 vistas de los 4 roles,
+menú abierto por rol, programa con pestañas, StepFrame, 375 px (lista y menú), modo oscuro y login: **sin scroll
+horizontal, sin errores de consola, login sin `sg-panel`**.
+
+### Reglas
+- Una lista nueva hereda el marco pastel si su `Card` principal contiene `DataCardGrid`, `Table` o `.empty-state`
+  como hijo directo de `CardContent`. No hace falta envolverla en `PastelFrame`.
+- Una página nueva de admin toma el tono del grupo del menú donde se registre en `NAV_GROUPS`.

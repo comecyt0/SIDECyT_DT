@@ -981,8 +981,387 @@ html.sg-panel [data-slot="dialog-content"] {
   :is(.panel-root, html.sg-panel) .panel-topbar-row :is(button, a).rounded-xl { padding: 8px; }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   E43 — 24/09/2026. Menú v3 y contenido interno de todas las vistas (pedido del usuario: "rediseña el
+   contenido interno de las demás vistas igual y el menú, todo menos el login y la landing").
+   Mismo lenguaje que el dashboard: marcos pastel con paneles blancos, títulos en Satoshi, todo pulsable
+   responde (hover/active), vino solo de detalle.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Menú desplegable v3: tarjeta blanca flotante, grupos con chip pastel, activo en vino ── */
+:is(.panel-root, html.sg-panel) .panel-menu {
+  overflow: hidden;
+  border-radius: 28px;
+  background: var(--app-card-bg);
+  box-shadow: var(--sg-shadow-float), 0 24px 48px -24px rgba(8, 48, 76, 0.18);
+  color: var(--sg-ink);
+}
+:is(.panel-root, html.sg-panel) .panel-menu-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--sg-mist);
+}
+:is(.panel-root, html.sg-panel) .panel-menu-title {
+  font-family: var(--sg-font-display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--sg-ink);
+}
+:is(.panel-root, html.sg-panel) .panel-menu-hint { margin-top: 4px; font-size: 13px; color: var(--sg-ink-2); }
+:is(.panel-root, html.sg-panel) .panel-menu-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+}
+@media (max-width: 767px) { :is(.panel-root, html.sg-panel) .panel-menu-body { grid-template-columns: minmax(0, 1fr); } }
+:is(.panel-root, html.sg-panel) .panel-menu-group {
+  --menu-tone: var(--pastel-lavender);
+  padding: 8px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--menu-tone) 55%, transparent);
+}
+:is(.panel-root, html.sg-panel) .panel-menu-group[data-pastel="powder"] { --menu-tone: var(--pastel-powder); }
+:is(.panel-root, html.sg-panel) .panel-menu-group[data-pastel="mint"] { --menu-tone: var(--pastel-mint); }
+:is(.panel-root, html.sg-panel) .panel-menu-group[data-pastel="butter"] { --menu-tone: var(--pastel-butter); }
+:is(.panel-root, html.sg-panel) .panel-menu-group[data-pastel="blush"] { --menu-tone: var(--pastel-blush); }
+:is(.panel-root, html.sg-panel) .panel-menu-label {
+  padding: 6px 10px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sg-ink-2);
+}
+:is(.panel-root, html.sg-panel) .panel-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  color: var(--sg-ink);
+  transition: background-color 180ms ease, transform 200ms var(--sg-ease-out), box-shadow 200ms ease;
+}
+:is(.panel-root, html.sg-panel) .panel-menu-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--menu-tone, var(--pastel-lavender));
+  color: var(--sg-ink);
+  transition: background-color 180ms ease, color 180ms ease;
+}
+:is(.panel-root, html.sg-panel) .panel-menu-name { display: block; font-size: 14px; font-weight: 600; line-height: 1.25; }
+:is(.panel-root, html.sg-panel) .panel-menu-desc {
+  display: block;
+  margin-top: 1px;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--sg-ink-2);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+:is(.panel-root, html.sg-panel) .panel-menu-go {
+  flex: none;
+  color: var(--sg-ink-2);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 180ms ease, transform 200ms var(--sg-ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(.panel-root, html.sg-panel) .panel-menu-item:hover { background: var(--app-card-bg); box-shadow: var(--sg-shadow-soft); transform: translateX(2px); }
+  :is(.panel-root, html.sg-panel) .panel-menu-item:hover .panel-menu-go { opacity: 1; transform: none; }
+}
+:is(.panel-root, html.sg-panel) .panel-menu-item:focus-visible { background: var(--app-card-bg); }
+:is(.panel-root, html.sg-panel) .panel-menu-item:focus-visible .panel-menu-go { opacity: 1; transform: none; }
+:is(.panel-root, html.sg-panel) .panel-menu-item:active { transform: scale(0.98); }
+/* Página actual: panel blanco con filo vino a la izquierda e ícono en vino. */
+:is(.panel-root, html.sg-panel) .panel-menu-item[data-active="true"] {
+  position: relative;
+  background: var(--app-card-bg);
+  box-shadow: var(--sg-shadow-soft);
+}
+:is(.panel-root, html.sg-panel) .panel-menu-item[data-active="true"]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--sg-vino);
+}
+:is(.panel-root, html.sg-panel) .panel-menu-item[data-active="true"] .panel-menu-icon { background: var(--pastel-vino); color: var(--sg-vino); }
+:is(.panel-root, html.sg-panel) .panel-menu-item[data-active="true"] .panel-menu-go { opacity: 1; transform: none; color: var(--sg-vino); }
+:is(.panel-root, html.sg-panel) .panel-menu-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 12px 24px;
+  border-top: 1px solid var(--sg-mist);
+  font-size: 12px;
+  color: var(--sg-ink-2);
+}
+:is(.panel-root, html.sg-panel) .panel-menu-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  background: var(--pastel-vino);
+  color: var(--sg-vino);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 180ms ease, transform 140ms var(--sg-ease-out);
+}
+:is(.panel-root, html.sg-panel) .panel-menu-logout:hover { background: var(--sg-danger-wash); color: var(--sg-danger); }
+:is(.panel-root, html.sg-panel) .panel-menu-logout:active { transform: scale(0.97); }
+
+/* ── Tono de sección: el marco de cada vista usa el pastel de su grupo del menú (o de su rol) ── */
+:is(.panel-root, html.sg-panel) .panel-main { --section-tone: var(--pastel-lavender); }
+:is(.panel-root, html.sg-panel) .panel-main[data-section-tone="powder"] { --section-tone: var(--pastel-powder); }
+:is(.panel-root, html.sg-panel) .panel-main[data-section-tone="mint"] { --section-tone: var(--pastel-mint); }
+:is(.panel-root, html.sg-panel) .panel-main[data-section-tone="butter"] { --section-tone: var(--pastel-butter); }
+:is(.panel-root, html.sg-panel) .panel-main[data-section-tone="blush"] { --section-tone: var(--pastel-blush); }
+
+/* ── Tarjeta de lista = marco pastel. La Card principal de una vista que contiene una rejilla de tarjetas
+   o una tabla se vuelve marco pastel (como PastelFrame) y su contenido queda en paneles blancos. Así se
+   rediseñan las ~30 vistas de lista sin tocar su JSX. Las tarjetas anidadas no cambian. ── */
+:is(.panel-root, html.sg-panel) .panel-main [data-slot="card"]:has(> [data-slot="card-content"] > :is(.data-grid, [data-slot="table-container"], .empty-state)):not([data-slot="card"] [data-slot="card"]) {
+  border-radius: 32px;
+  background: var(--section-tone);
+  box-shadow: none;
+}
+:is(.panel-root, html.sg-panel) .panel-main [data-slot="card"]:has(> [data-slot="card-content"] > :is(.data-grid, [data-slot="table-container"], .empty-state)):not([data-slot="card"] [data-slot="card"]) > [data-slot="card-header"] {
+  padding: 24px 24px 4px;
+  border-bottom: 0;
+}
+@media (min-width: 768px) {
+  :is(.panel-root, html.sg-panel) .panel-main [data-slot="card"]:has(> [data-slot="card-content"] > :is(.data-grid, [data-slot="table-container"], .empty-state)):not([data-slot="card"] [data-slot="card"]) > [data-slot="card-header"] { padding: 28px 28px 6px; }
+  :is(.panel-root, html.sg-panel) .panel-main [data-slot="card"]:has(> [data-slot="card-content"] > :is(.data-grid, [data-slot="table-container"], .empty-state)):not([data-slot="card"] [data-slot="card"]) > [data-slot="card-content"] { padding: 16px 28px 28px; }
+}
+:is(.panel-root, html.sg-panel) .panel-main [data-slot="card"]:has(> [data-slot="card-content"] > :is(.data-grid, [data-slot="table-container"], .empty-state)):not([data-slot="card"] [data-slot="card"]) > [data-slot="card-header"] [data-slot="card-title"] {
+  font-family: var(--sg-font-display);
+  font-size: clamp(1.2rem, 1.08rem + 0.45vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: -0.028em;
+}
+/* El ícono vino del título pasa a chip blanco redondo (menos vino repetido). */
+:is(.panel-root, html.sg-panel) .panel-main [data-slot="card"]:has(> [data-slot="card-content"] > :is(.data-grid, [data-slot="table-container"], .empty-state)):not([data-slot="card"] [data-slot="card"]) > [data-slot="card-header"] [data-slot="card-title"] > svg:first-child {
+  box-sizing: content-box;
+  padding: 9px;
+  border-radius: 9999px;
+  background: var(--app-card-bg);
+  box-shadow: var(--sg-shadow-soft);
+}
+:is(.panel-root, html.sg-panel) .panel-main [data-slot="card"] > [data-slot="card-content"] > .empty-state {
+  border-radius: 20px;
+  background: var(--app-card-bg);
+  box-shadow: var(--sg-shadow-soft);
+}
+
+/* ── Tarjetas de datos (DataCardGrid): paneles blancos que se levantan y muestran su filo al pasar ── */
+:is(.panel-root, html.sg-panel) .data-card {
+  border-radius: 20px;
+  background: var(--app-card-bg);
+  box-shadow: var(--sg-shadow-soft);
+  transition: box-shadow 260ms var(--sg-ease-out);
+}
+:is(.panel-root, html.sg-panel) .data-card::before { transition: height 360ms var(--sg-ease-out), opacity 200ms ease; }
+@media (hover: hover) and (pointer: fine) {
+  :is(.panel-root, html.sg-panel) .data-card:hover { box-shadow: var(--sg-shadow-float); }
+  :is(.panel-root, html.sg-panel) .data-card:hover::before { height: calc(100% - 44px); opacity: 0.8; }
+}
+
+/* ── Cabeceras de tarjeta blancas (detalle): título en Satoshi, sin filo duro ── */
+:is(.panel-root, html.sg-panel) .panel-main [data-slot="card-header"] { border-bottom-color: var(--sg-mist); }
+:is(.panel-root, html.sg-panel) .panel-main [data-slot="card-title"] { font-family: var(--sg-font-display); font-weight: 600; letter-spacing: -0.02em; }
+
+/* ── Buscador y filtros guardados ── */
+:is(.panel-root, html.sg-panel) .panel-main input[type="search"].auth-input {
+  height: 48px;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--app-card-bg);
+  box-shadow: var(--sg-shadow-soft);
+  transition: box-shadow 200ms ease;
+}
+:is(.panel-root, html.sg-panel) .panel-main input[type="search"].auth-input:hover { box-shadow: var(--sg-shadow-float); }
+:is(.panel-root, html.sg-panel) .panel-main input[type="search"].auth-input:focus { box-shadow: var(--sg-shadow-soft), 0 0 0 4px var(--sg-sky); }
+:is(.panel-root, html.sg-panel) .saved-filters > span:first-child { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; color: var(--sg-ink-2); }
+:is(.panel-root, html.sg-panel) .saved-filters > span.rounded-full { background: var(--app-card-bg); color: var(--sg-ink); box-shadow: var(--sg-shadow-soft); }
+:is(.panel-root, html.sg-panel) .saved-filters > button { text-transform: none; letter-spacing: 0; font-size: 12px; }
+
+/* ── Tablas: cabecera sin gris, filas con respiración ── */
+:is(.panel-root, html.sg-panel) [data-slot="table-header"] { background: transparent; }
+:is(.panel-root, html.sg-panel) [data-slot="table-head"] { font-size: 12px; font-weight: 600; color: var(--sg-ink-2); text-transform: none; letter-spacing: 0; }
+:is(.panel-root, html.sg-panel) [data-slot="table-body"] [data-slot="table-row"] { transition: background-color 160ms ease; }
+
+/* ── Paginación: botones redondos, página actual en tinta ── */
+:is(.panel-root, html.sg-panel) .pager { border-top: 0; padding-top: 16px; }
+:is(.panel-root, html.sg-panel) .pager .pager-btn {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--app-card-bg);
+  color: var(--sg-ink);
+  box-shadow: var(--sg-shadow-soft);
+  transition: background-color 160ms ease, transform 140ms var(--sg-ease-out);
+}
+:is(.panel-root, html.sg-panel) .pager .pager-btn:hover:not(:disabled) { background: var(--sg-sky); }
+:is(.panel-root, html.sg-panel) .pager .pager-btn:active:not(:disabled) { transform: scale(0.95); }
+:is(.panel-root, html.sg-panel) .pager .pager-btn[aria-current="page"] { background: var(--sg-ink) !important; color: var(--app-card-bg); opacity: 1; box-shadow: none; }
+:is(.panel-root, html.sg-panel) .pager select { height: 32px; border-radius: 9999px; }
+
+/* ── Pestañas de subrayado → control segmentado en píldora ── */
+:is(.panel-root, html.sg-panel) .seg-tabs {
+  display: inline-flex;
+  max-width: 100%;
+  margin-bottom: 0;
+  padding: 4px;
+  border-radius: 9999px;
+  background: var(--app-card-bg);
+  box-shadow: var(--sg-shadow-soft);
+  scrollbar-width: none;
+}
+:is(.panel-root, html.sg-panel) .seg-tabs [role="tab"] {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 9999px;
+  color: var(--sg-ink-2);
+  transition: background-color 180ms ease, color 180ms ease, transform 140ms var(--sg-ease-out);
+}
+:is(.panel-root, html.sg-panel) .seg-tabs [role="tab"]:hover { color: var(--sg-ink); background: var(--sg-canvas); }
+:is(.panel-root, html.sg-panel) .seg-tabs [role="tab"]:active { transform: scale(0.97); }
+:is(.panel-root, html.sg-panel) .seg-tabs [role="tab"][aria-selected="true"] { background: var(--pastel-vino); color: var(--sg-vino); }
+/* El contenedor de las pestañas traía un filo inferior propio: fuera. */
+:is(.panel-root, html.sg-panel) :has(> .seg-tabs) { border-bottom: 0; }
+
+/* ── Formularios por pasos (StepFrame) ── */
+:is(.panel-root, html.sg-panel) .step-frame { border-radius: 28px; }
+:is(.panel-root, html.sg-panel) .step-frame-head,
+:is(.panel-root, html.sg-panel) .step-frame-foot { border-color: var(--sg-mist) !important; }
+:is(.panel-root, html.sg-panel) .step-frame-title,
+:is(.panel-root, html.sg-panel) .step-question { font-family: var(--sg-font-display); font-weight: 600; letter-spacing: -0.025em; }
+:is(.panel-root, html.sg-panel) .step-question { font-size: 22px; line-height: 1.2; }
+:is(.panel-root, html.sg-panel) .step-count { text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 600; }
+:is(.panel-root, html.sg-panel) .step-intro { border: 0 !important; background: var(--pastel-butter) !important; border-radius: 16px; }
+/* Lista de pasos dentro de un pastel suave; el paso actual es un panel blanco con filo vino. */
+@media (min-width: 768px) {
+  :is(.panel-root, html.sg-panel) .step-list { align-self: start; padding: 8px; border-radius: 20px; background: var(--sg-canvas); }
+}
+:is(.panel-root, html.sg-panel) .step-item { transition: background-color 180ms ease, transform 160ms var(--sg-ease-out); }
+:is(.panel-root, html.sg-panel) .step-item:not(:disabled):hover { background: var(--sg-sky) !important; }
+:is(.panel-root, html.sg-panel) .step-item:not(:disabled):active { transform: scale(0.98); }
+:is(.panel-root, html.sg-panel) .step-item[aria-current="step"] { background: var(--app-card-bg) !important; box-shadow: var(--sg-shadow-soft); }
+:is(.panel-root, html.sg-panel) .step-item[aria-current="step"] .step-num { background: var(--sg-vino) !important; }
+:is(.panel-root, html.sg-panel) .step-back { border: 0 !important; border-radius: 9999px; background: var(--app-card-bg); box-shadow: var(--sg-shadow-hair); }
+:is(.panel-root, html.sg-panel) .step-back:active:not(:disabled) { transform: scale(0.97); }
+:is(.panel-root, html.sg-panel) .step-frame-foot .auth-submit { border-radius: 9999px; background: var(--sg-ink); color: var(--app-card-bg); }
+:is(.panel-root, html.sg-panel) .step-frame-foot .auth-submit:hover:not(:disabled) { background: var(--sg-ink-hover); }
+
+/* Botón "Menú" abierto: tinta navy (antes vino sólido). Menú de escritorio con altura máxima y scroll. */
+:is(.panel-root, html.sg-panel) .panel-topbar [aria-haspopup="dialog"][aria-expanded="true"] { background: var(--sg-ink); color: var(--app-card-bg); box-shadow: none; }
+@media (min-width: 768px) {
+  :is(.panel-root, html.sg-panel) .panel-menu { max-height: calc(100dvh - 104px); overflow-y: auto; overscroll-behavior: contain; }
+}
+/* Buscador de las listas: el placeholder se veía transparente (heredado del campo flotante del login). */
+:is(.panel-root, html.sg-panel) .panel-main input[type="search"].auth-input::placeholder { color: var(--sg-ink-2); opacity: 1; }
+
+/* ── Pie de los paneles (PanelFooter): tarjeta blanca, logo grande, enlaces en píldora ── */
+:is(.panel-root, html.sg-panel) .panel-footer.pfoot { display: block; padding-top: 8px; padding-bottom: 28px; border-top: 0; }
+:is(.panel-root, html.sg-panel) .panel-footer.pfoot::before { display: none; }
+:is(.panel-root, html.sg-panel) .pfoot-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow: hidden;
+  padding: 28px 24px;
+  border-radius: 32px;
+  background: var(--app-card-bg);
+  box-shadow: var(--sg-shadow-soft);
+}
+/* Salpicadura vino tenue en la esquina: la misma firma de la landing, sin saturar. */
+:is(.panel-root, html.sg-panel) .pfoot-card::after {
+  content: '';
+  position: absolute;
+  right: -120px;
+  bottom: -160px;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: var(--pastel-vino);
+  filter: blur(60px);
+  opacity: 0.9;
+  pointer-events: none;
+}
+@media (min-width: 900px) {
+  :is(.panel-root, html.sg-panel) .pfoot-card { flex-direction: row; align-items: center; justify-content: space-between; padding: 32px 40px; }
+}
+:is(.panel-root, html.sg-panel) .pfoot-brand { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; min-width: 0; }
+/* 5× el pie anterior: 76 px de logo recortado (antes 28 px de logo.png con ~46 % de margen). */
+:is(.panel-root, html.sg-panel) .pfoot-logo { width: auto; height: 76px; }
+/* En oscuro el logo (tinta vino/gris) se apaga sobre navy: placa clara detrás, mismo tamaño visible. */
+:is(.dark .panel-root, html.dark.sg-panel) .pfoot-logo { box-sizing: content-box; padding: 10px 14px; border-radius: 18px; background: #ffffff; }
+:is(.panel-root, html.sg-panel) .pfoot-name { font-family: var(--sg-font-display); font-size: 24px; font-weight: 600; line-height: 1; letter-spacing: -0.035em; color: var(--sg-ink); }
+:is(.panel-root, html.sg-panel) .pfoot-name::after { content: ''; display: block; width: 32px; height: 3px; margin-top: 10px; border-radius: 3px; background: var(--sg-vino); }
+:is(.panel-root, html.sg-panel) .pfoot-sub { margin-top: 10px; font-size: 14px; font-weight: 600; color: var(--sg-ink); }
+:is(.panel-root, html.sg-panel) .pfoot-inst { margin-top: 2px; font-size: 13px; color: var(--sg-ink-2); }
+:is(.panel-root, html.sg-panel) .pfoot-links { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; }
+@media (min-width: 900px) { :is(.panel-root, html.sg-panel) .pfoot-links { justify-content: flex-end; max-width: 440px; } }
+:is(.panel-root, html.sg-panel) .pfoot-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  background: var(--sg-canvas);
+  color: var(--sg-ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 180ms ease, color 180ms ease, transform 140ms var(--sg-ease-out);
+}
+:is(.panel-root, html.sg-panel) .pfoot-link svg { transition: transform 200ms var(--sg-ease-out); }
+:is(.panel-root, html.sg-panel) .pfoot-link:hover { background: var(--sg-sky); }
+:is(.panel-root, html.sg-panel) .pfoot-link:hover svg { transform: translate(2px, -2px); }
+:is(.panel-root, html.sg-panel) .pfoot-link:active { transform: scale(0.97); }
+:is(.panel-root, html.sg-panel) .pfoot-mail { background: var(--pastel-vino); color: var(--sg-vino); overflow-wrap: anywhere; white-space: normal; }
+:is(.panel-root, html.sg-panel) .pfoot-mail:hover { background: var(--sg-vino-wash); }
+:is(.panel-root, html.sg-panel) .pfoot-mail:hover svg { transform: none; }
+:is(.panel-root, html.sg-panel) .pfoot-legal {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 14px 8px 0;
+  font-size: 12px;
+  color: var(--sg-ink-2);
+}
+@media (max-width: 639px) {
+  :is(.panel-root, html.sg-panel) .pfoot-legal { flex-direction: column; align-items: center; text-align: center; }
+}
+
 /* ─────────────────────────── Movimiento ─────────────────────────── */
 
+@media (prefers-reduced-motion: reduce) {
+  :is(.panel-root, html.sg-panel) :is(.pfoot-link, .pfoot-link svg) { transition: none; }
+  :is(.panel-root, html.sg-panel) :is(.panel-menu-item, .panel-menu-go, .panel-menu-logout, .data-card, .data-card::before, .pager-btn, .seg-tabs [role="tab"], .step-item) { transition: none; }
+  :is(.panel-root, html.sg-panel) .panel-menu-item:hover { transform: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   :is(.panel-root, html.sg-panel) .app-card,
   :is(.panel-root, html.sg-panel) .tone-card,

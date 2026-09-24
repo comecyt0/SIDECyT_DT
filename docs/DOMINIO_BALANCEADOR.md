@@ -439,3 +439,38 @@ de origen del VIP nuevo**. Seguimiento y cómo continuar:
 
 **Puente si urge:** apuntar el DNS de vuelta a `10.200.41.106`, que sigue funcionando. Pierde la IP
 pública, así que sirve como puente, no como destino.
+
+## 13. 24/09/2026 — "El dominio se queda cargando" (caché de HTML) — E42
+
+**Síntoma reportado:** al entrar por el dominio, la pantalla de carga (logo con anillos) no se retira y la
+página nunca aparece. Desde el servidor, con navegador limpio, cargaba bien (splash oculto, sin errores).
+
+**Causa:** Next.js marcaba el HTML prerenderizado con `s-maxage=31536000` (un año de caché **compartida**).
+Cualquier intermediario que respete esa cabecera (el balanceador, un proxy institucional) podía seguir
+entregando el HTML de un despliegue anterior, que referencia archivos `/_next/static/chunks/<hash>.js` que el
+siguiente despliegue borró. Sin esos scripts React no arranca, y `RouteChangeOverlay` —que es quien oculta el
+`#boot-splash`— nunca corre. El service worker **no** cachea HTML (se revisó), así que no era él.
+
+**Corrección en tres capas:**
+1. **IIS (`apps/api/public/web.config`)** — regla de salida `HtmlSinCacheCompartida` con la precondición
+   `RespuestaHtmlORsc` (`text/html` o `text/x-component`): reescribe `Cache-Control` a
+   `private, no-cache, no-store, max-age=0, must-revalidate`. Los estáticos con hash (`/_next/static`) siguen con
+   `public, max-age=31536000, immutable` y la API no cambia. Respaldo previo:
+   `web.config.bak-20260924-prehtmlcache`.
+2. **Despliegue (`deploy-web.ps1`)** — tras un build correcto copia primero los `static` del respaldo
+   (`robocopy ... /E /XO`) y encima los nuevos: una pestaña abierta o una copia vieja todavía encuentra sus
+   scripts. Los nombres llevan hash, no chocan. (Crece `standalone\.next\static` con cada despliegue; se limpia
+   al borrar respaldos viejos.)
+3. **Navegador (`app/layout.tsx`, `RECUPERAR_CARGA`)** — script en línea en `<head>`: si falla un script de
+   `/_next/static`, aparece un `ChunkLoadError`, o a los 15 s el splash sigue visible, recarga **una sola vez**
+   (bandera en `sessionStorage`, ventana de 60 s, nunca en bucle) con `?_r=<hora>` para saltarse cualquier copia
+   guardada; el parámetro se limpia de la barra después. Constante propia, sin datos de usuario (la CSP ya permite
+   `'unsafe-inline'`; no se relajó nada).
+
+**Verificación:** `curl.exe -sk -D - https://sidecyt-comecyt.edomex.gob.mx/sigac` → `Cache-Control: private,
+no-cache, no-store...` con HSTS, XFO y CSP intactas; Edge headless por el dominio: splash oculto en la primera
+visita y al recargar con el service worker ya instalado. Los `ERR_ABORTED` de `?_rsc=` que aparecen son prefetch
+de Next cancelados al cerrar la página: normales.
+
+**Pendiente con infraestructura:** preguntar si el ELB cachea respuestas; si sí, que purgue y respete
+`Cache-Control`. Un usuario que ya tenga la copia vieja se recupera solo con el script (o con Ctrl+F5).

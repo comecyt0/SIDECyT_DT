@@ -24,7 +24,6 @@ import {
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
 import type { DashboardStat, AlertItem, EstadoPublicoConvocatoria } from '@/types/api';
-import ReverbStatusWidget from '@/components/admin/ReverbStatusWidget';
 import { INSTITUTION } from '@/lib/institution';
 import { formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
@@ -452,7 +451,7 @@ export default function AdminDashboard() {
           </div>
         </PastelFrame>
 
-        {/* Columna derecha: actividad + alertas + sistema */}
+        {/* Columna derecha: actividad + alertas (el estado de Reverb y "Buenas prácticas" se quitaron el 24/09/2026 a pedido del usuario) */}
         <div className="space-y-6">
           <section className="app-card overflow-hidden" aria-labelledby="dash-act">
             <div className="card-head">
@@ -517,15 +516,6 @@ export default function AdminDashboard() {
                   );
                 })
               )}
-            </div>
-          </section>
-
-          <section className="space-y-3">
-            <ReverbStatusWidget />
-            <div className="app-card px-5 py-4 text-xs text-[var(--app-ink-2)] space-y-1">
-              <p className="font-bold text-[var(--app-ink)] text-sm">Buenas prácticas</p>
-              <p>· La información se respalda automáticamente cada noche.</p>
-              <p>· Si algo no responde como esperas, escribe a soporte: no hace falta reintentar varias veces.</p>
             </div>
           </section>
         </div>

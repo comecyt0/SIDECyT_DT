@@ -11,14 +11,14 @@ import GlobalSearch from '@/components/admin/GlobalSearch';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import NotificationDetailModal, { type NotificationDetail } from '@/components/notifications/NotificationDetailModal';
-import DualBranding from '@/components/branding/DualBranding';
+import PanelFooter from '@/components/layout/PanelFooter';
 import {
   LogOut, Bell, Menu, X, ChevronRight,
   LayoutDashboard, FileText, Users, BookOpen, Building,
   Banknote, ShieldAlert, Zap, Images, UserCheck,
   BarChart3, KeyRound, FileSignature, ClipboardList, BellRing, Activity
 } from 'lucide-react';
-import { INSTITUTION, copyrightLine } from '@/lib/institution';
+import { INSTITUTION } from '@/lib/institution';
 import { useT } from '@/i18n/I18nProvider';
 import { formatDate } from '@/lib/format';
 import { usePanelScope } from '@/hooks/usePanelScope';
@@ -54,6 +54,9 @@ interface AdminTopLayoutProps {
   onMarkAsRead?: (id: string | number) => void | Promise<void>;
   onMarkAllAsRead?: () => void | Promise<void>;
 }
+
+/** Tono pastel del chip de cada grupo del menú (v3, sin saturar). */
+const MENU_TONES = ['lavender', 'powder', 'mint', 'butter'] as const;
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -182,6 +185,9 @@ export default function AdminTopLayout({
   };
 
   const activeGroup = getActiveGroup();
+  // Cada sección toma el pastel de su grupo en el menú: el marco de la vista y el chip del menú casan.
+  const activeGroupIndex = NAV_GROUPS.findIndex((g) => g.group === activeGroup);
+  const sectionTone = MENU_TONES[Math.max(0, activeGroupIndex) % MENU_TONES.length];
 
   return (
     // `panel-root`: alcance del sistema visual SIGAC (styles/panel-sigac.css). La estructura del menú no cambia (E26).
@@ -208,6 +214,9 @@ export default function AdminTopLayout({
           {/* ☰ Menu Toggle */}
           <div ref={menuRef} className="relative">
             <motion.button
+              aria-label={t('nav.menu')}
+              aria-expanded={menuOpen}
+              aria-haspopup="dialog"
               onClick={() => setMenuOpen(!menuOpen)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-200 ${
                 menuOpen
@@ -236,80 +245,64 @@ export default function AdminTopLayout({
               />
             )}
 
-            {/* ─── Mega Dropdown ─── */}
+            {/* ─── Menú v3 (24/09/2026): tarjeta flotante clara, grupos con chip pastel, activo en vino ─── */}
             <AnimatePresence>
               {menuOpen && (
                 <motion.div
-                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                  initial={{ opacity: 0, y: -6, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
-                  className="absolute left-0 top-[calc(100%+10px)] w-[680px] max-w-[90vw] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-100 dark:border-neutral-700 overflow-hidden z-50 max-md:fixed max-md:left-3 max-md:right-3 max-md:top-[5.5rem] max-md:w-auto max-md:max-w-none max-md:max-h-[calc(100dvh-6.5rem)] max-md:overflow-y-auto"
+                  exit={{ opacity: 0, y: -6, scale: 0.98, transition: { duration: 0.12 } }}
+                  transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+                  style={{ transformOrigin: 'top left' }}
+                  className="panel-menu absolute left-0 top-[calc(100%+12px)] w-[780px] max-w-[92vw] z-50 max-md:fixed max-md:left-3 max-md:right-3 max-md:top-[5.5rem] max-md:w-auto max-md:max-w-none max-md:max-h-[calc(100dvh-6.5rem)] max-md:overflow-y-auto"
+                  role="dialog"
+                  aria-label={t('nav.control_panel')}
                 >
-                  {/* Dropdown header */}
-                  <div className="px-6 py-4 bg-gradient-to-r from-primary to-[var(--brand-vino-700)] flex items-center justify-between">
-                    <div>
-                      <p className="text-white font-bold text-sm">{t('nav.control_panel')}</p>
-                      <p className="text-white/60 text-xs">{t('nav.control_panel_hint')}</p>
+                  <div className="panel-menu-head">
+                    <div className="min-w-0">
+                      <p className="panel-hero-pill !mb-2"><span aria-hidden="true" />{t('roles.admin')}</p>
+                      <p className="panel-menu-title">{t('nav.control_panel')}</p>
+                      <p className="panel-menu-hint">{t('nav.control_panel_hint')}</p>
                     </div>
-                    <Image src="/logo.png" alt="" width={41} height={32} className="h-8 w-auto opacity-30 brightness-0 invert" />
+                    <Image src="/logo-recortado.png" alt="" width={99} height={44} className="hidden sm:block h-10 w-auto opacity-90" />
                   </div>
 
-                  {/* Groups grid */}
-                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {NAV_GROUPS.map((group) => (
-                      <div key={group.group}>
-                        <p className="text-[10px] font-bold text-neutral-500 dark:text-neutral-300 uppercase tracking-widest mb-2 px-2">
-                          {group.group}
-                        </p>
-                        <div className="space-y-0.5">
+                  <div className="panel-menu-body">
+                    {NAV_GROUPS.map((group, gi) => (
+                      <section key={group.group} className="panel-menu-group" data-pastel={MENU_TONES[gi % MENU_TONES.length]}>
+                        <p className="panel-menu-label">{group.group}</p>
+                        <ul className="space-y-0.5">
                           {group.items.map((item) => {
                             const isActive = pathname.startsWith(item.href);
                             const Icon = item.icon;
                             return (
-                              <Link key={item.href} href={item.href}>
-                                <motion.div
-                                  whileHover={{ x: 3 }}
-                                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors duration-150 group/item ${
-                                    isActive
-                                      ? 'bg-primary/10 text-primary'
-                                      : 'hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200'
-                                  }`}
+                              <li key={item.href}>
+                                <Link
+                                  href={item.href}
+                                  className="panel-menu-item"
+                                  data-active={isActive ? 'true' : undefined}
+                                  aria-current={isActive ? 'page' : undefined}
+                                  onClick={() => setMenuOpen(false)}
                                 >
-                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                                    isActive ? 'bg-primary text-white' : 'bg-neutral-100 dark:bg-neutral-800 group-hover/item:bg-primary/10 group-hover/item:text-primary'
-                                  }`}>
-                                    <Icon className="w-4 h-4" />
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className={`text-sm font-semibold leading-none mb-0.5 ${isActive ? 'text-primary' : ''}`}>
-                                      {item.name}
-                                    </p>
-                                    {item.description && (
-                                      <p className="text-xs text-neutral-500 dark:text-neutral-300 truncate">{item.description}</p>
-                                    )}
-                                  </div>
-                                  {isActive && (
-                                    <ChevronRight className="w-3.5 h-3.5 text-primary ml-auto shrink-0" />
-                                  )}
-                                </motion.div>
-                              </Link>
+                                  <span className="panel-menu-icon" aria-hidden="true"><Icon className="w-4 h-4" /></span>
+                                  <span className="min-w-0 flex-1">
+                                    <span className="panel-menu-name">{item.name}</span>
+                                    {item.description && <span className="panel-menu-desc">{item.description}</span>}
+                                  </span>
+                                  <ChevronRight className="panel-menu-go w-4 h-4" aria-hidden="true" />
+                                </Link>
+                              </li>
                             );
                           })}
-                        </div>
-                      </div>
+                        </ul>
+                      </section>
                     ))}
                   </div>
 
-                  {/* Footer */}
-                  <div className="px-6 py-3 bg-neutral-50 dark:bg-neutral-900 border-t border-neutral-100 dark:border-neutral-700 flex items-center justify-between">
-                    <p className="text-xs text-neutral-500 dark:text-neutral-300">{INSTITUTION.name} · {INSTITUTION.state}</p>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 font-semibold transition-colors"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
+                  <div className="panel-menu-foot">
+                    <p>{INSTITUTION.name} · {INSTITUTION.state}</p>
+                    <button type="button" onClick={handleLogout} className="panel-menu-logout">
+                      <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
                       {t('common.logout')}
                     </button>
                   </div>
@@ -462,7 +455,7 @@ export default function AdminTopLayout({
       </header>
 
       {/* ── CONTENT ── */}
-      <main className="panel-main flex-1 mx-auto w-full px-4 md:px-8">
+      <main className="panel-main flex-1 mx-auto w-full px-4 md:px-8" data-section-tone={sectionTone}>
         {/* ─── Breadcrumb / Active section bar ─── */}
         <nav aria-label="Ubicación" className="panel-crumbs">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
@@ -496,14 +489,8 @@ export default function AdminTopLayout({
         solicitudHrefPattern={(id) => `/admin/solicitudes?id=${id}`}
       />
 
-      {/* Footer */}
-      <footer className="panel-footer mx-auto w-full px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-        <DualBranding size="sm" />
-        <div className="flex flex-col items-center sm:items-end gap-0.5 text-center sm:text-right">
-          <p className="text-xs text-neutral-500 dark:text-neutral-300">{copyrightLine()}</p>
-          <p className="text-xs text-neutral-400 dark:text-neutral-400">{INSTITUTION.systemTagline}</p>
-        </div>
-      </footer>
+      {/* Pie común de los paneles (E43) */}
+      <PanelFooter />
     </div>
   );
 }

@@ -400,6 +400,8 @@ con salpicaduras tenues, `PageHeader` como héroe, `PastelFrame` (marcos pastel 
 `StatTile` v3, dashboards reestructurados. El login no cambió. Detalle: `docs/DISENO_UI.md` §13. **Esto
 sustituye la regla E26 de "el menú no se toca"**: el usuario pidió explícitamente cambios de estructura en
 todos los paneles; la lógica del menú (grupos, dropdown, móvil) sigue igual.
+**24/09/2026 (noche) — E43:** contenido interno de todas las vistas, menú (bloques pastel por grupo) y pie
+común `PanelFooter` (logo ×5) con el mismo lenguaje; `DISENO_UI.md` §14.
 **24/09/2026 — sin arcoíris:** el acento de firma (CTA principal, palabra destacada, cuadro de marca) es
 **vino no saturado** con relleno animado al pasar el cursor, en landing y paneles (E40).
 **23/09/2026 — ESE MISMO SISTEMA EN TODOS LOS PANELES (dirección vigente, E39):** tinta navy principal,
@@ -1432,3 +1434,29 @@ Detalle de diseño en `docs/DISENO_UI.md` §13. Para desarrollo:
   límite efectiva; antes buscaba `estado === 'activa'`.
 - **Antes de desplegar, `npx tsc --noEmit`:** un build falló por un import quitado de más y `deploy-web.ps1`
   restauró la versión anterior (bien hecho por el script, pero se perdió un ciclo).
+
+### E42 — "El dominio se queda cargando": HTML viejo en caché compartida [resuelto 24-09-2026]
+Documento completo: `docs/DOMINIO_BALANCEADOR.md` §13.
+**Síntoma:** por el dominio la pantalla de carga no se retiraba nunca; desde el servidor cargaba bien.
+**Causa:** Next marca el HTML prerenderizado con `s-maxage=31536000`. Un intermediario (ELB/proxy) puede servir
+HTML de un despliegue anterior que pide chunks `/_next/static/...` ya borrados → React no arranca → nadie oculta
+`#boot-splash`.
+**Fix (3 capas):** (1) `web.config`: regla de salida `HtmlSinCacheCompartida` → `private, no-cache, no-store`
+solo en `text/html`/`text/x-component` (estáticos siguen `immutable`); (2) `deploy-web.ps1` copia los `static`
+del respaldo antes que los nuevos (chunks anteriores siguen existiendo); (3) `layout.tsx` `RECUPERAR_CARGA`:
+recarga **una vez** (sessionStorage, 60 s) si falla un chunk, hay `ChunkLoadError` o el splash sigue a los 15 s.
+**Lección:** en un sitio detrás de balanceador, el HTML nunca debe ser cacheable por terceros; y todo despliegue
+debe conservar los assets con hash de la generación anterior.
+
+### E43 — Vistas internas, menú y pie de los paneles [publicado 24-09-2026]
+Detalle en `docs/DISENO_UI.md` §14. Para desarrollo:
+- **Marco pastel automático:** la `Card` de primer nivel cuyo `CardContent` tiene como hijo directo
+  `DataCardGrid` (`.data-grid`), una tabla o `.empty-state` se pinta como marco pastel vía `:has()` — no editar
+  vistas para eso. El tono sale de `<main data-section-tone>` (admin: grupo del menú; otros roles: fijo).
+- **Menú:** clases `.panel-menu*` en ambos layouts; grupo con `data-pastel`. El botón lleva `aria-label`
+  (en móvil el texto se oculta y quedaba sin nombre accesible).
+- **Pie:** `components/layout/PanelFooter.tsx`, común a los 4 paneles (logo recortado 76 px, enlaces públicos,
+  correo de proyectos). `DualBranding` ya no se usa en los layouts.
+- **Dashboard admin:** `ReverbStatusWidget` y "Buenas prácticas" ya no se montan (pedido del usuario); el
+  componente y su endpoint siguen existiendo.
+- Ganchos de clase nuevos en StepFrame, paginación, DataCardGrid, SavedFiltersBar y pestañas del programa.

@@ -1,6 +1,14 @@
 # Estado Actual del Sistema COMECYT
 
-**Fecha de actualización:** 24 de septiembre de 2026 (versión anterior: 23/09/2026)
+**Fecha de actualización:** 24 de septiembre de 2026, noche (versión anterior: 23/09/2026)
+
+> 🧭 **24/09/2026 (noche) — "El dominio se queda cargando" (E42) y vistas internas + menú + pie (E43).**
+> La pantalla de carga infinita la causaba HTML viejo guardado en una caché intermedia que pedía scripts ya
+> borrados; se corrigió en tres capas (HTML sin caché compartida en IIS, el despliegue conserva los scripts
+> anteriores, y la página se recarga sola una vez si no arranca). Verificado por el dominio: carga normal en
+> primera visita y al recargar. Rediseño del contenido de todas las vistas de los 4 paneles, del menú y del pie
+> (logo ×5); quitado el bloque de Reverb/"Buenas prácticas" del dashboard. Login y landing sin cambios.
+> Ver `CLAUDE.md` E42/E43 y `DISENO_UI.md` §14.
 
 > 🎨 **24/09/2026 (tarde) — Paneles v3.** Rediseño estructural de los 4 paneles (menos el login) con la landing
 > y la referencia aboardhr.com: barra flotante en píldora, lienzo papel con salpicaduras de color tenues, héroes
@@ -337,7 +345,8 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 | **2FA del admin desactivado** | Alta | Apagado desde el 14/09 por falta de correo. Ya hay SMTP: reactivarlo con el usuario presente y probar el restablecimiento de contraseña por correo de punta a punta |
 | ~~**Convocatorias `activa` que parecen de prueba**~~ | ✅ Resuelto 24/09/2026 | Cerradas y archivadas (`deleted_at`) a pedido del usuario; ya no aparecen en la landing ni en la lista del admin. Reversibles (E40) |
 | **Publicar convocatorias reales** | Media | Hoy no hay ninguna publicada: la landing muestra "Por ahora no hay convocatorias publicadas" hasta que el admin dé de alta la primera |
-| **Ruta del balanceador nuevo** | **Crítica — el sitio no se ve por el dominio.** En espera de infraestructura | El VIP `10.200.41.131` (el que resuelve desde la publicación externa del 14/09/2026) devuelve `404`: no tiene registrada la entrega hacia `10.250.36.241:80`. **Solo lo puede hacer infraestructura; correo enviado el 14/09/2026.** Al responder: correr `VerificarDominio.ps1`, y si el origen **no** está en `100.64.0.0/10`, ajustar **el mismo día** las 5 apariciones del patrón en `web.config` (en dos formas distintas) y `TRUSTED_PROXIES` **juntas**, o habrá bucle de redirección. [DOMINIO_BALANCEADOR.md §12 y §9](DOMINIO_BALANCEADOR.md) · `Desktop\ADEM\_v5_publicacion_sep14\LEEME.md` |
+| **¿El balanceador guarda HTML en caché?** | Media | Preguntar a infraestructura si el ELB cachea respuestas y, si es así, pedir que purgue y que respete `Cache-Control: private, no-store` (lo que ahora envía el HTML, E42). El servidor ya se defiende solo, pero confirmar evita que un usuario vea una versión vieja |
+| ~~**Ruta del balanceador nuevo**~~ | ✅ Resuelto 14/09/2026 (tarde) | Infraestructura corrigió el balanceador; el dominio funciona desde Internet (E23 en `CLAUDE.md`). Texto original: El VIP `10.200.41.131` (el que resuelve desde la publicación externa del 14/09/2026) devuelve `404`: no tiene registrada la entrega hacia `10.250.36.241:80`. **Solo lo puede hacer infraestructura; correo enviado el 14/09/2026.** Al responder: correr `VerificarDominio.ps1`, y si el origen **no** está en `100.64.0.0/10`, ajustar **el mismo día** las 5 apariciones del patrón en `web.config` (en dos formas distintas) y `TRUSTED_PROXIES` **juntas**, o habrá bucle de redirección. [DOMINIO_BALANCEADOR.md §12 y §9](DOMINIO_BALANCEADOR.md) · `Desktop\ADEM\_v5_publicacion_sep14\LEEME.md` |
 | **Confirmaciones de infraestructura** | Alta | Rango de IPs del balanceador, HTTP→HTTPS en el balanceador, health check, 50 MB, timeouts. Incorporadas al correo del 14/09 (`_v5_publicacion_sep14\`); el original sigue en `Desktop\ADEM\_v4_dominio_sep11\`. [DOMINIO_BALANCEADOR.md §8](DOMINIO_BALANCEADOR.md#8-qué-necesita-hacer-o-confirmar-infraestructura) |
 | **Prueba con usuario real por el dominio** | Alta | Login, navegación por rol, subir y previsualizar documento, notificación. [DOMINIO_BALANCEADOR.md §6](DOMINIO_BALANCEADOR.md#6-lo-que-falta-probar) |
 | **Windows Update** | Alta | Servicio `wuauserv` detenido; último parche instalado el 27/03/2026. Pendientes: KB5122882 (acumulativa 2026-09), KB5126149 (.NET) y KB890830 (MSRT). Aplicar en ventana de mantenimiento, porque reinicia; conviene hacerlo junto con la activación de la licencia |
@@ -350,7 +359,7 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 | ~~Limpieza `C:\comecyt`~~ | ✅ Resuelto 23/09/2026 | Confirmado vacío y sin referencias; tarea rota eliminada; el directorio lo borró el usuario a mano (el sandbox de Claude Code no podía hacerlo desde ahí) |
 | ~~Limpieza de `.next.bak-*`~~ | ✅ Resuelto 23/09/2026 | 18 respaldos eliminados, **7.84 GB liberados**. Se conservó `.next.bak-20260921-prefix-uploads` (el más reciente) como red de seguridad para un rollback rápido |
 | **Logo Edomex** | Baja | `NEXT_PUBLIC_EDOMEX_LOGO_URL=none` — pendiente imagen oficial |
-| **Carrusel del login** | Baja | Los 4 slides no tienen imagen (`imagen_url` nula). La subida daba 422 (E32, corregido el 21/09/2026) — ya funciona, pero **todavía no se ha subido ninguna imagen real** en `/admin/carrusel` |
+| ~~**Carrusel del login**~~ | ✅ Resuelto 23/09/2026 | Imágenes reales subidas por el usuario. Texto original: Los 4 slides no tienen imagen (`imagen_url` nula). La subida daba 422 (E32, corregido el 21/09/2026) — ya funciona, pero **todavía no se ha subido ninguna imagen real** en `/admin/carrusel` |
 | **Disco C:** | Baja | 6.8 GB libres. Vigilar al aplicar actualizaciones |
 | **Caché de configuración y rutas** | Baja | `app:deploy-check` avisa que no están cacheadas. Cachearlas mejora el rendimiento, pero obliga a correr `config:cache` tras cada cambio de `.env` (ver `CLAUDE.md`, E18) |
 | **Sello de tiempo NOM-151** | Según uso | `TSA_URL` vacío: los documentos no llevan sello de tiempo. Configurar cuando TIC entregue el servicio |
@@ -362,6 +371,7 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 
 | Fecha | Cambio |
 |---|---|
+| 2026-09-24 (noche) | **E42 — carga infinita por el dominio** corregida en 3 capas (IIS: HTML `private, no-store`; `deploy-web.ps1` conserva los chunks anteriores; script de recuperación en `layout.tsx`). **E43 — vistas internas, menú y pie** rediseñados (marco pastel por sección, menú en bloques pastel, pie con logo ×5), bloque de Reverb/"Buenas prácticas" quitado del dashboard, botón "Menú" con nombre accesible en móvil |
 | 2026-09-24 (tarde) | **E41 — Paneles v3:** barra flotante, `PageHeader` héroe, `PastelFrame`, `StatTile` v3, dashboards reestructurados, lienzo papel con salpicaduras; login sin cambios |
 | 2026-09-24 | **E40:** estados públicos de convocatorias (próxima/abierta/con prórroga/cerrada), prórroga, banners de convocatorias y programas (solo admin, validación de MIME real y dominios), convocatorias de prueba cerradas y archivadas, 5 bugs de fechas corregidos, arcoíris → vino en landing y paneles. Migración `2026_09_24_000001` con respaldo previo |
 | 2026-09-23 (tarde, 3) | **Paneles unificados con el diseño de la landing** (E39, `DISENO_UI.md` §12); login intacto. Landing: nombre completo "SIGAC — Sistema de Gestión de Apoyos Científicos" y halo vino detrás del titular |

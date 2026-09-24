@@ -426,7 +426,7 @@ export default function ProgramaDetailPage() {
 
       <Card>
         <CardHeader className="pb-0">
-          <div className="flex gap-1 overflow-x-auto -mb-px" role="tablist" aria-label="Secciones del programa">
+          <div className="seg-tabs flex gap-1 overflow-x-auto -mb-px" role="tablist" aria-label="Secciones del programa">
             {(['info', 'campos', 'rubros', 'etapas', 'modalidades', 'criterios'] as const).map((tab) => (
               <button
                 key={tab}

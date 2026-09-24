@@ -38,7 +38,7 @@ export default function SavedFiltersBar<TFiltros extends Record<string, unknown>
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 text-xs">
+    <div className="saved-filters flex flex-wrap items-center gap-2 text-xs">
       <span className="flex items-center gap-1 text-[10px] font-bold text-neutral-500 dark:text-neutral-300 uppercase tracking-widest">
         <Filter className="w-3 h-3" />
         Mis filtros

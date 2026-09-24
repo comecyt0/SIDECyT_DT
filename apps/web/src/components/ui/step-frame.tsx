@@ -122,13 +122,13 @@ function StepFrameBody({
       role={inline ? undefined : 'dialog'}
       aria-modal={inline ? undefined : 'true'}
       aria-labelledby="stepframe-title"
-      className={`app-card w-full overflow-hidden flex flex-col ${inline ? '' : 'max-h-[100dvh] sm:max-h-[92dvh] rounded-b-none sm:rounded-b-[28px]'}`}
+      className={`app-card step-frame w-full overflow-hidden flex flex-col ${inline ? '' : 'max-h-[100dvh] sm:max-h-[92dvh] rounded-b-none sm:rounded-b-[28px]'}`}
     >
       {/* Cabecera */}
-      <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b shrink-0" style={{ borderColor: 'var(--app-rule)' }}>
+      <div className="step-frame-head flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b shrink-0" style={{ borderColor: 'var(--app-rule)' }}>
         <div className="flex items-center gap-3 min-w-0">
           {icon && <span className="app-tile-icon shrink-0">{icon}</span>}
-          <h2 id="stepframe-title" className="text-base sm:text-lg font-bold text-[var(--app-ink)] truncate">{title}</h2>
+          <h2 id="stepframe-title" className="step-frame-title text-base sm:text-lg font-bold text-[var(--app-ink)] truncate">{title}</h2>
         </div>
         {!inline && (
           <button
@@ -154,7 +154,7 @@ function StepFrameBody({
         ) : (
           <>
             {intro && (
-              <div className="flex items-start gap-3 rounded-[18px] px-4 py-3 mb-5 text-sm text-[var(--app-ink)]" style={{ backgroundColor: 'var(--tile-gold-bg)', border: '1px solid color-mix(in oklch, var(--tile-gold-fg) 25%, transparent)' }}>
+              <div className="step-intro flex items-start gap-3 rounded-[18px] px-4 py-3 mb-5 text-sm text-[var(--app-ink)]" style={{ backgroundColor: 'var(--tile-gold-bg)', border: '1px solid color-mix(in oklch, var(--tile-gold-fg) 25%, transparent)' }}>
                 <Lightbulb className="h-4 w-4 mt-0.5 shrink-0" style={{ color: 'var(--tile-gold-fg)' }} aria-hidden="true" />
                 <p className="leading-relaxed">{intro}</p>
               </div>
@@ -162,7 +162,7 @@ function StepFrameBody({
 
             <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-5 md:gap-8">
               {/* Lista de pasos */}
-              <ol className="flex md:flex-col gap-2 overflow-x-auto no-scrollbar md:overflow-visible -mx-1 px-1" aria-label="Pasos">
+              <ol className="step-list flex md:flex-col gap-2 overflow-x-auto no-scrollbar md:overflow-visible -mx-1 px-1" aria-label="Pasos">
                 {steps.map((s, i) => {
                   const done = i < index;
                   const active = i === index;
@@ -173,7 +173,7 @@ function StepFrameBody({
                         onClick={() => jumpTo(i)}
                         disabled={i > index}
                         aria-current={active ? 'step' : undefined}
-                        className="flex items-center gap-3 w-full rounded-[16px] px-3 py-2.5 text-left text-sm transition-colors disabled:cursor-default"
+                        className="step-item flex items-center gap-3 w-full rounded-[16px] px-3 py-2.5 text-left text-sm transition-colors disabled:cursor-default"
                         style={{
                           backgroundColor: active ? 'var(--tile-vino-bg)' : 'transparent',
                           color: active ? 'var(--app-ink)' : 'var(--app-ink-2)',
@@ -181,7 +181,7 @@ function StepFrameBody({
                         }}
                       >
                         <span
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold"
+                          className="step-num flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold"
                           style={
                             active
                               ? { background: 'var(--auth-vino)', color: 'var(--auth-white)' }
@@ -201,10 +201,10 @@ function StepFrameBody({
 
               {/* Contenido del paso */}
               <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--auth-vino)' }}>
+                <p className="step-count text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--auth-vino)' }}>
                   Paso {index + 1} de {steps.length}
                 </p>
-                <h3 className="mt-1 mb-4 text-lg font-bold text-[var(--app-ink)]">{current.question}</h3>
+                <h3 className="step-question mt-1 mb-4 text-lg font-bold text-[var(--app-ink)]">{current.question}</h3>
                 {(stepError || error) && (
                   <div role="alert" className="mb-4 rounded-[14px] px-4 py-3 text-sm" style={{ backgroundColor: 'var(--tile-vino-bg)', color: 'var(--auth-danger)' }}>
                     {stepError || error}
@@ -219,7 +219,7 @@ function StepFrameBody({
 
       {/* Pie */}
       {!success && (
-        <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-t shrink-0" style={{ borderColor: 'var(--app-rule)' }}>
+        <div className="step-frame-foot flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-t shrink-0" style={{ borderColor: 'var(--app-rule)' }}>
           {index === 0 && hideCancel ? (
             <span />
           ) : (
@@ -227,7 +227,7 @@ function StepFrameBody({
               type="button"
               onClick={index === 0 ? onClose : goPrev}
               disabled={submitting}
-              className="h-11 px-4 rounded-[14px] border font-semibold text-sm transition-colors hover:bg-[var(--app-hover-bg)] disabled:opacity-50 inline-flex items-center gap-1.5"
+              className="step-back h-11 px-4 rounded-[14px] border font-semibold text-sm transition-colors hover:bg-[var(--app-hover-bg)] disabled:opacity-50 inline-flex items-center gap-1.5"
               style={{ borderColor: 'var(--app-rule)', color: 'var(--app-ink)' }}
             >
               {index === 0 ? 'Cancelar' : (<><ChevronLeft className="h-4 w-4" aria-hidden="true" /> Anterior</>)}

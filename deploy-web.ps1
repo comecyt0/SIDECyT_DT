@@ -29,6 +29,13 @@ $buildExit = $LASTEXITCODE
 L "build exit=$buildExit"
 
 if ($buildExit -eq 0 -and (Test-Path '.next\standalone\server.js')) {
+    # E42 (24/09/2026): conservar los JS/CSS del despliegue ANTERIOR (nombres con hash, no chocan con los
+    # nuevos). Una pestaña abierta o una copia de HTML en caché los sigue pidiendo; sin ellos React no
+    # arranca y la pantalla de carga se queda para siempre. Primero los viejos, luego los nuevos.
+    if (Test-Path "$bak\static") {
+        robocopy "$bak\static" '.next\standalone\.next\static' /E /XO /NFL /NDL /NJH /NJS /NP | Out-Null
+        L "copia static anterior exit=$LASTEXITCODE"
+    }
     robocopy '.next\static' '.next\standalone\.next\static' /E /NFL /NDL /NJH /NJS /NP | Out-Null
     L "copia static exit=$LASTEXITCODE"
     robocopy 'public' '.next\standalone\public' /E /NFL /NDL /NJH /NJS /NP | Out-Null
