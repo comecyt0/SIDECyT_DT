@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import StepFrame from '@/components/ui/step-frame';
 import {
-  Edit, Trash2, UserPlus,
+  Edit, Trash2, UserPlus, Users,
   Mail, UserCircle, Lock, Briefcase, Phone, Building2, ShieldCheck
 } from 'lucide-react';
+import PageHeader from '@/components/ui/page-header';
 import api from '@/lib/api';
 import type { User, Rol, Empresa } from '@/types/api';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -236,16 +237,18 @@ export default function UsuariosClient({ users, pagination }: Props) {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {feedback && <AlertBox type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[clamp(1.5rem,2.4vw,1.875rem)] font-bold tracking-tight text-[var(--app-ink)]">Gestión de Usuarios</h1>
-          <p className="text-[var(--app-ink-2)] mt-1">Administra accesos, roles y adscripciones institucionales.</p>
-        </div>
-        <Button onClick={() => handleOpenModal()}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Nuevo Usuario
-        </Button>
-      </div>
+      <PageHeader
+        eyebrow="Administración"
+        title="Gestión de usuarios"
+        description="Administra accesos, roles y adscripciones institucionales."
+        icon={<Users className="h-5 w-5" />}
+        actions={
+          <Button variant="rainbow" onClick={() => handleOpenModal()}>
+            <UserPlus className="h-4 w-4" />
+            Nuevo usuario
+          </Button>
+        }
+      />
 
       <DataCardGrid
         items={users}

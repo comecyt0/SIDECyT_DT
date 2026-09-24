@@ -12,6 +12,7 @@ import type { AsignacionEvaluador } from '@/types/api';
 import MonthlySeriesChart from '@/components/charts/MonthlySeriesChart';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import PageHeader from '@/components/ui/page-header';
+import PastelFrame from '@/components/ui/pastel-frame';
 import StatTile from '@/components/ui/stat-tile';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,7 +61,7 @@ export default function EvaluadorDashboard() {
   }, []);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         title="Panel de evaluación"
         description="Aquí ves los proyectos que te asignaron y cómo va cada dictamen."
@@ -72,42 +73,44 @@ export default function EvaluadorDashboard() {
         }
       />
 
-      <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        <motion.div variants={item}>
-          <StatTile
-            label="Por iniciar"
-            value={<AnimatedNumber value={stats.por_iniciar} />}
-            icon={<ClipboardList className="h-5 w-5" />}
-            tone="vino"
-            hint="Todavía no abres la rúbrica"
-            href="/evaluador/asignaciones"
-            solid
-            loading={showLoading}
-          />
+      <PastelFrame tone="butter" title="Tus evaluaciones" description="Cómo van tus dictámenes. Cada tarjeta abre su lista.">
+        <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <motion.div variants={item}>
+            <StatTile
+              label="Por iniciar"
+              value={<AnimatedNumber value={stats.por_iniciar} />}
+              icon={<ClipboardList className="h-5 w-5" />}
+              tone="vino"
+              hint="Todavía no abres la rúbrica"
+              href="/evaluador/asignaciones"
+              solid
+              loading={showLoading}
+            />
+          </motion.div>
+          <motion.div variants={item}>
+            <StatTile
+              label="En evaluación"
+              value={<AnimatedNumber value={stats.en_progreso} />}
+              icon={<Star className="h-5 w-5" />}
+              tone="gold"
+              hint="Rúbricas que dejaste a medias"
+              href="/evaluador/asignaciones"
+              loading={showLoading}
+            />
+          </motion.div>
+          <motion.div variants={item}>
+            <StatTile
+              label="Dictámenes emitidos"
+              value={<AnimatedNumber value={stats.evaluadas} />}
+              icon={<CheckCircle2 className="h-5 w-5" />}
+              tone="emerald"
+              hint="Evaluaciones concluidas"
+              href="/evaluador/historico"
+              loading={showLoading}
+            />
+          </motion.div>
         </motion.div>
-        <motion.div variants={item}>
-          <StatTile
-            label="En evaluación"
-            value={<AnimatedNumber value={stats.en_progreso} />}
-            icon={<Star className="h-5 w-5" />}
-            tone="gold"
-            hint="Rúbricas que dejaste a medias"
-            href="/evaluador/asignaciones"
-            loading={showLoading}
-          />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatTile
-            label="Dictámenes emitidos"
-            value={<AnimatedNumber value={stats.evaluadas} />}
-            icon={<CheckCircle2 className="h-5 w-5" />}
-            tone="emerald"
-            hint="Evaluaciones concluidas"
-            href="/evaluador/historico"
-            loading={showLoading}
-          />
-        </motion.div>
-      </motion.div>
+        </PastelFrame>
 
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
         <Card>
@@ -129,8 +132,8 @@ export default function EvaluadorDashboard() {
               <MonthlySeriesChart
                 data={chart}
                 bars={[
-                  { key: 'aprobadas', name: 'Aprobadas', color: '#22c55e' },
-                  { key: 'rechazadas', name: 'Rechazadas', color: '#ef4444' },
+                  { key: 'aprobadas', name: 'Aprobadas', color: '#5fb591' },
+                  { key: 'rechazadas', name: 'Rechazadas', color: '#d98080' },
                   { key: 'pendientes', name: 'Pendientes', color: 'var(--brand-vino)' },
                 ]}
                 stacked

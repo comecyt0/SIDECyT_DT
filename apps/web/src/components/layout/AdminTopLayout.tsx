@@ -185,10 +185,13 @@ export default function AdminTopLayout({
 
   return (
     // `panel-root`: alcance del sistema visual SIGAC (styles/panel-sigac.css). La estructura del menú no cambia (E26).
-    <div className="panel-root min-h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col">
+    <div className="panel-root min-h-screen flex flex-col">
+      {/* Salpicaduras de color muy tenues al fondo (landing + referencia Aboard): vino, cielo y menta. */}
+      <div className="panel-splash" aria-hidden="true"><span /><span /><span /></div>
       {/* ── TOP BAR ── */}
-      <header className="panel-topbar sticky top-0 z-50 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border-b border-neutral-100 dark:border-neutral-700 shadow-sm">
-        <div className="max-w-screen-2xl mx-auto px-4 md:px-8 h-16 flex items-center gap-2 sm:gap-4">
+      {/* Barra flotante en píldora, como la de la landing (v3). Menú, búsqueda, avisos y sesión: sin cambios de lógica. */}
+      <header className="panel-topbar sticky z-50">
+        <div className="panel-topbar-row h-16 flex items-center gap-2 sm:gap-3">
 
           {/* Logo (recortado, mismo que la landing) + marca SIGAC */}
           <Link href="/admin/dashboard" className="panel-brand flex items-center gap-3 shrink-0" title="SIGAC — Sistema de Gestión de Apoyos Científicos">
@@ -241,7 +244,7 @@ export default function AdminTopLayout({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -8, scale: 0.98 }}
                   transition={{ duration: 0.18, ease: 'easeOut' }}
-                  className="absolute left-0 top-[calc(100%+10px)] w-[680px] max-w-[90vw] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-100 dark:border-neutral-700 overflow-hidden z-50 max-md:fixed max-md:left-3 max-md:right-3 max-md:top-[4.5rem] max-md:w-auto max-md:max-w-none max-md:max-h-[calc(100dvh-5.5rem)] max-md:overflow-y-auto"
+                  className="absolute left-0 top-[calc(100%+10px)] w-[680px] max-w-[90vw] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-100 dark:border-neutral-700 overflow-hidden z-50 max-md:fixed max-md:left-3 max-md:right-3 max-md:top-[5.5rem] max-md:w-auto max-md:max-w-none max-md:max-h-[calc(100dvh-6.5rem)] max-md:overflow-y-auto"
                 >
                   {/* Dropdown header */}
                   <div className="px-6 py-4 bg-gradient-to-r from-primary to-[var(--brand-vino-700)] flex items-center justify-between">
@@ -456,8 +459,12 @@ export default function AdminTopLayout({
           </div>
         </div>
 
+      </header>
+
+      {/* ── CONTENT ── */}
+      <main className="panel-main flex-1 mx-auto w-full px-4 md:px-8">
         {/* ─── Breadcrumb / Active section bar ─── */}
-        <div className="max-w-screen-2xl mx-auto px-4 md:px-8 h-10 flex items-center gap-2 border-t border-neutral-50 dark:border-neutral-800">
+        <nav aria-label="Ubicación" className="panel-crumbs">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             {NAV_GROUPS.map((group) =>
               group.items.map((item) => {
@@ -476,11 +483,7 @@ export default function AdminTopLayout({
               })
             )}
           </div>
-        </div>
-      </header>
-
-      {/* ── CONTENT ── */}
-      <main className="flex-1 max-w-screen-2xl mx-auto w-full px-4 md:px-8 py-8">
+        </nav>
         <PageTransition>
           {children}
         </PageTransition>
@@ -494,7 +497,7 @@ export default function AdminTopLayout({
       />
 
       {/* Footer */}
-      <footer className="border-t border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-4 px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 max-w-screen-2xl mx-auto w-full">
+      <footer className="panel-footer mx-auto w-full px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
         <DualBranding size="sm" />
         <div className="flex flex-col items-center sm:items-end gap-0.5 text-center sm:text-right">
           <p className="text-xs text-neutral-500 dark:text-neutral-300">{copyrightLine()}</p>

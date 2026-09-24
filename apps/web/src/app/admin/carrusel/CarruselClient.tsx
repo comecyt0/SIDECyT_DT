@@ -23,6 +23,7 @@ import {
   X,
   Link2,
 } from 'lucide-react';
+import PageHeader from '@/components/ui/page-header';
 import api from '@/lib/api';
 import { INSTITUTION } from '@/lib/institution';
 
@@ -201,19 +202,18 @@ export default function CarruselClient({ slides }: Props) {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-[clamp(1.5rem,2.4vw,1.875rem)] font-bold tracking-tight text-[var(--app-ink)]">Carrusel de Login</h1>
-          <p className="text-[var(--app-ink-2)] mt-1">
-            Administra los slides que se muestran en la pantalla de inicio de sesión.
-          </p>
-        </div>
-        <Button onClick={openCreate} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Nuevo Slide
-        </Button>
-      </div>
+      <PageHeader
+        eyebrow="Configuración"
+        title="Carrusel del inicio de sesión"
+        description="Administra los slides que se muestran en la pantalla de inicio de sesión."
+        icon={<Images className="h-5 w-5" />}
+        actions={
+          <Button variant="rainbow" onClick={openCreate}>
+            <Plus className="w-4 h-4" />
+            Nuevo slide
+          </Button>
+        }
+      />
 
       {error && !showModal && <AlertBox type="error" message={error} onClose={() => setError('')} />}
 

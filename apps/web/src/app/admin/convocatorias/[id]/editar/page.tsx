@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Loader2, Megaphone } from 'lucide-react';
-import Link from 'next/link';
+import { Loader2, Megaphone } from 'lucide-react';
+import PageHeader from '@/components/ui/page-header';
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
 import StepFrame from '@/components/ui/step-frame';
@@ -80,17 +79,13 @@ export default function EditarConvocatoriaPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {feedback && <AlertBox type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
-      <div className="flex items-center gap-4">
-        <Link href="/admin/convocatorias" aria-label="Volver a convocatorias">
-          <Button variant="soft" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-dark">Editar convocatoria</h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">{formData.nombre}</p>
-        </div>
-      </div>
+      <PageHeader
+        backHref={`/admin/convocatorias/${id}`}
+        backLabel="Volver a la ficha"
+        eyebrow="Convocatoria"
+        title="Editar convocatoria"
+        description={formData.nombre}
+      />
 
       <StepFrame
         inline

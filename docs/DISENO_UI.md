@@ -2,7 +2,8 @@
 
 > **23/09/2026:** nueva landing pública `/sigac` con sistema visual propio (referencia portrait.so) — ver §11
 > y [`LANDING_SIGAC.md`](LANDING_SIGAC.md). **Ese mismo sistema se llevó a todos los paneles** (el login
-> queda igual) — ver §12. Es la dirección vigente; §10 queda como historia de la capa de clases.
+> queda igual) — ver §12. **24/09/2026: rediseño estructural v3** (barra flotante, héroes, marcos pastel,
+> referencia aboardhr.com) — ver **§13, dirección vigente**. §10 queda como historia de la capa de clases.
 
 Sistema visual y de interacción del front. Empezó con el rediseño del login del **14/09/2026**, se
 extendió ese mismo día al panel (shell + dashboard), a "¿Olvidaste tu clave?", a "Solicitar acceso" y a
@@ -540,8 +541,48 @@ A pedido del usuario, el arcoíris de firma se sustituyó por **vino no saturado
 vino con `clip-path` (sin tocar el layout) y sube 1 px. Nuevos componentes de admin con este lenguaje:
 `BannerManager` (vista previa 3:1, pestañas archivo/enlace, quitar con confirmación) y `ProrrogaDialog`.
 
+---
+
+## 13. Paneles v3 — rediseño estructural con la landing + referencia Aboard (24/09/2026)
+
+**Pedido del usuario:** rediseñar todos los paneles (menos el login) tomando el dashboard de admin como base,
+con estructura, interfaz, efectos, colores y elementos lo más parecidos a la landing, más la referencia
+**aboardhr.com** (su `design.md`: "cuaderno pastel sobre escritorio blanco"). Color sin saturar, salpicaduras
+de color tenues y vino solo de detalle. Esta vez **sí se cambió la estructura**, no solo la piel.
+
+| Cambio | Dónde |
+|---|---|
+| **Barra flotante en píldora** (como la de la landing): despegada 12 px del borde, radio completo, sombra flotante única; menú, búsqueda, avisos y sesión con la misma lógica. Las **migas salieron de la barra** al inicio del contenido | `AdminTopLayout.tsx`, `RoleTopLayout.tsx` (+ `.panel-topbar`, `.panel-crumbs`) |
+| **Lienzo papel `#fafafa`** con tres **salpicaduras** difuminadas de croma baja (vino, cielo, menta) al fondo | `.panel-splash` |
+| Contenido a **1280 px** y pie tipo landing (filo vino centrado) | `.panel-main`, `.panel-footer` |
+| **`PageHeader` = héroe**: píldora de aviso (lavado cielo, punto vino), título Satoshi grande con tracking cerrado y barra vino, descripción gris, acciones en píldora. Las 4 vistas con encabezado propio se pasaron a `PageHeader` (usuarios, carrusel, editar convocatoria, nueva solicitud) | `page-header.tsx` (API igual, 37 vistas) |
+| **`PastelFrame`** (nuevo): marco pastel de radio 32 que enmarca paneles blancos, en lugar de sombras (la "tarjeta de producto" de Aboard). Tonos `blush`, `lavender`, `mint`, `powder`, `butter`, `vino` rebajados ~50 % hacia blanco | `pastel-frame.tsx`, `--pastel-*` |
+| **`StatTile` v3**: tarjeta blanca de producto, chip pastel, cifra Satoshi de 40 px, flecha que avanza y filo del tono que se extiende al pasar el cursor; protagonista en navy | `stat-tile.tsx` (API igual) |
+| **Dashboard de admin reestructurado**: héroe sobre el lienzo (saludo, contexto, acciones) + anillo a la derecha → "Pendientes ahora" en marco lavanda → indicadores como **columnas de valor sin marco** → gráficas en marco celeste con paneles blancos → actividad y alertas en tarjetas blancas | `admin/dashboard/page.tsx` |
+| **Dashboards de solicitante, revisor y evaluador**: indicadores dentro de un marco pastel por rol (rosa, menta, mantequilla) y más aire entre secciones | sus `dashboard/page.tsx` |
+| Gráficas con colores de luminosidad alta y croma baja (antes verdes/naranjas saturados); barras en vino, líneas vino + navy | dashboards |
+
+**Interacción:** todo lo clicable responde (tarjetas suben 3–4 px con sombra flotante, flechas avanzan,
+filos del tono se extienden, filas con fondo al pasar el cursor, píldoras con `scale(0.97)` al presionar,
+foco navy visible). Todo respeta `prefers-reduced-motion`.
+
+**Trampas encontradas al hacerlo (no repetir):**
+1. `backdrop-filter` en la barra crea un bloque contenedor: el menú móvil (`position: fixed`) y la capa que lo
+   cierra al tocar fuera quedaban atrapados dentro de la barra → se quitó; la barra usa blanco al 97 %.
+2. `align-self: start` en un marco dentro de una **columna flexible** lo encoge al ancho de su contenido → la
+   regla aplica solo a `.grid > .pastel-frame`.
+3. La barra flotante es 24 px más angosta: en teléfono se reducen márgenes y botones de ícono para caber a 375 px.
+4. Un `npm run build` falló por una importación quitada de más; **`deploy-web.ps1` restauró solo la versión
+   anterior** (producción no cayó). Correr `npx tsc --noEmit` antes de desplegar.
+
+**Verificación:** 4 roles con sesión (tokens temporales invalidados al terminar), escritorio 1440 y teléfono
+375 px **sin desborde**, menú desplegable, modo oscuro y login intacto (sin `sg-panel`, fuente Geist). Front
+103/103 pruebas, ESLint sin errores, sin errores de consola.
+
 ### Reglas para lo que venga
 
+- Encabezado de toda vista nueva: `PageHeader`. Agrupaciones de indicadores o paneles: `PastelFrame` con
+  paneles blancos dentro (`.pf-panel`), rotando tonos entre secciones; nunca dos marcos del mismo tono seguidos.
 - Nuevo color o componente del panel → token o regla en `panel-sigac.css`, acotado con
   `:is(.panel-root, html.sg-panel)`. **Nunca** en `:root` ni en `globals.css` (alcanzaría al login).
 - Un solo `variant="rainbow"` por vista (hoy es vino; el nombre de la variante se mantiene).

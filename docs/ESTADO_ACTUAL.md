@@ -2,6 +2,11 @@
 
 **Fecha de actualización:** 24 de septiembre de 2026 (versión anterior: 23/09/2026)
 
+> 🎨 **24/09/2026 (tarde) — Paneles v3.** Rediseño estructural de los 4 paneles (menos el login) con la landing
+> y la referencia aboardhr.com: barra flotante en píldora, lienzo papel con salpicaduras de color tenues, héroes
+> con titular grande, marcos pastel con tarjetas blancas, dashboards reestructurados. Verificado en los 4 roles,
+> escritorio y teléfono (375 px), modo oscuro y login intacto (E41, `DISENO_UI.md` §13).
+>
 > 🗓 **24/09/2026 — Convocatorias con estado público, prórroga y banners (E40).** Las 5 convocatorias de prueba
 > se **cerraron y archivaron** (la landing ya no las muestra). Las convocatorias ahora se ven en la landing como
 > **Próxima a abrir / Abierta / Con prórroga / Cerrada** según sus fechas; el admin puede **dar prórroga**
@@ -357,6 +362,7 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 
 | Fecha | Cambio |
 |---|---|
+| 2026-09-24 (tarde) | **E41 — Paneles v3:** barra flotante, `PageHeader` héroe, `PastelFrame`, `StatTile` v3, dashboards reestructurados, lienzo papel con salpicaduras; login sin cambios |
 | 2026-09-24 | **E40:** estados públicos de convocatorias (próxima/abierta/con prórroga/cerrada), prórroga, banners de convocatorias y programas (solo admin, validación de MIME real y dominios), convocatorias de prueba cerradas y archivadas, 5 bugs de fechas corregidos, arcoíris → vino en landing y paneles. Migración `2026_09_24_000001` con respaldo previo |
 | 2026-09-23 (tarde, 3) | **Paneles unificados con el diseño de la landing** (E39, `DISENO_UI.md` §12); login intacto. Landing: nombre completo "SIGAC — Sistema de Gestión de Apoyos Científicos" y halo vino detrás del titular |
 | 2026-09-23 (tarde, 2) | **SMTP Microsoft 365 funcionando** (E38). **Landing:** SIGAC, programas de Apoyo Empresarial, convocatorias en vivo (endpoint público E37 con throttle y lista blanca), vino de detalle, logo ×3, "Ir al sitio" en el login. **Regla permanente de ciberseguridad** en `CLAUDE.md` §0 |

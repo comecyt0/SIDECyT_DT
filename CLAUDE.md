@@ -394,6 +394,12 @@ completo y el barrido vista por vista en `docs/DISENO_UI.md` §10.
 **El menú/nav del panel NO se toca (E26).** `logo.png` es el favicon del sistema completo.
 **23/09/2026 — Landing pública `/sigac`** con sistema visual propio y aislado (ADN de portrait.so, tokens en
 `.lp-root`, fuentes locales Switzer + Satoshi): `docs/LANDING_SIGAC.md` y E36.
+**24/09/2026 — PANELES v3, DIRECCIÓN VIGENTE (E41):** rediseño estructural con la landing + referencia
+aboardhr.com: barra flotante en píldora (misma lógica de menú; migas fuera de la barra), lienzo papel `#fafafa`
+con salpicaduras tenues, `PageHeader` como héroe, `PastelFrame` (marcos pastel rebajados con paneles blancos),
+`StatTile` v3, dashboards reestructurados. El login no cambió. Detalle: `docs/DISENO_UI.md` §13. **Esto
+sustituye la regla E26 de "el menú no se toca"**: el usuario pidió explícitamente cambios de estructura en
+todos los paneles; la lógica del menú (grupos, dropdown, móvil) sigue igual.
 **24/09/2026 — sin arcoíris:** el acento de firma (CTA principal, palabra destacada, cuadro de marca) es
 **vino no saturado** con relleno animado al pasar el cursor, en landing y paneles (E40).
 **23/09/2026 — ESE MISMO SISTEMA EN TODOS LOS PANELES (dirección vigente, E39):** tinta navy principal,
@@ -1412,3 +1418,17 @@ Convocatoria" arriba. Documentación de la landing: `docs/LANDING_SIGAC.md` §10
 - **Nota de throttle:** el contador de `throttle:X,1` de Laravel es por usuario (o IP) y se **comparte entre
   rutas**; 20 acciones de banner/prórroga por minuto por admin sobran para uso humano, pero una prueba
   automatizada debe espaciar las peticiones.
+
+### E41 — Paneles v3: rediseño estructural (landing + aboardhr.com) [publicado 24-09-2026]
+Detalle de diseño en `docs/DISENO_UI.md` §13. Para desarrollo:
+- **Componentes nuevos/rehechos:** `components/ui/pastel-frame.tsx` (nuevo), `page-header.tsx` v3 y
+  `stat-tile.tsx` v3 (mismas props: las 37 vistas y los 4 dashboards los heredan). Clases `.dash*`,
+  `.feature-*`, `.card-head*`, `.list-row`, `.alert-row`, `.pf-panel` en `styles/panel-sigac.css` (bloque "v3").
+- **Layouts:** barra `.panel-topbar` flotante; migas movidas a `<main>` como `.panel-crumbs`; `.panel-splash`
+  al inicio de `.panel-root`. El dropdown móvil quedó en `top-[5.5rem]` por la barra despegada.
+- **No poner `backdrop-filter`/`transform`/`filter` en la barra**: rompe los `position: fixed` de su interior
+  (menú móvil y capa de cierre).
+- **Dashboard de admin:** la convocatoria "activa" del héroe usa `estado_publico` (abierta/prórroga) y la fecha
+  límite efectiva; antes buscaba `estado === 'activa'`.
+- **Antes de desplegar, `npx tsc --noEmit`:** un build falló por un import quitado de más y `deploy-web.ps1`
+  restauró la versión anterior (bien hecho por el script, pero se perdió un ciclo).

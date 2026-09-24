@@ -12,6 +12,7 @@ import {
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { useMinLoadingDuration } from '@/hooks/useMinLoadingDuration';
 import PageHeader from '@/components/ui/page-header';
+import PastelFrame from '@/components/ui/pastel-frame';
 import StatTile, { type TileTone } from '@/components/ui/stat-tile';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,7 +56,7 @@ export default function SolicitanteDashboard() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         title="Mi panel"
         description="Revisa en qué va cada una de tus solicitudes y crea una nueva cuando haya una convocatoria abierta."
@@ -70,25 +71,27 @@ export default function SolicitanteDashboard() {
         }
       />
 
-      <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {stats.map((s) => {
-          const Icon = s.icon;
-          return (
-            <motion.div key={s.label} variants={item}>
-              <StatTile
-                label={s.label}
-                value={<AnimatedNumber value={s.value} />}
-                icon={<Icon className="h-5 w-5" />}
-                tone={s.tone}
-                hint={s.hint}
-                href="/solicitante/solicitudes"
-                solid={s.solid}
-                loading={showLoading}
-              />
-            </motion.div>
-          );
-        })}
-      </motion.div>
+      <PastelFrame tone="blush" title="Tus solicitudes" description="Cada tarjeta abre tu lista de solicitudes.">
+        <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {stats.map((s) => {
+            const Icon = s.icon;
+            return (
+              <motion.div key={s.label} variants={item}>
+                <StatTile
+                  label={s.label}
+                  value={<AnimatedNumber value={s.value} />}
+                  icon={<Icon className="h-5 w-5" />}
+                  tone={s.tone}
+                  hint={s.hint}
+                  href="/solicitante/solicitudes"
+                  solid={s.solid}
+                  loading={showLoading}
+                />
+              </motion.div>
+            );
+          })}
+        </motion.div>
+        </PastelFrame>
 
       {!loading && solicitudes.some(s => s.estado === 'observada') && (
         <motion.div

@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { AlertBox } from '@/components/ui/alert-box';
+import PageHeader from '@/components/ui/page-header';
 import StepFrame, { type StepDef } from '@/components/ui/step-frame';
-import { Loader2, ArrowLeft, AlertCircle, FileText, CheckCircle2, Upload, X, FilePlus2 } from 'lucide-react';
+import { Loader2, AlertCircle, FileText, CheckCircle2, Upload, X, FilePlus2 } from 'lucide-react';
 import { currencySymbol, formatCurrency } from '@/lib/format';
-import Link from 'next/link';
 import api from '@/lib/api';
 import { useProgramaCatalog } from '@/hooks/useProgramaCatalog';
 import type { AreaConocimiento } from '@/types/api';
@@ -654,19 +654,13 @@ export default function NuevaSolicitud() {
         />
       )}
 
-      <div className="flex items-center gap-4">
-        <Link href="/solicitante/dashboard" aria-label="Volver al inicio">
-          <Button variant="soft" size="icon" className="h-10 w-10 shrink-0">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-neutral-dark">Nueva solicitud</h1>
-          <p className="text-neutral-500 dark:text-neutral-400">
-            Paso a paso, con lo que este programa necesita saber de tu proyecto.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/solicitante/dashboard"
+        backLabel="Volver al inicio"
+        eyebrow="Solicitudes"
+        title="Nueva solicitud"
+        description="Paso a paso, con lo que este programa necesita saber de tu proyecto."
+      />
 
       <StepFrame
         inline

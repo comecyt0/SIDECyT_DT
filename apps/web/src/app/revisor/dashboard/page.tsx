@@ -12,6 +12,7 @@ import type { Solicitud } from '@/types/api';
 import MonthlySeriesChart from '@/components/charts/MonthlySeriesChart';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import PageHeader from '@/components/ui/page-header';
+import PastelFrame from '@/components/ui/pastel-frame';
 import StatTile from '@/components/ui/stat-tile';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,7 +67,7 @@ export default function RevisorDashboard() {
   }, []);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         title="Bandeja de revisión"
         description="Revisa los documentos de cada solicitud y decide si pasa a evaluación técnica o regresa con observaciones."
@@ -78,42 +79,44 @@ export default function RevisorDashboard() {
         }
       />
 
-      <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        <motion.div variants={item}>
-          <StatTile
-            label="Nuevas"
-            value={<AnimatedNumber value={stats.nuevos} />}
-            icon={<Inbox className="h-5 w-5" />}
-            tone="vino"
-            hint="Esperan tu revisión"
-            href="/revisor/solicitudes"
-            solid
-            loading={showLoading}
-          />
+      <PastelFrame tone="mint" title="Tu bandeja hoy" description="Lo que espera tu revisión. Cada tarjeta abre su lista.">
+        <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <motion.div variants={item}>
+            <StatTile
+              label="Nuevas"
+              value={<AnimatedNumber value={stats.nuevos} />}
+              icon={<Inbox className="h-5 w-5" />}
+              tone="vino"
+              hint="Esperan tu revisión"
+              href="/revisor/solicitudes"
+              solid
+              loading={showLoading}
+            />
+          </motion.div>
+          <motion.div variants={item}>
+            <StatTile
+              label="Con correcciones pendientes"
+              value={<AnimatedNumber value={stats.en_subsanacion} />}
+              icon={<Clock className="h-5 w-5" />}
+              tone="gold"
+              hint="Esperan respuesta del solicitante"
+              href="/revisor/observadas"
+              loading={showLoading}
+            />
+          </motion.div>
+          <motion.div variants={item}>
+            <StatTile
+              label="Urgentes"
+              value={<AnimatedNumber value={stats.pendientes_urgentes} />}
+              icon={<AlertCircle className="h-5 w-5" />}
+              tone="orange"
+              hint="Llevan más tiempo esperando"
+              href="/revisor/solicitudes"
+              loading={showLoading}
+            />
+          </motion.div>
         </motion.div>
-        <motion.div variants={item}>
-          <StatTile
-            label="Con correcciones pendientes"
-            value={<AnimatedNumber value={stats.en_subsanacion} />}
-            icon={<Clock className="h-5 w-5" />}
-            tone="gold"
-            hint="Esperan respuesta del solicitante"
-            href="/revisor/observadas"
-            loading={showLoading}
-          />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatTile
-            label="Urgentes"
-            value={<AnimatedNumber value={stats.pendientes_urgentes} />}
-            icon={<AlertCircle className="h-5 w-5" />}
-            tone="orange"
-            hint="Llevan más tiempo esperando"
-            href="/revisor/solicitudes"
-            loading={showLoading}
-          />
-        </motion.div>
-      </motion.div>
+        </PastelFrame>
 
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
         <Card>
@@ -135,8 +138,8 @@ export default function RevisorDashboard() {
               <MonthlySeriesChart
                 data={chart}
                 bars={[
-                  { key: 'aprobadas_doc', name: 'Aprobadas', color: '#22c55e' },
-                  { key: 'observadas', name: 'Con observaciones', color: '#f59e0b' },
+                  { key: 'aprobadas_doc', name: 'Aprobadas', color: '#5fb591' },
+                  { key: 'observadas', name: 'Con observaciones', color: '#e0a84b' },
                   { key: 'pendientes', name: 'Pendientes', color: 'var(--brand-vino)' },
                 ]}
                 stacked
