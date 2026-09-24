@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Channels\CampanaChannel;
 use App\Models\Solicitud;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,7 +30,7 @@ class SolicitudEnviada extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail', CampanaChannel::class];
     }
 
     /**
@@ -46,7 +47,7 @@ class SolicitudEnviada extends Notification implements ShouldQueue
                 'monto_solicitado' => $this->solicitud->monto_solicitado,
                 'fecha_envio' => now(),
                 'solicitud_id' => $this->solicitud->id,
-                'app_url' => env('NEXT_PUBLIC_APP_URL', 'http://localhost:3000'),
+                'app_url' => config('app.frontend_url'),
             ]);
     }
 

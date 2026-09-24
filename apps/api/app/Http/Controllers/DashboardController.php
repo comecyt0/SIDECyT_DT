@@ -405,6 +405,29 @@ class DashboardController extends Controller
             ];
         }
 
+        // 24/09/2026 — solo el admin general. (Las recuperaciones y accesos pendientes ya tienen su tarjeta en
+        // "Pendientes ahora".)
+        if ($user->tieneRol('admin')) {
+            // Admins activos cuyo dominio no recibe correo (sin MX): nunca les llega ningún aviso por correo.
+            $sinCorreo = \Illuminate\Support\Facades\Cache::remember('dash:admins-sin-mx', 3600, function () {
+                return \App\Models\User::where('rol_id', config('comecyt.roles.admin'))->where('activo', true)->pluck('email')
+                    ->filter(function ($e) {
+                        $dom = strtolower((string) substr(strrchr((string) $e, '@') ?: '', 1));
+
+                        return $dom === '' || ! (checkdnsrr($dom, 'MX') || checkdnsrr($dom, 'A'));
+                    })->count();
+            });
+            if ($sinCorreo > 0) {
+                $alerts[] = [
+                    'type' => 'error',
+                    'message' => "{$sinCorreo} cuenta(s) de administrador tienen un correo cuyo dominio no recibe mensajes: no les llegan los avisos por correo (recuperaciones, accesos). Cámbialo en Usuarios.",
+                    'href' => '/admin/usuarios',
+                    'color' => 'bg-red-50',
+                    'dot' => 'bg-red-500',
+                ];
+            }
+        }
+
         return response()->json($alerts);
     }
 }

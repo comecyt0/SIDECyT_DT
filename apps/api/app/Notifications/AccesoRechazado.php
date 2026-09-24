@@ -31,7 +31,7 @@ class AccesoRechazado extends Notification implements ShouldQueue
             ->view('emails.acceso-rechazado', [
                 'nombre' => $this->solicitudAcceso->nombre,
                 'motivo_rechazo' => $this->solicitudAcceso->motivo_rechazo,
-                'app_url' => env('NEXT_PUBLIC_APP_URL', 'http://localhost:3000'),
+                'app_url' => config('app.frontend_url'),
             ]);
     }
 }

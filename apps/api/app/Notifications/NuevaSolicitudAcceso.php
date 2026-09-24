@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Channels\CampanaChannel;
 use App\Models\SolicitudAcceso;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,7 +22,7 @@ class NuevaSolicitudAcceso extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail', CampanaChannel::class];
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -31,7 +32,7 @@ class NuevaSolicitudAcceso extends Notification implements ShouldQueue
             ->view('emails.nueva-solicitud-acceso', [
                 'solicitud' => $this->solicitudAcceso,
                 'admin_name' => $notifiable->name,
-                'app_url' => env('NEXT_PUBLIC_APP_URL', 'http://localhost:3000'),
+                'app_url' => config('app.frontend_url'),
             ]);
     }
 

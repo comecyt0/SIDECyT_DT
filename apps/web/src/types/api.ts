@@ -275,4 +275,6 @@ export interface AlertItem {
   message?: string;
   tipo: 'info' | 'warning' | 'error';
   type?: 'info' | 'warning' | 'error';
+  /** Ruta interna del panel donde se atiende la alerta (se valida antes de pintarla). */
+  href?: string;
 }

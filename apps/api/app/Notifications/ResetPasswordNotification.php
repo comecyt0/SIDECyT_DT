@@ -13,7 +13,7 @@ class ResetPasswordNotification extends BaseResetPassword
      */
     public function toMail($notifiable): MailMessage
     {
-        $frontendUrl = rtrim(env('NEXT_PUBLIC_APP_URL', 'http://localhost:3000'), '/');
+        $frontendUrl = rtrim(config('app.frontend_url'), '/');
         $url = $frontendUrl.'/reset-password?token='.$this->token.'&email='.urlencode($notifiable->getEmailForPasswordReset());
 
         return (new MailMessage)

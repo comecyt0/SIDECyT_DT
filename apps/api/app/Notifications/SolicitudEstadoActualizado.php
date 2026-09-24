@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Channels\CampanaChannel;
 use App\Models\Solicitud;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -32,7 +33,7 @@ class SolicitudEstadoActualizado extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail', CampanaChannel::class];
     }
 
     /**
@@ -49,7 +50,7 @@ class SolicitudEstadoActualizado extends Notification implements ShouldQueue
             ->when($this->mensajeCustom, function ($mail) {
                 return $mail->line('Observaciones: '.$this->mensajeCustom);
             })
-            ->action('Ver Solicitud', url(env('NEXT_PUBLIC_APP_URL', 'http://localhost:3000')."/solicitante/solicitudes/{$this->solicitud->id}"))
+            ->action('Ver Solicitud', url(config('app.frontend_url')."/solicitante/solicitudes/{$this->solicitud->id}"))
             ->line('Gracias por usar el sistema COMECYT.');
     }
 

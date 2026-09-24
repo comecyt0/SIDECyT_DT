@@ -533,7 +533,13 @@ export default function AdminDashboard() {
                       <span aria-hidden="true" />
                       {/* El backend arma el texto con <strong>; el título de la convocatoria lo captura un admin,
                           así que no se inyecta como HTML: se quitan las etiquetas y se muestra como texto. */}
-                      <p className="text-xs text-[var(--app-ink)] leading-relaxed">{(alert.message ?? alert.mensaje ?? '').replace(/<[^>]+>/g, '')}</p>
+                      <p className="text-xs text-[var(--app-ink)] leading-relaxed">
+                        {(alert.message ?? alert.mensaje ?? '').replace(/<[^>]+>/g, '')}
+                        {/* Enlace solo a rutas internas del panel (el valor viene de la API). */}
+                        {typeof alert.href === 'string' && /^\/admin\/[a-z0-9-]+$/.test(alert.href) && (
+                          <> <Link href={alert.href} className="font-semibold underline underline-offset-2">Revisar</Link></>
+                        )}
+                      </p>
                     </div>
                   );
                 })

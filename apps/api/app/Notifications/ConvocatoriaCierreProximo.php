@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Channels\CampanaChannel;
 use App\Models\Convocatoria;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -28,7 +29,7 @@ class ConvocatoriaCierreProximo extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail', CampanaChannel::class];
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -42,7 +43,7 @@ class ConvocatoriaCierreProximo extends Notification implements ShouldQueue
             ->greeting("Hola {$notifiable->name},")
             ->line("Te informamos que la convocatoria **{$this->convocatoria->nombre}** cierra {$diasText} ({$this->convocatoria->fecha_cierre_efectiva}).")
             ->line('Si tienes solicitudes en borrador o pendientes de subsanación, complétalas antes de la fecha de cierre.')
-            ->action('Ver convocatoria', env('NEXT_PUBLIC_APP_URL', 'http://localhost:3000') . '/solicitante/solicitudes')
+            ->action('Ver convocatoria', config('app.frontend_url') . '/solicitante/solicitudes')
             ->line("— Equipo {$institutionName}")
             ->salutation('Atentamente');
     }

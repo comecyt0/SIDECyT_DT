@@ -1568,3 +1568,27 @@ seguridad nuevas: ampliación del §0. Para desarrollo:
   `ReadJwtFromCookie` y `ApiAuthenticate` antes de `ThrottleRequests` + `$request->setUserResolver()` en `ApiAuthenticate`.
 - **Verificación:** 72/72 (`e2e_e45.php`), 38/38 regresión E44 (403→404 a propósito), 13/13 en navegador (incluye chat
   entre dos navegadores y confeti al re-entrar), vitest 113/113. Datos de prueba borrados y tokens invalidados.
+
+### E46 — "El correo de recuperar contraseña no llega" [resuelto 24-09-2026]
+**Síntoma:** el usuario pidió recuperar contraseña y no recibió nada.
+**Causa (varias, ninguna era el SMTP, que funciona):**
+1. **Por diseño** (regla 10) el enlace sale solo cuando un admin **aprueba** la solicitud en `/admin/reset-requests`.
+2. El aviso al admin era **solo por correo**, y el único admin tiene un correo de **dominio sin MX** (`comecyt.gob.mx`):
+   nadie se enteraba y la solicitud quedaba pendiente sin rastro.
+3. **El canal `database` de 8 notificaciones escribía en la tabla `notifications`, que nada lee** (la campana lee
+   `notificaciones_log`): esos avisos nunca se vieron en el panel.
+4. **Enlaces de correo a `http://localhost:3000`:** `config('app.frontend_url')` (default de Laravel con `FRONTEND_URL`, no
+   definida) daba localhost — afectaba el aviso de mensaje no leído del buzón — y 13 notificaciones usaban
+   `env('NEXT_PUBLIC_APP_URL')`, que con `config:cache` (lo corre `deploy.sh`) devuelve null → localhost.
+**Fix:** `config/app.php` define `frontend_url` (FRONTEND_URL → NEXT_PUBLIC_APP_URL → APP_URL) y **todo** el código usa
+`config('app.frontend_url')`; nuevo canal `App\Notifications\Channels\CampanaChannel` (escribe en `notificaciones_log` →
+campana + tiempo real + push) en lugar de `database`, también en `SolicitudResetPassword`; al pulsar el aviso
+(`reset_password`, `nueva_solicitud_acceso`) lleva a su página (`hrefAvisoAdmin`); alerta en el dashboard si una cuenta
+de admin tiene un dominio que no recibe correo.
+**Verificado de punta a punta en producción (15/15, `e2e_correo.php`):** SMTP autentica, forgot-password crea la
+solicitud, la cola avisa al admin (correo + campana) sin fallos, aprobar envía el enlace real (aceptado por Microsoft 365)
+al buzón del sistema, el enlace usa el dominio, restablecer con el token funciona y un token falso da 422.
+**Reglas:** (1) nunca `env()` fuera de `config/` (con caché devuelve null); (2) toda notificación que deba verse en el
+panel usa `CampanaChannel`, no `database`; (3) un aviso que pide una acción no puede depender solo del correo.
+**Pendiente del usuario:** poner un correo real a la cuenta admin (Usuarios); quedan otros `env()` fuera de config
+(cookies, rate limits, SSO, VAPID, TSA) que fallarían si algún día se corre `config:cache` en este servidor.

@@ -38,7 +38,7 @@ class AvisoMensajeNoLeido implements ShouldQueue
             ? Buzon::equipo((int) $c->convocatoria_id)
             : User::where('id', $c->solicitante_id)->where('activo', true)->get(['id', 'name', 'email']);
 
-        $base = rtrim((string) config('app.frontend_url', env('NEXT_PUBLIC_APP_URL', config('app.url'))), '/');
+        $base = rtrim((string) config('app.frontend_url'), '/');
         $ruta = $delSolicitante ? '/admin/buzon?hilo='.$c->id : '/solicitante/buzon?hilo='.$c->id;
         $asunto = 'SIGAC: tienes un mensaje sin leer en el buzón';
 

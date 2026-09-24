@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Channels\CampanaChannel;
 use App\Models\Solicitud;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -41,7 +42,7 @@ class EvaluacionCompletada extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail', CampanaChannel::class];
     }
 
     /**
@@ -61,7 +62,7 @@ class EvaluacionCompletada extends Notification implements ShouldQueue
                 'evaluador_nombre' => $this->evaluador,
                 'comentarios_evaluador' => $this->comentarios,
                 'solicitud_id' => $this->solicitud->id,
-                'app_url' => env('NEXT_PUBLIC_APP_URL', 'http://localhost:3000'),
+                'app_url' => config('app.frontend_url'),
             ]);
     }
 

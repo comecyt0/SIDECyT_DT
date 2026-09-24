@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Channels\CampanaChannel;
 use App\Models\Convenio;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -32,7 +33,7 @@ class ConvenioCreado extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail', CampanaChannel::class];
     }
 
     /**
@@ -54,7 +55,7 @@ class ConvenioCreado extends Notification implements ShouldQueue
                 'fecha_termino' => $this->convenio->fecha_termino,
                 'institucion_nombre' => $this->solicitud->empresa->nombre ?? 'Tu Institución',
                 'solicitud_id' => $this->solicitud->id,
-                'app_url' => env('NEXT_PUBLIC_APP_URL', 'http://localhost:3000'),
+                'app_url' => config('app.frontend_url'),
             ]);
     }
 

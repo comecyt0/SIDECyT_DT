@@ -50,7 +50,7 @@ class PasswordResetController extends Controller
 
         // Notify all admin users
         try {
-            $admins = User::where('rol_id', config('comecyt.roles.admin'))->get();
+            $admins = User::where('rol_id', config('comecyt.roles.admin'))->where('activo', true)->get();
             foreach ($admins as $admin) {
                 $admin->notify(new SolicitudResetPassword($resetRequest));
             }

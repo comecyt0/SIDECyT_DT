@@ -6,7 +6,7 @@ import AdminTopLayout from '@/components/layout/AdminTopLayout';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useSessionRefresh } from '@/hooks/useSessionRefresh';
 import NotificationToast from '@/components/notifications/NotificationToast';
-import { hrefBuzon } from '@/lib/notificaciones';
+import { hrefAvisoAdmin, hrefBuzon } from '@/lib/notificaciones';
 
 /** Campana del panel /admin: cada quien ve solo SUS notificaciones. */
 function AdminShell({ children, esAdmin, userName }: { children: React.ReactNode; esAdmin: boolean; userName: string }) {
@@ -30,7 +30,8 @@ function AdminShell({ children, esAdmin, userName }: { children: React.ReactNode
       {children}
       <NotificationToast
         notification={incoming}
-        href={(incoming && hrefBuzon(incoming, '/admin/buzon')) || (esAdmin ? '/admin/notificaciones' : '/admin/buzon')}
+        href={(incoming && (hrefBuzon(incoming, '/admin/buzon') ?? (esAdmin ? hrefAvisoAdmin(incoming) : null)))
+          || (esAdmin ? '/admin/notificaciones' : '/admin/buzon')}
         onClose={dismissIncoming}
       />
     </AdminTopLayout>

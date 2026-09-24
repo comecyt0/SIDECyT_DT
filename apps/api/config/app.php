@@ -55,6 +55,14 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+     | URL pública del frontend para los enlaces de los correos (24/09/2026). Siempre leer con
+     | config('app.frontend_url'), nunca env() en el código: con `config:cache` (lo corre deploy.sh) env() devuelve
+     | null fuera de config/ y los enlaces salían a http://localhost:3000. Laravel ya traía 'frontend_url' con
+     | FRONTEND_URL (no definida aquí) → también daba localhost.
+     */
+    'frontend_url' => rtrim((string) env('FRONTEND_URL', env('NEXT_PUBLIC_APP_URL', env('APP_URL', 'http://localhost:3000'))), '/'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

@@ -31,7 +31,7 @@ class AccesoAprobado extends Notification implements ShouldQueue
             ->view('emails.acceso-aprobado', [
                 'nombre' => $this->solicitudAcceso->nombre,
                 'email' => $this->solicitudAcceso->email,
-                'app_url' => env('NEXT_PUBLIC_APP_URL', 'http://localhost:3000'),
+                'app_url' => config('app.frontend_url'),
             ]);
     }
 }
