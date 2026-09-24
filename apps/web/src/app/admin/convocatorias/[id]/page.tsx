@@ -12,6 +12,7 @@ import { formatCurrency, parseDate } from '@/lib/format';
 import { ESTADO_PUBLICO, estadoPublico, puedeProrrogar } from '@/lib/convocatoria-estado';
 import ProrrogaDialog from '@/components/admin/ProrrogaDialog';
 import BannerManager from '@/components/admin/BannerManager';
+import { useRol } from '@/hooks/useRol';
 
 const sectionTitleCls = 'text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)] flex items-center gap-2 border-b border-[var(--app-rule)] pb-2';
 const fechaLarga = (v?: string | null) => (v ? parseDate(v).toLocaleDateString('es-MX', { dateStyle: 'long' }) : '—');
@@ -19,6 +20,8 @@ const fechaLarga = (v?: string | null) => (v ? parseDate(v).toLocaleDateString('
 type ConvocatoriaConPrograma = Convocatoria & { tipo_programa?: { id: number; nombre: string; banner_url?: string | null } };
 
 export default function VerConvocatoriaPage() {
+  // E45: acciones visibles según el rol (el backend las permite o rechaza de todos modos).
+  const { esAdmin } = useRol();
   const { id } = useParams();
   const router = useRouter();
   const [convocatoria, setConvocatoria] = useState<ConvocatoriaConPrograma | null>(null);
@@ -71,14 +74,16 @@ export default function VerConvocatoriaPage() {
         description={`Ejercicio fiscal ${convocatoria.ejercicio_fiscal}. Aquí ves las fechas, los montos, el banner y la descripción que conocen los solicitantes.`}
         actions={
           <>
-            {puedeProrrogar(convocatoria) && (
+            {esAdmin && puedeProrrogar(convocatoria) && (
               <Button variant="secondary" onClick={() => setProrrogaOpen(true)}>
                 <CalendarPlus className="h-4 w-4" /> Dar prórroga
               </Button>
             )}
+            {esAdmin && (
             <Button variant="outline" onClick={() => router.push(`/admin/convocatorias/${id}/editar`)}>
               <Edit className="h-4 w-4" /> Editar
             </Button>
+            )}
           </>
         }
       />
@@ -154,7 +159,7 @@ export default function VerConvocatoriaPage() {
         </CardContent>
       </Card>
 
-      <BannerManager
+      {esAdmin && <BannerManager
         endpoint={`/admin/convocatorias/${convocatoria.id}/banner`}
         value={convocatoria.banner_url}
         onChange={(url) => setConvocatoria({ ...convocatoria, banner_url: url })}
@@ -162,7 +167,7 @@ export default function VerConvocatoriaPage() {
         fallbackLabel={programa ? `el banner del programa «${programa.nombre}»` : 'el del programa'}
         title="Banner de la convocatoria"
         description="Se muestra en la tarjeta de la convocatoria en la página pública. Si no cargas uno, se usa el del programa."
-      />
+      />}
 
       <ProrrogaDialog
         convocatoria={convocatoria}

@@ -31,7 +31,46 @@ class User extends Authenticatable implements JWTSubject
         'remember_token',
         'two_factor_secret',
         'two_factor_recovery_codes',
+        // E45: el nombre interno del archivo no sale; se expone la URL autenticada (avatar_url / banner_url).
+        'avatar_path',
+        'banner_path',
     ];
+
+    /** E45: toda serialización de un usuario lleva su foto y portada, para identificarlo en cualquier vista. */
+    protected $appends = ['avatar_url', 'banner_url'];
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->avatar_path ? '/api/media/perfil/'.$this->avatar_path : null;
+    }
+
+    public function getBannerUrlAttribute(): ?string
+    {
+        return $this->banner_path ? '/api/media/perfil/'.$this->banner_path : null;
+    }
+
+    /** Admin de convocatoria (E45): convocatorias que opera. */
+    public function convocatoriasAsignadas()
+    {
+        return $this->belongsToMany(Convocatoria::class, 'convocatoria_user');
+    }
+
+    /** Alcance por periodo (E45). */
+    public function periodos()
+    {
+        return $this->belongsToMany(Periodo::class, 'periodo_user');
+    }
+
+    public function tieneRol(string ...$slugs): bool
+    {
+        foreach ($slugs as $slug) {
+            if ((int) $this->rol_id === (int) config("comecyt.roles.{$slug}")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     protected function casts(): array
     {

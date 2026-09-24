@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { construirCsp, generarNonce } from '@/lib/csp';
+import { subrutaPermitida } from '@/lib/roles';
 
 // Next.js 16: este archivo reemplaza a `middleware.ts` (deprecated).
 // El comportamiento es idéntico — la convención cambió de nombre, no de API.
@@ -15,7 +16,8 @@ const PUBLIC_PATHS = [
  *  El rol se lee del JWT (payload no verificado aquí: el backend valida la firma en cada petición y es quien
  *  protege los datos). Este chequeo es defensa en profundidad: que nadie vea la interfaz de otro rol. */
 const ROLE_PREFIXES: Record<string, string[]> = {
-  '/admin':       ['admin'],
+  // E45: el admin de convocatoria y la consulta usan las pantallas de /admin, pero solo las de SUBRUTAS_POR_ROL.
+  '/admin':       ['admin', 'admin_convocatoria', 'consulta'],
   '/revisor':     ['revisor'],
   '/evaluador':   ['evaluador'],
   '/solicitante': ['solicitante'],
@@ -23,6 +25,8 @@ const ROLE_PREFIXES: Record<string, string[]> = {
 
 const DASHBOARD_BY_ROLE: Record<string, string> = {
   admin: '/admin/dashboard',
+  admin_convocatoria: '/admin/dashboard',
+  consulta: '/admin/dashboard',
   revisor: '/revisor/solicitudes',
   evaluador: '/evaluador/evaluaciones',
   solicitante: '/solicitante/dashboard',
@@ -53,6 +57,8 @@ function roleSlugFromPayload(payload: Record<string, unknown> | null): string | 
     case 2: return 'revisor';
     case 3: return 'evaluador';
     case 4: return 'solicitante';
+    case 5: return 'admin_convocatoria';
+    case 6: return 'consulta';
     default: return null;
   }
 }
@@ -109,7 +115,7 @@ export function proxy(request: NextRequest) {
 
   for (const [prefix, allowed] of Object.entries(ROLE_PREFIXES)) {
     if (path === prefix || path.startsWith(prefix + '/')) {
-      if (!allowed.includes(rol)) {
+      if (!allowed.includes(rol) || !subrutaPermitida(rol, path)) {
         return NextResponse.redirect(new URL(DASHBOARD_BY_ROLE[rol], request.url));
       }
       break;

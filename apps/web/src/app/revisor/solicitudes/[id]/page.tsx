@@ -20,6 +20,8 @@ import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { parseDate } from '@/lib/format';
 import { safeUrl } from '@/lib/safe-url';
+import Seguimiento, { type PasoHistorial } from '@/components/perfil/Seguimiento';
+import { UserChip } from '@/components/ui/user-avatar';
 
 interface ProgramaCampo {
   id: string;
@@ -237,6 +239,20 @@ export default function RevisorDetalleSolicitudPage() {
           </span>
         }
       />
+
+      {/* E45: quién solicita (foto → ficha completa) y seguimiento del folio. */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Solicitante y seguimiento</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {solicitud.user && (
+            <UserChip user={solicitud.user} sub={solicitud.empresa?.nombre ?? solicitud.user.email ?? null}
+              href={`/revisor/perfiles/${solicitud.user.id}?folio=${solicitud.id}`} size="md" />
+          )}
+          <Seguimiento pasos={((solicitud as unknown as { historial?: PasoHistorial[] }).historial) ?? []} />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>

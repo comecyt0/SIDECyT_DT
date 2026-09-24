@@ -53,6 +53,18 @@ class Convocatoria extends Model
         return $this->hasMany(Solicitud::class);
     }
 
+    /** E45: periodo de la convocatoria (alcance de visión por periodo). */
+    public function periodo(): BelongsTo
+    {
+        return $this->belongsTo(Periodo::class);
+    }
+
+    /** E45: administradores de convocatoria asignados. */
+    public function administradores(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'convocatoria_user');
+    }
+
     /** Hoy en la zona horaria de negocio (Toluca), no en UTC — ver config comecyt.timezone_negocio. */
     public static function hoy(): string
     {

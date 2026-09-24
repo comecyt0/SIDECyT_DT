@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import PageHeader from '@/components/ui/page-header';
 import { estadoBadgeClass, estadoLabel } from '@/lib/solicitud-estados';
 import type { Solicitud } from '@/types/api';
+import UserAvatar from '@/components/ui/user-avatar';
 
 interface Props {
   solicitudes: Solicitud[];
@@ -63,7 +64,8 @@ export default function CompletadasClient({ solicitudes }: Props) {
                     <p className="text-sm font-semibold text-[var(--app-ink)] truncate">
                       {s.titulo_proyecto}
                     </p>
-                    <p className="text-xs text-[var(--app-ink-2)] mt-0.5 truncate">
+                    <p className="text-xs text-[var(--app-ink-2)] mt-0.5 truncate flex items-center gap-1.5">
+                      <UserAvatar user={s.user} size="xs" />
                       {s.empresa?.nombre || s.user?.name || 'Solicitante'}
                       {s.updated_at && (
                         <span className="ml-2">

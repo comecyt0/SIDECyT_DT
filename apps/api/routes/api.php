@@ -36,6 +36,11 @@ use App\Http\Controllers\PushController;
 use App\Http\Controllers\Solicitudes\RevisionController;
 use App\Http\Controllers\Solicitudes\SolicitudController;
 use App\Http\Controllers\UserPreferenceController;
+use App\Http\Controllers\Admin\DocumentoFijoController;
+use App\Http\Controllers\Admin\PeriodoController;
+use App\Http\Controllers\BuzonController;
+use App\Http\Controllers\FolioController;
+use App\Http\Controllers\PerfilController;
 use App\Http\Middleware\ApiGatewayMiddleware;
 use App\Http\Middleware\CircuitBreakerMiddleware;
 use App\Http\Middleware\RateLimitMiddleware;
@@ -111,6 +116,8 @@ Route::middleware([
         ->middleware('throttle:30,1');
     Route::get('convocatorias/abiertas', [ConvocatoriaPublicaController::class, 'index'])
         ->middleware('throttle:30,1');
+    // E45: folios aprobados que el admin publicó (solo folio + convocatoria). Lista blanca, caché, throttle.
+    Route::get('folios-aprobados', [FolioController::class, 'publicos'])->middleware('throttle:30,1');
 
     // === PROTECTED ROUTES ===
     Route::group(['middleware' => 'api.auth'], function () {
@@ -137,13 +144,45 @@ Route::middleware([
 
         // Agrupación por Roles (Ejemplo inicial, los controllers completos se implementan en fase 2)
 
-        // ADMIN COMECYT (1)
-        Route::group(['prefix' => 'admin', 'middleware' => 'admin'], function () {
+        // ═══ ADMIN — E45 (24/09/2026): tres grupos (docs/IMPLEMENTACIONES_E45.md §4) ═══
+        // (a) LECTURA con alcance: admin, admin de convocatoria y consulta (solo GET).
+        Route::group(['prefix' => 'admin', 'middleware' => ['rol:admin,admin_convocatoria,consulta', 'alcance']], function () {
             Route::get('stats', [DashboardController::class, 'adminStats']);
-            Route::get('activity', [DashboardController::class, 'adminActivity']);
             Route::get('alerts', [DashboardController::class, 'adminAlerts']);
             Route::get('charts', [DashboardController::class, 'adminCharts']);
             Route::get('search', [DashboardController::class, 'globalSearch']);
+            Route::get('convocatorias', [ConvocatoriaController::class, 'index']);
+            Route::get('convocatorias/{convocatoria}', [ConvocatoriaController::class, 'show']);
+            Route::get('solicitudes', [SolicitudController::class, 'adminIndex']);
+            Route::get('solicitudes/{solicitud}/full', [SolicitudController::class, 'adminShowFull']);
+            Route::get('solicitudes/{solicitud}/historial', [FolioController::class, 'historial']);
+            Route::get('folios', [FolioController::class, 'index']);
+            Route::get('reportes/excel', [DocumentoController::class, 'exportExcel']);
+            Route::get('periodos', [PeriodoController::class, 'index']);
+        });
+
+        // (b) OPERACIÓN con alcance: admin y admin de convocatoria.
+        Route::group(['prefix' => 'admin', 'middleware' => ['rol:admin,admin_convocatoria', 'alcance']], function () {
+            Route::apiResource('convenios', ConvenioController::class)->except(['store']);
+            Route::apiResource('ministraciones', MinistracionController::class)->parameters(['ministraciones' => 'ministracion']);
+            Route::apiResource('informes', InformeController::class)->parameters(['informes' => 'informe']);
+            Route::get('evaluadores-disponibles', [EvaluadorController::class, 'disponibles']);
+            Route::post('asignaciones-evaluador', [EvaluadorController::class, 'asignar']);
+            Route::delete('asignaciones-evaluador/{asignacion}', [EvaluadorController::class, 'desasignar']);
+            Route::post('solicitudes/{solicitud}/generar-convenio', [ConvenioController::class, 'generate']);
+            Route::post('solicitudes/{solicitud}/cerrar', [SolicitudController::class, 'cerrar']);
+            Route::post('solicitudes/{solicitud}/seguimiento', [SolicitudController::class, 'iniciarSeguimiento']);
+            Route::post('solicitudes/{solicitud}/rechazar', [SolicitudController::class, 'rechazar']);
+            Route::post('solicitudes/{solicitud}/cancelar', [SolicitudController::class, 'cancelar']);
+            // Folios aprobados en la landing (E45): revisar, confirmar y despublicar.
+            Route::get('convocatorias/{convocatoria}/folios-publicados', [FolioController::class, 'publicacion']);
+            Route::post('convocatorias/{convocatoria}/folios-publicados', [FolioController::class, 'publicar'])->middleware('throttle:20,1');
+            Route::delete('convocatorias/{convocatoria}/folios-publicados', [FolioController::class, 'despublicar'])->middleware('throttle:20,1');
+        });
+
+        // (c) SOLO ADMIN GENERAL.
+        Route::group(['prefix' => 'admin', 'middleware' => 'admin'], function () {
+            Route::get('activity', [DashboardController::class, 'adminActivity']);
 
             // PROGRAMAS DINÁMICOS CRUD
             Route::get('programas', [TipoProgramaController::class, 'index']);
@@ -151,62 +190,59 @@ Route::middleware([
             Route::put('programas/{tipoPrograma}', [TipoProgramaController::class, 'update']);
             Route::delete('programas/{tipoPrograma}', [TipoProgramaController::class, 'destroy']);
 
-            // Campos dinámicos por programa
             Route::get('programas/{tipoPrograma}/campos', [ProgramaCampoController::class, 'index']);
             Route::post('programas/{tipoPrograma}/campos', [ProgramaCampoController::class, 'store']);
             Route::put('programas/{tipoPrograma}/campos/{campo}', [ProgramaCampoController::class, 'update']);
             Route::delete('programas/{tipoPrograma}/campos/{campo}', [ProgramaCampoController::class, 'destroy']);
 
-            // Documentos por programa
             Route::get('programas/{tipoPrograma}/documentos', [ProgramaDocumentoController::class, 'index']);
             Route::post('programas/{tipoPrograma}/documentos', [ProgramaDocumentoController::class, 'store']);
             Route::put('programas/{tipoPrograma}/documentos/{documento}', [ProgramaDocumentoController::class, 'update']);
             Route::delete('programas/{tipoPrograma}/documentos/{documento}', [ProgramaDocumentoController::class, 'destroy']);
 
-            // Rubros por programa
             Route::get('programas/{tipoPrograma}/rubros', [ProgramaRubroController::class, 'index']);
             Route::post('programas/{tipoPrograma}/rubros', [ProgramaRubroController::class, 'store']);
             Route::put('programas/{tipoPrograma}/rubros/{rubro}', [ProgramaRubroController::class, 'update']);
             Route::delete('programas/{tipoPrograma}/rubros/{rubro}', [ProgramaRubroController::class, 'destroy']);
 
-            // Etapas por programa
             Route::get('programas/{tipoPrograma}/etapas', [ProgramaEtapaController::class, 'index']);
             Route::post('programas/{tipoPrograma}/etapas', [ProgramaEtapaController::class, 'store']);
             Route::put('programas/{tipoPrograma}/etapas/{etapa}', [ProgramaEtapaController::class, 'update']);
             Route::delete('programas/{tipoPrograma}/etapas/{etapa}', [ProgramaEtapaController::class, 'destroy']);
 
-            // Modalidades por programa
             Route::get('programas/{tipoPrograma}/modalidades', [ProgramaModalidadController::class, 'index']);
             Route::post('programas/{tipoPrograma}/modalidades', [ProgramaModalidadController::class, 'store']);
             Route::put('programas/{tipoPrograma}/modalidades/{modalidad}', [ProgramaModalidadController::class, 'update']);
             Route::delete('programas/{tipoPrograma}/modalidades/{modalidad}', [ProgramaModalidadController::class, 'destroy']);
 
-            // Criterios de evaluación por programa
             Route::get('programas/{tipoPrograma}/criterios', [ProgramaCriterioEvaluacionController::class, 'index']);
             Route::post('programas/{tipoPrograma}/criterios', [ProgramaCriterioEvaluacionController::class, 'store']);
             Route::put('programas/{tipoPrograma}/criterios/{criterio}', [ProgramaCriterioEvaluacionController::class, 'update']);
             Route::delete('programas/{tipoPrograma}/criterios/{criterio}', [ProgramaCriterioEvaluacionController::class, 'destroy']);
 
-            Route::apiResource('convocatorias', ConvocatoriaController::class);
-            // E40 — prórroga y banner (solo admin: este grupo lleva middleware `admin`)
+            // Convocatorias: crear/editar/borrar solo el admin general (la lectura está en el grupo a).
+            Route::post('convocatorias', [ConvocatoriaController::class, 'store']);
+            Route::match(['put', 'patch'], 'convocatorias/{convocatoria}', [ConvocatoriaController::class, 'update']);
+            // E40 — prórroga y banner
             Route::post('convocatorias/{convocatoria}/prorroga', [ConvocatoriaController::class, 'prorroga'])->middleware('throttle:20,1');
             Route::post('convocatorias/{convocatoria}/banner', [BannerController::class, 'storeConvocatoria'])->middleware('throttle:20,1');
             Route::delete('convocatorias/{convocatoria}/banner', [BannerController::class, 'destroyConvocatoria'])->middleware('throttle:20,1');
             Route::post('programas/{tipoPrograma}/banner', [BannerController::class, 'storePrograma'])->middleware('throttle:20,1');
             Route::delete('programas/{tipoPrograma}/banner', [BannerController::class, 'destroyPrograma'])->middleware('throttle:20,1');
             Route::apiResource('usuarios', UserController::class)->parameters(['usuarios' => 'user']);
-            Route::apiResource('convenios', ConvenioController::class);
-            Route::apiResource('ministraciones', MinistracionController::class)->parameters(['ministraciones' => 'ministracion']);
-            Route::apiResource('informes', InformeController::class)->parameters(['informes' => 'informe']);
             Route::apiResource('empresas', EmpresaController::class)->parameters(['empresas' => 'empresa']);
             Route::apiResource('categorias-apoyo', \App\Http\Controllers\Admin\CategoriaApoyoController::class)->parameters(['categorias-apoyo' => 'categoriasApoyo']);
             Route::apiResource('lista-negra', ListaNegraController::class);
             Route::apiResource('notificaciones', NotificacionLogController::class)->only(['index', 'show']);
             Route::post('notificaciones/{notificacion}/leer', [NotificacionLogController::class, 'marcarLeida']);
             Route::post('notificaciones/leer-todas', [NotificacionLogController::class, 'marcarTodasLeidas']);
-            // Asignación de Evaluadores
-            Route::post('asignaciones-evaluador', [EvaluadorController::class, 'asignar']);
-            Route::delete('asignaciones-evaluador/{asignacion}', [EvaluadorController::class, 'desasignar']);
+
+            // E45: periodos y límites de los documentos fijos.
+            Route::post('periodos', [PeriodoController::class, 'store']);
+            Route::put('periodos/{periodo}', [PeriodoController::class, 'update']);
+            Route::delete('periodos/{periodo}', [PeriodoController::class, 'destroy']);
+            Route::get('documentos-fijos', [DocumentoFijoController::class, 'index']);
+            Route::put('documentos-fijos/{documentoFijo}', [DocumentoFijoController::class, 'update']);
 
             // Carousel management
             Route::get('carousel', [CarouselController::class, 'index']);
@@ -214,16 +250,6 @@ Route::middleware([
             Route::post('carousel', [CarouselController::class, 'store']);
             Route::put('carousel/{carouselSlide}', [CarouselController::class, 'update']);
             Route::delete('carousel/{carouselSlide}', [CarouselController::class, 'destroy']);
-
-            // Convenio generation from solicitud + state transitions
-            Route::post('solicitudes/{solicitud}/generar-convenio', [ConvenioController::class, 'generate']);
-            Route::post('solicitudes/{solicitud}/cerrar', [SolicitudController::class, 'cerrar']);
-            Route::post('solicitudes/{solicitud}/seguimiento', [SolicitudController::class, 'iniciarSeguimiento']);
-            Route::post('solicitudes/{solicitud}/rechazar', [SolicitudController::class, 'rechazar']);
-            Route::post('solicitudes/{solicitud}/cancelar', [SolicitudController::class, 'cancelar']);
-            Route::get('solicitudes', [SolicitudController::class, 'adminIndex']);
-            // Admin puede ver TODA la documentación de cualquier solicitud
-            Route::get('solicitudes/{solicitud}/full', [SolicitudController::class, 'adminShowFull']);
 
             // Solicitudes de Acceso (registro de nuevos usuarios)
             Route::get('solicitudes-acceso', [RegistroAccesoController::class, 'index']);
@@ -235,9 +261,6 @@ Route::middleware([
             Route::post('reset-requests/{resetRequest}/aprobar', [PasswordResetController::class, 'adminApprove']);
             Route::post('reset-requests/{resetRequest}/rechazar', [PasswordResetController::class, 'adminReject']);
 
-            // Reportes — solo admin
-            Route::get('reportes/excel', [DocumentoController::class, 'exportExcel']);
-
             // Audit log
             Route::get('audit-logs', [AuditLogController::class, 'index']);
 
@@ -245,8 +268,34 @@ Route::middleware([
             Route::get('reverb/status', [ReverbStatusController::class, 'status']);
         });
 
+        // ═══ BUZÓN con chat (E45): solicitantes, admin y admin de convocatoria. Participación revisada en el controlador. ═══
+        Route::group(['prefix' => 'buzon', 'middleware' => 'rol:solicitante,admin,admin_convocatoria'], function () {
+            Route::get('/', [BuzonController::class, 'index']);
+            Route::get('convocatorias', [BuzonController::class, 'convocatoriasDisponibles']);
+            Route::post('/', [BuzonController::class, 'store'])->middleware('throttle:10,1');
+            Route::get('{conversacion}', [BuzonController::class, 'show']);
+            Route::post('{conversacion}/mensajes', [BuzonController::class, 'mensaje'])->middleware('throttle:30,1');
+            Route::post('{conversacion}/leer', [BuzonController::class, 'leer']);
+            Route::post('{conversacion}/resolver', [BuzonController::class, 'resolver']);
+            Route::post('{conversacion}/reabrir', [BuzonController::class, 'reabrir']);
+        });
+
+        // ═══ PERFIL (E45): todos los roles. ═══
+        Route::get('mi-perfil', [PerfilController::class, 'show']);
+        Route::put('mi-perfil', [PerfilController::class, 'update']);
+        Route::post('mi-perfil/avatar', [PerfilController::class, 'subirAvatar'])->middleware('throttle:10,1');
+        Route::delete('mi-perfil/avatar', [PerfilController::class, 'quitarAvatar']);
+        Route::post('mi-perfil/banner', [PerfilController::class, 'subirBanner'])->middleware('throttle:10,1');
+        Route::delete('mi-perfil/banner', [PerfilController::class, 'quitarBanner']);
+        Route::get('media/perfil/{archivo}', [PerfilController::class, 'media'])
+            ->where('archivo', '[A-Za-z0-9]{40}\.webp')->middleware('throttle:600,1');
+        Route::get('perfiles/{user}', [PerfilController::class, 'ficha'])->middleware('throttle:120,1');
+
+        // Límites de documentos fijos para mostrar en los formularios de subida (E45).
+        Route::get('config/documentos-fijos', [DocumentoFijoController::class, 'publico']);
+
         // REVISOR (2)
-        Route::group(['prefix' => 'revisor', 'middleware' => 'revisor'], function () {
+        Route::group(['prefix' => 'revisor', 'middleware' => ['revisor', 'alcance']], function () {
             Route::get('stats', [DashboardController::class, 'revisorStats']);
             Route::get('charts', [DashboardController::class, 'revisorCharts']);
             Route::get('search', [DashboardController::class, 'revisorSearch']);
@@ -262,7 +311,7 @@ Route::middleware([
         });
 
         // EVALUADOR (3)
-        Route::group(['prefix' => 'evaluador', 'middleware' => 'evaluador'], function () {
+        Route::group(['prefix' => 'evaluador', 'middleware' => ['evaluador', 'alcance']], function () {
             Route::get('stats', [DashboardController::class, 'evaluadorStats']);
             Route::get('charts', [DashboardController::class, 'evaluadorCharts']);
             Route::get('search', [DashboardController::class, 'evaluadorSearch']);
@@ -295,7 +344,7 @@ Route::middleware([
         Route::delete('catalogs/programa/{tipo_programa_id}/cache', [ProgramaCatalogController::class, 'clearCache'])->middleware('admin');
 
         // SOLICITANTE INSTITUCIONAL (4)
-        Route::group(['prefix' => 'solicitudes'], function () {
+        Route::group(['prefix' => 'solicitudes', 'middleware' => 'alcance'], function () {
             Route::get('/', [SolicitudController::class, 'index']);
             Route::post('/', [SolicitudController::class, 'store']);
             Route::get('convocatorias-activas', [SolicitudController::class, 'activeConvocatorias']);
@@ -312,7 +361,7 @@ Route::middleware([
         // dictamen: admin or the evaluador who authored it
         // convenio: admin or the solicitud owner
         Route::get('documentos/dictamen/{dictamen}', [DocumentoController::class, 'downloadDictamen']);
-        Route::get('documentos/convenio/{solicitud}', [DocumentoController::class, 'downloadConvenio']);
+        Route::get('documentos/convenio/{solicitud}', [DocumentoController::class, 'downloadConvenio'])->middleware('alcance');
 
         // Archivos de solicitud en almacenamiento privado (24/09/2026): permiso por rol dentro del controlador
         // (admin, revisor, dueño, evaluador asignado). El nombre solo acepta el formato que genera el sistema.

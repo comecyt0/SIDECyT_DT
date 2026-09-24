@@ -12,12 +12,15 @@ import type { Convocatoria } from '@/types/api';
 import { formatDate } from '@/lib/format';
 import { ESTADO_PUBLICO, estadoPublico, puedeProrrogar } from '@/lib/convocatoria-estado';
 import ProrrogaDialog from '@/components/admin/ProrrogaDialog';
+import { useRol } from '@/hooks/useRol';
 
 interface Props {
   convocatorias: Convocatoria[];
 }
 
 export default function ConvocatoriasClient({ convocatorias }: Props) {
+  // E45: acciones visibles según el rol (el backend las permite o rechaza de todos modos).
+  const { esAdmin } = useRol();
   const router = useRouter();
   const [lista, setLista] = useState<Convocatoria[]>(Array.isArray(convocatorias) ? convocatorias : []);
   const [prorroga, setProrroga] = useState<Convocatoria | null>(null);
@@ -28,13 +31,13 @@ export default function ConvocatoriasClient({ convocatorias }: Props) {
         title="Convocatorias"
         description="Publica convocatorias, dales prórroga y revisa cómo se ven en la página pública."
         icon={<Megaphone className="h-5 w-5" />}
-        actions={
+        actions={esAdmin ? (
           <Link href="/admin/convocatorias/nueva">
             <Button variant="rainbow">
               <Plus className="h-4 w-4" /> Nueva convocatoria
             </Button>
           </Link>
-        }
+        ) : undefined}
       />
 
       <Card>
@@ -100,12 +103,14 @@ export default function ConvocatoriasClient({ convocatorias }: Props) {
                               <Eye />
                             </Button>
                           </Link>
+                          {esAdmin && (
                           <Link href={`/admin/convocatorias/${conv.id}/editar`} aria-label="Editar" title="Editar">
                             <Button variant="soft" size="icon-sm" aria-label="Editar" title="Editar">
                               <Edit />
                             </Button>
                           </Link>
-                          {puedeProrrogar(conv) && (
+                          )}
+                          {esAdmin && puedeProrrogar(conv) && (
                             <Button variant="secondary" size="icon-sm" aria-label="Dar prórroga" title="Dar prórroga" onClick={() => setProrroga(conv)}>
                               <CalendarPlus />
                             </Button>

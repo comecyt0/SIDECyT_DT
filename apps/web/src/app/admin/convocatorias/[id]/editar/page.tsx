@@ -27,8 +27,14 @@ export default function EditarConvocatoriaPage() {
     fecha_cierre: '',
     monto_maximo_apoyo: '',
     porcentaje_aportacion_minima: '',
-    estado: 'borrador'
+    estado: 'borrador',
+    // E45: periodo de la convocatoria.
+    periodo_id: '',
   });
+  const [periodos, setPeriodos] = useState<{ id: number; nombre: string; activo: boolean }[]>([]);
+  useEffect(() => {
+    api.get('/admin/periodos').then(({ data }) => setPeriodos(Array.isArray(data) ? data : [])).catch(() => setPeriodos([]));
+  }, []);
 
   useEffect(() => {
     fetchConvocatoria();
@@ -45,7 +51,8 @@ export default function EditarConvocatoriaPage() {
         fecha_cierre: data.fecha_cierre,
         monto_maximo_apoyo: data.monto_maximo_apoyo.toString(),
         porcentaje_aportacion_minima: data.porcentaje_aportacion_minima.toString(),
-        estado: data.estado
+        estado: data.estado,
+        periodo_id: data.periodo_id ? String(data.periodo_id) : '',
       });
     } catch {
       setFeedback({ type: 'error', message: 'No se pudo abrir la convocatoria.' });
@@ -58,7 +65,7 @@ export default function EditarConvocatoriaPage() {
   const handleSubmit = async () => {
     setSaving(true);
     try {
-      await api.put(`/admin/convocatorias/${id}`, formData);
+      await api.put(`/admin/convocatorias/${id}`, { ...formData, periodo_id: formData.periodo_id ? Number(formData.periodo_id) : null });
       setFeedback({ type: 'success', message: 'Convocatoria actualizada.' });
       router.push('/admin/convocatorias');
     } catch (error: any) {
@@ -116,6 +123,13 @@ export default function EditarConvocatoriaPage() {
                   <div className="space-y-1.5">
                     <Label htmlFor="ejercicio_fiscal" className={labelCls}>Ejercicio fiscal *</Label>
                     <input id="ejercicio_fiscal" inputMode="numeric" maxLength={4} value={formData.ejercicio_fiscal} onChange={(e) => setFormData({ ...formData, ejercicio_fiscal: e.target.value })} className={inputCls} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="periodo_id" className={labelCls}>Periodo</Label>
+                    <select id="periodo_id" value={formData.periodo_id} onChange={(e) => setFormData({ ...formData, periodo_id: e.target.value })} className="h-11 w-full">
+                      <option value="">Sin periodo</option>
+                      {periodos.filter((p) => p.activo || String(p.id) === formData.periodo_id).map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                    </select>
                   </div>
                 </div>
                 <div className="space-y-1.5">

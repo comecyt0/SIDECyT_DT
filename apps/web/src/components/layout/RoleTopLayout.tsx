@@ -18,6 +18,8 @@ import { INSTITUTION } from '@/lib/institution';
 import { useT } from '@/i18n/I18nProvider';
 import { formatDate } from '@/lib/format';
 import { usePanelScope } from '@/hooks/usePanelScope';
+import UserAvatar from '@/components/ui/user-avatar';
+import { useMiPerfil } from '@/hooks/useMiPerfil';
 
 export interface NavItem {
   name: string;
@@ -86,6 +88,9 @@ export default function RoleTopLayout({
   const sectionTone = homeHref.startsWith('/revisor') ? 'mint' : homeHref.startsWith('/evaluador') ? 'butter' : 'blush';
   const pathname = usePathname();
   const { t } = useT();
+  const { perfil } = useMiPerfil();
+  // Ruta de "Mi cuenta" de este rol (E45): /solicitante/cuenta, /revisor/cuenta, /evaluador/cuenta.
+  const cuentaHref = `/${homeHref.split('/')[1] ?? ''}/cuenta`;
   const [localUserName, setLocalUserName] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
@@ -402,18 +407,14 @@ export default function RoleTopLayout({
             <div className="h-7 w-px bg-neutral-200 dark:bg-neutral-700 hidden sm:block" />
 
             {/* User avatar + name */}
-            <div className="flex items-center gap-3">
+            <Link href={cuentaHref} className="panel-user flex items-center gap-3 rounded-full" title="Mi cuenta">
               <div className="hidden sm:block text-right">
-                <p className="text-sm font-bold text-neutral-900 dark:text-neutral-50 leading-none">{localUserName}</p>
+                <p className="text-sm font-bold text-neutral-900 dark:text-neutral-50 leading-none">{perfil?.name ?? localUserName}</p>
                 <p className="text-[11px] text-accent dark:text-amber-300 font-semibold uppercase tracking-wider mt-0.5">{roleLabel}</p>
               </div>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-[var(--brand-vino-700)] text-white flex items-center justify-center font-bold text-sm shadow-md shadow-primary/20"
-              >
-                {userInitial}
-              </motion.div>
-            </div>
+              {/* E45: foto de perfil como identificador (iniciales si no tiene). */}
+              <UserAvatar user={perfil ?? { name: localUserName || userInitial }} size="sm" />
+            </Link>
 
             {/* Logout */}
             <button

@@ -3,13 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Informe;
+use App\Models\Solicitud;
+use App\Support\Alcance;
 use Illuminate\Http\Request;
 
 class InformeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Informe::with('solicitud.convocatoria')->orderBy('id', 'desc')->get());
+        // E45: con alcance (admin de convocatoria y revisores con periodos).
+        $q = Informe::with('solicitud.convocatoria', 'solicitud.user')->orderBy('id', 'desc');
+
+        return response()->json(Alcance::aplicarPorSolicitud($q, $request->user())->get());
     }
 
     public function store(Request $request)
@@ -20,6 +25,7 @@ class InformeController extends Controller
             'fecha_limite_entrega' => 'required|date',
             'estado' => 'nullable|in:pendiente,en_revision,aprobado,rechazado',
         ]);
+        Alcance::exigirSolicitud($request->user(), Solicitud::findOrFail($validated['solicitud_id']));
 
         $informe = Informe::create($validated);
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Convenio;
 use App\Models\Solicitud;
 use App\Notifications\ConvenioCreado;
+use App\Support\Alcance;
 use App\Support\Audit;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -17,9 +18,10 @@ class ConvenioController extends Controller
     /**
      * List all convenios
      */
-    public function index()
+    public function index(Request $request)
     {
-        $convenios = Convenio::with('solicitud.empresa')
+        // E45: con alcance.
+        $convenios = Alcance::aplicarPorSolicitud(Convenio::with('solicitud.empresa', 'solicitud.user'), $request->user())
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 

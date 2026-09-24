@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\SolicitudesExport;
 use App\Models\Dictamen;
 use App\Models\Solicitud;
+use App\Support\Alcance;
 use App\Support\DocumentSignature;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
@@ -26,6 +27,12 @@ class DocumentoController extends Controller
             // Evaluador can only access dictamenes they authored
             $dictamen->loadMissing('asignacion');
             if ($dictamen->asignacion?->evaluador_id !== $user->id) {
+                return response()->json(['error' => 'No autorizado'], 403);
+            }
+        } elseif ($user->tieneRol('admin_convocatoria', 'consulta')) {
+            // E45: dentro de su alcance.
+            $dictamen->loadMissing('asignacion.solicitud');
+            if (! $dictamen->asignacion?->solicitud || ! Alcance::puedeVerSolicitud($user, $dictamen->asignacion->solicitud)) {
                 return response()->json(['error' => 'No autorizado'], 403);
             }
         } elseif ($user->rol_id !== $adminRol) {
@@ -60,7 +67,9 @@ class DocumentoController extends Controller
         $user = Auth::guard('api')->user();
         $adminRol = config('comecyt.roles.admin');
 
-        if ($user->rol_id !== $adminRol && $solicitud->user_id !== $user->id) {
+        // E45: admin de convocatoria y consulta también, dentro de su alcance (lo revisa además el middleware `alcance`).
+        $interno = $user->tieneRol('admin_convocatoria', 'consulta') && Alcance::puedeVerSolicitud($user, $solicitud);
+        if ($user->rol_id !== $adminRol && ! $interno && $solicitud->user_id !== $user->id) {
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
@@ -95,6 +104,7 @@ class DocumentoController extends Controller
      */
     public function exportExcel()
     {
-        return Excel::download(new SolicitudesExport, 'sabana_solititudes_comecyt.xlsx');
+        // E45: la sábana solo trae lo del alcance de quien la descarga.
+        return Excel::download(new SolicitudesExport(request()->user()), 'sabana_solicitudes_comecyt.xlsx');
     }
 }

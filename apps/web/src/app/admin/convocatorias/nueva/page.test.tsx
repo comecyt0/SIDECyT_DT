@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/api', () => ({
   default: {
-    get: vi.fn(),
+    get: vi.fn(() => Promise.resolve({ data: [] })),
     post: vi.fn(),
     put: vi.fn(),
     delete: vi.fn(),

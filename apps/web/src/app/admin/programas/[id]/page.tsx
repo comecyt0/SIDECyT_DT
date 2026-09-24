@@ -13,6 +13,7 @@ import api from '@/lib/api';
 import { NestedCRUDModal } from '@/components/admin/NestedCRUDModal';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import DocumentosPrograma from '@/components/admin/DocumentosPrograma';
 
 interface TipoPrograma {
   id: number;
@@ -25,7 +26,7 @@ interface TipoPrograma {
   activo?: boolean;
 }
 
-type TabType = 'info' | 'campos' | 'rubros' | 'etapas' | 'modalidades' | 'criterios';
+type TabType = 'info' | 'campos' | 'documentos' | 'rubros' | 'etapas' | 'modalidades' | 'criterios';
 
 // "Título del proyecto" → "titulo_del_proyecto": identificador interno a partir del texto visible
 const slugify = (s: string) =>
@@ -34,6 +35,7 @@ const slugify = (s: string) =>
 const TAB_LABELS: Record<TabType, string> = {
   info: 'Datos generales',
   campos: 'Preguntas',
+  documentos: 'Documentos',
   rubros: 'Conceptos de gasto',
   etapas: 'Etapas',
   modalidades: 'Modalidades',
@@ -43,6 +45,7 @@ const TAB_LABELS: Record<TabType, string> = {
 const TAB_TITLES: Record<TabType, { create: string; edit: string }> = {
   info: { create: 'Datos generales', edit: 'Datos generales' },
   campos: { create: 'Nueva pregunta', edit: 'Editar pregunta' },
+  documentos: { create: 'Nuevo documento', edit: 'Editar documento' },
   rubros: { create: 'Nuevo concepto de gasto', edit: 'Editar concepto de gasto' },
   etapas: { create: 'Nueva etapa', edit: 'Editar etapa' },
   modalidades: { create: 'Nueva modalidad', edit: 'Editar modalidad' },
@@ -127,7 +130,7 @@ export default function ProgramaDetailPage() {
   }, [fetchPrograma]);
 
   useEffect(() => {
-    if (activeTab !== 'info' && activeTab !== 'campos') {
+    if (activeTab !== 'info' && activeTab !== 'campos' && activeTab !== 'documentos') {
       fetchTabData(activeTab);
     }
   }, [activeTab, fetchTabData]);
@@ -187,6 +190,7 @@ export default function ProgramaDetailPage() {
   const getEmptyForm = (tab: TabType): any => {
     const forms: Record<TabType, any> = {
       info: {},
+      documentos: {},
       campos: { nombre_campo: '', etiqueta: '', tipo_campo: 'text', orden: 1, requerido: false, activo: true },
       rubros: { clave: '', nombre: '', descripcion: '', activo: true },
       etapas: { numero_etapa: 1, nombre: '', duracion_meses: 1, es_evaluacion_tecnica: false, activo: true },
@@ -199,6 +203,7 @@ export default function ProgramaDetailPage() {
   const getModalFields = (tab: TabType) => {
     const fieldConfigs: Record<TabType, any[]> = {
       info: [],
+      documentos: [],
       campos: [
         { name: 'etiqueta', label: 'Texto de la pregunta', type: 'text', required: true, placeholder: 'Ej. Título del proyecto', hint: 'Tal como lo leerá el solicitante. El identificador interno se genera solo.' },
         { name: 'tipo_campo', label: 'Tipo de respuesta', type: 'select', required: true, options: [
@@ -243,6 +248,8 @@ export default function ProgramaDetailPage() {
   };
 
   const renderTabContent = () => {
+    // E45 (punto 6): documentos con tipos y tamaño por documento.
+    if (activeTab === 'documentos') return <DocumentosPrograma programaId={programaId} />;
     if (activeTab === 'info') {
       return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -427,7 +434,7 @@ export default function ProgramaDetailPage() {
       <Card>
         <CardHeader className="pb-0">
           <div className="seg-tabs flex gap-1 overflow-x-auto -mb-px" role="tablist" aria-label="Secciones del programa">
-            {(['info', 'campos', 'rubros', 'etapas', 'modalidades', 'criterios'] as const).map((tab) => (
+            {(['info', 'campos', 'documentos', 'rubros', 'etapas', 'modalidades', 'criterios'] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"

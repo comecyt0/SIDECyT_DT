@@ -47,6 +47,9 @@ export default function LoginPage() {
     Cookies.set('userName', user.name ?? '', opts);
     const dashboardMap: Record<string, string> = {
       admin: '/admin/dashboard',
+      // E45: roles delegados usan el panel de admin con alcance.
+      admin_convocatoria: '/admin/dashboard',
+      consulta: '/admin/dashboard',
       revisor: '/revisor/solicitudes',
       evaluador: '/evaluador/evaluaciones',
       solicitante: '/solicitante/dashboard',

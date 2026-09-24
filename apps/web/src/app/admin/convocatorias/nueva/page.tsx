@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef , useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -26,6 +26,7 @@ import {
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import ConvocatoriaPreviewPanel from '@/components/admin/ConvocatoriaPreviewPanel';
+import SelectorFormatos from '@/components/admin/SelectorFormatos';
 
 interface Campo {
   nombre_campo: string;
@@ -42,6 +43,9 @@ interface Documento {
   descripcion: string;
   obligatorio: boolean;
   orden: number;
+  // E45 (punto 6): tipos y tamaño que acepta este documento.
+  formatos: string[];
+  tamano_mb: number;
 }
 
 interface Rubro {
@@ -63,6 +67,8 @@ interface WizardState {
   convocatoria: {
     nombre: string;
     ejercicio_fiscal: string;
+    // E45 (punto 5): periodo de la convocatoria (alcance de visión por periodo).
+    periodo_id: string;
     estado: 'borrador' | 'activa' | 'cerrada';
     descripcion: string;
     fecha_apertura: string;
@@ -146,6 +152,7 @@ const emptyWizardState: WizardState = {
   convocatoria: {
     nombre: '',
     ejercicio_fiscal: new Date().getFullYear().toString(),
+    periodo_id: '',
     estado: 'borrador',
     descripcion: '',
     fecha_apertura: '',
@@ -208,7 +215,14 @@ export default function ConvocatoriasNuevaPage() {
     descripcion: '',
     obligatorio: false,
     orden: 1,
+    formatos: ['pdf'],
+    tamano_mb: 5,
   });
+  // E45: periodos activos para el selector del paso 1.
+  const [periodos, setPeriodos] = useState<{ id: number; nombre: string; activo: boolean }[]>([]);
+  useEffect(() => {
+    api.get('/admin/periodos').then(({ data }) => setPeriodos(Array.isArray(data) ? data.filter((p: { activo: boolean }) => p.activo) : [])).catch(() => setPeriodos([]));
+  }, []);
 
   const [rubroForm, setRubroForm] = useState<Rubro>({
     clave: '',
@@ -347,6 +361,8 @@ export default function ConvocatoriasNuevaPage() {
         descripcion: '',
         obligatorio: false,
         orden: state.documentos.length + 1,
+        formatos: ['pdf'],
+        tamano_mb: 5,
       });
     }
     setShowDocumentoModal(true);
@@ -495,8 +511,11 @@ export default function ConvocatoriasNuevaPage() {
       if (state.documentos.length > 0) {
         setSaveProgress('Agregando documentos...');
         for (const doc of state.documentos) {
+          const { formatos, tamano_mb, ...resto } = doc;
           await api.post(`/admin/programas/${programaId}/documentos`, {
-            ...doc,
+            ...resto,
+            formato_permitido: formatos,
+            'tamaño_maximo_mb': tamano_mb,
             programa_id: programaId,
           });
         }
@@ -526,6 +545,7 @@ export default function ConvocatoriasNuevaPage() {
       const { data: creada } = await api.post('/admin/convocatorias', {
         nombre: state.convocatoria.nombre,
         ejercicio_fiscal: state.convocatoria.ejercicio_fiscal,
+        periodo_id: state.convocatoria.periodo_id ? Number(state.convocatoria.periodo_id) : null,
         estado: 'activa',
         descripcion: state.convocatoria.descripcion,
         fecha_apertura: state.convocatoria.fecha_apertura,
@@ -663,6 +683,20 @@ export default function ConvocatoriasNuevaPage() {
                   />
                   {validationErrors.ejercicio_fiscal && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.ejercicio_fiscal}</p>}
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="conv_periodo" className={wizLabelCls}>Periodo</Label>
+                <select
+                  id="conv_periodo"
+                  value={state.convocatoria.periodo_id}
+                  onChange={(e) => setState({ ...state, convocatoria: { ...state.convocatoria, periodo_id: e.target.value } })}
+                  className="h-11 w-full"
+                >
+                  <option value="">Sin periodo</option>
+                  {periodos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                </select>
+                <p className="text-xs text-[var(--app-ink-2)]">Los usuarios con alcance por periodo solo verán las convocatorias de sus periodos. Se administran en Configuración › Periodos.</p>
               </div>
 
               <div className="space-y-1.5">
@@ -1082,6 +1116,15 @@ export default function ConvocatoriasNuevaPage() {
                           />
                         </div>
                       </>
+                    ),
+                  },
+                  {
+                    key: 'archivo',
+                    label: 'Archivo',
+                    question: '¿Qué tipo de archivo y de qué tamaño?',
+                    content: (
+                      <SelectorFormatos idBase="doc-wizard" formatos={documentoForm.formatos} tamano={documentoForm.tamano_mb}
+                        onChange={(formatos, tamano_mb) => setDocumentoForm({ ...documentoForm, formatos, tamano_mb })} />
                     ),
                   },
                   {

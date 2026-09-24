@@ -7,6 +7,7 @@ use App\Models\Observacion;
 use App\Models\Solicitud;
 use App\Notifications\SolicitudEstadoActualizado;
 use App\Notifications\SolicitudObservada;
+use App\Support\Alcance;
 use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,9 +18,10 @@ class RevisionController extends Controller
      * Get solicitudes pending review (estado: enviada o observada)
      * Nota: 'subsanada' es el estado previo, ahora es 'observada' cuando revisor devuelve para correcciones
      */
-    public function pendientes()
+    // E45: las tres bandejas con alcance por periodo (si el admin le asignó periodos al revisor).
+    public function pendientes(Request $request)
     {
-        $solicitudes = Solicitud::with(['user', 'empresa', 'convocatoria', 'areaConocimiento'])
+        $solicitudes = Alcance::aplicar(Solicitud::query(), $request->user())->with(['user', 'empresa', 'convocatoria', 'areaConocimiento'])
             ->whereIn('estado', ['enviada', 'observada'])
             ->orderBy('updated_at', 'asc')
             ->get();
@@ -30,9 +32,9 @@ class RevisionController extends Controller
     /**
      * Get completadas (solicitudes that have been evaluated and closed or moved forward)
      */
-    public function completadas()
+    public function completadas(Request $request)
     {
-        $solicitudes = Solicitud::with(['user', 'empresa', 'convocatoria'])
+        $solicitudes = Alcance::aplicar(Solicitud::query(), $request->user())->with(['user', 'empresa', 'convocatoria'])
             ->whereIn('estado', ['en_evaluacion', 'aprobada', 'rechazada', 'convenio', 'ministracion', 'cerrada'])
             ->orderBy('updated_at', 'desc')
             ->get();
@@ -43,9 +45,9 @@ class RevisionController extends Controller
     /**
      * Get observadas (solicitudes that need corrections from solicitante)
      */
-    public function observadas()
+    public function observadas(Request $request)
     {
-        $solicitudes = Solicitud::with(['user', 'empresa', 'convocatoria'])
+        $solicitudes = Alcance::aplicar(Solicitud::query(), $request->user())->with(['user', 'empresa', 'convocatoria'])
             ->where('estado', 'observada')
             ->orderBy('updated_at', 'asc')
             ->get();
@@ -58,9 +60,13 @@ class RevisionController extends Controller
      */
     public function show(Solicitud $solicitud)
     {
-        $solicitud->load(['user', 'empresa', 'convocatoria', 'areaConocimiento', 'observaciones', 'documentos', 'asignaciones.dictamen', 'ministracion.banco']);
+        $solicitud->load(['user', 'empresa', 'convocatoria', 'areaConocimiento', 'observaciones', 'documentos', 'asignaciones.dictamen', 'ministracion.banco', 'historial.user:id,name,avatar_path']);
 
-        return response()->json($solicitud);
+        // E45: el revisor no ve los datos bancarios completos (solo admin y admin de convocatoria).
+        $data = $solicitud->toArray();
+        $data['ministracion'] = \App\Support\Enmascarar::ministracion($data['ministracion'] ?? null);
+
+        return response()->json($data);
     }
 
     /**

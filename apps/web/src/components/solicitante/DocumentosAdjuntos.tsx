@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Upload, Check, Loader2, Download, Trash2, Eye, X, FileText, HardDrive, CheckCircle2, Paperclip } from 'lucide-react';
 import api from '@/lib/api';
 import { safeUrl } from '@/lib/safe-url';
+import { acceptDe, describirLimites, formatosDe, validarArchivo } from '@/lib/archivos';
 
 export interface Documento {
   id: number;
@@ -26,6 +27,9 @@ interface TipoDocumento {
   obligatorio: boolean;
   descripcion?: string;
   orden: number;
+  // E45 (punto 6): límites que definió el admin para este documento.
+  formato_permitido?: string | null;
+  tamaño_maximo_mb?: number | null;
 }
 
 interface DocumentosAdjuntosProps {
@@ -94,13 +98,12 @@ export function DocumentosAdjuntos({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== 'application/pdf') {
-      setFeedback({ type: 'error', message: 'Solo se permiten archivos PDF.' });
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setFeedback({ type: 'error', message: 'El archivo no debe superar los 5MB.' });
+    // E45: tipos y tamaño del documento según lo configurado por el admin (el servidor revisa el contenido real).
+    const tipoDoc = tiposDocumento.find((t) => t.clave === clave);
+    const problema = validarArchivo(file, formatosDe(tipoDoc?.formato_permitido), Number(tipoDoc?.['tamaño_maximo_mb'] ?? 5) || 5);
+    if (problema) {
+      setFeedback({ type: 'error', message: problema });
+      event.target.value = '';
       return;
     }
 
@@ -298,7 +301,8 @@ export function DocumentosAdjuntos({
                             if (el) fileInputRefs.current[tipo.clave] = el;
                           }}
                           type="file"
-                          accept=".pdf"
+                          accept={acceptDe(formatosDe(tipo.formato_permitido))}
+                          title={describirLimites(formatosDe(tipo.formato_permitido), Number(tipo['tamaño_maximo_mb'] ?? 5) || 5)}
                           onChange={(e) => handleFileSelect(tipo.clave, e)}
                           disabled={isUploading}
                           className="hidden"

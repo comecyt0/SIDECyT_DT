@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   ClipboardList,
   History,
+  UserCircle,
 } from 'lucide-react';
 import RoleTopLayout from '@/components/layout/RoleTopLayout';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -20,6 +21,7 @@ export default function EvaluadorLayout({ children }: { children: React.ReactNod
     { name: t('nav.panel_principal'),       href: '/evaluador/dashboard',    icon: LayoutDashboard, description: t('nav.desc.panel_principal') },
     { name: t('nav.evaluaciones_tecnicas'), href: '/evaluador/asignaciones', icon: ClipboardList,   description: t('nav.desc.evaluaciones_tecnicas') },
     { name: t('nav.historico_dictamenes'),  href: '/evaluador/historico',    icon: History,         description: t('nav.desc.historico_dictamenes') },
+    { name: 'Mi cuenta', href: '/evaluador/cuenta', icon: UserCircle, description: 'Foto, portada y datos de tu perfil' },
   ];
 
   return (

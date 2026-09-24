@@ -15,6 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import PageHeader from '@/components/ui/page-header';
 import SavedFiltersBar from '@/components/filters/SavedFiltersBar';
 import { parseDate } from '@/lib/format';
+import { UserChip } from '@/components/ui/user-avatar';
 
 const container = {
   hidden: { opacity: 0 },
@@ -187,6 +188,9 @@ export default function AsignacionesPage() {
                     </div>
 
                     <div className="space-y-2">
+                      {asig.solicitud?.user && (
+                        <UserChip user={asig.solicitud.user} href={`/evaluador/perfiles/${asig.solicitud.user.id}?folio=${asig.solicitud.id}`} size="xs" />
+                      )}
                       <div className="flex items-center gap-1.5 text-xs text-[var(--app-ink-2)]">
                         <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                         <span className="truncate">

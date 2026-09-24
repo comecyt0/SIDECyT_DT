@@ -3,6 +3,8 @@
 namespace App\Exports;
 
 use App\Models\Solicitud;
+use App\Models\User;
+use App\Support\Alcance;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -10,12 +12,16 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class SolicitudesExport implements FromCollection, WithHeadings, WithMapping
 {
+    public function __construct(private ?User $usuario = null) {}
+
     /**
      * @return Collection
      */
     public function collection()
     {
-        return Solicitud::with(['user:id,name', 'empresa:id,nombre', 'convocatoria:id,nombre'])->get();
+        $q = Solicitud::with(['user:id,name', 'empresa:id,nombre', 'convocatoria:id,nombre']);
+
+        return ($this->usuario ? Alcance::aplicar($q, $this->usuario) : $q)->get();
     }
 
     public function headings(): array

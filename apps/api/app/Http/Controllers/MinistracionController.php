@@ -3,15 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ministracion;
+use App\Models\Solicitud;
+use App\Support\Alcance;
 use App\Notifications\PagoLiberado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class MinistracionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Ministracion::with(['solicitud.user.empresa', 'solicitud.convocatoria', 'banco'])->orderBy('id', 'desc')->get());
+        // E45: con alcance.
+        $q = Ministracion::with(['solicitud.user.empresa', 'solicitud.convocatoria', 'banco'])->orderBy('id', 'desc');
+
+        return response()->json(Alcance::aplicarPorSolicitud($q, $request->user())->get());
     }
 
     public function store(Request $request)
@@ -23,6 +28,8 @@ class MinistracionController extends Controller
             'numero_cuenta' => 'nullable|string|max:50',
             'titular_cuenta' => 'nullable|string|max:255',
         ]);
+        // E45: la solicitud viene en el cuerpo (no en la ruta): el middleware `alcance` no la ve.
+        Alcance::exigirSolicitud($request->user(), Solicitud::findOrFail($validated['solicitud_id']));
 
         // Estado siempre inicia como 'pendiente' — no permitir forzarlo a 'pagada' en creación
         $validated['estado'] = 'pendiente';

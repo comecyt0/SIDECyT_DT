@@ -44,6 +44,8 @@ import {
   Cell,
   Legend,
 } from 'recharts';
+import UserAvatar from '@/components/ui/user-avatar';
+import { useRol } from '@/hooks/useRol';
 
 /**
  * Dashboard de administración — v3 (24/09/2026, sistema SIGAC: landing + referencia Aboard).
@@ -147,6 +149,8 @@ function humanizeAction(row: AuditRow): string {
 
 export default function AdminDashboard() {
   const reduceMotion = useReducedMotion();
+  // E45: el admin de convocatoria y la consulta usan este dashboard con sus cifras (alcance en el backend).
+  const { esAdmin, esConsulta, listo } = useRol();
   const [userName, setUserName] = useState('');
   const [stats, setStats] = useState<DashboardStat[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
@@ -184,14 +188,16 @@ export default function AdminDashboard() {
   useEffect(() => {
     type ConvRow = { nombre?: string; estado_publico?: EstadoPublicoConvocatoria; fecha_cierre_efectiva?: string | null; fecha_prorroga?: string | null };
     const safe = <T,>(p: Promise<{ data: T }>, fallback: T) => p.then((r) => r.data).catch(() => fallback);
+    const soloAdmin = (Cookies.get('userRole') || 'admin') === 'admin';
     Promise.all([
       safe(api.get<DashboardStat[]>('/admin/stats'), []),
       safe(api.get<AlertItem[]>('/admin/alerts'), []),
       safe(api.get<ConvRow[]>('/admin/convocatorias'), []),
       safe(api.get<ChartsResponse | null>('/admin/charts'), null),
-      safe(api.get<Array<{ estado?: string }>>('/admin/solicitudes-acceso'), []),
-      safe(api.get<Array<{ status?: string }>>('/admin/reset-requests'), []),
-      safe(api.get<{ data?: AuditRow[] } | AuditRow[]>('/admin/audit-logs?per_page=6'), { data: [] }),
+      // E45: estas tres son solo del admin general; los demás roles no las piden.
+      soloAdmin ? safe(api.get<Array<{ estado?: string }>>('/admin/solicitudes-acceso'), []) : Promise.resolve([]),
+      soloAdmin ? safe(api.get<Array<{ status?: string }>>('/admin/reset-requests'), []) : Promise.resolve([]),
+      soloAdmin ? safe(api.get<{ data?: AuditRow[] } | AuditRow[]>('/admin/audit-logs?per_page=6'), { data: [] }) : Promise.resolve({ data: [] as AuditRow[] }),
     ])
       .then(([statsData, alertsData, convData, chartsData, accesos, resets, audit]) => {
         setStats(Array.isArray(statsData) ? statsData : []);
@@ -218,10 +224,17 @@ export default function AdminDashboard() {
   const pipelinePct = pipelineTotal > 0 ? pipelineAvanzadas / pipelineTotal : 0;
 
   const pendientes: { key: string; label: string; hint: string; value: number | null; href: string; icon: typeof UserCheck; tone: TileTone }[] = [
-    { key: 'accesos', label: 'Solicitudes de acceso', hint: 'Cuentas por aprobar', value: accesosPendientes, href: '/admin/solicitudes-acceso', icon: UserCheck, tone: 'vino' },
-    { key: 'resets', label: 'Restablecimientos', hint: 'Contraseñas por autorizar', value: resetsPendientes, href: '/admin/reset-requests', icon: KeyRound, tone: 'sky' },
+    // Accesos y restablecimientos: solo el admin general los atiende.
+    ...(esAdmin ? [
+      { key: 'accesos', label: 'Solicitudes de acceso', hint: 'Cuentas por aprobar', value: accesosPendientes, href: '/admin/solicitudes-acceso', icon: UserCheck, tone: 'vino' as TileTone },
+      { key: 'resets', label: 'Restablecimientos', hint: 'Contraseñas por autorizar', value: resetsPendientes, href: '/admin/reset-requests', icon: KeyRound, tone: 'sky' as TileTone },
+    ] : []),
     { key: 'revision', label: 'Solicitudes en revisión', hint: 'Enviadas u observadas', value: statValue('Solicitudes en Revisión'), href: '/admin/solicitudes', icon: FileText, tone: 'violet' },
-    { key: 'ministraciones', label: 'Ministraciones pendientes', hint: 'Pagos por liberar', value: statValue('Ministraciones Pendientes'), href: '/admin/ministraciones', icon: Banknote, tone: 'emerald' },
+    ...(!esConsulta ? [
+      { key: 'ministraciones', label: 'Ministraciones pendientes', hint: 'Pagos por liberar', value: statValue('Ministraciones Pendientes'), href: '/admin/ministraciones', icon: Banknote, tone: 'emerald' as TileTone },
+    ] : [
+      { key: 'folios', label: 'Folios', hint: 'Histórico de aprobados y no aprobados', value: statValue('Dictámenes Aprobados'), href: '/admin/folios', icon: CheckCircle2, tone: 'emerald' as TileTone },
+    ]),
   ];
 
   const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } };
@@ -255,9 +268,15 @@ export default function AdminDashboard() {
             )}
           </p>
           <div className="dash-hero-actions">
-            <Link href="/admin/convocatorias">
-              <Button><BookOpen className="h-4 w-4" /> Gestionar convocatorias</Button>
-            </Link>
+            {listo && !esConsulta ? (
+              <Link href="/admin/convocatorias">
+                <Button><BookOpen className="h-4 w-4" /> {esAdmin ? 'Gestionar convocatorias' : 'Mis convocatorias'}</Button>
+              </Link>
+            ) : listo ? (
+              <Link href="/admin/folios">
+                <Button><CheckCircle2 className="h-4 w-4" /> Ver folios</Button>
+              </Link>
+            ) : null}
             <Button variant="outline" onClick={handleExportExcel} isLoading={exporting}>
               {!exporting && <FileSpreadsheet className="h-4 w-4" />} Exportar Excel
             </Button>
@@ -453,6 +472,7 @@ export default function AdminDashboard() {
 
         {/* Columna derecha: actividad + alertas (el estado de Reverb y "Buenas prácticas" se quitaron el 24/09/2026 a pedido del usuario) */}
         <div className="space-y-6">
+          {esAdmin && (
           <section className="app-card overflow-hidden" aria-labelledby="dash-act">
             <div className="card-head">
               <div>
@@ -474,7 +494,7 @@ export default function AdminDashboard() {
                   const initial = (row.user?.name || 'Sistema').charAt(0).toUpperCase();
                   return (
                     <li key={row.id} className="list-row">
-                      <span className="list-avatar" aria-hidden="true">{initial}</span>
+                      <UserAvatar user={row.user ?? { name: initial === 'S' ? 'Sistema' : initial }} size="sm" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-[var(--app-ink)] truncate">{row.user?.name || 'Sistema'}</p>
                         <p className="text-xs text-[var(--app-ink-2)] truncate first-letter:uppercase">{humanizeAction(row)}</p>
@@ -486,6 +506,8 @@ export default function AdminDashboard() {
               )}
             </ul>
           </section>
+
+          )}
 
           <section className="app-card overflow-hidden" aria-labelledby="dash-alert">
             <div className="card-head">

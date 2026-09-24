@@ -1212,3 +1212,27 @@
   .lp-call-banner img, .lp-tab, .lp-btn-rainbow, .lp-btn-rainbow::after { transition: none; }
   .lp-spin { animation-duration: 1400ms; }
 }
+
+/* ───────────────────────── E45 — Folios aprobados (solo el folio, agrupado por convocatoria) ───────────────────────── */
+.lp-root .lp-folios-section { background: linear-gradient(180deg, transparent, var(--color-vino-wash) 45%, transparent); }
+.lp-root .lp-folios-icono { display: inline-block; width: 0.8em; height: 0.8em; margin-left: 6px; vertical-align: -0.05em; color: var(--color-vino); }
+.lp-root .lp-folios { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+.lp-root .lp-folios-grupo {
+  padding: 24px;
+  border-radius: 24px;
+  background: var(--color-white-canvas);
+  box-shadow: rgba(0, 0, 0, 0.04) 0 0 0 1px, rgba(205, 205, 205, 0.5) 0 4px 16px;
+}
+.lp-root .lp-folios-grupo header h3 { font-family: var(--font-basier-circle); font-size: 19px; font-weight: 600; letter-spacing: -0.02em; color: var(--color-portrait-ink); overflow-wrap: anywhere; }
+.lp-root .lp-folios-grupo header p { margin-top: 4px; font-size: 13px; color: var(--color-iron-quiet); }
+.lp-root .lp-folios-grupo ul { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.lp-root .lp-folios-grupo li {
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background: var(--color-vino-wash);
+  color: var(--color-vino);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}

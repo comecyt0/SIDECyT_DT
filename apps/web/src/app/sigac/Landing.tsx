@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
 import { useGlobalLoader } from '@/components/ui/GlobalLoader';
+import FoliosAprobados from './FoliosAprobados';
 
 /**
  * Landing pública de SIGAC — Sistema de Gestión de Apoyos Científicos (/sigac), puerta de entrada a las
@@ -720,6 +721,9 @@ export default function Landing() {
 
         {/* ── Convocatorias por estado (en vivo desde /api/convocatorias/publicas, E40) ── */}
         <Calls state={calls} />
+
+        {/* ── Folios aprobados publicados por el admin (E45): solo el folio, con confeti al entrar ── */}
+        <FoliosAprobados />
 
         {/* ── Programas de Apoyo Empresarial (contenido de comecyt.edomex.gob.mx) ── */}
         <section id="programas" className="lp-section" aria-labelledby="lp-programas">

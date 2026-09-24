@@ -16,6 +16,8 @@ import SavedFiltersBar from '@/components/filters/SavedFiltersBar';
 import { estadoLabel, estadoBadgeClass } from '@/lib/solicitud-estados';
 import { DataCardGrid } from '@/components/ui/DataCardGrid';
 import { formatCurrency } from '@/lib/format';
+import { UserChip } from '@/components/ui/user-avatar';
+import { useRol } from '@/hooks/useRol';
 
 interface PaginationMeta {
   current_page: number;
@@ -31,6 +33,8 @@ interface Props {
 }
 
 export default function SolicitudesClient({ solicitudes, pagination, initialSearch }: Props) {
+  // E45: acciones visibles según el rol (el backend las permite o rechaza de todos modos).
+  const { puedeOperar } = useRol();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -291,6 +295,10 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
                     {estadoLabel(sol.estado)}
                   </span>
                 </div>
+                {/* E45: la foto identifica al solicitante; lleva a su ficha completa con seguimiento. */}
+                <div className="mb-3">
+                  <UserChip user={sol.user} sub={sol.user?.email ?? null} href={sol.user ? `/admin/perfiles/${sol.user.id}?folio=${sol.id}` : undefined} />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 text-xs">
                   <div>
                     <span className="text-[10px] uppercase tracking-wider text-[var(--app-ink-2)] block">Empresa</span>
@@ -302,6 +310,8 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
                   </div>
                 </div>
                 <div className="flex items-center justify-end gap-1.5 pt-3 border-t flex-wrap" style={{ borderColor: 'var(--app-rule)' }}>
+                  {!puedeOperar && sol.convenio && <Badge variant="outline"><Check aria-hidden="true" /> Con convenio</Badge>}
+                  {puedeOperar && (<>
                   {canGenerateConvenio(sol) && (
                     <Button size="sm" onClick={() => handleOpenConvenioModal(sol)}>
                       <FileSignature /> Generar convenio
@@ -334,6 +344,7 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
                       <Ban /> Cancelar
                     </Button>
                   )}
+                  </>)}
                 </div>
               </div>
             )}

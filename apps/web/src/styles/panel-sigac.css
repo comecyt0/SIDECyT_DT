@@ -1355,9 +1355,185 @@ html.sg-panel [data-slot="dialog-content"] {
   :is(.panel-root, html.sg-panel) .pfoot-legal { flex-direction: column; align-items: center; text-align: center; }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   E45 — 24/09/2026. Perfil (portada + avatar), ficha de usuario, seguimiento, folios y buzón.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Cabecera de perfil (referencia del usuario: portada ancha, avatar superpuesto, nombre grande) ── */
+:is(.panel-root, html.sg-panel) .perfil-hero {
+  overflow: hidden;
+  border-radius: 28px;
+  background: var(--app-card-bg);
+  box-shadow: var(--sg-shadow-soft);
+}
+:is(.panel-root, html.sg-panel) .perfil-portada {
+  position: relative;
+  height: 200px;
+  background: linear-gradient(120deg, var(--pastel-vino), var(--pastel-powder) 55%, var(--pastel-lavender));
+}
+@media (min-width: 768px) { :is(.panel-root, html.sg-panel) .perfil-portada { height: 250px; } }
+/* Desvanecido hacia la tarjeta, como la referencia: la portada "se funde" con el cuerpo. */
+:is(.panel-root, html.sg-panel) .perfil-portada::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 45%;
+  background: linear-gradient(to bottom, transparent, var(--app-card-bg));
+  pointer-events: none;
+}
+:is(.panel-root, html.sg-panel) .perfil-portada-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+:is(.panel-root, html.sg-panel) .perfil-portada-acciones { position: absolute; top: 14px; right: 14px; z-index: 2; display: flex; gap: 8px; }
+:is(.panel-root, html.sg-panel) .perfil-btn-flotante {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--app-card-bg) 92%, transparent);
+  color: var(--sg-ink);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--sg-shadow-soft);
+  transition: background-color 180ms ease, transform 140ms var(--sg-ease-out);
+}
+:is(.panel-root, html.sg-panel) .perfil-btn-flotante:hover:not(:disabled) { background: var(--app-card-bg); }
+:is(.panel-root, html.sg-panel) .perfil-btn-flotante:active:not(:disabled) { transform: scale(0.97); }
+:is(.panel-root, html.sg-panel) .perfil-cuerpo {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px 24px;
+  padding: 0 24px 24px;
+  margin-top: -72px;
+}
+@media (min-width: 768px) { :is(.panel-root, html.sg-panel) .perfil-cuerpo { padding: 0 32px 28px; margin-top: -84px; } }
+:is(.panel-root, html.sg-panel) .perfil-avatar { position: relative; z-index: 1; flex: none; }
+:is(.panel-root, html.sg-panel) .perfil-avatar-btn {
+  position: absolute;
+  right: 2px;
+  bottom: 6px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  background: var(--sg-vino);
+  color: #ffffff;
+  box-shadow: 0 0 0 3px var(--app-card-bg);
+  transition: transform 140ms var(--sg-ease-out), filter 180ms ease;
+}
+:is(.panel-root, html.sg-panel) .perfil-avatar-btn:hover:not(:disabled) { filter: brightness(1.08); }
+:is(.panel-root, html.sg-panel) .perfil-avatar-btn:active:not(:disabled) { transform: scale(0.94); }
+:is(.panel-root, html.sg-panel) .perfil-titular { position: relative; z-index: 1; min-width: 0; flex: 1 1 280px; padding-bottom: 6px; }
+:is(.panel-root, html.sg-panel) .perfil-nombre {
+  font-family: var(--sg-font-display);
+  font-size: clamp(1.7rem, 1.2rem + 1.8vw, 2.6rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  color: var(--sg-ink);
+  overflow-wrap: anywhere;
+}
+:is(.panel-root, html.sg-panel) .perfil-pildoras { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+:is(.panel-root, html.sg-panel) .perfil-pildora {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  background: var(--sg-sky);
+  color: var(--sg-sky-ink);
+  font-size: 13px;
+  font-weight: 600;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+:is(.panel-root, html.sg-panel) .perfil-pildora[data-tono="vino"] { background: var(--pastel-vino); color: var(--sg-vino); }
+:is(.panel-root, html.sg-panel) .perfil-estado { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--sg-mint-ink); }
+:is(.panel-root, html.sg-panel) .perfil-estado > span { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+:is(.panel-root, html.sg-panel) .perfil-estado[data-activo="false"] { color: var(--sg-danger); }
+:is(.panel-root, html.sg-panel) .perfil-indicadores { display: flex; flex-wrap: wrap; gap: 0; width: 100%; }
+:is(.panel-root, html.sg-panel) .perfil-indicadores > div { padding: 4px 24px 0 0; margin-right: 24px; border-right: 1px solid var(--sg-mist); }
+:is(.panel-root, html.sg-panel) .perfil-indicadores > div:last-child { border-right: 0; }
+:is(.panel-root, html.sg-panel) .perfil-indicadores dd { font-family: var(--sg-font-display); font-size: 24px; font-weight: 600; letter-spacing: -0.03em; color: var(--sg-ink); order: -1; }
+:is(.panel-root, html.sg-panel) .perfil-indicadores > div { display: flex; flex-direction: column; }
+:is(.panel-root, html.sg-panel) .perfil-indicadores dt { font-size: 12.5px; color: var(--sg-ink-2); }
+:is(.panel-root, html.sg-panel) .perfil-quitar-foto { font-size: 12.5px; font-weight: 600; color: var(--sg-ink-2); text-decoration: underline; text-underline-offset: 3px; }
+:is(.panel-root, html.sg-panel) .perfil-quitar-foto:hover { color: var(--sg-danger); }
+
+/* ── Tarjetas "Editar tu perfil" / "Datos de tu cuenta" ── */
+:is(.panel-root, html.sg-panel) .perfil-tarjeta { padding: 24px; border-radius: 24px; background: var(--app-card-bg); box-shadow: var(--sg-shadow-soft); }
+:is(.panel-root, html.sg-panel) .perfil-tarjeta-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  font-family: var(--sg-font-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--sg-ink);
+}
+:is(.panel-root, html.sg-panel) .perfil-tarjeta-titulo svg { width: 18px; height: 18px; color: var(--sg-vino); }
+:is(.panel-root, html.sg-panel) .perfil-campo { display: block; }
+:is(.panel-root, html.sg-panel) .perfil-campo > span { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--sg-ink); }
+:is(.panel-root, html.sg-panel) .perfil-campo > span svg { width: 14px; height: 14px; color: var(--sg-ink-2); }
+:is(.panel-root, html.sg-panel) .perfil-guardar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 9999px;
+  background: var(--sg-ink);
+  color: var(--app-card-bg);
+  font-weight: 600;
+  transition: background-color 180ms ease, transform 140ms var(--sg-ease-out);
+}
+:is(.panel-root, html.sg-panel) .perfil-guardar:hover:not(:disabled) { background: var(--sg-ink-hover); }
+:is(.panel-root, html.sg-panel) .perfil-guardar:active:not(:disabled) { transform: scale(0.985); }
+:is(.panel-root, html.sg-panel) .perfil-guardar:disabled { opacity: 0.6; }
+:is(.panel-root, html.sg-panel) .perfil-dato { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; background: var(--sg-canvas); }
+:is(.panel-root, html.sg-panel) .perfil-dato-icono { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 12px; background: var(--app-card-bg); color: var(--sg-vino); box-shadow: var(--sg-shadow-soft); }
+:is(.panel-root, html.sg-panel) .perfil-dato-icono svg { width: 16px; height: 16px; }
+:is(.panel-root, html.sg-panel) .perfil-dato-etiqueta { display: block; font-size: 12px; color: var(--sg-ink-2); }
+:is(.panel-root, html.sg-panel) .perfil-dato-valor { display: block; font-size: 14.5px; font-weight: 600; color: var(--sg-ink); overflow-wrap: anywhere; }
+
+/* ── Seguimiento (línea de tiempo con foto de quien actuó) ── */
+:is(.panel-root, html.sg-panel) .seguimiento { position: relative; display: grid; gap: 14px; padding-left: 4px; }
+:is(.panel-root, html.sg-panel) .seguimiento::before { content: ''; position: absolute; left: 19px; top: 8px; bottom: 8px; width: 2px; border-radius: 2px; background: var(--sg-mist); }
+:is(.panel-root, html.sg-panel) .seguimiento-paso { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 14px; align-items: start; }
+:is(.panel-root, html.sg-panel) .seguimiento-paso > .user-avatar { box-shadow: 0 0 0 4px var(--app-card-bg); }
+:is(.panel-root, html.sg-panel) .seguimiento-caja { padding: 10px 14px; border-radius: 16px; background: var(--sg-canvas); }
+:is(.panel-root, html.sg-panel) .seguimiento-caja[data-final="aprobado"] { background: var(--pastel-mint); }
+:is(.panel-root, html.sg-panel) .seguimiento-caja[data-final="no_aprobado"] { background: var(--pastel-vino); }
+
+/* ── Buzón con chat ── */
+:is(.panel-root, html.sg-panel) .buzon { display: grid; gap: 16px; min-height: 560px; }
+@media (min-width: 1024px) { :is(.panel-root, html.sg-panel) .buzon { grid-template-columns: 360px minmax(0, 1fr); } }
+:is(.panel-root, html.sg-panel) .buzon-lista, :is(.panel-root, html.sg-panel) .buzon-chat { border-radius: 24px; background: var(--app-card-bg); box-shadow: var(--sg-shadow-soft); overflow: hidden; }
+:is(.panel-root, html.sg-panel) .buzon-hilo { display: flex; gap: 12px; width: 100%; padding: 14px 16px; text-align: left; border-top: 1px solid var(--sg-mist); transition: background-color 160ms ease; }
+:is(.panel-root, html.sg-panel) .buzon-hilo:hover { background: var(--sg-canvas); }
+:is(.panel-root, html.sg-panel) .buzon-hilo[aria-current="true"] { background: var(--pastel-vino); }
+:is(.panel-root, html.sg-panel) .buzon-mensajes { display: flex; flex-direction: column; gap: 10px; padding: 20px; overflow-y: auto; max-height: 60vh; min-height: 320px; background: var(--sg-canvas); }
+:is(.panel-root, html.sg-panel) .buzon-msg { display: flex; align-items: flex-end; gap: 8px; max-width: 82%; }
+:is(.panel-root, html.sg-panel) .buzon-msg[data-mio="true"] { align-self: flex-end; flex-direction: row-reverse; }
+:is(.panel-root, html.sg-panel) .buzon-burbuja { padding: 10px 14px; border-radius: 18px 18px 18px 6px; background: var(--app-card-bg); color: var(--sg-ink); box-shadow: var(--sg-shadow-soft); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14.5px; line-height: 1.45; }
+:is(.panel-root, html.sg-panel) .buzon-msg[data-mio="true"] .buzon-burbuja { border-radius: 18px 18px 6px 18px; background: var(--sg-ink); color: var(--app-card-bg); }
+:is(.panel-root, html.sg-panel) .buzon-meta { margin-top: 3px; font-size: 11px; color: var(--sg-ink-2); }
+:is(.panel-root, html.sg-panel) .buzon-msg[data-mio="true"] .buzon-meta { text-align: right; }
+:is(.panel-root, html.sg-panel) .buzon-escribir { display: flex; gap: 10px; padding: 14px; border-top: 1px solid var(--sg-mist); }
+:is(.panel-root, html.sg-panel) .buzon-escribir textarea { flex: 1; min-height: 46px; max-height: 160px; resize: vertical; padding: 12px 16px; border-radius: 18px; border: 1px solid var(--sg-ash); background: var(--app-card-bg); color: var(--sg-ink); }
+:is(.panel-root, html.sg-panel) .buzon-escribir textarea:focus { outline: none; border-color: var(--sg-ink); box-shadow: 0 0 0 4px var(--sg-sky); }
+:is(.panel-root, html.sg-panel) .buzon-badge { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 9999px; background: var(--sg-vino); color: #ffffff; font-size: 11px; font-weight: 700; }
+
 /* ─────────────────────────── Movimiento ─────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
+  :is(.panel-root, html.sg-panel) :is(.perfil-btn-flotante, .perfil-avatar-btn, .perfil-guardar, .buzon-hilo) { transition: none; }
   :is(.panel-root, html.sg-panel) :is(.pfoot-link, .pfoot-link svg) { transition: none; }
   :is(.panel-root, html.sg-panel) :is(.panel-menu-item, .panel-menu-go, .panel-menu-logout, .data-card, .data-card::before, .pager-btn, .seg-tabs [role="tab"], .step-item) { transition: none; }
   :is(.panel-root, html.sg-panel) .panel-menu-item:hover { transform: none; }

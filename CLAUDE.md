@@ -22,6 +22,10 @@ Convocatoria → Solicitud → Revisión documental → Evaluación técnica
 | Revisor Documental | 2 | Valida documentación de solicitudes |
 | Evaluador Técnico | 3 | Puntúa proyectos según criterios dinámicos |
 | Solicitante | 4 | Institución que solicita financiamiento |
+| Admin de convocatoria | 5 | Opera el flujo completo **solo** de sus convocatorias asignadas (∩ sus periodos); no crea ni borra convocatorias, ni toca usuarios/programas/configuración (E45) |
+| Consulta | 6 | Solo lectura: dashboard, solicitudes, fichas, folios, reportes — de sus periodos; **sin periodos no ve nada** (E45) |
+
+Alcance (E45): revisor/evaluador sin periodos ven todo; con periodos, solo esos. Regla única en `App\Support\Alcance`.
 
 ---
 
@@ -182,6 +186,19 @@ por terminado cualquier cambio, revisar como mínimo:
 
 Si un requisito de negocio choca con un control de seguridad, **no se relaja el control en silencio**: se
 documenta el riesgo aquí y se consulta al usuario.
+
+**Ampliación del 24/09/2026 (pedido del usuario: "que el sistema no sea hackeable desde ningún apartado"):**
+
+| Área | Qué exigir |
+|---|---|
+| **Alcance / multirol (E45)** | Todo dato ligado a una convocatoria pasa por `App\Support\Alcance`: listados con `Alcance::aplicar*`, registros por el middleware `alcance` (404 fuera de alcance, nunca 403 que confirme existencia). Si el id llega en el **cuerpo** (no en la ruta), revisarlo a mano con `Alcance::exigirSolicitud`. Nunca filtrar solo en el front |
+| **Roles** | Rutas con `rol:...` explícito; privilegio mínimo (Consulta solo GET; admin de convocatoria sin usuarios, programas ni configuración). Menú y botones ocultos en el front son comodidad, no control |
+| **Datos sensibles** | Bancarios completos solo admin y admin de convocatoria (`Enmascarar`). Respuestas con lista blanca de campos cuando cruzan roles (fichas, evaluadores disponibles, endpoints públicos) |
+| **Archivos** | MIME real + extensión fija derivada del MIME (nunca la del cliente), tamaño por campo, nombre aleatorio, disco **privado** y descarga con sesión + permiso. Imágenes re-codificadas (elimina EXIF/cargas); DOCX/XLSX sin macros; ZIP sin rutas `..`, con límite de entradas y de tamaño descomprimido. No imágenes SVG |
+| **Tiempo real** | Canales privados autorizados en `routes/channels.php` por participación real; el servidor decide quién recibe, el cliente solo escucha. Mensajes solo texto, longitud máxima, throttle |
+| **Publicación pública** | Lo que se muestra en la landing es una instantánea confirmada por un humano, con lista blanca de campos (p. ej. solo folio), caché y throttle |
+| **Auditoría** | Toda acción administrativa (publicar, asignar alcances, resolver, cambiar límites) queda en `Audit::log` |
+| **Pruebas** | Cada función nueva lleva su prueba del caso malicioso (otro rol, otra convocatoria, id ajeno en el cuerpo, archivo disfrazado, exceso de peticiones) antes de publicar |
 
 ### 1. apiResource con plurales españoles en -ones/-es
 Laravel pluraliza mal palabras que terminan en `-ones`, `-es`, `-as`. **Siempre** usar `.parameters()`:
@@ -1509,9 +1526,39 @@ reversión en `backups\20260924-seguridad\red-cambios.txt`. `serverFetch`: el ce
 `X-Forwarded-For` y `TRUSTED_PROXIES` incluye `10.250.36.241`, para que el límite por IP no sea uno solo para todos.
 `F:\COMECYT_CREDENCIALES.txt` **borrado**.
 
-**Incidente durante el despliegue (no repetir):** al mover la CSP de `next.config.ts` a `proxy.ts`, `sw.js` (que no
+**Incidente durante el despliegue (no repetir) [E44]:** al mover la CSP de `next.config.ts` a `proxy.ts`, `sw.js` (que no
 pasa por el proxy) quedó con la CSP de IIS `default-src 'none'`. **Un service worker obedece la CSP de su propio
 archivo**: no pudo hacer `fetch()` y la API respondía 503 "Sin conexión" en navegadores con el SW instalado
 (~14:06–14:17). Fix: regla de cabeceras propia para `/sw.js` en `next.config.ts` + versión nueva del SW (bytes
 distintos obligan a reinstalarlo). **Regla:** toda CSP nueva se prueba en navegador con el SW activo y navegando
 entre páginas del mismo contexto, no solo con `curl` o con la primera visita.
+
+### E45 — Alcance por convocatoria/periodo, perfiles, buzón, folios y límites de archivo [publicado 24-09-2026]
+Plan, decisiones del usuario, modelo de datos, rutas y verificación: **`docs/IMPLEMENTACIONES_E45.md`**. Reglas de
+seguridad nuevas: ampliación del §0. Para desarrollo:
+- **Alcance:** todo dato ligado a convocatoria pasa por `App\Support\Alcance` (`aplicar`, `aplicarPorSolicitud`,
+  `exigirSolicitud`/`exigirConvocatoria` → 404). Middleware `alcance` revisa los modelos enlazados en la ruta; ids que
+  llegan en el **cuerpo** se revisan a mano. Middleware `rol:slug,...` por grupo. Rutas admin en 3 grupos: lectura
+  (admin, admin_convocatoria, consulta), operación (admin, admin_convocatoria) y solo admin.
+- **Front:** `useRol()` y `subrutaPermitida()` (`lib/roles.ts`, compartido por `proxy.ts` y el menú) son comodidad de
+  UI; el control real es el backend. Páginas nuevas del admin se declaran en `SUBRUTAS_POR_ROL` además de `NAV_GROUPS`.
+- **Historial:** el `saved` de `Solicitud` escribe `solicitud_historial` en cada cambio de `estado` (toma
+  `motivo`/`observaciones` de la petición). Toda transición sigue usando `forceFill()->save()`.
+- **Fotos:** `PerfilController` re-codifica a WebP con GD (avatar 512², portada 1600×480, tope 40 MP antes de
+  decodificar), disco privado `perfiles/`, servidas por `/api/media/perfil/{40}.webp` con sesión. `UserAvatar` solo
+  acepta esa forma de URL.
+- **Archivos:** `App\Support\TiposArchivo` (pdf, imagen, office sin macros, zip seguro); extensión derivada del
+  contenido. Límites por documento del programa (`formato_permitido`, `tamaño_maximo_mb` ≤ 20) y de los fijos
+  (`documentos_fijos_config`).
+- **Buzón:** canal privado `conversacion.{id}` autorizado por `Buzon::participa`; evento `MensajeBuzonEnviado`
+  (ShouldBroadcastNow); job `AvisoMensajeNoLeido` a los 30 min (el correo no lleva el texto del mensaje).
+- **Folios públicos:** instantánea en `folios_publicados` tras confirmación (`confirmar: accepted`);
+  `GET /api/folios-aprobados` público con lista blanca, caché 5 min y throttle 30.
+- **Bugs de fondo encontrados al probar con datos reales:** (1) `SolicitudController::store` usaba `Solicitud::create`
+  con `folio`/`estado` guardados → NOT NULL: **nadie podía crear una solicitud** (ahora `forceFill`, patrón E30/E31);
+  (2) `adminShowFull` cargaba `criteriosEvaluacion` e `informe`, inexistentes → 500; (3) **`throttle:*` corría antes
+  que la autenticación** (Laravel ejecuta ThrottleRequests antes de cualquier middleware fuera de su lista de
+  prioridad): contaba por IP con un contador compartido entre rutas. Fix: `prependToPriorityList` de
+  `ReadJwtFromCookie` y `ApiAuthenticate` antes de `ThrottleRequests` + `$request->setUserResolver()` en `ApiAuthenticate`.
+- **Verificación:** 72/72 (`e2e_e45.php`), 38/38 regresión E44 (403→404 a propósito), 13/13 en navegador (incluye chat
+  entre dos navegadores y confeti al re-entrar), vitest 113/113. Datos de prueba borrados y tokens invalidados.

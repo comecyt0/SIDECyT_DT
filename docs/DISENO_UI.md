@@ -628,3 +628,18 @@ horizontal, sin errores de consola, login sin `sg-panel`**.
 - Una lista nueva hereda el marco pastel si su `Card` principal contiene `DataCardGrid`, `Table` o `.empty-state`
   como hijo directo de `CardContent`. No hace falta envolverla en `PastelFrame`.
 - Una página nueva de admin toma el tono del grupo del menú donde se registre en `NAV_GROUPS`.
+
+## 15. Perfil, ficha, buzón, folios y confeti (E45, 24/09/2026)
+
+Referencia del usuario: dos capturas de un perfil con portada ancha y foto circular superpuesta. Todo en
+`panel-sigac.css`, bloque "E45" (`perfil-*`, `seguimiento*`, `buzon-*`), y `landing.css` para la sección pública.
+
+| Pieza | Diseño |
+|---|---|
+| **`PerfilHero`** (Mi cuenta y fichas) | Portada 1600×480 con degradado hacia blanco abajo; foto circular 128 px con aro blanco que monta sobre la portada; nombre en Satoshi grande; píldoras de rol, institución y "Cuenta activa"; contadores (solicitudes, aprobadas, en proceso) separados por filetes. En Mi cuenta: "Cambiar portada" y papelera en píldoras sobre la portada, botón de cámara vino sobre la foto. Sin foto → iniciales en pastel; sin portada → lavado tenue |
+| **`UserAvatar` / `UserChip`** | La foto es el identificador en todo el sistema: barra superior (con etiqueta del rol), tarjetas de solicitudes, folios, listas de revisor/evaluador, actividad del dashboard, chat y seguimiento. Iniciales solo de palabras que empiezan con letra |
+| **Seguimiento** | Línea de tiempo vertical: foto de quien hizo el cambio + "X registró el folio como **Estado**", fecha; el paso actual en panel cielo; el motivo (si hay) debajo |
+| **Buzón** | Dos columnas (lista de hilos 360 px + chat); mensajes propios en burbuja tinta navy a la derecha, ajenos en blanco a la izquierda, foto junto a cada burbuja, "Leído"; categoría en píldora (duda cielo, problema rojo, sugerencia violeta). En teléfono se apilan y la barra de pestañas se parte en dos líneas |
+| **Folios (admin)** | Control segmentado con conteos (Aprobados / No aprobados / En proceso / Todos), filtros por convocatoria y periodo, tarjetas con foto del solicitante y píldora "En la página pública"; panel de publicación con lista revisable y casilla de confirmación antes del botón |
+| **Límites de archivos** | Una tarjeta por documento: tipos como casillas en píldora, deslizador de tamaño (1–20 MB) con el valor en vivo |
+| **Landing — Folios aprobados** | Sección centrada con título + ícono de fiesta, tarjeta blanca por convocatoria con los folios en píldoras vino tenue (mono). **Confeti en `<canvas>`** (vino, navy, pastel) desde dos focos cada vez que la sección entra en pantalla, también al regresar; no se dispara con `prefers-reduced-motion`; `pointer-events: none` |

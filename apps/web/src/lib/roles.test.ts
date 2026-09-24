@@ -9,8 +9,10 @@ describe('ROLES', () => {
     expect(ROLES.SOLICITANTE).toBe(4);
   });
 
-  it('expone exactamente cuatro roles', () => {
-    expect(Object.keys(ROLES)).toHaveLength(4);
+  it('incluye los roles de E45 (admin de convocatoria y consulta) y en total son seis', () => {
+    expect(ROLES.ADMIN_CONVOCATORIA).toBe(5);
+    expect(ROLES.CONSULTA).toBe(6);
+    expect(Object.keys(ROLES)).toHaveLength(6);
   });
 
   it('produce IDs únicos para cada rol', () => {
@@ -20,6 +22,6 @@ describe('ROLES', () => {
 
   it('RoleId acepta sólo los valores válidos', () => {
     const valid: RoleId = ROLES.ADMIN;
-    expect([1, 2, 3, 4]).toContain(valid);
+    expect([1, 2, 3, 4, 5, 6]).toContain(valid);
   });
 });

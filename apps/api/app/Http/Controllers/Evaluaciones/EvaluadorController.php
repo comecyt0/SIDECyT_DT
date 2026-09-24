@@ -12,6 +12,7 @@ use App\Models\Solicitud;
 use App\Models\SolicitudCriterioEvaluacion;
 use App\Models\User;
 use App\Notifications\EvaluacionCompletada;
+use App\Support\Alcance;
 use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,12 +26,30 @@ class EvaluadorController extends Controller
     {
         $evaluadorUser = $request->user();
 
-        $asignaciones = AsignacionEvaluador::with(['solicitud', 'solicitud.empresa'])
-            ->where('evaluador_id', $evaluadorUser->id)
-            ->orderBy('estado', 'desc') // asignado, evaluando, concluido
-            ->get();
+        // E45: además de ser suyas, dentro de sus periodos (si el admin le asignó alguno).
+        $asignaciones = Alcance::aplicarPorSolicitud(
+            AsignacionEvaluador::with(['solicitud', 'solicitud.empresa', 'solicitud.user'])
+                ->where('evaluador_id', $evaluadorUser->id)
+                ->orderBy('estado', 'desc'), // asignado, evaluando, concluido
+            $evaluadorUser
+        )->get();
 
         return response()->json($asignaciones);
+    }
+
+    /**
+     * E45 — Evaluadores que el admin o el admin de convocatoria pueden asignar: TODOS los activos (decisión del
+     * usuario). Solo nombre y foto: el admin de convocatoria no ve los datos personales de los evaluadores.
+     */
+    public function disponibles()
+    {
+        return response()->json(
+            User::where('rol_id', config('comecyt.roles.evaluador'))
+                ->where('activo', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'avatar_path'])
+                ->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'avatar_url' => $u->avatar_url])
+        );
     }
 
     /**
@@ -292,9 +311,12 @@ class EvaluadorController extends Controller
             'fecha_limite' => 'required|date|after:today',
         ]);
 
+        // E45: la solicitud viene en el cuerpo: el middleware `alcance` no la ve.
+        Alcance::exigirSolicitud($request->user(), Solicitud::findOrFail($validated['solicitud_id']));
+
         $evaluador = User::findOrFail($validated['evaluador_id']);
-        if ($evaluador->rol_id !== config('comecyt.roles.evaluador')) {
-            return response()->json(['message' => 'El usuario seleccionado no tiene rol de Evaluador.'], 422);
+        if ((int) $evaluador->rol_id !== (int) config('comecyt.roles.evaluador') || ! $evaluador->activo) {
+            return response()->json(['message' => 'El usuario seleccionado no es un evaluador activo.'], 422);
         }
 
         $existente = AsignacionEvaluador::where('solicitud_id', $validated['solicitud_id'])

@@ -17,8 +17,13 @@ import {
   LogOut, Bell, Menu, X, ChevronRight,
   LayoutDashboard, FileText, Users, BookOpen, Building,
   Banknote, ShieldAlert, Zap, Images, UserCheck,
-  BarChart3, KeyRound, FileSignature, ClipboardList, BellRing, Activity
+  BarChart3, KeyRound, FileSignature, ClipboardList, BellRing, Activity,
+  MessagesSquare, Award, CalendarRange, FileCog, UserCircle,
 } from 'lucide-react';
+import UserAvatar from '@/components/ui/user-avatar';
+import { useMiPerfil } from '@/hooks/useMiPerfil';
+import { useRol } from '@/hooks/useRol';
+import { ROL_ETIQUETA, subrutaPermitida } from '@/lib/roles';
 import { INSTITUTION } from '@/lib/institution';
 import { useT } from '@/i18n/I18nProvider';
 import { formatDate } from '@/lib/format';
@@ -67,6 +72,7 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'Programas', href: '/admin/programas', icon: Zap, description: 'Configuración de programas dinámicos' },
       { name: 'Convocatorias', href: '/admin/convocatorias', icon: BookOpen, description: 'Publicaciones y periodos de solicitud' },
       { name: 'Solicitudes', href: '/admin/solicitudes', icon: FileText, description: 'Seguimiento de solicitudes activas' },
+      { name: 'Folios', href: '/admin/folios', icon: Award, description: 'Histórico de aprobados y no aprobados, y publicación' },
     ],
   },
   {
@@ -77,6 +83,7 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'Informes Finales', href: '/admin/informes', icon: ClipboardList, description: 'Revisión y aprobación de informes' },
       { name: 'Empresas', href: '/admin/empresas', icon: Building, description: 'Catálogo de empresas registradas' },
       { name: 'Evaluadores', href: '/admin/evaluadores', icon: BarChart3, description: 'Asignación y seguimiento' },
+      { name: 'Buzón', href: '/admin/buzon', icon: MessagesSquare, description: 'Sugerencias y chat con solicitantes' },
     ],
   },
   {
@@ -94,6 +101,9 @@ const NAV_GROUPS: NavGroup[] = [
     group: 'Configuración',
     items: [
       { name: 'Carrusel Login', href: '/admin/carrusel', icon: Images, description: 'Slides de la pantalla de inicio' },
+      { name: 'Periodos', href: '/admin/periodos', icon: CalendarRange, description: 'Periodos de las convocatorias y alcance' },
+      { name: 'Límites de archivos', href: '/admin/documentos-fijos', icon: FileCog, description: 'Tipos y tamaño de los documentos fijos' },
+      { name: 'Mi cuenta', href: '/admin/cuenta', icon: UserCircle, description: 'Foto, portada y datos de tu perfil' },
     ],
   },
 ];
@@ -183,6 +193,12 @@ export default function AdminTopLayout({
   };
 
   const activeGroup = getActiveGroup();
+  // E45: el menú muestra solo lo que el rol puede abrir (mismo criterio que proxy.ts; el backend decide los datos).
+  const { rol } = useRol();
+  const { perfil } = useMiPerfil();
+  const grupos = NAV_GROUPS
+    .map((g) => ({ ...g, items: g.items.filter((i) => rol === 'admin' || (rol !== '' && subrutaPermitida(rol, i.href))) }))
+    .filter((g) => g.items.length > 0);
   // Cada sección toma el pastel de su grupo en el menú: el marco de la vista y el chip del menú casan.
   const activeGroupIndex = NAV_GROUPS.findIndex((g) => g.group === activeGroup);
   const sectionTone = MENU_TONES[Math.max(0, activeGroupIndex) % MENU_TONES.length];
@@ -258,7 +274,7 @@ export default function AdminTopLayout({
                 >
                   <div className="panel-menu-head">
                     <div className="min-w-0">
-                      <p className="panel-hero-pill !mb-2"><span aria-hidden="true" />{t('roles.admin')}</p>
+                      <p className="panel-hero-pill !mb-2"><span aria-hidden="true" />{rol ? ROL_ETIQUETA[rol] : t('roles.admin')}</p>
                       <p className="panel-menu-title">{t('nav.control_panel')}</p>
                       <p className="panel-menu-hint">{t('nav.control_panel_hint')}</p>
                     </div>
@@ -266,7 +282,7 @@ export default function AdminTopLayout({
                   </div>
 
                   <div className="panel-menu-body">
-                    {NAV_GROUPS.map((group, gi) => (
+                    {grupos.map((group, gi) => (
                       <section key={group.group} className="panel-menu-group" data-pastel={MENU_TONES[gi % MENU_TONES.length]}>
                         <p className="panel-menu-label">{group.group}</p>
                         <ul className="space-y-0.5">
@@ -424,18 +440,14 @@ export default function AdminTopLayout({
             <div className="h-7 w-px bg-neutral-200 dark:bg-neutral-700 hidden sm:block" />
 
             {/* User avatar + name */}
-            <div className="flex items-center gap-3 cursor-pointer group">
+            <Link href="/admin/cuenta" className="panel-user flex items-center gap-3 group rounded-full" title="Mi cuenta">
               <div className="hidden sm:block text-right">
-                <p className="text-sm font-bold text-neutral-900 dark:text-neutral-50 leading-none">{localUserName}</p>
-                <p className="text-[11px] text-accent dark:text-amber-300 font-semibold uppercase tracking-wider mt-0.5">{t('roles.admin')}</p>
+                <p className="text-sm font-bold text-neutral-900 dark:text-neutral-50 leading-none">{perfil?.name ?? localUserName}</p>
+                <p className="text-[11px] text-accent dark:text-amber-300 font-semibold uppercase tracking-wider mt-0.5">{rol ? ROL_ETIQUETA[rol] : t('roles.admin')}</p>
               </div>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-[var(--brand-vino-700)] text-white flex items-center justify-center font-bold text-sm shadow-md shadow-primary/20"
-              >
-                {userInitial}
-              </motion.div>
-            </div>
+              {/* E45: la foto de perfil identifica al usuario en la barra (iniciales si no tiene). */}
+              <UserAvatar user={perfil ?? { name: localUserName || userInitial }} size="sm" />
+            </Link>
 
             {/* Logout button */}
             <button

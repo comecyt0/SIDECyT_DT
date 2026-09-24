@@ -2,6 +2,15 @@
 
 **Fecha de actualización:** 24 de septiembre de 2026, noche (versión anterior: 23/09/2026)
 
+> 🧩 **24/09/2026 (noche, 3) — Seis funciones nuevas (E45).** Roles **Admin de convocatoria** (opera solo sus
+> convocatorias) y **Consulta** (solo lectura); **periodos** en las convocatorias y alcance por periodo; **foto de
+> perfil y portada** (WebP) visibles en todo el sistema y **ficha completa** por usuario/folio; **historial y
+> seguimiento** de cada folio, vista de aprobados/no aprobados y **publicación confirmada** de folios en la landing
+> (con confeti); **buzón con chat en tiempo real** con el equipo de la convocatoria; **tipo y tamaño de archivo**
+> configurables por documento. Probado en producción con datos desechables (72/72, 38/38, 13/13 en navegador) y
+> corregidos 3 bugs de fondo (crear solicitud, abrir solicitud en admin, throttle antes de la sesión). Ver
+> `docs/IMPLEMENTACIONES_E45.md` y `CLAUDE.md` E45.
+>
 > 🔒 **24/09/2026 (noche, 2) — Auditoría de ciberseguridad de todo el código (E44).** Se corrigieron, entre otros:
 > el seeder que en cada despliegue devolvía la contraseña del admin a una publicada; documentos de solicitantes que
 > se descargaban **sin sesión** (ahora privados, con permiso por rol); cerrar sesión que no terminaba la sesión; el
@@ -353,6 +362,7 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 | ~~**Correo (SMTP)**~~ | ✅ **Resuelto 23/09/2026 (tarde)** | Infraestructura respondió: la cuenta tenía el autenticador (MFA) activo y se le asignó licencia Exchange Online. Tras el cambio, `smtp.office365.com:587` STARTTLS autentica y envía, también desde Laravel. `MAIL_MAILER=smtp` activo (E38 en `CLAUDE.md`) |
 | **2FA del admin desactivado** | Alta | Apagado desde el 14/09 por falta de correo. Ya hay SMTP: reactivarlo con el usuario presente y probar el restablecimiento de contraseña por correo de punta a punta |
 | ~~**Convocatorias `activa` que parecen de prueba**~~ | ✅ Resuelto 24/09/2026 | Cerradas y archivadas (`deleted_at`) a pedido del usuario; ya no aparecen en la landing ni en la lista del admin. Reversibles (E40) |
+| **Dar de alta periodos, admins de convocatoria y usuarios Consulta** | Media | E45 está listo pero sin datos: crear los periodos en `/admin/periodos`, asignarlos a las convocatorias, y dar de alta los usuarios de los roles nuevos con su alcance (paso "Alcance" en `/admin/usuarios`) |
 | **Publicar convocatorias reales** | Media | Hoy no hay ninguna publicada: la landing muestra "Por ahora no hay convocatorias publicadas" hasta que el admin dé de alta la primera |
 | **¿El balanceador guarda HTML en caché?** | Media | Preguntar a infraestructura si el ELB cachea respuestas y, si es así, pedir que purgue y que respete `Cache-Control: private, no-store` (lo que ahora envía el HTML, E42). El servidor ya se defiende solo, pero confirmar evita que un usuario vea una versión vieja |
 | ~~**Ruta del balanceador nuevo**~~ | ✅ Resuelto 14/09/2026 (tarde) | Infraestructura corrigió el balanceador; el dominio funciona desde Internet (E23 en `CLAUDE.md`). Texto original: El VIP `10.200.41.131` (el que resuelve desde la publicación externa del 14/09/2026) devuelve `404`: no tiene registrada la entrega hacia `10.250.36.241:80`. **Solo lo puede hacer infraestructura; correo enviado el 14/09/2026.** Al responder: correr `VerificarDominio.ps1`, y si el origen **no** está en `100.64.0.0/10`, ajustar **el mismo día** las 5 apariciones del patrón en `web.config` (en dos formas distintas) y `TRUSTED_PROXIES` **juntas**, o habrá bucle de redirección. [DOMINIO_BALANCEADOR.md §12 y §9](DOMINIO_BALANCEADOR.md) · `Desktop\ADEM\_v5_publicacion_sep14\LEEME.md` |
@@ -381,6 +391,7 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 
 | Fecha | Cambio |
 |---|---|
+| 2026-09-24 (noche, 3) | **E45 — alcance por convocatoria y periodo, perfiles con foto y portada, buzón con chat, historial y publicación de folios, límites de archivo por campo.** Migración `2026_09_24_000003` con respaldo previo (`comecyt_2026-09-24_1508.dump`). Bugs corregidos: `store` de solicitud (nadie podía crear una), `adminShowFull` 500, orden de `throttle` vs autenticación. Front desplegado (`e45`, `e45b`) |
 | 2026-09-24 (noche, 2) | **E44 — Auditoría de ciberseguridad** de backend y front: documentos privados, cierre de sesión real, SW sin HTML, cuentas inactivas, notificaciones propias, dictamen blindado, CSP con nonce, seeder sin contraseña publicada, enumeración, política de contraseñas, invalidación de JWT al cambiar clave, `.env` con ACL restringida, firma SMB y 3 puertos cerrados, credenciales sueltas borradas. Migración `2026_09_24_000002` con respaldo previo. Incidente de 11 min con el SW (CSP de `sw.js`), corregido |
 | 2026-09-24 (noche) | **E42 — carga infinita por el dominio** corregida en 3 capas (IIS: HTML `private, no-store`; `deploy-web.ps1` conserva los chunks anteriores; script de recuperación en `layout.tsx`). **E43 — vistas internas, menú y pie** rediseñados (marco pastel por sección, menú en bloques pastel, pie con logo ×5), bloque de Reverb/"Buenas prácticas" quitado del dashboard, botón "Menú" con nombre accesible en móvil |
 | 2026-09-24 (tarde) | **E41 — Paneles v3:** barra flotante, `PageHeader` héroe, `PastelFrame`, `StatTile` v3, dashboards reestructurados, lienzo papel con salpicaduras; login sin cambios |

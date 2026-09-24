@@ -15,6 +15,8 @@ use App\Models\SolicitudMiembroEquipo;
 use App\Models\SolicitudRubroPresupuesto;
 use App\Notifications\SolicitudEnviada;
 use App\Notifications\SolicitudEstadoActualizado;
+use App\Support\Alcance;
+use App\Support\Enmascarar;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,11 +49,21 @@ class SolicitudController extends Controller
      */
     public function adminIndex(Request $request)
     {
-        $query = Solicitud::with(['user', 'empresa', 'convocatoria'])
-            ->orderBy('created_at', 'desc');
+        // E45: con alcance (admin de convocatoria / consulta / periodos) y filtros por convocatoria y periodo.
+        $query = Alcance::aplicar(
+            Solicitud::with(['user', 'empresa', 'convocatoria.periodo:id,nombre'])
+                ->orderBy('created_at', 'desc'),
+            $request->user()
+        );
+        if ($request->filled('convocatoria_id')) {
+            $query->where('convocatoria_id', (int) $request->convocatoria_id);
+        }
+        if ($request->filled('periodo_id')) {
+            $query->whereHas('convocatoria', fn ($q) => $q->where('periodo_id', (int) $request->periodo_id));
+        }
 
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = addcslashes((string) $request->search, '%_\\');
             $query->where(function ($q) use ($search) {
                 $q->where('folio', 'ilike', "%{$search}%")
                     ->orWhere('titulo_proyecto', 'ilike', "%{$search}%")
@@ -63,13 +75,13 @@ class SolicitudController extends Controller
             $query->where('estado', $request->estado);
         }
 
-        $perPage = (int) $request->get('per_page', 0);
+        $perPage = min(100, (int) $request->get('per_page', 0));
 
         if ($perPage > 0) {
             return response()->json($query->paginate($perPage));
         }
 
-        return response()->json($query->get());
+        return response()->json($query->limit(500)->get());
     }
 
     /**
@@ -146,7 +158,12 @@ class SolicitudController extends Controller
             for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
                 $folio = 'COMECYT-'.$year.'-'.strtoupper(Str::random(6));
                 try {
-                    $solicitud = Solicitud::create([
+                    // forceFill, NO create(): `folio` y `estado` están en Solicitud::$guarded (SEV-1). create() los
+                    // descartaba en silencio y el INSERT fallaba por `folio` NOT NULL → NINGUNA solicitud se podía
+                    // crear (500). Encontrado el 24/09/2026 (E45) — mismo patrón que E30/E31. Aquí son valores que
+                    // arma el servidor, no el cliente; el resto viene validado arriba.
+                    $solicitud = new Solicitud;
+                    $solicitud->forceFill([
                         'folio' => $folio,
                         'user_id' => $user->id,
                         'empresa_id' => $user->empresa_id,
@@ -157,7 +174,7 @@ class SolicitudController extends Controller
                         'monto_solicitado' => $request->monto_solicitado,
                         'area_conocimiento_id' => $request->area_conocimiento_id,
                         'estado' => 'borrador',
-                    ]);
+                    ])->save();
                     break;
                 } catch (QueryException $e) {
                     // 23505 = unique_violation en PostgreSQL, 23000 = integrity en MySQL
@@ -252,6 +269,8 @@ class SolicitudController extends Controller
             'documentos',
             'asignaciones.dictamen',
             'ministracion.banco',
+            // E45: seguimiento del folio (quién movió el estado, con su foto y el motivo).
+            'historial.user:id,name,avatar_path',
         ]);
 
         return response()->json($solicitud);
@@ -272,7 +291,7 @@ class SolicitudController extends Controller
             'convocatoria.tipoPrograma.campos',
             'convocatoria.tipoPrograma.documentos',
             'convocatoria.tipoPrograma.rubros',
-            'convocatoria.tipoPrograma.criteriosEvaluacion',
+            'convocatoria.tipoPrograma.criterios', // antes criteriosEvaluacion: esa relación no existe (500 con datos reales)
             'empresa',
             'areaConocimiento',
             'observaciones',
@@ -282,9 +301,16 @@ class SolicitudController extends Controller
             'ministracion.banco',
             'convenio',
             'informe',
+            'historial.user:id,name,avatar_path',
         ]);
 
-        return response()->json($solicitud);
+        // E45: datos bancarios completos solo para admin y admin de convocatoria.
+        $data = $solicitud->toArray();
+        if (! Enmascarar::veBancarios(request()->user())) {
+            $data['ministracion'] = Enmascarar::ministracion($data['ministracion'] ?? null);
+        }
+
+        return response()->json($data);
     }
 
     /**
@@ -423,31 +449,27 @@ class SolicitudController extends Controller
             ], 422);
         }
 
-        // Get configured limits
-        $maxFileSize = ConfigHelper::val('validation.informe_final_max_mb') * 1024;  // Convert to KB
+        // E45: tipo y tamaño del informe final los configura el admin (documentos fijos).
         $maxResultados = ConfigHelper::val('validation.resultados_obtenidos_max_chars');
+        $fijo = \App\Models\DocumentoFijoConfig::where('clave', 'informe_final')->first();
 
         $request->validate([
-            'archivo_informe' => "required|file|mimes:pdf|max:{$maxFileSize}",
+            'archivo_informe' => 'required|file|max:'.(\App\Support\TiposArchivo::TAMANO_MAX_MB * 1024),
             'resultados_obtenidos' => "nullable|string|max:{$maxResultados}",
         ]);
 
         $file = $request->file('archivo_informe');
-
-        // ✅ SEGURIDAD: Validar MIME type binario (no solo extensión)
-        try {
-            // getPathname(), no getRealPath(): en este IIS realpath del temporal devuelve false (E28).
-            $this->validateBinaryMimeType($file->getPathname());
-        } catch (ValidationException $e) {
-            return response()->json([
-                'error' => ConfigHelper::msg(Message::DOCUMENTO_MIME_INVALIDO),
-                'message' => ConfigHelper::msg(Message::DOCUMENTO_CORRUPTO),
-            ], 422);
-        }
+        // Contenido real contra tipos y tamaño configurados (lanza 422 con mensaje claro).
+        $extension = \App\Support\TiposArchivo::validar(
+            $file,
+            \App\Support\TiposArchivo::normalizar($fijo?->formatos ?? 'pdf'),
+            (int) ($fijo?->tamano_maximo_mb ?? ConfigHelper::val('validation.informe_final_max_mb')),
+            'archivo_informe'
+        );
 
         try {
             // SEGURIDAD (24/09/2026): almacenamiento privado + descarga autenticada (antes disco `public`, sin sesión).
-            $url = \App\Http\Controllers\ArchivoSolicitudController::guardar($file, $solicitud);
+            $url = \App\Http\Controllers\ArchivoSolicitudController::guardar($file, $solicitud, $extension);
             \App\Http\Controllers\ArchivoSolicitudController::borrarPorUrl($solicitud->informe_final_url, $solicitud);
 
             // forceFill: `estado_informe` está en $guarded (E31) — con update() se descartaba en silencio.

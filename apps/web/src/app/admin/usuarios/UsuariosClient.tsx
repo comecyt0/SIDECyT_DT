@@ -16,6 +16,7 @@ import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import PaginationControls from '@/components/ui/pagination-controls';
 import { DataCardGrid } from '@/components/ui/DataCardGrid';
+import UserAvatar from '@/components/ui/user-avatar';
 
 interface PaginationMeta {
   current_page: number;
@@ -92,8 +93,27 @@ export default function UsuariosClient({ users, pagination }: Props) {
     empresa_id: '',
     telefono: '',
     cargo: '',
-    activo: true
+    activo: true,
+    // E45: alcance — convocatorias (admin de convocatoria) y periodos (roles con alcance por periodo).
+    convocatoria_ids: [] as number[],
+    periodo_ids: [] as number[],
   });
+  const [convocatoriasOp, setConvocatoriasOp] = useState<{ id: number; nombre: string }[]>([]);
+  const [periodosOp, setPeriodosOp] = useState<{ id: number; nombre: string }[]>([]);
+  useEffect(() => {
+    Promise.all([
+      api.get('/admin/convocatorias').catch(() => ({ data: [] })),
+      api.get('/admin/periodos').catch(() => ({ data: [] })),
+    ]).then(([c, p]) => {
+      setConvocatoriasOp(Array.isArray(c.data) ? c.data.map((x: { id: number; nombre: string }) => ({ id: x.id, nombre: x.nombre })) : []);
+      setPeriodosOp(Array.isArray(p.data) ? p.data.map((x: { id: number; nombre: string }) => ({ id: x.id, nombre: x.nombre })) : []);
+    });
+  }, []);
+  const rolSlug = catalogs.roles.find((r) => String(r.id) === formData.rol_id)?.slug ?? '';
+  const pideConvocatorias = rolSlug === 'admin_convocatoria';
+  const pidePeriodos = ['admin_convocatoria', 'revisor', 'evaluador', 'consulta'].includes(rolSlug);
+  const alternarId = (campo: 'convocatoria_ids' | 'periodo_ids', id: number) =>
+    setFormData((f) => ({ ...f, [campo]: f[campo].includes(id) ? f[campo].filter((x) => x !== id) : [...f[campo], id] }));
 
   useEffect(() => {
     const fetchCatalogs = async () => {
@@ -102,7 +122,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
         const data = response.data || {};
         setCatalogs({
           roles: data.roles || [],
-          instituciones: data.instituciones || []
+          instituciones: data.empresas || data.instituciones || []
         });
       } catch (error) {
         console.error("Error al cargar catálogos:", error);
@@ -131,7 +151,9 @@ export default function UsuariosClient({ users, pagination }: Props) {
         empresa_id: user.empresa_id?.toString() || '',
         telefono: user.telefono || '',
         cargo: user.cargo || '',
-        activo: !!user.activo
+        activo: !!user.activo,
+        convocatoria_ids: ((user as unknown as { convocatorias_asignadas?: { id: number }[] }).convocatorias_asignadas ?? []).map((c) => c.id),
+        periodo_ids: ((user as unknown as { periodos?: { id: number }[] }).periodos ?? []).map((p) => p.id),
       });
     } else {
       setEditingUser(null);
@@ -143,7 +165,9 @@ export default function UsuariosClient({ users, pagination }: Props) {
         empresa_id: '',
         telefono: '',
         cargo: '',
-        activo: true
+        activo: true,
+        convocatoria_ids: [],
+        periodo_ids: [],
       });
     }
     setShowModal(true);
@@ -172,13 +196,16 @@ export default function UsuariosClient({ users, pagination }: Props) {
     setSubmitting(true);
     try {
       // Convert string IDs to numbers and filter empty values
-      const payload: Partial<User> & { password?: string } = {
+      const payload: Partial<User> & { password?: string; convocatoria_ids?: number[]; periodo_ids?: number[] } = {
         name: formData.name,
         email: formData.email,
         rol_id: parseInt(formData.rol_id, 10),
         telefono: formData.telefono || undefined,
         cargo: formData.cargo || undefined,
         activo: formData.activo,
+        // El backend limpia lo que no corresponde al rol (App\Http\Controllers\Admin\UserController).
+        convocatoria_ids: pideConvocatorias ? formData.convocatoria_ids : [],
+        periodo_ids: pidePeriodos ? formData.periodo_ids : [],
       };
 
       // Only add password for new users or when password is provided
@@ -260,6 +287,8 @@ export default function UsuariosClient({ users, pagination }: Props) {
           if (slug === 'admin') return 'primary';
           if (slug === 'revisor') return 'emerald';
           if (slug === 'evaluador') return 'amber';
+          if (slug === 'admin_convocatoria') return 'purple';
+          if (slug === 'consulta') return 'teal';
           return 'sky'; // solicitante
         }}
         emptyState={
@@ -271,9 +300,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
         renderCard={(user) => (
           <div className="pl-3 group">
             <div className="flex items-start gap-3 mb-3">
-              <div className="h-11 w-11 bg-gradient-to-br from-primary to-[var(--brand-vino-700)] rounded-xl flex items-center justify-center text-white font-bold text-sm shadow shrink-0">
-                {user.name.charAt(0).toUpperCase()}
-              </div>
+              <UserAvatar user={user as unknown as { id: number; name: string; avatar_url?: string | null }} size="md" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-50 truncate">{user.name}</h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-300 flex items-center gap-1 truncate">
@@ -413,6 +440,50 @@ export default function UsuariosClient({ users, pagination }: Props) {
               </>
             ),
           },
+          ...((pideConvocatorias || pidePeriodos) ? [{
+            key: 'alcance',
+            label: 'Alcance',
+            question: pideConvocatorias ? '¿Qué convocatorias opera y de qué periodos?' : '¿Qué periodos puede ver?',
+            validate: () => (pideConvocatorias && formData.convocatoria_ids.length === 0 ? 'Elige al menos una convocatoria.' : null),
+            content: (
+              <div className="space-y-5">
+                {pideConvocatorias && (
+                  <fieldset>
+                    <legend className="mb-2 text-sm font-semibold text-[var(--app-ink)]">Convocatorias a su cargo</legend>
+                    <p className="mb-3 text-xs text-[var(--app-ink-2)]">Solo verá y operará estas convocatorias.</p>
+                    <div className="max-h-56 space-y-1.5 overflow-y-auto">
+                      {convocatoriasOp.length === 0 && <p className="text-xs text-[var(--app-ink-2)]">No hay convocatorias.</p>}
+                      {convocatoriasOp.map((c) => (
+                        <label key={c.id} className="flex items-center gap-2 rounded-xl bg-[var(--sg-canvas,#f6f8fb)] px-3 py-2 text-sm text-[var(--app-ink)]">
+                          <input type="checkbox" checked={formData.convocatoria_ids.includes(c.id)} onChange={() => alternarId('convocatoria_ids', c.id)} />{c.nombre}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                )}
+                {pidePeriodos && (
+                  <fieldset>
+                    <legend className="mb-2 text-sm font-semibold text-[var(--app-ink)]">Periodos visibles</legend>
+                    <p className="mb-3 text-xs text-[var(--app-ink-2)]">
+                      {rolSlug === 'consulta'
+                        ? 'Sin periodos no verá nada.'
+                        : rolSlug === 'admin_convocatoria'
+                          ? 'Opcional: si eliges periodos, de sus convocatorias solo verá las de esos periodos.'
+                          : 'Sin periodos ve todo; con periodos, solo lo de esos periodos.'}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {periodosOp.length === 0 && <p className="text-xs text-[var(--app-ink-2)]">No hay periodos. Créalos en Configuración › Periodos.</p>}
+                      {periodosOp.map((p) => (
+                        <label key={p.id} className="inline-flex items-center gap-2 rounded-full bg-[var(--sg-canvas,#f6f8fb)] px-3 py-1.5 text-sm text-[var(--app-ink)]">
+                          <input type="checkbox" checked={formData.periodo_ids.includes(p.id)} onChange={() => alternarId('periodo_ids', p.id)} />{p.nombre}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                )}
+              </div>
+            ),
+          }] : []),
         ]}
         onClose={() => { setShowModal(false); setErrors({}); }}
         onSubmit={() => handleSubmit()}

@@ -36,6 +36,8 @@ import type { Solicitud } from '@/types/api';
 import { INSTITUTION } from '@/lib/institution';
 import { estadoBadgeClass, estadoLabel } from '@/lib/solicitud-estados';
 import { parseDate } from '@/lib/format';
+import Seguimiento, { type PasoHistorial } from '@/components/perfil/Seguimiento';
+import { acceptDe, describirLimites, formatosDe, validarArchivo } from '@/lib/archivos';
 
 const estadoIcon: Record<string, React.ElementType> = {
   borrador: FileText,
@@ -114,6 +116,18 @@ export default function DetalleSolicitudPage() {
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
   const [enviarError, setEnviarError] = useState<string | null>(null);
   const [informeFile, setInformeFile] = useState<File | null>(null);
+  // E45 (punto 6): tipos y tamaño de los documentos fijos (financieros e informe final), definidos por el admin.
+  const [fijos, setFijos] = useState<Record<string, { formatos: string[]; mb: number }>>({});
+  useEffect(() => {
+    api.get('/config/documentos-fijos').then(({ data }) => {
+      const m: Record<string, { formatos: string[]; mb: number }> = {};
+      (Array.isArray(data) ? data : []).forEach((d: { clave: string; formatos: string; tamano_maximo_mb: number }) => {
+        m[d.clave] = { formatos: formatosDe(d.formatos), mb: Number(d.tamano_maximo_mb) || 5 };
+      });
+      setFijos(m);
+    }).catch(() => {});
+  }, []);
+  const limiteFijo = (clave: string) => fijos[clave] ?? { formatos: ['pdf'], mb: clave === 'informe_final' ? 10 : 5 };
   const [informeResultados, setInformeResultados] = useState('');
   const [submittingInforme, setSubmittingInforme] = useState(false);
   const [informeError, setInformeError] = useState<string | null>(null);
@@ -215,12 +229,10 @@ export default function DetalleSolicitudPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== 'application/pdf') {
-      setFeedback({ type: 'error', message: 'Solo se permiten archivos PDF.' });
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setFeedback({ type: 'error', message: 'El archivo no debe superar los 5MB.' });
+    const problema = validarArchivo(file, limiteFijo(tipo).formatos, limiteFijo(tipo).mb);
+    if (problema) {
+      setFeedback({ type: 'error', message: problema });
+      event.target.value = '';
       return;
     }
 
@@ -276,13 +288,9 @@ export default function DetalleSolicitudPage() {
       return;
     }
 
-    if (informeFile.type !== 'application/pdf') {
-      setInformeError('Solo se permiten archivos PDF.');
-      return;
-    }
-
-    if (informeFile.size > 10 * 1024 * 1024) {
-      setInformeError('El archivo no debe superar los 10MB.');
+    const problemaInforme = validarArchivo(informeFile, limiteFijo('informe_final').formatos, limiteFijo('informe_final').mb);
+    if (problemaInforme) {
+      setInformeError(problemaInforme);
       return;
     }
 
@@ -429,6 +437,19 @@ export default function DetalleSolicitudPage() {
               );
             })}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* E45 (punto 4): seguimiento del folio — cada cambio de estado con la foto de quien lo hizo. */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <Route className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
+            Seguimiento
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Seguimiento pasos={((solicitud as unknown as { historial?: PasoHistorial[] }).historial) ?? []} />
         </CardContent>
       </Card>
 
@@ -773,7 +794,8 @@ export default function DetalleSolicitudPage() {
                         <label className={`btn-liquid icon-glass h-8 px-3 text-sm font-semibold rounded-[10px] cursor-pointer inline-flex items-center justify-center gap-1.5 transition-colors ${uploadingDoc === doc.key ? 'opacity-50 pointer-events-none' : ''}`} style={{ color: 'var(--auth-vino)' }}>
                           <input
                             type="file"
-                            accept=".pdf"
+                            accept={acceptDe(limiteFijo(doc.key).formatos)}
+                            title={describirLimites(limiteFijo(doc.key).formatos, limiteFijo(doc.key).mb)}
                             className="hidden"
                             onChange={(e) => handleFileUpload(e, doc.key)}
                             disabled={uploadingDoc === doc.key}
@@ -846,13 +868,13 @@ export default function DetalleSolicitudPage() {
                     <div className="text-center">
                       <Upload className="h-8 w-8 mx-auto mb-2" style={{ color: 'var(--auth-vino)' }} />
                       <p className="text-sm font-medium text-[var(--app-ink)]">
-                        {informeFile?.name || 'Elige o arrastra aquí tu archivo PDF'}
+                        {informeFile?.name || 'Elige o arrastra aquí tu archivo'}
                       </p>
-                      <p className="text-xs text-[var(--app-ink-2)] mt-1">Máximo 10 MB</p>
+                      <p className="text-xs text-[var(--app-ink-2)] mt-1">{describirLimites(limiteFijo('informe_final').formatos, limiteFijo('informe_final').mb)}</p>
                     </div>
                     <input
                       type="file"
-                      accept=".pdf"
+                      accept={acceptDe(limiteFijo('informe_final').formatos)}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) setInformeFile(file);

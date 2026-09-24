@@ -4,121 +4,188 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Alcance;
+use App\Support\Audit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
+/**
+ * Usuarios (solo admin general). E45: asignación de alcance —
+ *   - `convocatoria_ids`: convocatorias que opera un admin de convocatoria;
+ *   - `periodo_ids`: periodos visibles para admin de convocatoria, revisor, evaluador y consulta.
+ * Cambios de rol y de alcance quedan en la bitácora.
+ */
 class UserController extends Controller
 {
-    /**
-     * Display a listing of the resource, with optional search and pagination.
-     */
+    private const ROLES_CON_PERIODO = ['admin_convocatoria', 'revisor', 'evaluador', 'consulta'];
+
     public function index(Request $request)
     {
-        $query = User::with(['rol', 'empresa'])->orderBy('id', 'desc');
+        $query = User::with(['rol', 'empresa', 'convocatoriasAsignadas:id,nombre', 'periodos:id,nombre'])->orderBy('id', 'desc');
 
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = '%'.addcslashes((string) $request->search, '%_\\').'%';
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('email', 'ilike', "%{$search}%");
+                $q->where('name', 'ilike', $search)
+                    ->orWhere('email', 'ilike', $search);
             });
         }
+        if ($request->filled('rol_id')) {
+            $query->where('rol_id', (int) $request->rol_id);
+        }
 
-        $perPage = (int) $request->get('per_page', 0);
+        $perPage = min(100, (int) $request->get('per_page', 0));
         if ($perPage > 0) {
             return response()->json($query->paginate($perPage));
         }
 
-        return response()->json($query->get());
+        return response()->json($query->limit(1000)->get());
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validated = $request->validate($this->reglas() + [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => ['required', Password::defaults()],
             'rol_id' => 'required|exists:roles,id',
-            'empresa_id' => 'nullable|exists:empresas,id',
-            'telefono' => 'nullable|string|max:20',
-            'cargo' => 'nullable|string|max:255',
-            'activo' => 'boolean',
         ]);
 
-        $validated['password'] = Hash::make($validated['password']);
+        $user = DB::transaction(function () use ($validated) {
+            $datos = collect($validated)->except(['convocatoria_ids', 'periodo_ids'])->all();
+            $datos['password'] = Hash::make($datos['password']);
+            $user = User::create($datos);
+            $this->sincronizarAlcance($user, $validated);
 
-        $user = User::create($validated);
+            return $user;
+        });
+        Audit::log('user.creado', $user, ['rol_id' => $user->rol_id] + $this->resumenAlcance($user));
 
         return response()->json([
             'message' => 'Usuario creado con éxito',
-            'user' => $user->load(['rol', 'empresa']),
+            'user' => $user->load(['rol', 'empresa', 'convocatoriasAsignadas:id,nombre', 'periodos:id,nombre']),
         ], 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(User $user)
     {
-        return response()->json($user->load(['rol', 'empresa']));
+        return response()->json($user->load(['rol', 'empresa', 'convocatoriasAsignadas:id,nombre', 'periodos:id,nombre']));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, User $user)
     {
-        $validated = $request->validate([
+        $validated = $request->validate($this->reglas() + [
             'name' => 'string|max:255',
             'email' => 'string|email|max:255|unique:users,email,'.$user->id,
             'password' => ['nullable', Password::defaults()],
             'rol_id' => 'exists:roles,id',
-            'empresa_id' => 'nullable|exists:empresas,id',
-            'telefono' => 'nullable|string|max:20',
-            'cargo' => 'nullable|string|max:255',
-            'activo' => 'boolean',
         ]);
 
-        if (isset($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
-        } else {
-            unset($validated['password']);
+        // Nadie se quita a sí mismo el rol de admin ni se desactiva (evita quedarse fuera por error).
+        $yo = $request->user();
+        if ((int) $yo->id === (int) $user->id) {
+            if (isset($validated['rol_id']) && (int) $validated['rol_id'] !== (int) $user->rol_id) {
+                return response()->json(['message' => 'No puedes cambiar tu propio rol.'], 422);
+            }
+            if (array_key_exists('activo', $validated) && ! $validated['activo']) {
+                return response()->json(['message' => 'No puedes desactivar tu propia cuenta.'], 422);
+            }
+        }
+        // Nunca dejar el sistema sin un admin activo.
+        $dejaDeSerAdminActivo = $user->tieneRol('admin') && (
+            (isset($validated['rol_id']) && (int) $validated['rol_id'] !== (int) config('comecyt.roles.admin'))
+            || (array_key_exists('activo', $validated) && ! $validated['activo'])
+        );
+        if ($dejaDeSerAdminActivo && User::where('rol_id', config('comecyt.roles.admin'))->where('activo', true)->count() <= 1) {
+            return response()->json(['message' => 'Debe quedar al menos un administrador activo.'], 422);
         }
 
-        $user->update($validated);
+        $antes = ['rol_id' => $user->rol_id, 'activo' => $user->activo] + $this->resumenAlcance($user);
+
+        DB::transaction(function () use ($validated, $user) {
+            $datos = collect($validated)->except(['convocatoria_ids', 'periodo_ids'])->all();
+            if (! empty($datos['password'])) {
+                $datos['password'] = Hash::make($datos['password']);
+            } else {
+                unset($datos['password']);
+            }
+            $user->update($datos);
+            $this->sincronizarAlcance($user->fresh(), $validated);
+        });
+        Alcance::olvidar($user->id);
+
+        $despues = ['rol_id' => $user->fresh()->rol_id, 'activo' => $user->fresh()->activo] + $this->resumenAlcance($user);
+        if ($antes !== $despues) {
+            Audit::log('user.rol_o_alcance_cambiado', $user, ['antes' => $antes, 'despues' => $despues]);
+        }
 
         return response()->json([
             'message' => 'Usuario actualizado con éxito',
-            'user' => $user->load(['rol', 'empresa']),
+            'user' => $user->fresh()->load(['rol', 'empresa', 'convocatoriasAsignadas:id,nombre', 'periodos:id,nombre']),
         ]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Request $request, User $user)
     {
-        // Prevent self-deletion
         if ($user->id === $request->user()->id) {
             return response()->json(['message' => 'No puedes eliminar tu propia cuenta.'], 422);
         }
 
-        // Prevent deleting the last admin
-        if ($user->rol_id === config('comecyt.roles.admin')) {
+        if ((int) $user->rol_id === (int) config('comecyt.roles.admin')) {
             $adminCount = User::where('rol_id', config('comecyt.roles.admin'))->count();
             if ($adminCount <= 1) {
                 return response()->json(['message' => 'No puedes eliminar el último administrador del sistema.'], 422);
             }
         }
 
+        Audit::log('user.eliminado', $user, ['email' => $user->email, 'rol_id' => $user->rol_id]);
         $user->delete();
 
         return response()->json([
             'message' => 'Usuario eliminado con éxito',
         ]);
+    }
+
+    private function reglas(): array
+    {
+        return [
+            'empresa_id' => 'nullable|exists:empresas,id',
+            'telefono' => 'nullable|string|max:20',
+            'cargo' => 'nullable|string|max:255',
+            'activo' => 'boolean',
+            'convocatoria_ids' => 'sometimes|array|max:200',
+            'convocatoria_ids.*' => 'integer|distinct|exists:convocatorias,id',
+            'periodo_ids' => 'sometimes|array|max:100',
+            'periodo_ids.*' => 'integer|distinct|exists:periodos,id',
+        ];
+    }
+
+    /** Aplica el alcance según el rol; lo que no corresponde al rol se limpia (un revisor no conserva convocatorias). */
+    private function sincronizarAlcance(User $user, array $validated): void
+    {
+        $esDelegado = $user->tieneRol('admin_convocatoria');
+        $conPeriodo = $user->tieneRol(...self::ROLES_CON_PERIODO);
+
+        if (! $esDelegado) {
+            $user->convocatoriasAsignadas()->detach();
+        } elseif (array_key_exists('convocatoria_ids', $validated)) {
+            $user->convocatoriasAsignadas()->sync($validated['convocatoria_ids']);
+        }
+
+        if (! $conPeriodo) {
+            $user->periodos()->detach();
+        } elseif (array_key_exists('periodo_ids', $validated)) {
+            $user->periodos()->sync($validated['periodo_ids']);
+        }
+    }
+
+    private function resumenAlcance(User $user): array
+    {
+        return [
+            'convocatorias' => DB::table('convocatoria_user')->where('user_id', $user->id)->orderBy('convocatoria_id')->pluck('convocatoria_id')->all(),
+            'periodos' => DB::table('periodo_user')->where('user_id', $user->id)->orderBy('periodo_id')->pluck('periodo_id')->all(),
+        ];
     }
 }

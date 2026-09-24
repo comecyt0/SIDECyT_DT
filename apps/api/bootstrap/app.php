@@ -50,12 +50,29 @@ return Application::configure(basePath: dirname(__DIR__))
         // Lee JWT desde cookie HttpOnly si no hay Authorization header
         $middleware->appendToGroup('api', ReadJwtFromCookieMiddleware::class);
 
+        // E45 (24/09/2026): orden de prioridad. Laravel ejecuta ThrottleRequests ANTES que cualquier middleware
+        // que no esté en su lista de prioridad, así que corría antes de ApiAuthenticate: `throttle:*` nunca veía al
+        // usuario y contaba por IP, con UN contador compartido entre todas las rutas limitadas (un usuario detrás de
+        // la misma NAT agotaba el límite de otro). Ahora: cookie → JWT → usuario autenticado → throttle por usuario.
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Routing\Middleware\ThrottleRequests::class,
+            prepend: ReadJwtFromCookieMiddleware::class,
+        );
+        // Segundo "prepend" sobre el mismo punto: queda entre ReadJwtFromCookie y ThrottleRequests.
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Routing\Middleware\ThrottleRequests::class,
+            prepend: ApiAuthenticate::class,
+        );
+
         $middleware->alias([
             'admin' => AdminMiddleware::class,
             'revisor' => RevisorMiddleware::class,
             'evaluador' => EvaluadorMiddleware::class,
             'api.auth' => ApiAuthenticate::class,
             'auth.login.ratelimit' => AuthLoginRateLimitMiddleware::class,
+            // E45: roles por slug y alcance por convocatoria/periodo en cada registro de la ruta.
+            'rol' => \App\Http\Middleware\RolMiddleware::class,
+            'alcance' => \App\Http\Middleware\AlcanceMiddleware::class,
         ]);
 
         // API 100% stateless — la autenticación es JWT en cookie HttpOnly `comecyt_auth`.

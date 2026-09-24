@@ -158,5 +158,8 @@ return [
         'revisor' => 2,
         'evaluador' => 3,
         'solicitante' => 4,
+        // E45 (24/09/2026): opera solo sus convocatorias asignadas / solo lectura por periodos.
+        'admin_convocatoria' => 5,
+        'consulta' => 6,
     ],
 ];

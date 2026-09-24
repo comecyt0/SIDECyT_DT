@@ -45,6 +45,54 @@ class Solicitud extends Model
 
     protected $appends = ['resumen'];
 
+    /** Estados que cuentan como folio aprobado / no aprobado (E45, decisión del usuario: "por dictamen"). */
+    public const ESTADOS_APROBADOS = ['aprobada', 'convenio', 'ministracion', 'seguimiento', 'cerrada'];
+
+    public const ESTADOS_NO_APROBADOS = ['rechazada', 'cancelada'];
+
+    /**
+     * E45 — Seguimiento: cada creación o cambio de `estado` queda en solicitud_historial, venga de donde venga
+     * (todas las transiciones usan forceFill()->save(), así que pasan por aquí). El motivo se toma de la petición
+     * si trae `motivo` u `observaciones` (rechazar, cancelar, observar).
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (Solicitud $s) {
+            if (! $s->wasRecentlyCreated && ! $s->wasChanged('estado')) {
+                return;
+            }
+            $req = request();
+            $motivo = $req ? ($req->input('motivo') ?? $req->input('observaciones')) : null;
+            SolicitudHistorial::create([
+                'solicitud_id' => $s->id,
+                'estado_anterior' => $s->wasRecentlyCreated ? null : $s->getOriginal('estado'),
+                'estado_nuevo' => (string) $s->estado,
+                'user_id' => auth('api')->id(),
+                'motivo' => is_string($motivo) ? mb_substr($motivo, 0, 1000) : null,
+                'created_at' => now(),
+            ]);
+        });
+    }
+
+    /**
+     * 24/09/2026 (E45): adminShowFull cargaba `informe`, que no existía → 500 con la primera solicitud real
+     * (RelationNotFoundException). Informe ya tenía su belongsTo(Solicitud); faltaba el lado inverso.
+     */
+    public function informes()
+    {
+        return $this->hasMany(Informe::class);
+    }
+
+    public function informe()
+    {
+        return $this->hasOne(Informe::class)->latestOfMany();
+    }
+
+    public function historial()
+    {
+        return $this->hasMany(SolicitudHistorial::class)->orderBy('created_at')->orderBy('id');
+    }
+
     /**
      * Virtual attribute alias for descripcion_proyecto for frontend compatibility.
      */

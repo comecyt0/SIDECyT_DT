@@ -39,6 +39,12 @@ class ApiAuthenticate
             }
 
             auth()->setUser($user);
+            // E45: `$request->user()` debe devolver al usuario del JWT. Sin esto, `throttle:*` no lo reconocía y
+            // contaba por IP: todos los usuarios detrás de una misma IP (NAT institucional, o el propio servidor en
+            // serverFetch) compartían un solo contador entre todas las rutas limitadas.
+            $request->setUserResolver(fn () => $user);
+            // E45: la caché de alcance es por petición (los workers de cola son procesos largos).
+            \App\Support\Alcance::olvidar();
         } catch (\Exception $e) {
             throw new AuthenticationException('Unauthenticated');
         }

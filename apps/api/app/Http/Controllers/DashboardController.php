@@ -4,62 +4,80 @@ namespace App\Http\Controllers;
 
 use App\Models\AsignacionEvaluador;
 use App\Models\Convocatoria;
-use App\Models\Informe;
 use App\Models\Empresa;
+use App\Models\Informe;
 use App\Models\Ministracion;
 use App\Models\Solicitud;
 use App\Models\User;
+use App\Support\Alcance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Dashboards de todos los roles. E45 (24/09/2026): TODAS las cifras pasan por App\Support\Alcance — el admin de
+ * convocatoria, la consulta y los revisores/evaluadores con periodos ven solo lo de sus convocatorias.
+ */
 class DashboardController extends Controller
 {
+    private function user(): User
+    {
+        return request()->user();
+    }
+
+    private function solicitudes()
+    {
+        return Alcance::aplicar(Solicitud::query(), $this->user());
+    }
+
     /**
-     * Estadísticas para el Administrador
+     * Estadísticas para el Administrador (y admin de convocatoria / consulta, con alcance).
      */
     public function adminStats()
     {
+        $u = $this->user();
+        $minis = Alcance::aplicarPorSolicitud(Ministracion::query(), $u);
+
         $stats = [
             [
                 'title' => 'Convocatorias Activas',
-                'value' => (string) Convocatoria::where('estado', 'activa')->count(),
+                'value' => (string) Alcance::aplicar(Convocatoria::where('estado', 'activa')->whereNull('deleted_at'), $u, 'id')->count(),
                 'icon' => 'Bookmark',
                 'color' => 'text-blue-500',
             ],
             [
                 'title' => 'Solicitudes en Revisión',
-                'value' => (string) Solicitud::whereIn('estado', ['enviada', 'observada'])->count(),
+                'value' => (string) $this->solicitudes()->whereIn('estado', ['enviada', 'observada'])->count(),
                 'icon' => 'FileText',
                 'color' => 'text-amber-500',
             ],
             [
                 'title' => 'Proyectos Evaluándose',
-                'value' => (string) Solicitud::where('estado', 'en_evaluacion')->count(),
+                'value' => (string) $this->solicitudes()->where('estado', 'en_evaluacion')->count(),
                 'icon' => 'Users',
                 'color' => 'text-accent',
             ],
             [
                 'title' => 'Dictámenes Aprobados',
-                'value' => (string) Solicitud::where('estado', 'aprobada')->count(),
+                'value' => (string) $this->solicitudes()->where('estado', 'aprobada')->count(),
                 'icon' => 'CheckCircle2',
                 'color' => 'text-green-600',
             ],
             [
                 'title' => 'Ministraciones Pendientes',
-                'value' => (string) Ministracion::where('estado', 'pendiente')->count(),
+                'value' => (string) (clone $minis)->where('estado', 'pendiente')->count(),
                 'icon' => 'Clock',
                 'color' => 'text-orange-500',
             ],
             [
                 'title' => 'Informes Entregados',
-                'value' => (string) Solicitud::where('estado_informe', 'entregado')->count(),
+                'value' => (string) $this->solicitudes()->where('estado_informe', 'entregado')->count(),
                 'icon' => 'FileText',
                 'color' => 'text-blue-600',
             ],
             [
                 'title' => 'Pagos Completados',
-                'value' => (string) Ministracion::where('estado', 'pagada')->count(),
+                'value' => (string) (clone $minis)->where('estado', 'pagada')->count(),
                 'icon' => 'CheckCircle2',
                 'color' => 'text-emerald-600',
             ],
@@ -69,64 +87,38 @@ class DashboardController extends Controller
     }
 
     /**
-     * Estadísticas para el Revisor
-     * - nuevos: solicitudes enviadas y sin revisar aún (estado='enviada')
-     * - en_subsanacion: solicitudes con observaciones que esperan correcciones (estado='observada')
-     * - pendientes_urgentes: solicitudes observadas hace más de 7 días sin reenvío (antiguas)
+     * Estadísticas para el Revisor (con alcance por periodo, E45).
      */
     public function revisorStats()
     {
-        // Solicitudes con estado 'enviada' sin revisar
-        $nuevos = Solicitud::where('estado', 'enviada')->count();
-
-        // Solicitudes con estado 'observada' en proceso de subsanación
-        $en_subsanacion = Solicitud::where('estado', 'observada')->count();
-
-        // Solicitudes 'observada' que llevan más de 7 días sin reenvío (urgentes)
-        $pendientes_urgentes = Solicitud::where('estado', 'observada')
-            ->where('updated_at', '<', now()->subDays(7))
-            ->count();
-
-        $stats = [
-            'nuevos' => $nuevos,
-            'en_subsanacion' => $en_subsanacion,
-            'pendientes_urgentes' => $pendientes_urgentes,
-        ];
-
-        return response()->json($stats);
+        return response()->json([
+            'nuevos' => $this->solicitudes()->where('estado', 'enviada')->count(),
+            'en_subsanacion' => $this->solicitudes()->where('estado', 'observada')->count(),
+            'pendientes_urgentes' => $this->solicitudes()->where('estado', 'observada')
+                ->where('updated_at', '<', now()->subDays(7))->count(),
+        ]);
     }
 
     /**
-     * Estadísticas para el Evaluador
-     * - por_iniciar: asignaciones con estado 'notificado' (sin empezar)
-     * - en_progreso: asignaciones SIN estado 'notificado' y SIN estado 'concluido' (en proceso)
-     * - evaluadas: asignaciones con estado 'concluido' (evaluación completada)
+     * Estadísticas para el Evaluador (sus asignaciones, con alcance por periodo, E45).
      */
     public function evaluadorStats(Request $request)
     {
         $user = $request->user();
+        $base = fn () => Alcance::aplicarPorSolicitud(AsignacionEvaluador::where('evaluador_id', $user->id), $user);
 
-        $stats = [
-            'por_iniciar' => AsignacionEvaluador::where('evaluador_id', $user->id)
-                ->where('estado', 'asignado')
-                ->count(),
-            'en_progreso' => AsignacionEvaluador::where('evaluador_id', $user->id)
-                ->where('estado', 'evaluando')
-                ->count(),
-            'evaluadas' => AsignacionEvaluador::where('evaluador_id', $user->id)
-                ->where('estado', 'concluido')
-                ->count(),
-        ];
-
-        return response()->json($stats);
+        return response()->json([
+            'por_iniciar' => $base()->where('estado', 'asignado')->count(),
+            'en_progreso' => $base()->where('estado', 'evaluando')->count(),
+            'evaluadas' => $base()->where('estado', 'concluido')->count(),
+        ]);
     }
 
     /**
-     * Actividad Reciente para Admin
+     * Actividad Reciente para Admin (solo admin general: ruta con middleware `admin`).
      */
     public function adminActivity()
     {
-        // Ejemplo: Solicitudes por mes en el último año
         $activity = Solicitud::select(
             DB::raw("to_char(created_at, 'Mon') as label"),
             DB::raw('count(*) as value')
@@ -184,15 +176,16 @@ class DashboardController extends Controller
         $start = now()->subMonths(11)->startOfMonth();
         $monthExpr = $this->monthExpr('updated_at');
 
-        // Solicitudes en revisión por mes (basado en última actualización)
-        $rows = DB::table('solicitudes')
+        $query = DB::table('solicitudes')
             ->select(
                 DB::raw("{$monthExpr} as ym"),
                 DB::raw("sum(case when estado = 'en_evaluacion' then 1 else 0 end) as aprobadas_doc"),
                 DB::raw("sum(case when estado = 'observada' then 1 else 0 end) as observadas"),
                 DB::raw("sum(case when estado in ('enviada', 'observada') then 1 else 0 end) as pendientes"),
             )
-            ->where('updated_at', '>=', $start)
+            ->whereNull('deleted_at')
+            ->where('updated_at', '>=', $start);
+        $rows = Alcance::aplicar($query, $this->user())
             ->groupBy(DB::raw($monthExpr))
             ->orderBy('ym')
             ->get();
@@ -217,7 +210,8 @@ class DashboardController extends Controller
         $start = now()->subMonths(11)->startOfMonth();
         $monthExpr = $this->monthExpr('a.updated_at');
 
-        $rows = DB::table('asignaciones_evaluador as a')
+        $query = DB::table('asignaciones_evaluador as a')
+            ->join('solicitudes as s', 's.id', '=', 'a.solicitud_id')
             ->leftJoin('dictamenes as d', 'd.asignacion_id', '=', 'a.id')
             ->select(
                 DB::raw("{$monthExpr} as ym"),
@@ -226,7 +220,8 @@ class DashboardController extends Controller
                 DB::raw("sum(case when a.estado in ('asignado', 'evaluando') then 1 else 0 end) as pendientes"),
             )
             ->where('a.evaluador_id', $user->id)
-            ->where('a.updated_at', '>=', $start)
+            ->where('a.updated_at', '>=', $start);
+        $rows = Alcance::aplicar($query, $user, 's.convocatoria_id')
             ->groupBy(DB::raw($monthExpr))
             ->orderBy('ym')
             ->get();
@@ -243,17 +238,15 @@ class DashboardController extends Controller
     }
 
     /**
-     * Series mensuales para gráficas del dashboard admin.
-     * - Últimos 12 meses
-     * - Por mes: solicitudes recibidas, monto solicitado total, monto aprobado total
-     * - Distribución actual por estado (snapshot)
+     * Series mensuales para gráficas del dashboard admin (con alcance).
      */
     public function adminCharts()
     {
+        $user = $this->user();
         $start = now()->subMonths(11)->startOfMonth();
         $monthExpr = $this->monthExpr('s.created_at');
 
-        $rows = DB::table('solicitudes as s')
+        $query = DB::table('solicitudes as s')
             ->leftJoin('convenios as c', 'c.solicitud_id', '=', 's.id')
             ->select(
                 DB::raw("{$monthExpr} as ym"),
@@ -261,7 +254,9 @@ class DashboardController extends Controller
                 DB::raw('coalesce(sum(s.monto_solicitado), 0) as monto_solicitado'),
                 DB::raw('coalesce(sum(c.monto_aprobado), 0) as monto_aprobado'),
             )
-            ->where('s.created_at', '>=', $start)
+            ->whereNull('s.deleted_at')
+            ->where('s.created_at', '>=', $start);
+        $rows = Alcance::aplicar($query, $user, 's.convocatoria_id')
             ->groupBy(DB::raw($monthExpr))
             ->orderBy('ym')
             ->get();
@@ -272,8 +267,8 @@ class DashboardController extends Controller
             'monto_aprobado' => (float) ($row?->monto_aprobado ?? 0),
         ]);
 
-        // Distribución por estado (snapshot actual)
-        $distribucion = Solicitud::select('estado', DB::raw('count(*) as total'))
+        $distribucion = $this->solicitudes()
+            ->select('estado', DB::raw('count(*) as total'))
             ->groupBy('estado')
             ->orderBy('estado')
             ->get()
@@ -288,36 +283,23 @@ class DashboardController extends Controller
         ]);
     }
 
-    /**
-     * Búsqueda global transversal para el admin.
-     * Acepta ?q=texto (≥2 chars). Busca en solicitudes (folio + titulo),
-     * usuarios (name + email) e instituciones (nombre).
-     * Limita a N por categoría para mantener la respuesta liviana.
-     */
     public function globalSearch(Request $request)
     {
         return $this->searchByScope($request, scope: 'admin');
     }
 
-    /**
-     * Búsqueda para revisor: sólo solicitudes en su bandeja + instituciones.
-     * Filtramos a estados que el revisor maneja.
-     */
     public function revisorSearch(Request $request)
     {
         return $this->searchByScope($request, scope: 'revisor');
     }
 
-    /**
-     * Búsqueda para evaluador: sólo solicitudes asignadas a él + instituciones.
-     */
     public function evaluadorSearch(Request $request)
     {
         return $this->searchByScope($request, scope: 'evaluador');
     }
 
     /**
-     * Implementación común de búsqueda con scope por rol.
+     * Implementación común de búsqueda con scope por rol + alcance (E45).
      */
     private function searchByScope(Request $request, string $scope)
     {
@@ -331,11 +313,11 @@ class DashboardController extends Controller
         }
 
         $like = DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
-        $needle = "%{$q}%";
+        $needle = '%'.addcslashes($q, '%_\\').'%';
         $limit = 8;
         $user = $request->user();
 
-        $solQuery = Solicitud::with('institucion:id,nombre')
+        $solQuery = Alcance::aplicar(Solicitud::with('institucion:id,nombre'), $user)
             ->where(function ($w) use ($like, $needle) {
                 $w->where('folio', $like, $needle)
                     ->orWhere('titulo_proyecto', $like, $needle);
@@ -357,9 +339,9 @@ class DashboardController extends Controller
             ->limit($limit)
             ->get(['id', 'folio', 'titulo_proyecto', 'estado', 'empresa_id']);
 
-        // Usuarios e instituciones sólo para admin
+        // Usuarios: solo el admin general busca en todo el padrón (E45: no el admin de convocatoria ni consulta).
         $usuarios = collect();
-        if ($scope === 'admin') {
+        if ($scope === 'admin' && $user->tieneRol('admin')) {
             $usuarios = User::with('rol:id,slug,nombre')
                 ->where(function ($w) use ($like, $needle) {
                     $w->where('name', $like, $needle)
@@ -367,13 +349,12 @@ class DashboardController extends Controller
                 })
                 ->orderBy('name')
                 ->limit($limit)
-                ->get(['id', 'name', 'email', 'rol_id', 'activo']);
+                ->get(['id', 'name', 'email', 'rol_id', 'activo', 'avatar_path']);
         }
 
-        $empresas = Empresa::where('nombre', $like, $needle)
-            ->orderBy('nombre')
-            ->limit($limit)
-            ->get(['id', 'nombre', 'acronimo']);
+        $empresas = $user->tieneRol('admin')
+            ? Empresa::where('nombre', $like, $needle)->orderBy('nombre')->limit($limit)->get(['id', 'nombre', 'acronimo'])
+            : collect();
 
         return response()->json([
             'solicitudes' => $solicitudes,
@@ -383,14 +364,15 @@ class DashboardController extends Controller
     }
 
     /**
-     * Alertas de Sistema para Admin
+     * Alertas de Sistema para Admin (con alcance).
      */
     public function adminAlerts()
     {
+        $user = $this->user();
         $alerts = [];
 
-        // 1. Instituciones con informes atrasados (> 20 días)
-        $atrasados = Informe::where('estado', 'pendiente')
+        $atrasados = Alcance::aplicarPorSolicitud(Informe::query(), $user)
+            ->where('estado', 'pendiente')
             ->where('fecha_limite_entrega', '<', now()->subDays(20))
             ->count();
 
@@ -403,12 +385,9 @@ class DashboardController extends Controller
             ];
         }
 
-        // 2. Convocatorias por cerrar (en menos de 7 días)
-        // E40: fecha límite efectiva (con prórroga), días enteros en zona de negocio. Antes usaba
-        // `titulo` (no existe: es `nombre`) y fecha_cierre sin prórroga.
+        // E40: fecha límite efectiva (con prórroga), días enteros en zona de negocio.
         $hoyNegocio = Convocatoria::hoy();
-        $porCerrar = Convocatoria::where('estado', 'activa')
-            ->whereNull('deleted_at')
+        $porCerrar = Alcance::aplicar(Convocatoria::where('estado', 'activa')->whereNull('deleted_at'), $user, 'id')
             ->whereRaw('COALESCE(fecha_prorroga, fecha_cierre) BETWEEN ? AND ?', [
                 $hoyNegocio, \Illuminate\Support\Carbon::parse($hoyNegocio)->addDays(7)->toDateString(),
             ])

@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Traits\ValidatesBinaryMimeTypes;
 use App\Models\Ministracion;
 use App\Models\ProgramaDocumento;
 use App\Models\Solicitud;
 use App\Models\SolicitudDocumento;
+use App\Models\DocumentoFijoConfig;
+use App\Support\TiposArchivo;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 /**
  * Subida y borrado de documentos de una solicitud.
@@ -25,8 +25,6 @@ use Illuminate\Validation\ValidationException;
  */
 class DocumentoUploadController extends Controller
 {
-    use ValidatesBinaryMimeTypes;
-
     private const FINANCIEROS = ['carta_compromiso', 'caratula_banco', 'constancia_fiscal', 'factura_institucion'];
 
     private const ESTADOS_ANEXOS = ['borrador', 'observada'];
@@ -38,7 +36,8 @@ class DocumentoUploadController extends Controller
     public function upload(Request $request, Solicitud $solicitud)
     {
         $request->validate([
-            'file' => 'required|file|mimes:pdf|max:5120', // 5 MB
+            // E45: tipo y tamaño los define el admin por campo (TiposArchivo valida abajo); aquí solo el tope absoluto.
+            'file' => 'required|file|max:'.(TiposArchivo::TAMANO_MAX_MB * 1024),
             'tipo' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9_]+$/'],
         ]);
 
@@ -52,14 +51,21 @@ class DocumentoUploadController extends Controller
         $esFinanciero = in_array($tipo, self::FINANCIEROS, true);
         $esInforme = $tipo === 'informe_final';
 
+        // E45: límites del campo — documento del programa (programa_documentos) o fijo (documentos_fijos_config).
         if (! $esFinanciero && ! $esInforme) {
-            $clavesPrograma = ProgramaDocumento::where('tipo_programa_id', $solicitud->convocatoria?->tipo_programa_id)
+            $config = ProgramaDocumento::where('tipo_programa_id', $solicitud->convocatoria?->tipo_programa_id)
                 ->where('activo', true)
-                ->pluck('clave')
-                ->all();
-            if (! in_array($tipo, $clavesPrograma, true)) {
+                ->where('clave', $tipo)
+                ->first();
+            if (! $config) {
                 return response()->json(['error' => 'Tipo de documento no válido para este programa.'], 422);
             }
+            $formatos = $config->formato_permitido;
+            $maxMb = $config->getAttribute('tamaño_maximo_mb');
+        } else {
+            $fijo = DocumentoFijoConfig::where('clave', $tipo)->first();
+            $formatos = $fijo?->formatos ?? 'pdf';
+            $maxMb = $fijo?->tamano_maximo_mb ?? 5;
         }
 
         if (! $esAdmin) {
@@ -70,16 +76,10 @@ class DocumentoUploadController extends Controller
         }
 
         $file = $request->file('file');
-        try {
-            $this->validateBinaryMimeType($file->getPathname());
-        } catch (ValidationException $e) {
-            return response()->json([
-                'error' => 'Archivo inválido',
-                'message' => 'El archivo debe ser un PDF válido. Se detectó un tipo diferente.',
-            ], 422);
-        }
+        // Contenido real (no nombre ni MIME declarado) contra los tipos y el tamaño del campo. Lanza 422 con mensaje.
+        $extension = TiposArchivo::validar($file, TiposArchivo::normalizar($formatos), (int) $maxMb);
 
-        $url = ArchivoSolicitudController::guardar($file, $solicitud);
+        $url = ArchivoSolicitudController::guardar($file, $solicitud, $extension);
 
         if ($esInforme) {
             ArchivoSolicitudController::borrarPorUrl($solicitud->informe_final_url, $solicitud);
@@ -101,7 +101,8 @@ class DocumentoUploadController extends Controller
             SolicitudDocumento::create([
                 'solicitud_id' => $solicitud->id,
                 'tipo' => $tipo,
-                'nombre_original' => mb_substr(basename((string) $file->getClientOriginalName()), 0, 200),
+                // Solo informativo (se muestra como texto): sin rutas y con longitud acotada.
+                'nombre_original' => mb_substr(basename(str_replace('\\', '/', (string) $file->getClientOriginalName())), 0, 200),
                 'url' => $url,
             ]);
         }

@@ -15,6 +15,7 @@ import type { AreaConocimiento } from '@/types/api';
 import { DynamicFieldRenderer } from '@/components/solicitante/DynamicFieldRenderer';
 import { RubrosTable } from '@/components/solicitante/RubrosTable';
 import { MiembrosEquipo, type MiembroEquipo } from '@/components/solicitante/MiembrosEquipo';
+import { acceptDe, describirLimites, formatosDe, validarArchivo } from '@/lib/archivos';
 
 interface Convocatoria {
   id: number;
@@ -578,8 +579,11 @@ export default function NuevaSolicitud() {
                       <p className="text-xs text-[var(--app-ink-2)] mt-0.5">{doc.descripcion}</p>
                     )}
                     <p className="text-xs text-[var(--app-ink-2)]">
-                      PDF{doc.tamaño_maximo_mb ? ` · hasta ${doc.tamaño_maximo_mb} MB` : ' · hasta 10 MB'}
+                      {describirLimites(formatosDe(doc.formato_permitido), Number(doc.tamaño_maximo_mb ?? 5) || 5)}
                     </p>
+                    {fieldErrors[`doc_${doc.clave}`] && (
+                      <p role="alert" className="text-xs font-semibold" style={{ color: 'var(--auth-danger)' }}>{fieldErrors[`doc_${doc.clave}`]}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     {selectedFile && (
@@ -590,17 +594,25 @@ export default function NuevaSolicitud() {
                     <input
                       ref={el => { fileInputRefs.current[doc.clave] = el; }}
                       type="file"
-                      accept=".pdf,application/pdf"
+                      accept={acceptDe(formatosDe(doc.formato_permitido))}
                       className="hidden"
                       onChange={e => {
                         const file = e.target.files?.[0] || null;
-                        setDocumentosFiles(prev => ({ ...prev, [doc.clave]: file }));
                         e.target.value = '';
+                        // E45: límites del documento definidos por el admin (el servidor revisa el contenido real).
+                        const problema = file ? validarArchivo(file, formatosDe(doc.formato_permitido), Number(doc.tamaño_maximo_mb ?? 5) || 5) : null;
+                        setFieldErrors(prev => {
+                          const n = { ...prev };
+                          if (problema) n[`doc_${doc.clave}`] = problema; else delete n[`doc_${doc.clave}`];
+                          return n;
+                        });
+                        if (problema) return;
+                        setDocumentosFiles(prev => ({ ...prev, [doc.clave]: file }));
                       }}
                     />
                     <Button type="button" variant="soft" size="sm" className="gap-1.5" onClick={() => fileInputRefs.current[doc.clave]?.click()}>
                       <Upload className="h-3.5 w-3.5" />
-                      {selectedFile ? 'Cambiar' : 'Adjuntar PDF'}
+                      {selectedFile ? 'Cambiar' : 'Adjuntar'}
                     </Button>
                   </div>
                 </div>
