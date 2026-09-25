@@ -25,7 +25,7 @@ export default function SolicitanteLayout({ children }: { children: React.ReactN
   const { t } = useT();
   const { notifs, count, markAsRead, markAllAsRead, incoming, dismissIncoming } = useNotifications();
   useSessionRefresh();
-  // El onboarding se muestra sin la barra del panel, pero con el mismo sistema visual SIGAC.
+  // El onboarding se muestra sin la barra del panel, pero con el mismo sistema visual SIGAE.
   usePanelScope();
   const pathname = usePathname();
   const router = useRouter();

@@ -139,7 +139,7 @@
         <div class="header">
             <div class="header-logo">COMECYT</div>
             <h1>Recuperar Contraseña</h1>
-            <p>Sistema de Gestión de Apoyo Científico</p>
+            <p>Sistema de Gestión de Apoyo Empresarial</p>
         </div>
         <div class="accent-bar"></div>
 

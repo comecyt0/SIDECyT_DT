@@ -17,10 +17,10 @@ interface PageHeaderProps {
 }
 
 /**
- * Encabezado de página — v3 (24/09/2026, sistema SIGAC: héroe de la landing + referencia Aboard).
+ * Encabezado de página — v3 (24/09/2026, sistema SIGAE: héroe de la landing + referencia Aboard).
  * Píldora de aviso (lavado cielo con punto) → título grande Satoshi con tracking cerrado y barra vino →
  * descripción en gris. Acciones en píldora a la derecha (debajo en teléfono). Mismo API en las 33 vistas.
- * Estilos: `.panel-hero*` en styles/panel-sigac.css.
+ * Estilos: `.panel-hero*` en styles/panel-sigae.css.
  */
 export default function PageHeader({ title, description, icon, eyebrow, actions, backHref, backLabel = 'Volver' }: PageHeaderProps) {
   return (

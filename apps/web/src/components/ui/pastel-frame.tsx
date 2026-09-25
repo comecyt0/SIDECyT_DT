@@ -5,7 +5,7 @@ import { ArrowUpRight } from 'lucide-react';
 /**
  * Marco pastel — v3 (24/09/2026). La "tarjeta de producto" de la referencia Aboard: un lavado pastel
  * suave (radio 32) que enmarca paneles blancos, en lugar de sombras. Tonos rebajados para no saturar
- * (ver `--pastel-*` en styles/panel-sigac.css); rotarlos entre secciones da el ritmo papel → pastel → papel.
+ * (ver `--pastel-*` en styles/panel-sigae.css); rotarlos entre secciones da el ritmo papel → pastel → papel.
  */
 export type PastelTone = 'blush' | 'lavender' | 'mint' | 'powder' | 'butter' | 'vino';
 

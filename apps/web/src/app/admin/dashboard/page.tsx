@@ -48,7 +48,7 @@ import UserAvatar from '@/components/ui/user-avatar';
 import { useRol } from '@/hooks/useRol';
 
 /**
- * Dashboard de administración — v3 (24/09/2026, sistema SIGAC: landing + referencia Aboard).
+ * Dashboard de administración — v3 (24/09/2026, sistema SIGAE: landing + referencia Aboard).
  * Ritmo papel → pastel → papel: héroe sobre el lienzo, pendientes en marco lavanda con tarjetas blancas,
  * indicadores como columnas de valor sin marco, gráficas en marco cielo, actividad y alertas en blanco.
  * Color sin saturar: el pastel enmarca; vino y navy solo en detalles, cifras y gráficas.

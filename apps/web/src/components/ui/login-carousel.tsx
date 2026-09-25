@@ -27,7 +27,7 @@ const DEFAULT_SLIDES: CarouselSlide[] = [
     id: 1,
     titulo: 'Gestión de Proyectos Tecnológicos',
     subtitulo: INSTITUTION.tagline,
-    descripcion: 'Administre el ciclo completo de convocatorias, evaluaciones y ministración de apoyos científicos.',
+    descripcion: 'Administre el ciclo completo de convocatorias, evaluaciones y ministración de apoyos empresariales.',
     badge_texto: 'Desarrollo Tecnológico',
     orden: 1,
     activo: true,

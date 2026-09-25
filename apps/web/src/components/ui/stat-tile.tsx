@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 
 /**
- * Tarjeta de indicador — v3 (24/09/2026, sistema SIGAC: landing + referencia Aboard).
+ * Tarjeta de indicador — v3 (24/09/2026, sistema SIGAE: landing + referencia Aboard).
  * Tarjeta blanca de producto (radio 20, sombra suave única) con chip pastel del tono, cifra grande en
  * Satoshi y una flecha que avanza al pasar el cursor. Pensada para ir sola o dentro de un <PastelFrame>.
  * `solid` = protagonista en tinta navy. El tono solo pinta el chip y un filo inferior: sin saturar.
- * Estilos: `.stat-tile` en styles/panel-sigac.css. Misma API que la v2: los 4 roles la heredan.
+ * Estilos: `.stat-tile` en styles/panel-sigae.css. Misma API que la v2: los 4 roles la heredan.
  */
 export type TileTone =
   | 'vino' | 'gold' | 'amber' | 'orange' | 'emerald'

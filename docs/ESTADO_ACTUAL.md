@@ -1,7 +1,14 @@
 # Estado Actual del Sistema COMECYT
 
-**Fecha de actualización:** 24 de septiembre de 2026, cierre de la noche (versión anterior: 23/09/2026)
+**Fecha de actualización:** 25 de septiembre de 2026 (versión anterior: 24/09/2026)
 
+> 🏛 **25/09/2026 — SIGAE, portal de sistemas y responsive (E48).** El sistema se llama ahora **SIGAE — Sistema de
+> Gestión de Apoyo Empresarial** (antes SIGAC); la landing está en **`/sigae`** y `/sigac` redirige. **El dominio
+> (`/`) muestra el portal de sistemas del COMECYT** con acceso a SIGAE y a **SICEI — Sistema de Impulso a la Ciencia,
+> Educación e Innovación** (`/sicei`, "Próximamente" hasta que se defina). Corregido el **menú móvil que no se
+> desplazaba** y auditoría responsive de todas las vistas (6 roles × 6 anchos): barra en tablet, pestañas y asistente
+> en teléfono corregidos. Ver `CLAUDE.md` E48 y `DISENO_UI.md` §16–17.
+>
 > 🔚 **Cierre de sesión 24/09/2026 (noche).** Publicado y verificado en producción: E44 (auditoría de seguridad), E45
 > (alcance por convocatoria/periodo, perfiles, buzón, folios, límites de archivo), avisos del buzón ligados a su hilo,
 > E46 (correo de recuperación: aviso al admin también en la campana, enlaces sin localhost) y E47 (asistente de
@@ -52,10 +59,10 @@
 > punta en producción, front 103/103. Migración aplicada con respaldo previo.
 
 > 🎨 **23/09/2026 (tarde) — Paneles unificados con la landing.** Admin, solicitante, revisor y evaluador
-> usan ahora el sistema visual SIGAC de la landing (tinta navy, blanco, pastel, vino de detalle, píldoras,
-> Switzer/Satoshi, logo y marca SIGAC en la barra). El login no cambió. Capa única
-> `src/styles/panel-sigac.css`; verificado en producción con los 4 roles, móvil 375 px y modo oscuro
-> (E39 en `CLAUDE.md`, `DISENO_UI.md` §12). **SIGAC = Sistema de Gestión de Apoyos Científicos.**
+> usan ahora el sistema visual SIGAE de la landing (tinta navy, blanco, pastel, vino de detalle, píldoras,
+> Switzer/Satoshi, logo y marca SIGAE en la barra). El login no cambió. Capa única
+> `src/styles/panel-sigae.css`; verificado en producción con los 4 roles, móvil 375 px y modo oscuro
+> (E39 en `CLAUDE.md`, `DISENO_UI.md` §12). **SIGAE = Sistema de Gestión de Apoyo Empresarial.**
 >
 > 📨 **23/09/2026 (tarde) — SMTP institucional FUNCIONANDO.** Infraestructura quitó el autenticador (MFA)
 > de `proyectos.comecyt@edomex.gob.mx` y le asignó licencia Exchange Online. Probado: autenticación,
@@ -63,19 +70,19 @@
 > producción; `comecyt-queue` y `comecyt-scheduler` reiniciados. Pendiente: reactivar el 2FA del admin con
 > el usuario presente (E38 en `CLAUDE.md`).
 >
-> 📣 **23/09/2026 (tarde) — Landing ampliada.** Nombre **SIGAC**, los 4 programas de Apoyo Empresarial,
+> 📣 **23/09/2026 (tarde) — Landing ampliada.** Nombre **SIGAE**, los 4 programas de Apoyo Empresarial,
 > **convocatorias abiertas en vivo** desde el nuevo endpoint público `GET /api/convocatorias/abiertas`
 > (solo lectura, lista blanca de campos, 30/min, E37), acentos vino, logo ×3 y botón "Ir al sitio" en el
 > login. ⚠️ Las 5 convocatorias `activa` de producción parecen datos de carga inicial: la landing las
 > anuncia; revisarlas en `/admin/convocatorias`. **Nueva regla permanente de ciberseguridad** para toda
 > implementación: `CLAUDE.md`, Reglas Críticas §0.
 >
-> 🌈 **23/09/2026 (tarde) — Landing pública publicada en `/sigac`.** https://sidecyt-comecyt.edomex.gob.mx/sigac
+> 🌈 **23/09/2026 (tarde) — Landing pública publicada en `/sigae`.** https://sidecyt-comecyt.edomex.gob.mx/sigae
 > presenta el sistema antes del login (qué es, las 8 etapas, los 4 perfiles, cómo obtener acceso) y lleva
-> a `/login` o `/solicitar-acceso`. **`/` sin sesión ahora redirige a `/sigac`** (con sesión, directo al
+> a `/login` o `/solicitar-acceso`. **`/` sin sesión ahora redirige a `/sigae`** (con sesión, directo al
 > panel). `/privacidad` y `/terminos` pasaron a ser públicas (antes mandaban al login). El campo de correo
 > del hero abre el login con el correo prellenado. Estilo basado en portrait.so a pedido del usuario,
-> aislado del resto del sistema. Solo frontend. Detalle: `docs/LANDING_SIGAC.md`.
+> aislado del resto del sistema. Solo frontend. Detalle: `docs/LANDING_SIGAE.md`.
 
 > 📧 **23/09/2026 (tarde) — SMTP, carrusel y cabeceras.** El usuario subió las **4 imágenes reales del
 > carrusel** vía `/admin/carrusel` (confirmado en BD) — con eso se probaron y cerraron dos pendientes
@@ -237,8 +244,8 @@ Entorno de `comecyt-web` (`AppEnvironmentExtra`): `PORT=3000`, `HOSTNAME=127.0.0
 
 | URL | Uso | Notas |
 |---|---|---|
-| `https://sidecyt-comecyt.edomex.gob.mx/` | **Producción** | Detrás del balanceador, certificado válido `*.edomex.gob.mx`. Sin sesión redirige a `/sigac` |
-| `https://sidecyt-comecyt.edomex.gob.mx/sigac` | **Landing pública** (23/09/2026) | Antes del login; ver `LANDING_SIGAC.md` |
+| `https://sidecyt-comecyt.edomex.gob.mx/` | **Producción** | Detrás del balanceador, certificado válido `*.edomex.gob.mx`. Sin sesión redirige a `/sigae` |
+| `https://sidecyt-comecyt.edomex.gob.mx/sigae` | **Landing pública** (23/09/2026) | Antes del login; ver `LANDING_SIGAE.md` |
 | `https://10.250.36.241/` | VPN interna | Certificado autofirmado (el navegador advierte) |
 | `http://10.250.36.241/` | — | `302` → `https://10.250.36.241/` |
 | `http://sidecyt-comecyt.edomex.gob.mx/` | — | El balanceador no responde en el puerto 80 (pedido a infraestructura) |
@@ -372,6 +379,7 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 | **2FA del admin desactivado** | Alta | Apagado desde el 14/09 por falta de correo. Ya hay SMTP: reactivarlo con el usuario presente y probar el restablecimiento de contraseña por correo de punta a punta |
 | ~~**Convocatorias `activa` que parecen de prueba**~~ | ✅ Resuelto 24/09/2026 | Cerradas y archivadas (`deleted_at`) a pedido del usuario; ya no aparecen en la landing ni en la lista del admin. Reversibles (E40) |
 | **Push a GitHub** | **Alta** | El repositorio remoto `comecyt0/SIDECyT_DT` está configurado pero el servidor no tiene credenciales: el usuario debe correr `git -C "F:\Desarrollo Tecnologico" push -u origin main`. Commits locales sin subir: E44, E45, avisos del buzón, E46 y E47 |
+| **SICEI** | Según el usuario | `/sicei` es una página de "Próximamente". Cuando el usuario defina el sistema, sustituirla por su landing/sistema (el portal ya enlaza ahí) |
 | **Borrador 4 de convocatoria** | Media | Recuperado del intento fallido (E47). Faltan: opciones de "Número de personas solicitantes?", el criterio de evaluación (nombre corto, detalle en la descripción) y revisar las fechas (01/05–01/06/2026 ya pasaron) |
 | **Recuperación de contraseña pendiente** | Media | Solicitud del 24/09 16:45 para una cuenta de solicitante (`un***@edomex.gob.mx`): el enlace sale solo cuando el admin la aprueba en Recuperación Contraseñas |
 | **Correo real para la cuenta admin** | **Alta** | El único admin tiene un correo de dominio sin servidor de correo (`comecyt.gob.mx`, sin MX): no le llega ningún aviso por correo (recuperaciones, accesos). Desde el 24/09 los avisos también llegan a la campana y el dashboard lo alerta, pero conviene cambiarlo en Usuarios (E46) |
@@ -406,6 +414,7 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 
 | Fecha | Cambio |
 |---|---|
+| 2026-09-25 | **E48:** SIGAC → **SIGAE** (código, correos, metadatos, docs; `/sigac` → 308 `/sigae`); **portal de sistemas en `/`** (SIGAE + SICEI, interactivo, pie con datos del COMECYT) y `/sicei` "Próximamente"; menú móvil con scroll y página fija; auditoría responsive (barra en 768 px, `.seg-tabs`, indicador del asistente) |
 | 2026-09-24 (noche, 5) | **E47 — "Nueva convocatoria":** guardado atómico (una petición, todo o nada, errores por campo), borradores con autoguardado en el servidor y lista "Borradores sin terminar"; corregida la pérdida de opciones de listas y % de rubros. El intento fallido del usuario se recuperó como borrador. Migración `2026_09_24_000005` con respaldo previo. Verificado 24/24 + 16/16 |
 | 2026-09-24 (noche, 4) | **E46 — correo de recuperación:** el SMTP funcionaba; la solicitud esperaba aprobación del admin y su aviso iba solo a un correo sin MX. Aviso ahora también en la campana (canal `CampanaChannel`, que además reemplaza el canal `database` que nadie leía), clic → página de la acción, alerta de correo de admin inválido, enlaces de correo sin localhost. Verificado 15/15 con envío real. Buzón: avisos ligados a su hilo (migración `2026_09_24_000004`) y campana del admin solo con lo propio |
 | 2026-09-24 (noche, 3) | **E45 — alcance por convocatoria y periodo, perfiles con foto y portada, buzón con chat, historial y publicación de folios, límites de archivo por campo.** Migración `2026_09_24_000003` con respaldo previo (`comecyt_2026-09-24_1508.dump`). Bugs corregidos: `store` de solicitud (nadie podía crear una), `adminShowFull` 500, orden de `throttle` vs autenticación. Front desplegado (`e45`, `e45b`) |
@@ -413,9 +422,9 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 | 2026-09-24 (noche) | **E42 — carga infinita por el dominio** corregida en 3 capas (IIS: HTML `private, no-store`; `deploy-web.ps1` conserva los chunks anteriores; script de recuperación en `layout.tsx`). **E43 — vistas internas, menú y pie** rediseñados (marco pastel por sección, menú en bloques pastel, pie con logo ×5), bloque de Reverb/"Buenas prácticas" quitado del dashboard, botón "Menú" con nombre accesible en móvil |
 | 2026-09-24 (tarde) | **E41 — Paneles v3:** barra flotante, `PageHeader` héroe, `PastelFrame`, `StatTile` v3, dashboards reestructurados, lienzo papel con salpicaduras; login sin cambios |
 | 2026-09-24 | **E40:** estados públicos de convocatorias (próxima/abierta/con prórroga/cerrada), prórroga, banners de convocatorias y programas (solo admin, validación de MIME real y dominios), convocatorias de prueba cerradas y archivadas, 5 bugs de fechas corregidos, arcoíris → vino en landing y paneles. Migración `2026_09_24_000001` con respaldo previo |
-| 2026-09-23 (tarde, 3) | **Paneles unificados con el diseño de la landing** (E39, `DISENO_UI.md` §12); login intacto. Landing: nombre completo "SIGAC — Sistema de Gestión de Apoyos Científicos" y halo vino detrás del titular |
-| 2026-09-23 (tarde, 2) | **SMTP Microsoft 365 funcionando** (E38). **Landing:** SIGAC, programas de Apoyo Empresarial, convocatorias en vivo (endpoint público E37 con throttle y lista blanca), vino de detalle, logo ×3, "Ir al sitio" en el login. **Regla permanente de ciberseguridad** en `CLAUDE.md` §0 |
-| 2026-09-23 (tarde) | **Landing pública `/sigac` publicada** (referencia portrait.so, fuentes Switzer + Satoshi auto-hospedadas). `/` sin sesión → `/sigac`; `/privacidad` y `/terminos` públicas; `?email=` prellena el login. Pruebas axe 3/3, sin scroll horizontal a 375 y 1440 px. Ver `LANDING_SIGAC.md` y `CLAUDE.md` E36 |
+| 2026-09-23 (tarde, 3) | **Paneles unificados con el diseño de la landing** (E39, `DISENO_UI.md` §12); login intacto. Landing: nombre completo "SIGAE — Sistema de Gestión de Apoyo Empresarial" y halo vino detrás del titular |
+| 2026-09-23 (tarde, 2) | **SMTP Microsoft 365 funcionando** (E38). **Landing:** SIGAE, programas de Apoyo Empresarial, convocatorias en vivo (endpoint público E37 con throttle y lista blanca), vino de detalle, logo ×3, "Ir al sitio" en el login. **Regla permanente de ciberseguridad** en `CLAUDE.md` §0 |
+| 2026-09-23 (tarde) | **Landing pública `/sigae` publicada** (referencia portrait.so, fuentes Switzer + Satoshi auto-hospedadas). `/` sin sesión → `/sigae`; `/privacidad` y `/terminos` públicas; `?email=` prellena el login. Pruebas axe 3/3, sin scroll horizontal a 375 y 1440 px. Ver `LANDING_SIGAE.md` y `CLAUDE.md` E36 |
 | 2026-09-23 | **Cookie de sesión endurecida** (`Secure`+`Strict`, verificado). **Definida e implementada la transición `aprobada→convenio→ministracion`** (E33), que destapó 3 bugs más en `ConvenioController` nunca antes ejercitados — corregidos y verificados con datos desechables (E34). **Limpieza:** 7.84 GB liberados en respaldos `.next.bak-*`, tarea rota eliminada, `C:\comecyt` borrado. **SMTP institucional probado con credenciales reales — bloqueado por la institución** (E35): dos rutas rechazadas por políticas de Microsoft 365 / red interna, ninguna corregible desde el servidor. **Carrusel:** imágenes reales ya subidas por el usuario. **Cabeceras:** `Server` confirmada oculta; `Cross-Origin-Resource-Policy` activada en `/storage/*` |
 | 2026-09-21 | **Rediseño vivo y multicolor de los 4 paneles, publicado**, más 3 bugs de producción encontrados y corregidos la misma tarde (E30, E31, E32 en `CLAUDE.md`): aprobar accesos daba 500 y nunca cerraba la solicitud; el mismo patrón bloqueaba **las 14 transiciones de estado** del ciclo de vida de `Solicitud` antes de que llegara la primera solicitud real; subir imagen del carrusel daba 422. Licencia de Windows con más margen (180 días, 3 rearmes). Ver `DISENO_UI.md` §10 |
 | 2026-09-11 | **Dominio `sidecyt-comecyt.edomex.gob.mx` publicado detrás de balanceador.** `web.config` reconoce `X-Forwarded-Proto` del balanceador (una variable por condición; corregido un bucle por caché de URL Rewrite), HSTS vía balanceador, caché de respuestas apagada. Laravel con el dominio y `TRUSTED_PROXIES`. Frontend con API relativa, recompilado. Log de IIS con `X-Forwarded-*`. Nuevo `VerificarDominio.ps1`. Ver `DOMINIO_BALANCEADOR.md` y `CLAUDE.md` E22 |

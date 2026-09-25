@@ -33,12 +33,12 @@
         @if($aprobado)
         <div class="header-success">
             <h1>✅ Evaluación Aprobada</h1>
-            <p>COMECYT - Sistema de Gestión de Apoyo Científico</p>
+            <p>COMECYT - Sistema de Gestión de Apoyo Empresarial</p>
         </div>
         @else
         <div class="header-rejected">
             <h1>❌ Evaluación No Aprobada</h1>
-            <p>COMECYT - Sistema de Gestión de Apoyo Científico</p>
+            <p>COMECYT - Sistema de Gestión de Apoyo Empresarial</p>
         </div>
         @endif
 

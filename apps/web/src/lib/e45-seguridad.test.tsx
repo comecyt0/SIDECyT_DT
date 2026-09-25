@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import UserAvatar from '@/components/ui/user-avatar';
 import { acceptDe, formatosDe, validarArchivo } from '@/lib/archivos';
 import { subrutaPermitida } from '@/lib/roles';
-import FoliosAprobados from '@/app/sigac/FoliosAprobados';
+import FoliosAprobados from '@/app/sigae/FoliosAprobados';
 
 /** E45 — pruebas del caso malicioso de las piezas nuevas (regla §0 de CLAUDE.md). */
 describe('UserAvatar', () => {

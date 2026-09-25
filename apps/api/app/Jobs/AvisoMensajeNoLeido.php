@@ -40,12 +40,12 @@ class AvisoMensajeNoLeido implements ShouldQueue
 
         $base = rtrim((string) config('app.frontend_url'), '/');
         $ruta = $delSolicitante ? '/admin/buzon?hilo='.$c->id : '/solicitante/buzon?hilo='.$c->id;
-        $asunto = 'SIGAC: tienes un mensaje sin leer en el buzón';
+        $asunto = 'SIGAE: tienes un mensaje sin leer en el buzón';
 
         foreach ($destinatarios as $u) {
             try {
                 Mail::raw(
-                    "Hola {$u->name}:\n\nTienes un mensaje sin leer en el buzón de sugerencias de SIGAC "
+                    "Hola {$u->name}:\n\nTienes un mensaje sin leer en el buzón de sugerencias de SIGAE "
                     ."(asunto: «".mb_substr(strip_tags((string) $c->asunto), 0, 120)."»).\n\n"
                     ."Ábrelo aquí: {$base}{$ruta}\n\n"
                     ."Por seguridad este correo no incluye el contenido del mensaje.\n\nCOMECYT",

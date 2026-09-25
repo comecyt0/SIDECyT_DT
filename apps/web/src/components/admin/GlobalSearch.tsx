@@ -144,7 +144,7 @@ export default function GlobalSearch({
       </button>
 
       {open && (
-        <div className="lg:hidden absolute right-0 top-[calc(100%+8px)] w-[92vw] max-w-[420px] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-100 dark:border-neutral-700 overflow-hidden z-50">
+        <div className="lg:hidden fixed left-3 right-3 top-[5.5rem] w-auto max-w-[420px] sm:left-auto sm:right-6 sm:w-[420px] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-100 dark:border-neutral-700 overflow-hidden z-50">
           <div className="p-3 border-b border-neutral-100 dark:border-neutral-700 flex items-center gap-2">
             <Search className="h-4 w-4 text-neutral-500 dark:text-neutral-300 shrink-0" />
             <input

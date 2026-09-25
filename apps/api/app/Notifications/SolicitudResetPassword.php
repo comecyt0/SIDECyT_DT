@@ -45,6 +45,6 @@ class SolicitudResetPassword extends Notification implements ShouldQueue
             ->action('Ver Solicitudes de Recuperación', $appUrl.'/admin/reset-requests')
             ->line('Si apruebas la solicitud, el sistema enviará automáticamente el enlace de recuperación al correo del usuario.')
             ->line('Si no reconoces esta solicitud, puedes rechazarla sin problema.')
-            ->salutation('COMECYT — Sistema de Gestión de Apoyo Científico');
+            ->salutation('COMECYT — Sistema de Gestión de Apoyo Empresarial');
     }
 }

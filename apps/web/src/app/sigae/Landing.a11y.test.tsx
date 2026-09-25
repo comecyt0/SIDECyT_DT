@@ -44,7 +44,7 @@ const conv = (o: Record<string, unknown>) => ({
   banner_url: null, estado: 'abierta', ...o,
 });
 
-describe('Landing /sigac', () => {
+describe('Landing /sigae', () => {
   it('no tiene violaciones axe', async () => {
     const { container } = render(<Landing />);
     const results = await axe(container);

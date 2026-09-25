@@ -6,7 +6,7 @@ import UserAvatar, { type AvatarUser } from '@/components/ui/user-avatar';
 
 /**
  * Cabecera de perfil (E45, punto 3): portada ancha, avatar circular superpuesto, nombre grande, píldoras, estado e
- * indicadores. Referencia visual del usuario (portal de cursos), adaptada al sistema SIGAC: blanco, pastel, vino de
+ * indicadores. Referencia visual del usuario (portal de cursos), adaptada al sistema SIGAE: blanco, pastel, vino de
  * detalle. Con `editable` muestra "Cambiar portada" y el botón de cámara sobre la foto.
  */
 export interface PerfilHeroProps {

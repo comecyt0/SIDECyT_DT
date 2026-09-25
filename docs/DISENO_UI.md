@@ -1,7 +1,7 @@
 # Diseño UI — COMECYT
 
-> **23/09/2026:** nueva landing pública `/sigac` con sistema visual propio (referencia portrait.so) — ver §11
-> y [`LANDING_SIGAC.md`](LANDING_SIGAC.md). **Ese mismo sistema se llevó a todos los paneles** (el login
+> **23/09/2026:** nueva landing pública `/sigae` con sistema visual propio (referencia portrait.so) — ver §11
+> y [`LANDING_SIGAE.md`](LANDING_SIGAE.md). **Ese mismo sistema se llevó a todos los paneles** (el login
 > queda igual) — ver §12. **24/09/2026: rediseño estructural v3** (barra flotante, héroes, marcos pastel,
 > referencia aboardhr.com) — ver **§13, dirección vigente**. §10 queda como historia de la capa de clases.
 
@@ -449,16 +449,16 @@ subagentes frescos (no-fork) o hacerlo directo.
 
 ---
 
-## 11. Landing pública `/sigac` (23/09/2026)
+## 11. Landing pública `/sigae` (23/09/2026)
 
-Página de presentación **antes del login** en https://sidecyt-comecyt.edomex.gob.mx/sigac; `/` sin sesión
+Página de presentación **antes del login** en https://sidecyt-comecyt.edomex.gob.mx/sigae; `/` sin sesión
 redirige ahí. Documento completo (rutas, archivos, tokens, movimiento, estados, cómo editar):
-**[`LANDING_SIGAC.md`](LANDING_SIGAC.md)**.
+**[`LANDING_SIGAE.md`](LANDING_SIGAE.md)**.
 
 - **Sistema visual propio y aislado**, a pedido del usuario: ADN de https://portrait.so (el usuario entregó
   su `design.md`) — lienzo blanco, tinta navy `#08304c`, un arcoíris de firma en tres lugares (CTA, una
   palabra del titular, cuadro de marca), lavados pastel, nav flotante en píldora, collage de polaroids.
-  Tokens en `.lp-root` dentro de `apps/web/src/app/sigac/landing.css`, **nunca en `:root`**: no toca
+  Tokens en `.lp-root` dentro de `apps/web/src/app/sigae/landing.css`, **nunca en `:root`**: no toca
   `--auth-*`, `--app-*` ni `--tile-*`. Login, paneles y menú no cambian.
 - **Fuentes:** Switzer (texto) y Satoshi (titulares, sustituto libre de Basier Circle), auto-hospedadas con
   `next/font/local`. El servidor no alcanza Google Fonts; Fontshare sí.
@@ -469,7 +469,7 @@ redirige ahí. Documento completo (rutas, archivos, tokens, movimiento, estados,
   usa `#585858` y no el `#797979` de la referencia —, objetivos táctiles de 44 px, `aria-*` del formulario).
 - Se respeta la regla vigente de pantalla de carga: la entrada animada de la landing espera a que se retire
   el `#boot-splash`.
-- **Tarde del 23/09:** nombre **SIGAC**; contenido de Apoyo Empresarial; **vino institucional como acento
+- **Tarde del 23/09:** nombre **SIGAE**; contenido de Apoyo Empresarial; **vino institucional como acento
   de detalle** (barras bajo títulos, números, fechas de cierre, filos de tarjeta; nunca fondos grandes);
   logo ×3 con `public/logo-recortado.png`; convocatorias abiertas en vivo; botón "Ir al sitio" en el login
   (único cambio al login: una píldora con los tokens `--auth-*`).
@@ -477,19 +477,19 @@ redirige ahí. Documento completo (rutas, archivos, tokens, movimiento, estados,
 
 ---
 
-## 12. Paneles unificados con la landing — sistema SIGAC (23/09/2026)
+## 12. Paneles unificados con la landing — sistema SIGAE (23/09/2026)
 
 **Pedido del usuario:** implementar el diseño, la interfaz y los colores de la landing en todos los paneles
 (admin, solicitante, revisor, evaluador) para unificar el sistema; **el login queda igual**. Esto **sustituye**
 la dirección "vivo y multicolor / Duolingo" del 21/09 (§10) como lenguaje visible: las clases de §10
 (`.pill`, `.tone-*`, `.stat-tile`, `data-tone`…) siguen existiendo y funcionando, pero ahora se pintan con
-el sistema SIGAC.
+el sistema SIGAE.
 
 ### Cómo está hecho (una capa, sin editar las 136 vistas)
 
 | Pieza | Dónde | Qué hace |
 |---|---|---|
-| `src/styles/panel-sigac.css` | importado en `app/layout.tsx` | Toda la capa. **Sin `@layer`** a propósito: gana sobre `globals.css` y las utilidades de Tailwind, así corrige radios/sombras que las vistas traen como utilidades |
+| `src/styles/panel-sigae.css` | importado en `app/layout.tsx` | Toda la capa. **Sin `@layer`** a propósito: gana sobre `globals.css` y las utilidades de Tailwind, así corrige radios/sombras que las vistas traen como utilidades |
 | `.panel-root` | raíz de `AdminTopLayout` y `RoleTopLayout` | Alcance del sistema en el primer render |
 | `html.sg-panel` | `hooks/usePanelScope.ts` (en ambos layouts y en el onboarding del solicitante) | Alcance para **portales** (diálogos, selects, menús), que se renderizan fuera de `.panel-root`. Se quita al salir del panel |
 | Tokens redefinidos | dentro del alcance | shadcn (`--primary`…), `--app-*`, `--tile-*`, los `--auth-*` que consumen los paneles, `--tone-*-L` y la **escala `neutral` de Tailwind v4** (`--color-neutral-*`, tintada hacia navy) |
@@ -518,7 +518,7 @@ y `<Card>`; cambiar los componentes las habría alterado. Con la capa acotada, e
 - **Campos:** 16 px, relleno gris frío `#f3f6fa` con filo, foco navy + halo cielo.
 - **Tablas:** contenedor de 24 px con sombra, encabezado `#f6f8fb`, fila con hover cielo.
 - **Barra superior:** **misma estructura y comportamiento (E26)**; cambia la piel (blanco, sombra de capas,
-  filo vino), el logo recortado (40 px; 30/24 px en teléfono) y la marca "SIGAC · Gestión de Apoyos
+  filo vino), el logo recortado (40 px; 30/24 px en teléfono) y la marca "SIGAE · Gestión de Apoyos
   Científicos" con el cuadro arcoíris.
 - **Modo oscuro:** conservado, en navy profundo con las mismas relaciones.
 
@@ -583,7 +583,7 @@ foco navy visible). Todo respeta `prefers-reduced-motion`.
 
 - Encabezado de toda vista nueva: `PageHeader`. Agrupaciones de indicadores o paneles: `PastelFrame` con
   paneles blancos dentro (`.pf-panel`), rotando tonos entre secciones; nunca dos marcos del mismo tono seguidos.
-- Nuevo color o componente del panel → token o regla en `panel-sigac.css`, acotado con
+- Nuevo color o componente del panel → token o regla en `panel-sigae.css`, acotado con
   `:is(.panel-root, html.sg-panel)`. **Nunca** en `:root` ni en `globals.css` (alcanzaría al login).
 - Un solo `variant="rainbow"` por vista (hoy es vino; el nombre de la variante se mantiene).
 - Vino solo en detalles; si una vista pide un bloque grande de color, usar navy o un lavado pastel.
@@ -593,7 +593,7 @@ foco navy visible). Todo respeta `prefers-reduced-motion`.
 Pedido del usuario: "rediseña el contenido interno de las demás vistas igual y el menú, todo menos el login y la
 landing", más "mejora el diseño del footer de todos los paneles y haz 5 veces más grande el logo del footer" y
 quitar del dashboard del admin el bloque "Notificaciones al instante / Información para soporte / Buenas
-prácticas". Todo en `panel-sigac.css`, bloque "E43", acotado a `:is(.panel-root, html.sg-panel)`.
+prácticas". Todo en `panel-sigae.css`, bloque "E43", acotado a `:is(.panel-root, html.sg-panel)`.
 
 ### Qué cambió
 
@@ -611,7 +611,7 @@ prácticas". Todo en `panel-sigac.css`, bloque "E43", acotado a `:is(.panel-root
 | **Paginación** (`.pager`) | Cuadros con borde, página actual vino | Botones redondos blancos, página actual en tinta navy (`aria-current="page"`) |
 | **Pestañas del programa** (`.seg-tabs`) | Subrayado | Control segmentado en píldora; activa en lavado vino |
 | **StepFrame** | Pasos sobre blanco, "Siguiente" vino sólido | Lista de pasos sobre papel, paso actual en panel blanco con número vino, pregunta en Satoshi 22 px, aviso en mantequilla, botones en píldora y "Siguiente" en tinta navy |
-| **Pie** (`PanelFooter.tsx`, nuevo, común a los 4 paneles) | Logo 28 px + dos líneas de texto | Tarjeta blanca (radio 32) con salpicadura vino tenue: **logo recortado a 76 px** (≈5× el visible anterior: `logo.png` a 28 px tiene ~46 % de margen), "SIGAC" + barra vino, nombre completo del sistema e institución; enlaces en píldora (Sitio público, Aviso de privacidad, Términos, correo de proyectos). Línea legal debajo. En oscuro el logo lleva placa clara |
+| **Pie** (`PanelFooter.tsx`, nuevo, común a los 4 paneles) | Logo 28 px + dos líneas de texto | Tarjeta blanca (radio 32) con salpicadura vino tenue: **logo recortado a 76 px** (≈5× el visible anterior: `logo.png` a 28 px tiene ~46 % de margen), "SIGAE" + barra vino, nombre completo del sistema e institución; enlaces en píldora (Sitio público, Aviso de privacidad, Términos, correo de proyectos). Línea legal debajo. En oscuro el logo lleva placa clara |
 | **Dashboard admin** | Estado de Reverb + "Buenas prácticas" | Quitados (el widget `ReverbStatusWidget` sigue en el código, solo no se monta) |
 
 ### Ganchos de clase agregados (sin tocar lógica)
@@ -632,7 +632,7 @@ horizontal, sin errores de consola, login sin `sg-panel`**.
 ## 15. Perfil, ficha, buzón, folios y confeti (E45, 24/09/2026)
 
 Referencia del usuario: dos capturas de un perfil con portada ancha y foto circular superpuesta. Todo en
-`panel-sigac.css`, bloque "E45" (`perfil-*`, `seguimiento*`, `buzon-*`), y `landing.css` para la sección pública.
+`panel-sigae.css`, bloque "E45" (`perfil-*`, `seguimiento*`, `buzon-*`), y `landing.css` para la sección pública.
 
 | Pieza | Diseño |
 |---|---|
@@ -644,4 +644,32 @@ Referencia del usuario: dos capturas de un perfil con portada ancha y foto circu
 | **Límites de archivos** | Una tarjeta por documento: tipos como casillas en píldora, deslizador de tamaño (1–20 MB) con el valor en vivo |
 | **Asistente de convocatorias — borrador (E47)** | Bajo "Paso n de 7" una línea viva (`aria-live`): "Guardando borrador…" con spinner, "Borrador guardado a las hh:mm" con nube, o en rojo "No se pudo guardar el borrador; se reintentará". Pie del asistente: "Anterior" + "Guardar borrador y salir" (variante `soft`) a la izquierda, "Siguiente"/"Crear convocatoria" a la derecha. Errores del servidor en paso 7: caja roja con lista de líneas "Elemento n «nombre» — campo: mensaje" y la nota "No se guardó nada a medias". Contador `n / 255` bajo el nombre del criterio |
 | **Borradores sin terminar (E47)** | Tarjeta blanca (radio 28) arriba de la lista de convocatorias, solo si hay borradores: nombre (o "Convocatoria sin nombre"), "Ibas en el paso n de 7 (Paso) · guardado fecha", botón "Continuar →" y papelera con confirmación. Solo el admin general |
-| **Landing — Folios aprobados** | Sección centrada con título + ícono de fiesta, tarjeta blanca por convocatoria con los folios en píldoras vino tenue (mono). **Confeti en `<canvas>`** (vino, navy, pastel) desde dos focos cada vez que la sección entra en pantalla, también al regresar; no se dispara con `prefers-reduced-motion`; `pointer-events: none` |
+| **Landing — Folios aprobados (E45)** | Sección centrada con título + ícono de fiesta, tarjeta blanca por convocatoria con los folios en píldoras vino tenue (mono). **Confeti en `<canvas>`** (vino, navy, pastel) desde dos focos cada vez que la sección entra en pantalla, también al regresar; no se dispara con `prefers-reduced-motion`; `pointer-events: none` |
+
+## 16. Portal de sistemas (`/`) y SICEI (`/sicei`) — E48, 25/09/2026
+
+Pedido del usuario: al abrir `https://sidecyt-comecyt.edomex.gob.mx` una página con el logo y los datos del COMECYT, dos
+botones (SIGAE → `/sigae`, SICEI → `/sicei`), "lo más interactiva posible" y con **vino en detalles, no saturado**.
+Código: `components/portal/Portal.tsx`, estilos `components/portal/portal.css` (prefijo `.pt-*`, tokens dentro de `.pt-root`).
+
+| Pieza | Diseño |
+|---|---|
+| **Paleta** | Papel `#fafafa`, tinta navy `#08304c`; pastel por sistema (cielo SIGAE, menta SICEI). Vino `oklch(36% 0.1 358)` solo en subrayado del titular, viñetas, punto "Próximamente", foco, íconos de accesos y filete de títulos del pie |
+| **Tipografía** | Satoshi (display) + Switzer (texto), las mismas auto-hospedadas de la landing |
+| **Estructura** | Barra flotante en píldora (logo + "Portal de sistemas" + enlace a comecyt.edomex.gob.mx) → titular pregunta "¿A qué sistema quieres entrar?" con subrayado vino dibujado → dos tarjetas "puerta" (sigla enorme, nombre, para quién, 3 puntos, estado, botón) → "¿Cuál es para mí?" → accesos rápidos (convocatorias abiertas, iniciar sesión, solicitar acceso) → pie en 4 columnas (marca y descripción, sistemas, contacto, enlaces) |
+| **Interacción** | Fondo con retícula de puntos y dos halos que derivan + halo que sigue al puntero (transform); en cada tarjeta, luz radial que sigue al cursor y leve inclinación 3D con resorte (solo puntero fino); botón con relleno vino suave que barre al pasar el cursor y flecha que avanza; `:active` a 0.97; el selector destaca la tarjeta recomendada (contorno vino) y atenúa la otra, con explicación en `aria-live` |
+| **Movimiento** | Una sola entrada escalonada al retirarse la pantalla de carga (1.1 s). `prefers-reduced-motion`: sin animaciones ni halo del puntero, todo visible |
+| **Honestidad** | Sin cifras inventadas; SICEI marcado "Próximamente" y `/sicei` explica que está en preparación (con salida a SIGAE para empresas) |
+| **Responsive** | Tarjetas apiladas bajo 880 px, botones a ancho completo bajo 480 px, pie 1→2→4 columnas; verificado sin scroll horizontal en 320/375/768/1440 |
+
+**Regla:** en `.pt-root` el reinicio de enlaces va con `:where(a)`; un selector `.pt-root a` le gana a cualquier clase de
+botón y deja el texto del color heredado (pasó: botón navy sin texto visible).
+
+## 17. Barra superior y menú en móvil/tablet — E48
+
+- **Menú:** se desplaza en todas las anchuras (antes solo ≥ 768 px), página de atrás fija mientras está abierto
+  (`useBloqueoScroll`, clase `html.sg-scroll-bloqueado`).
+- **Avisos y búsqueda en teléfono:** panel a ancho completo bajo la barra (`left/right: 12px`, `top: 5.5rem`).
+- **Barra 640–1023 px:** solo logo (sin "SIGAE / Gestión de…"), "Menú" sin la etiqueta de sección y avatar sin nombre:
+  todo cabe en 768 px (antes se salía hasta 170 px por la derecha en todos los roles).
+- **`.seg-tabs` bajo 640 px:** dos líneas en vez de salirse de la pantalla.

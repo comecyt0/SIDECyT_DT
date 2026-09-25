@@ -1,18 +1,23 @@
-# Landing pública SIGAC — `/sigac`
+# Landing pública SIGAE — `/sigae`
 
-**Publicada:** 23/09/2026 · **URL:** https://sidecyt-comecyt.edomex.gob.mx/sigac
-(también por VPN: `https://10.250.36.241/sigac`)
+**Publicada:** 23/09/2026 · **URL:** https://sidecyt-comecyt.edomex.gob.mx/sigae
+(también por VPN: `https://10.250.36.241/sigae`)
 
 Página de presentación del sistema **antes del login** y **puerta de entrada a todas las convocatorias de
 Apoyo Empresarial del COMECYT**. Muestra las convocatorias abiertas en vivo, los 4 programas, los sectores,
 los documentos que se preparan, el recorrido de una solicitud y cómo obtener acceso; lleva a `/login` o a
-`/solicitar-acceso`. En la landing el sistema se llama **SIGAC — Sistema de Gestión de Apoyos Científicos**
+`/solicitar-acceso`. En la landing el sistema se llama **SIGAE — Sistema de Gestión de Apoyo Empresarial**
 (nombre y significado confirmados por el usuario; antes decía SIDECyT). El nombre completo aparece en el texto
 del hero, en la tarjeta final, en el `title` del logo del nav y en los metadatos de la página.
 
+> **25/09/2026 (E48):** el sistema pasó de **SIGAC** ("Sistema de Gestión de Apoyos Científicos") a **SIGAE** ("Sistema
+> de Gestión de Apoyo Empresarial"); la landing se movió de `/sigac` a **`/sigae`** (carpeta `app/sigae`) y `/sigac`
+> redirige con 308. Además **`/` ya no redirige a la landing**: muestra el portal de sistemas del COMECYT (SIGAE y SICEI),
+> documentado en `docs/DISENO_UI.md` §16. Las secciones de abajo conservan su historia con el nombre nuevo.
+
 ## 0. Cambios del 23/09/2026 (tarde), en orden
 
-1. Nombre **SIGAC** en toda la landing ("Entra a SIGAC", marca del nav, metadatos).
+1. Nombre **SIGAE** en toda la landing ("Entra a SIGAE", marca del nav, metadatos).
 2. **Contenido de Apoyo Empresarial** de https://comecyt.edomex.gob.mx/apoyo-empresarial y de la página de
    cada programa (consultadas el 23/09/2026): 4 programas con público objetivo, descripción, correo y
    enlace oficial; 30 sectores estratégicos; formatos que piden las convocatorias; Reglas de Operación,
@@ -26,10 +31,10 @@ del hero, en la tarjeta final, en el `title` del logo del nav y en los metadatos
    hover de botones secundarios y selección de texto. Nunca fondos grandes ni botones rellenos.
 5. **Logo de COMECYT 3 veces más grande** en encabezado (dibujo visible ~26 → 78 px) y pie (~35 → 104 px),
    con `public/logo-recortado.png` (el `logo.png` original tiene ~46 % de margen transparente). En teléfono
-   el del encabezado se limita a 40–46 px para que quepa con "SIGAC" y el botón.
+   el del encabezado se limita a 40–46 px para que quepa con "SIGAE" y el botón.
 6. **Convocatorias abiertas en vivo** (§10) y píldora del nav "N convocatorias abiertas".
-7. Botón **"Ir al sitio"** en el login (arriba a la izquierda) → `/sigac`.
-8. Nombre completo **"SIGAC, el Sistema de Gestión de Apoyos Científicos"** en el texto del hero (en vino).
+7. Botón **"Ir al sitio"** en el login (arriba a la izquierda) → `/sigae`.
+8. Nombre completo **"SIGAE, el Sistema de Gestión de Apoyo Empresarial"** en el texto del hero (en vino).
 9. **Halo detrás del titular en vino** (`oklch(36% 0.1 358 / 0.13)`), antes lavanda de la referencia.
 10. El mismo sistema visual se llevó a todos los paneles: `DISENO_UI.md` §12.
 
@@ -39,25 +44,25 @@ del hero, en la tarjeta final, en el `title` del logo del nav y en los metadatos
 
 | Petición | Resultado |
 |---|---|
-| `/` sin sesión | `302` → `/sigac` (lo resuelve `proxy.ts`) |
+| `/` sin sesión | `302` → `/sigae` (lo resuelve `proxy.ts`) |
 | `/` con sesión | `302` → el panel de su rol (sin pasar por `/login`) |
-| `/sigac` | Pública para todos (en `PUBLIC_PATHS`) |
+| `/sigae` | Pública para todos (en `PUBLIC_PATHS`) |
 | `/privacidad`, `/terminos` | **Públicas desde este cambio.** Antes mandaban al login a quien no tenía sesión, y la landing las enlaza desde el pie |
 | `/login?email=…` | El login prellena el correo (y enfoca la contraseña) si el valor parece un correo válido |
 
-`src/app/page.tsx` redirige a `/sigac` solo como respaldo: en la práctica `proxy.ts` resuelve `/` antes.
-En IIS no hubo que tocar nada: `/sigac` cae en la regla `NextJsProxy` de `public/web.config`.
+`src/app/page.tsx` redirige a `/sigae` solo como respaldo: en la práctica `proxy.ts` resuelve `/` antes.
+En IIS no hubo que tocar nada: `/sigae` cae en la regla `NextJsProxy` de `public/web.config`.
 
 ## 2. Archivos
 
 | Archivo | Qué hace |
 |---|---|
-| `apps/web/src/app/sigac/page.tsx` | Página de servidor: metadatos (título, descripción, OpenGraph, canonical) y fuentes locales |
-| `apps/web/src/app/sigac/Landing.tsx` | Componente cliente: nav, hero con collage, etapas, roles, acceso y pie |
-| `apps/web/src/app/sigac/landing.css` | Todos los estilos, con prefijo `.lp-*`. Los tokens viven en `.lp-root`, **no** en `:root` |
+| `apps/web/src/app/sigae/page.tsx` | Página de servidor: metadatos (título, descripción, OpenGraph, canonical) y fuentes locales |
+| `apps/web/src/app/sigae/Landing.tsx` | Componente cliente: nav, hero con collage, etapas, roles, acceso y pie |
+| `apps/web/src/app/sigae/landing.css` | Todos los estilos, con prefijo `.lp-*`. Los tokens viven en `.lp-root`, **no** en `:root` |
 | `apps/web/src/fonts/` + `apps/web/src/lib/fonts.ts` | `Switzer-Variable.woff2`, `Satoshi-Variable.woff2` y su licencia (FFL). Desde la unificación de paneles (E39) las comparten landing y paneles; el layout raíz pone sus variables en `<html>` (el login sigue en Geist) |
-| `apps/web/src/app/sigac/Landing.a11y.test.tsx` | axe sin violaciones + validación del correo + enlaces a login/acceso |
-| `apps/web/src/proxy.ts` | `/sigac`, `/privacidad` y `/terminos` en `PUBLIC_PATHS`; regla de `/` |
+| `apps/web/src/app/sigae/Landing.a11y.test.tsx` | axe sin violaciones + validación del correo + enlaces a login/acceso |
+| `apps/web/src/proxy.ts` | `/sigae`, `/privacidad` y `/terminos` en `PUBLIC_PATHS`; regla de `/` |
 | `apps/web/src/app/(auth)/login/page.tsx` | Prellenado de `?email=` |
 
 La landing está aislada: no usa ni modifica `--auth-*`, `--app-*` ni `globals.css`. Los paneles, el login
@@ -101,7 +106,7 @@ sus efectos, animación e interfaz. Se tomó su **ADN**, no sus píxeles ni su c
 
 ## 4. Estructura
 
-1. **Nav flotante** (fija, píldora): logo COMECyT grande + "SIGAC" + cuadro arcoíris · píldora (≥ 900 px):
+1. **Nav flotante** (fija, píldora): logo COMECyT grande + "SIGAE" + cuadro arcoíris · píldora (≥ 900 px):
    "N convocatorias abiertas" si hay, o "Conoce los programas de apoyo empresarial" si no · "Solicitar
    acceso" (≥ 560 px) · "Iniciar sesión" con contorno arcoíris. Al hacer scroll gana un filo de 1 px.
 2. **Hero:** nombre de la institución · titular "Tu proyecto, de la idea al **convenio**" · texto ·
@@ -119,7 +124,7 @@ sus efectos, animación e interfaz. Se tomó su **ADN**, no sus píxeles ni su c
 8. **Un lugar para cada quien:** los 4 perfiles (solicitantes, revisión documental, evaluación técnica,
    administración) con encabezado fijo a la izquierda en escritorio.
 9. **¿Cómo obtengo acceso?:** 3 pasos (solicitar, validación por la administración, entrar) y la tarjeta
-   final "Entra a SIGAC" con los dos botones.
+   final "Entra a SIGAE" con los dos botones.
 10. **Pie:** logo grande, aviso de privacidad, términos, enlace a Apoyo Empresarial del sitio oficial,
     dirección, teléfonos, `proyectos.comecyt@edomex.gob.mx` y `copyrightLine()`.
 
@@ -132,7 +137,7 @@ sus efectos, animación e interfaz. Se tomó su **ADN**, no sus píxeles ni su c
   | Estado | Cuándo | Cómo se ve |
   |---|---|---|
   | Próxima a abrir | publicada y aún no llega su apertura | píldora cielo, "Abre en N días", botón "Prepárate: solicita acceso" |
-  | Abierta | entre apertura y cierre | píldora menta con punto que late, "Quedan N días" (vino si ≤ 7), "Postular en SIGAC" |
+  | Abierta | entre apertura y cierre | píldora menta con punto que late, "Quedan N días" (vino si ≤ 7), "Postular en SIGAE" |
   | Con prórroga | abierta con plazo ampliado | píldora durazno, "Prórroga hasta X" y la fecha original tachada |
   | Cerrada | cerrada a mano o pasó su fecha límite (últimos 180 días) | píldora gris, banner desaturado, sin botón |
 - **Pestañas:** Abiertas / Próximas a abrir / Cerradas con su conteo; abre en la primera que tenga
@@ -200,9 +205,9 @@ aparece dibujada; no hay paralaje. Sin JavaScript, un `<noscript>` deja todo vis
 - `vitest`: 5/5 en `Landing.a11y.test.tsx` (axe sin violaciones, validación del correo, convocatorias en
   vivo con datos maliciosos, estados vacío/error, enlaces) y la prueba del login sigue pasando.
 - Producción tras la tercera vuelta: 5 convocatorias pintadas, píldora "5 convocatorias abiertas", "Ir al
-  sitio" del login lleva a `/sigac`, sin errores de consola, sin scroll horizontal a 1440 y 375 px.
+  sitio" del login lleva a `/sigae`, sin errores de consola, sin scroll horizontal a 1440 y 375 px.
 - Capturas con Edge headless a 1440×900 y 375×812: **sin scroll horizontal** en ninguna.
-- Flujo real: `/` → `/sigac`; correo inválido muestra el error; correo válido abre
+- Flujo real: `/` → `/sigae`; correo inválido muestra el error; correo válido abre
   `/login?email=persona%40institucion.edu.mx` con el campo lleno; `/privacidad` y `/terminos` responden
   200 sin sesión.
 - Producción: ver §8.
@@ -223,4 +228,4 @@ log en `logs\deploy-landing-20260923.log`). Solo frontend; el backend no cambió
   intensidad del paralaje).
 - **Colores:** tokens al inicio de `landing.css`, dentro de `.lp-root`. No introducir otro color de marca:
   la paleta es tinta navy + arcoíris + tres lavados pastel.
-- Después de cualquier cambio: `npx vitest run src/app/sigac` y `deploy-web.ps1`.
+- Después de cualquier cambio: `npx vitest run src/app/sigae` y `deploy-web.ps1`.

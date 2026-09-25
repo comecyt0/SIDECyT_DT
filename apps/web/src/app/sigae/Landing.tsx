@@ -37,9 +37,9 @@ import { useGlobalLoader } from '@/components/ui/GlobalLoader';
 import FoliosAprobados from './FoliosAprobados';
 
 /**
- * Landing pública de SIGAC — Sistema de Gestión de Apoyos Científicos (/sigac), puerta de entrada a las
+ * Landing pública de SIGAE — Sistema de Gestión de Apoyo Empresarial (/sigae), puerta de entrada a las
  * convocatorias de Apoyo Empresarial. Estilos en ./landing.css (prefijo .lp-*), referencia de
- * estilo portrait.so y decisiones en docs/LANDING_SIGAC.md.
+ * estilo portrait.so y decisiones en docs/LANDING_SIGAE.md.
  *
  * Contenido honesto: nada de cifras inventadas. Las etapas y los roles salen del ciclo real del
  * sistema (CLAUDE.md, "Estados de Solicitud"); el collage ilustra piezas del expediente, no datos.
@@ -80,7 +80,7 @@ const ROLES: { title: string; body: string; icon: ReactNode; tone: Tone | 'mist'
 const ACCESS: { title: string; body: string }[] = [
   { title: 'Solicita acceso', body: 'Llena el formulario con los datos de tu empresa o institución y tu correo.' },
   { title: 'Se valida tu solicitud', body: 'La administración del COMECYT revisa tus datos y aprueba el acceso.' },
-  { title: 'Entra a SIGAC', body: 'Inicia sesión con tu correo y tu contraseña, y registra tu proyecto.' },
+  { title: 'Entra a SIGAE', body: 'Inicia sesión con tu correo y tu contraseña, y registra tu proyecto.' },
 ];
 
 /**
@@ -327,7 +327,7 @@ function CallCard({ c, i }: { c: Call; i: number }) {
         </dl>
         {abierta && (
           <Link href="/login" className="lp-btn lp-btn-ghost lp-call-cta">
-            Postular en SIGAC <ArrowRight className="lp-btn-arrow" aria-hidden="true" />
+            Postular en SIGAE <ArrowRight className="lp-btn-arrow" aria-hidden="true" />
           </Link>
         )}
         {c.estado === 'proxima' && (
@@ -364,7 +364,7 @@ function Calls({ state }: { state: CallsState }) {
       <div ref={ref} className="lp-wrap lp-reveal" data-inview={inView ? 'true' : 'false'}>
         <div className="lp-head">
           <h2 id="lp-calls" className="lp-h2">Convocatorias</h2>
-          <p className="lp-h2-sub">Lo que puedes postular hoy, lo que viene y lo que ya cerró. Esta lista se actualiza sola desde SIGAC.</p>
+          <p className="lp-h2-sub">Lo que puedes postular hoy, lo que viene y lo que ya cerró. Esta lista se actualiza sola desde SIGAE.</p>
         </div>
 
         {state.status === 'loading' && (
@@ -654,11 +654,11 @@ export default function Landing() {
       {/* ── Nav flotante ── */}
       <header className="lp-nav" data-scrolled={scrolled ? 'true' : 'false'}>
         <nav className="lp-nav-bar" aria-label="Principal">
-          <a href="#contenido" className="lp-brand" aria-label="SIGAC, Sistema de Gestión de Apoyos Científicos — inicio" title="Sistema de Gestión de Apoyos Científicos">
+          <a href="#contenido" className="lp-brand" aria-label="SIGAE, Sistema de Gestión de Apoyo Empresarial — inicio" title="Sistema de Gestión de Apoyo Empresarial">
             {/* logo-recortado.png = logo.png sin el margen transparente (el dibujo ocupa solo la mitad del alto) */}
             {/* eslint-disable-next-line @next/next/no-img-element -- logo institucional */}
             <img src="/logo-recortado.png" alt="" width={176} height={78} />
-            <span className="lp-brand-name">SIGAC</span>
+            <span className="lp-brand-name">SIGAE</span>
             <span className="lp-swatch" aria-hidden="true" />
           </a>
           {openCount > 0 ? (
@@ -705,7 +705,7 @@ export default function Landing() {
                 </span>
               </h1>
               <p className="lp-lead lp-in" style={{ '--i': 8 } as CSSProperties}>
-                <strong className="lp-lead-name">SIGAC, el Sistema de Gestión de Apoyos Científicos</strong>, es la
+                <strong className="lp-lead-name">SIGAE, el Sistema de Gestión de Apoyo Empresarial</strong>, es la
                 plataforma del {INSTITUTION.name} para las convocatorias de Apoyo Empresarial:
                 postula tu proyecto de ciencia, tecnología e innovación, sigue cada etapa y recibe el apoyo,
                 con todo tu expediente en un solo lugar.
@@ -733,7 +733,7 @@ export default function Landing() {
               <p className="lp-h2-sub">
                 El {INSTITUTION.name} brinda a empresas y emprendedores asesoría, capacitación y apoyos económicos
                 para impulsar proyectos de ciencia, tecnología e innovación en el {INSTITUTION.state}. Todas sus
-                convocatorias de Apoyo Empresarial se postulan en SIGAC.
+                convocatorias de Apoyo Empresarial se postulan en SIGAE.
               </p>
             </div>
             <ul ref={programsRef} className="lp-programs lp-reveal" data-inview={programsInView ? 'true' : 'false'}>
@@ -764,7 +764,7 @@ export default function Landing() {
             </ul>
             <p className="lp-note-line">
               Las fechas, montos y requisitos de cada convocatoria se publican en su página oficial. Cuando una
-              convocatoria está abierta, la registras aquí en SIGAC.
+              convocatoria está abierta, la registras aquí en SIGAE.
             </p>
           </div>
         </section>
@@ -823,7 +823,7 @@ export default function Landing() {
               <h2 id="lp-documentos" className="lp-h2">Lo que vas a preparar</h2>
               <p className="lp-h2-sub">
                 Cada convocatoria publica sus formatos para descargar y llenar. En general piden estos documentos,
-                que después adjuntas a tu solicitud en SIGAC.
+                que después adjuntas a tu solicitud en SIGAE.
               </p>
               <ul className="lp-doc-notes">
                 <li>Consulta antes la convocatoria, sus <strong>Reglas de Operación</strong> y los Lineamientos del Comité de Admisión y Seguimiento.</li>
@@ -892,8 +892,8 @@ export default function Landing() {
                 <img src="/logo.png" alt="" width={72} height={56} />
               </span>
               <div className="lp-final-text">
-                <h3>Entra a SIGAC</h3>
-                <p>Sistema de Gestión de Apoyos Científicos. Usa el correo con el que te registraste.</p>
+                <h3>Entra a SIGAE</h3>
+                <p>Sistema de Gestión de Apoyo Empresarial. Usa el correo con el que te registraste.</p>
               </div>
               <div className="lp-final-actions">
                 <Link href="/solicitar-acceso" className="lp-btn lp-btn-ghost">Solicitar acceso</Link>

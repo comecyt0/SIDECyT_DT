@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 /**
- * Convocatorias para la landing pública (/sigac), agrupadas por estado público. Sin autenticación.
+ * Convocatorias para la landing pública (/sigae), agrupadas por estado público. Sin autenticación.
  * GET /api/convocatorias/publicas (y /abiertas como alias de compatibilidad). E37 + E40.
  *
  * Seguridad:

@@ -5,9 +5,9 @@
 
 ## Visión General del Proyecto
 
-**SIGAC — Sistema de Gestión de Apoyos Científicos** (nombre confirmado por el usuario el 23/09/2026) es el
+**SIGAE — Sistema de Gestión de Apoyo Empresarial** (nombre confirmado por el usuario el 23/09/2026) es el
 sistema del **COMECYT** (Consejo Mexiquense de Ciencia y Tecnología) que administra el ciclo completo de las
-convocatorias de financiamiento de Apoyo Empresarial. Landing pública: `/sigac` (E36). El dominio conserva el
+convocatorias de financiamiento de Apoyo Empresarial. Landing pública: `/sigae` (E36). El dominio conserva el
 nombre anterior (`sidecyt-comecyt.edomex.gob.mx`).
 
 ```
@@ -235,9 +235,9 @@ Storage::disk('public')->url("documentos/{$id}/{$filename}");
 Páginas sin auth deben estar en `PUBLIC_PATHS` en `apps/web/src/proxy.ts`. Si no, el proxy las bloquea silenciosamente → el usuario ve que el botón "no hace nada".
 ```typescript
 const PUBLIC_PATHS = [
-  '/sigac', '/login', '/forgot-password', '/reset-password', '/solicitar-acceso', '/privacidad', '/terminos',
+  '/', '/sicei', '/sigae', '/login', '/forgot-password', '/reset-password', '/solicitar-acceso', '/privacidad', '/terminos',
 ];
-// y `/` sin sesión → /sigac (landing pública, E36)
+// `/` = portal de sistemas (SIGAE y SICEI) desde el 25/09/2026 (E48); `/sigac` → 308 a `/sigae`
 ```
 
 ### 5. Password Reset desde Admin — limpiar token previo
@@ -409,8 +409,8 @@ Capa reutilizable en `globals.css` (`data-tone`, `.pill`, `.tone-chip`, `.tone-c
 `.btn-sticker`, `.empty-state`) que alcanza a los 4 roles sin tocarlos archivo por archivo; detalle
 completo y el barrido vista por vista en `docs/DISENO_UI.md` §10.
 **El menú/nav del panel NO se toca (E26).** `logo.png` es el favicon del sistema completo.
-**23/09/2026 — Landing pública `/sigac`** con sistema visual propio y aislado (ADN de portrait.so, tokens en
-`.lp-root`, fuentes locales Switzer + Satoshi): `docs/LANDING_SIGAC.md` y E36.
+**23/09/2026 — Landing pública `/sigae`** con sistema visual propio y aislado (ADN de portrait.so, tokens en
+`.lp-root`, fuentes locales Switzer + Satoshi): `docs/LANDING_SIGAE.md` y E36.
 **24/09/2026 — PANELES v3, DIRECCIÓN VIGENTE (E41):** rediseño estructural con la landing + referencia
 aboardhr.com: barra flotante en píldora (misma lógica de menú; migas fuera de la barra), lienzo papel `#fafafa`
 con salpicaduras tenues, `PageHeader` como héroe, `PastelFrame` (marcos pastel rebajados con paneles blancos),
@@ -423,7 +423,7 @@ común `PanelFooter` (logo ×5) con el mismo lenguaje; `DISENO_UI.md` §14.
 **vino no saturado** con relleno animado al pasar el cursor, en landing y paneles (E40).
 **23/09/2026 — ESE MISMO SISTEMA EN TODOS LOS PANELES (dirección vigente, E39):** tinta navy principal,
 lienzo blanco, pastel, vino solo de detalle, píldoras, Switzer/Satoshi. Capa única
-`src/styles/panel-sigac.css` acotada a `:is(.panel-root, html.sg-panel)`; **el login no cambia**. Sustituye
+`src/styles/panel-sigae.css` acotada a `:is(.panel-root, html.sg-panel)`; **el login no cambia**. Sustituye
 la dirección visible "multicolor/Duolingo" del 21/09. Detalle: `docs/DISENO_UI.md` §12.
 
 ### Patrón de descarga de archivos (blob)
@@ -1314,18 +1314,18 @@ Los dos puntos que quedaban en "Cabeceras menores" (Pendientes):
    afecta ni la vista previa de documentos de solicitud (aún sin datos reales) ni las imágenes del
    carrusel — solo cierra el acceso a un origen externo, que es justo el propósito de la cabecera.
 
-### E36 — Landing pública `/sigac` antes del login [publicada 23-09-2026]
-El usuario pidió una landing previa al login en `https://sidecyt-comecyt.edomex.gob.mx/sigac`, con las
+### E36 — Landing pública `/sigae` antes del login [publicada 23-09-2026]
+El usuario pidió una landing previa al login en `https://sidecyt-comecyt.edomex.gob.mx/sigae`, con las
 skills de diseño y el ADN visual de portrait.so (entregó su `design.md`). Documento completo:
-**`docs/LANDING_SIGAC.md`**; resumen de diseño en `docs/DISENO_UI.md` §11.
-- **Rutas:** `/sigac`, `/privacidad` y `/terminos` en `PUBLIC_PATHS` de `proxy.ts`. **`/` sin sesión →
-  `/sigac`**; con sesión → el panel de su rol (antes iba a `/login` y de ahí rebotaba). Las legales eran
+**`docs/LANDING_SIGAE.md`**; resumen de diseño en `docs/DISENO_UI.md` §11.
+- **Rutas:** `/sigae`, `/privacidad` y `/terminos` en `PUBLIC_PATHS` de `proxy.ts`. **`/` sin sesión →
+  `/sigae`**; con sesión → el panel de su rol (antes iba a `/login` y de ahí rebotaba). Las legales eran
   inaccesibles sin sesión hasta hoy (redirigían al login) aunque la landing y los términos las enlazan.
 - **`/login?email=…`** prellena el correo y enfoca la contraseña (lo usa el campo del hero). Se lee con
   `window.location.search` tras montar, no con `useSearchParams`, para no exigir un `<Suspense>`.
-- **Estilos aislados:** todo en `src/app/sigac/landing.css` con prefijo `.lp-*` y tokens dentro de
+- **Estilos aislados:** todo en `src/app/sigae/landing.css` con prefijo `.lp-*` y tokens dentro de
   `.lp-root`. **Nunca mover esos tokens a `:root` ni a `globals.css`**: chocarían con `--auth-*`/`--app-*`.
-- **Fuentes auto-hospedadas** con `next/font/local` (`src/app/sigac/fonts/`, Switzer + Satoshi, licencia
+- **Fuentes auto-hospedadas** con `next/font/local` (`src/app/sigae/fonts/`, Switzer + Satoshi, licencia
   FFL). **El servidor no alcanza `fonts.googleapis.com`** — una fuente nueva con `next/font/google`
   probablemente rompería el build (Geist funciona porque ya estaba en caché). Fontshare sí responde, con
   `curl.exe --ssl-no-revoke`.
@@ -1334,15 +1334,15 @@ skills de diseño y el ADN visual de portrait.so (entregó su `design.md`). Docu
   `animation-fill-mode: backwards` — con `transform` + transición pisaba la rotación y el hover de cada
   tarjeta (se detectó antes de publicar).
 - **Verificado:** tsc 0 errores; `Landing.a11y.test.tsx` 3/3 (axe sin violaciones); Edge headless a 1440 y
-  375 px sin scroll horizontal y sin errores de consola en producción; `/` → 307 `/sigac` por IP y por
+  375 px sin scroll horizontal y sin errores de consola en producción; `/` → 307 `/sigae` por IP y por
   dominio; cabeceras de seguridad sin cambios.
-- **Segunda y tercera vuelta, mismo día (pedidos del usuario):** el sistema se llama **SIGAC** en la landing
+- **Segunda y tercera vuelta, mismo día (pedidos del usuario):** el sistema se llama **SIGAE** en la landing
   (no SIDECyT); contenido de los 4 programas de Apoyo Empresarial tomado de
   `comecyt.edomex.gob.mx/apoyo-empresarial` (programas, 30 sectores, formatos, contactos); acentos en
   **vino institucional** (`oklch(36% 0.1 358)`, el de `--auth-vino`) solo en detalles; logo de COMECYT
   **3 veces más grande** en encabezado y pie usando `public/logo-recortado.png` (el `logo.png` original tiene
   ~46 % de margen transparente); correo del pie `proyectos.comecyt@edomex.gob.mx`; **convocatorias abiertas
-  en vivo** (E37); botón **"Ir al sitio"** en el login → `/sigac`.
+  en vivo** (E37); botón **"Ir al sitio"** en el login → `/sigae`.
 - **Bug encontrado antes de cerrar:** `useInView` de Framer se conecta al `ref` en el montaje; si el elemento
   aparece después (la rejilla de convocatorias se pinta cuando llegan los datos), nunca lo observa y las
   tarjetas se quedaban en opacidad 0. **Regla:** el `ref` de un revelado va en un contenedor que exista
@@ -1389,10 +1389,10 @@ Exchange Online** (solo buzón). Configuración sugerida: `smtp.office365.com`, 
 - **Pendiente derivado:** reactivar el 2FA del admin (apagado desde el 14/09 por falta de correo) con el
   usuario presente, y probar de punta a punta el restablecimiento de contraseña por correo.
 
-### E39 — Paneles unificados con el diseño de la landing (sistema SIGAC) [publicado 23-09-2026]
+### E39 — Paneles unificados con el diseño de la landing (sistema SIGAE) [publicado 23-09-2026]
 Pedido del usuario: llevar diseño, interfaz y colores de la landing a todos los paneles; el login igual.
 Detalle completo en `docs/DISENO_UI.md` §12. Lo que un desarrollador debe saber:
-- **Una sola capa:** `src/styles/panel-sigac.css`, importada en `app/layout.tsx`, **sin `@layer`** (gana
+- **Una sola capa:** `src/styles/panel-sigae.css`, importada en `app/layout.tsx`, **sin `@layer`** (gana
   sobre `globals.css` y Tailwind). Todo selector va con `:is(.panel-root, html.sg-panel)`.
 - **Dos alcances:** `.panel-root` en la raíz de `AdminTopLayout`/`RoleTopLayout` (primer render) y
   `html.sg-panel`, que pone `usePanelScope()` mientras hay un panel montado — necesario porque diálogos,
@@ -1415,7 +1415,7 @@ Detalle completo en `docs/DISENO_UI.md` §12. Lo que un desarrollador debe saber
 Pedido del usuario: cerrar las convocatorias de prueba; que al darse de alta tengan estado para la landing
 (próxima a abrir, abierta, cerrada, con prórroga); configurar la prórroga; banner o imagen por enlace o archivo
 local, para convocatorias **y programas**, **solo admin**. Reglas de negocio: sección "Estado público de una
-Convocatoria" arriba. Documentación de la landing: `docs/LANDING_SIGAC.md` §10.
+Convocatoria" arriba. Documentación de la landing: `docs/LANDING_SIGAE.md` §10.
 - **Datos:** las 5 convocatorias de carga inicial se **cerraron** y luego se **archivaron** (`deleted_at`) para
   que la landing no las publique en "Cerradas" con nombres erróneos. Reversible (`deleted_at = NULL`). Ambas
   acciones en la bitácora (`convocatoria.cerrada_datos_prueba`, `convocatoria.archivada_datos_prueba`).
@@ -1459,7 +1459,7 @@ Convocatoria" arriba. Documentación de la landing: `docs/LANDING_SIGAC.md` §10
 Detalle de diseño en `docs/DISENO_UI.md` §13. Para desarrollo:
 - **Componentes nuevos/rehechos:** `components/ui/pastel-frame.tsx` (nuevo), `page-header.tsx` v3 y
   `stat-tile.tsx` v3 (mismas props: las 37 vistas y los 4 dashboards los heredan). Clases `.dash*`,
-  `.feature-*`, `.card-head*`, `.list-row`, `.alert-row`, `.pf-panel` en `styles/panel-sigac.css` (bloque "v3").
+  `.feature-*`, `.card-head*`, `.list-row`, `.alert-row`, `.pf-panel` en `styles/panel-sigae.css` (bloque "v3").
 - **Layouts:** barra `.panel-topbar` flotante; migas movidas a `<main>` como `.panel-crumbs`; `.panel-splash`
   al inicio de `.panel-root`. El dropdown móvil quedó en `top-[5.5rem]` por la barra despegada.
 - **No poner `backdrop-filter`/`transform`/`filter` en la barra**: rompe los `position: fixed` de su interior
@@ -1646,3 +1646,32 @@ lleva al paso 6, corregir, autoguardado, recargar, crear con una sola petición,
 E44 38/38 y E45 72/72, vitest 124/124.
 **Regla:** un flujo que crea varios registros relacionados va en **un endpoint con transacción**, nunca como cadena de
 peticiones desde el front; y todo formulario largo tiene borrador.
+
+### E48 — SIGAC → SIGAE, portal de sistemas en `/`, SICEI y auditoría responsive [publicado 25-09-2026]
+**1. Nuevo nombre (pedido del usuario):** el sistema se llama **SIGAE — Sistema de Gestión de Apoyo Empresarial** (antes
+SIGAC, "Sistema de Gestión de Apoyos Científicos"; las entradas anteriores de este archivo ya usan el nombre nuevo). Se
+renombró en código, correos, metadatos, manifest y docs: carpeta `app/sigac` → `app/sigae`, `styles/panel-sigac.css` →
+`panel-sigae.css`, `docs/LANDING_SIGAC.md` → `LANDING_SIGAE.md`, evento `sigae:perfil-actualizado`. **La landing vive en
+`/sigae`; `/sigac` (y `/sigac/*`) redirige con 308 a `/sigae`** conservando la búsqueda (proxy.ts). Textos de contenido
+("relevancia científica", "Vinculación Científica") no son el nombre del sistema y no se tocaron.
+**2. Portal en `/` (pedido del usuario):** `https://sidecyt-comecyt.edomex.gob.mx/` ya no redirige: muestra el **portal de
+sistemas del COMECYT** (`components/portal/Portal.tsx` + `portal.css`, prefijo `.pt-*`) con dos tarjetas —**SIGAE**
+(disponible → `/sigae`) y **SICEI — Sistema de Impulso a la Ciencia, Educación e Innovación** (próximamente → `/sicei`)—,
+selector "¿Cuál es para mí?", accesos rápidos y pie con los datos públicos del COMECYT. `/sicei` es una página pública de
+"Próximamente" hasta que el usuario defina el sistema. Ambas en `PUBLIC_PATHS`. Quien tiene sesión entra a su panel por
+SIGAE (→ `/login`, que lo redirige). Detalle de diseño: `docs/DISENO_UI.md` §16.
+**Bug encontrado al revisarlo:** `.pt-root a { color: inherit }` (0,1,1) le ganaba a `.pt-cta { color }` (0,1,0) → el botón
+principal era una píldora navy **sin texto visible**. Reinicio con `:where(a)`; la prueba ahora mide el contraste.
+**3. Menú móvil sin scroll (reporte del usuario):** `.panel-menu { overflow: hidden }` (capa sin `@layer`) ganaba a
+`max-md:overflow-y-auto` de Tailwind y el scroll solo existía desde 768 px; además el dedo movía la página de atrás. Ahora
+el menú se desplaza en todas las anchuras (`overscroll-behavior: contain`) y `useBloqueoScroll` fija la página mientras el
+menú o los avisos están abiertos en pantallas < 768 px. El panel de avisos y el de búsqueda pasan a ancho completo bajo
+la barra en teléfono (antes anclados al ícono, se salían por la izquierda).
+**4. Auditoría responsive** (`auditoria_responsive.mjs`: vistas × 6 roles × 320/375/414/768/1024/1440, scroll horizontal,
+elementos fuera de pantalla sin contenedor con scroll, menú y avisos móviles con gesto real). Encontró y se corrigió:
+barra superior desbordada **en tablet (768 px) en todos los roles** (marca, etiqueta de sección y nombre del usuario solo
+desde 1024 px); pestañas `.seg-tabs` de 554 px en teléfono (Folios, programa, buzón) → dos líneas bajo 640 px; indicador
+de 7 pasos del asistente en 320 px → círculos de 28 px y sin conectores bajo 380 px.
+**Lección:** esta capa de estilos va sin `@layer` a propósito (gana a Tailwind), así que **cualquier `overflow`, `display`
+o `color` declarado aquí anula la utilidad de Tailwind del JSX** — al diagnosticar "la clase no hace nada", buscar primero
+en `panel-sigae.css`.

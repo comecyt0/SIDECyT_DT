@@ -474,7 +474,7 @@ siguiente despliegue borró. Sin esos scripts React no arranca, y `RouteChangeOv
    guardada; el parámetro se limpia de la barra después. Constante propia, sin datos de usuario (la CSP ya permite
    `'unsafe-inline'`; no se relajó nada).
 
-**Verificación:** `curl.exe -sk -D - https://sidecyt-comecyt.edomex.gob.mx/sigac` → `Cache-Control: private,
+**Verificación:** `curl.exe -sk -D - https://sidecyt-comecyt.edomex.gob.mx/sigae` → `Cache-Control: private,
 no-cache, no-store...` con HSTS, XFO y CSP intactas; Edge headless por el dominio: splash oculto en la primera
 visita y al recargar con el service worker ya instalado. Los `ERR_ABORTED` de `?_rsc=` que aparecen son prefetch
 de Next cancelados al cerrar la página: normales.

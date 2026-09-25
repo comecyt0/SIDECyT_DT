@@ -88,13 +88,14 @@ export default function UserAvatar({
 /** Foto + nombre en línea (listas, tablas, seguimiento). */
 export function UserChip({ user, sub, href, size = 'sm' }: { user?: AvatarUser | null; sub?: string | null; href?: string; size?: keyof typeof TAMANOS }) {
   const contenido = (
-    <span className="inline-flex min-w-0 items-center gap-2.5">
+    // max-w-full + min-w-0 en cada nivel: el nombre se trunca con "…" en vez de salirse de la tarjeta (320 px, E48).
+    <span className="inline-flex min-w-0 max-w-full items-center gap-2.5">
       <UserAvatar user={user} size={size} />
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold text-[var(--app-ink)]">{user?.name ?? '—'}</span>
         {sub && <span className="block truncate text-xs text-[var(--app-ink-2)]">{sub}</span>}
       </span>
     </span>
   );
-  return href ? <Link href={href} className="min-w-0 rounded-lg hover:underline">{contenido}</Link> : contenido;
+  return href ? <Link href={href} className="inline-flex min-w-0 max-w-full rounded-lg hover:underline">{contenido}</Link> : contenido;
 }

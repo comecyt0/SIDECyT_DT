@@ -24,7 +24,7 @@ export interface ResumenPerfil {
   value: number;
 }
 
-const EVENTO = 'sigac:perfil-actualizado';
+const EVENTO = 'sigae:perfil-actualizado';
 let cache: { user: MiPerfil; resumen: ResumenPerfil[] } | null = null;
 let enCurso: Promise<{ user: MiPerfil; resumen: ResumenPerfil[] }> | null = null;
 

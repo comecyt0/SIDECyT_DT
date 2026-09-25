@@ -145,7 +145,7 @@ export default function FoliosAprobados() {
           </h2>
           <p className="lp-h2-sub">
             {total === 1 ? '1 proyecto aprobado' : `${total} proyectos aprobados`}. Si tu folio aparece aquí, revisa tu
-            panel en SIGAC: ahí sigue el convenio.
+            panel en SIGAE: ahí sigue el convenio.
           </p>
         </div>
         <div className="lp-folios">

@@ -5,9 +5,9 @@
  * nav: N5 floating pill · footer: Ft1 mínimo · enrichment: Tier-A CSS art (tarjetas del proceso)
  * Hallmark · pre-emit critique: P4 H5 E4 S5 R4 V5
  *
- * Landing pública de SIDECyT (/sigac). Todo vive bajo `.lp-root`: los tokens NO se declaran en
+ * Landing pública de SIGAE (/sigae). Todo vive bajo `.lp-root`: los tokens NO se declaran en
  * :root para no chocar con --auth-* / --app-* del resto del sistema. Documentado en
- * docs/LANDING_SIGAC.md y docs/DISENO_UI.md §11.
+ * docs/LANDING_SIGAE.md y docs/DISENO_UI.md §11.
  */
 
 .lp-root {
@@ -147,7 +147,7 @@
 
 /* ─────────────────────────── Marca ─────────────────────────── */
 
-/* Cuadro de marca junto a "SIGAC": degradado vino suave (antes arcoíris de la referencia). */
+/* Cuadro de marca junto a "SIGAE": degradado vino suave (antes arcoíris de la referencia). */
 .lp-swatch {
   display: inline-block;
   width: 10px;

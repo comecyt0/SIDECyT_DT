@@ -152,7 +152,7 @@
                 Hola <strong>{{ $nombre }}</strong>,
             </div>
 
-            <p>Nos complace informarte que tu solicitud de acceso al sistema COMECYT ha sido <strong>aprobada</strong>. Ya puedes iniciar sesión y comenzar a gestionar tus solicitudes de apoyo científico.</p>
+            <p>Nos complace informarte que tu solicitud de acceso al sistema COMECYT ha sido <strong>aprobada</strong>. Ya puedes iniciar sesión y comenzar a gestionar tus solicitudes de apoyo empresarial.</p>
 
             <div class="success-box">
                 <strong>✓ Acceso Aprobado Exitosamente</strong>

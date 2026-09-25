@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-// Sistema visual SIGAC de los paneles (23/09/2026). Todo acotado a `.panel-root`: el login no cambia.
-import "../styles/panel-sigac.css";
+// Sistema visual SIGAE de los paneles (23/09/2026). Todo acotado a `.panel-root`: el login no cambia.
+import "../styles/panel-sigae.css";
 import { switzer, satoshi } from "@/lib/fonts";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { I18nProvider } from "@/i18n/I18nProvider";
@@ -25,8 +25,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: `${INSTITUTION.name} - Sistema de Gestión de Apoyos Científicos`,
-  description: "Plataforma integral para la evaluación, seguimiento y ministración de proyectos tecnológicos y científicos.",
+  title: `${INSTITUTION.name} - Sistema de Gestión de Apoyo Empresarial`,
+  description: "SIGAE, el Sistema de Gestión de Apoyo Empresarial: convocatorias, solicitudes, evaluación, convenios y ministración de los apoyos.",
   manifest: "/manifest.webmanifest",
   applicationName: `${INSTITUTION.name} Sistema`,
   appleWebApp: {

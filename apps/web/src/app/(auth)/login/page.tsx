@@ -28,7 +28,7 @@ export default function LoginPage() {
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [twoFactorCode, setTwoFactorCode] = useState('');
 
-  // La landing (/sigac) manda el correo que escribió el usuario como ?email=. Se lee tras montar
+  // La landing (/sigae) manda el correo que escribió el usuario como ?email=. Se lee tras montar
   // (no useSearchParams, para no exigir un Suspense) y solo si parece un correo.
   useEffect(() => {
     const fromLanding = new URLSearchParams(window.location.search).get('email');
@@ -158,9 +158,9 @@ export default function LoginPage() {
       {/* ── Derecha: formulario ── */}
       <main className="flex min-h-screen w-full flex-col lg:w-[45%] xl:w-[42%]">
         <div className="flex items-center justify-between gap-3 px-6 pt-5">
-          {/* Regreso a la landing pública (/sigac), pedido del usuario el 23/09/2026. */}
+          {/* Regreso a la landing pública (/sigae), pedido del usuario el 23/09/2026. */}
           <Link
-            href="/sigac"
+            href="/sigae"
             className="group inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[var(--auth-rule)] bg-[var(--auth-white)] px-4 text-sm font-semibold text-[var(--auth-vino)] transition-[transform,background-color] duration-150 ease-out hover:bg-[var(--auth-vino-soft)] active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--auth-vino)]"
           >
             <ArrowLeft className="h-4 w-4 transition-transform duration-200 ease-out group-hover:-translate-x-0.5" aria-hidden="true" />

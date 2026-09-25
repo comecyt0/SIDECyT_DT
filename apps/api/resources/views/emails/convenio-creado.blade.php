@@ -30,7 +30,7 @@
     <div class="container">
         <div class="header">
             <h1>📜 Convenio Generado</h1>
-            <p>COMECYT - Sistema de Gestión de Apoyo Científico</p>
+            <p>COMECYT - Sistema de Gestión de Apoyo Empresarial</p>
         </div>
 
         <div class="content">

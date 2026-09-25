@@ -103,7 +103,7 @@ límite de entradas y de tamaño descomprimido) y descargados como adjunto; endp
 | Backend: migración `2026_09_24_000003` (con respaldo previo), modelos, `Alcance`, middlewares `rol`/`alcance`, rutas en 3 grupos | ✅ (smoke test de los 4 roles OK) |
 | 1 · 5 Roles, periodos, alcance (menú filtrado, paso "Alcance" en usuarios, `/admin/periodos`, periodo en el asistente) | ✅ |
 | 3 Perfil, foto y portada (`/{rol}/cuenta`, fichas `/…/perfiles/{id}`, avatar en barra, listas, actividad y chat) | ✅ |
-| 4 Historial, histórico y publicación (`/admin/folios`, Seguimiento en solicitud, sección con confeti en `/sigac`) | ✅ |
+| 4 Historial, histórico y publicación (`/admin/folios`, Seguimiento en solicitud, sección con confeti en `/sigae`) | ✅ |
 | 2 Buzón con chat (`/solicitante/buzon`, `/admin/buzon`, tiempo real por Reverb) | ✅ |
 | 6 Límites de archivos (`/admin/documentos-fijos`, pestaña "Documentos" del programa, paso "Archivo" del asistente) | ✅ |
 | Pruebas, despliegue y documentación final | ✅ |

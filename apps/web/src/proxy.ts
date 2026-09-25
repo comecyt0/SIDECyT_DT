@@ -6,10 +6,12 @@ import { subrutaPermitida } from '@/lib/roles';
 // Next.js 16: este archivo reemplaza a `middleware.ts` (deprecated).
 // El comportamiento es idéntico — la convención cambió de nombre, no de API.
 
-// `/sigac` es la landing pública (23/09/2026). `/privacidad` y `/terminos` se abren a quien no tiene
+// `/sigae` es la landing pública (23/09/2026). `/privacidad` y `/terminos` se abren a quien no tiene
 // sesión porque la landing los enlaza desde el pie: antes redirigían al login.
+// 25/09/2026: `/` es el portal de los sistemas del COMECYT (SIGAE y SICEI) y `/sicei` la página del nuevo sistema.
 const PUBLIC_PATHS = [
-  '/sigac', '/login', '/forgot-password', '/reset-password', '/solicitar-acceso', '/privacidad', '/terminos',
+  '/', '/sicei',
+  '/sigae', '/login', '/forgot-password', '/reset-password', '/solicitar-acceso', '/privacidad', '/terminos',
 ];
 
 /** Prefijo de ruta → roles autorizados a entrar.
@@ -96,10 +98,16 @@ export function proxy(request: NextRequest) {
 
   const esPublica = PUBLIC_PATHS.includes(path);
 
-  // La raíz: sin sesión → landing; con sesión → su panel.
-  if (path === '/') {
-    return NextResponse.redirect(new URL(sesion && rol ? DASHBOARD_BY_ROLE[rol] : '/sigac', request.url));
+  // 25/09/2026: el sistema pasó de SIGAC a SIGAE. La dirección anterior de la landing redirige de forma permanente
+  // (308) para no romper enlaces ya compartidos; conserva la búsqueda (?…) y el navegador conserva el #ancla.
+  if (path === '/sigac' || path.startsWith('/sigac/')) {
+    const destino = new URL(request.url);
+    destino.pathname = '/sigae' + path.slice('/sigac'.length);
+    return NextResponse.redirect(destino, 308);
   }
+
+  // La raíz ya no redirige (25/09/2026): muestra el portal con los accesos a SIGAE y SICEI a todos. Quien tiene
+  // sesión entra a su panel desde el botón de SIGAE (/login lo manda a su panel).
 
   if (esPublica) {
     // Con sesión válida, las pantallas de acceso llevan a su panel (la landing y las legales no).

@@ -1,0 +1,299 @@
+/* Hallmark · page: portal de sistemas COMECYT (/) · genre: modern-minimal institucional · theme: studied-DNA (landing SIGAE)
+ * macrostructure: héroe con pregunta + dos "puertas" (tarjetas de sistema) + selector guiado + accesos + pie Ft3 (columnas)
+ * color: tinta navy + papel; vino no saturado SOLO en detalles (subrayado, puntos, foco, íconos); pastel por sistema
+ * motion: una entrada escalonada; luz que sigue al puntero y ligera inclinación (solo puntero fino y sin reduced-motion)
+ * Hallmark · pre-emit critique: P5 H5 E4 S5 R4 V4
+ *
+ * Todo bajo `.pt-root`: los tokens no se declaran en :root (no chocan con --auth-*, --app-*, .lp-*).
+ */
+
+.pt-root {
+  --pt-tinta: #08304c;
+  --pt-tinta-2: #3d5566;
+  --pt-papel: #fafafa;
+  --pt-blanco: #ffffff;
+  --pt-niebla: #eef1f4;
+  --pt-linea: #e3e7eb;
+  --pt-vino: oklch(36% 0.1 358);
+  --pt-vino-suave: oklch(52% 0.08 4);
+  --pt-vino-lavado: oklch(96.5% 0.014 358);
+  --pt-vino-borde: oklch(45% 0.07 358 / 0.35);
+  --pt-cielo: #e8f1ff;
+  --pt-cielo-tinta: #0b3f8a;
+  --pt-menta: #dcf7e6;
+  --pt-menta-tinta: #0b5a2a;
+  --pt-mantequilla: #fff4d6;
+  --pt-sombra: rgba(8, 48, 76, 0.06) 0 1px 2px, rgba(8, 48, 76, 0.06) 0 12px 28px -12px;
+  --pt-sombra-alta: rgba(8, 48, 76, 0.08) 0 2px 4px, rgba(8, 48, 76, 0.14) 0 28px 56px -24px;
+  --pt-display: var(--font-lp-display), var(--font-lp-text), ui-sans-serif, system-ui, sans-serif;
+  --pt-texto: var(--font-lp-text), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --pt-ease: cubic-bezier(0.23, 1, 0.32, 1);
+
+  color-scheme: light;
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  overflow-x: clip;
+  background: var(--pt-papel);
+  color: var(--pt-tinta);
+  font-family: var(--pt-texto);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.pt-root *, .pt-root *::before, .pt-root *::after { box-sizing: border-box; }
+.pt-root :where(h1, h2, h3, p) { margin: 0; }
+.pt-root :where(ul) { margin: 0; padding: 0; list-style: none; }
+/* :where() deja este reinicio con especificidad (0,1,0): antes `.pt-root a` (0,1,1) le ganaba a `.pt-cta { color }` y el
+   botón principal quedaba con texto navy sobre fondo navy (invisible). */
+.pt-root :where(a) { color: inherit; text-decoration: none; }
+.pt-root :focus-visible { outline: 2px solid var(--pt-vino); outline-offset: 3px; border-radius: 12px; }
+.pt-root svg { width: 1.1em; height: 1.1em; flex: none; }
+
+.pt-wrap { width: 100%; max-width: 1180px; margin-inline: auto; padding-inline: 16px; }
+@media (min-width: 640px) { .pt-wrap { padding-inline: 32px; } }
+
+.pt-saltar {
+  position: absolute; left: 16px; top: -80px; z-index: 60; padding: 8px 16px; border-radius: 9999px;
+  background: var(--pt-tinta); color: var(--pt-blanco); font-weight: 600;
+}
+.pt-saltar:focus-visible { top: 16px; }
+
+/* ─────────── Fondo vivo ─────────── */
+.pt-fondo { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; --px: 50vw; --py: 30vh; }
+.pt-fondo-reticula {
+  position: absolute; inset: -2px;
+  background-image: radial-gradient(circle at 1px 1px, rgba(8, 48, 76, 0.10) 1px, transparent 0);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+}
+.pt-fondo-halo { position: absolute; width: 42vmax; height: 42vmax; border-radius: 50%; filter: blur(70px); opacity: 0.55; }
+.pt-fondo-halo-a { top: -14vmax; left: -10vmax; background: var(--pt-cielo); animation: pt-deriva 22s ease-in-out infinite alternate; }
+.pt-fondo-halo-b { top: 8vmax; right: -14vmax; background: var(--pt-vino-lavado); animation: pt-deriva 26s ease-in-out infinite alternate-reverse; }
+/* Halo que sigue al puntero: se mueve con transform (sin repintar el fondo). */
+.pt-fondo-puntero {
+  position: absolute; left: 0; top: 0; width: 520px; height: 520px; margin: -260px 0 0 -260px; border-radius: 50%;
+  background: radial-gradient(circle, oklch(36% 0.1 358 / 0.07), transparent 65%);
+  transform: translate3d(var(--px), var(--py), 0); opacity: 0; transition: opacity 400ms ease;
+}
+.pt-fondo[data-vivo] .pt-fondo-puntero { opacity: 1; }
+@keyframes pt-deriva { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(4vmax, 3vmax, 0) scale(1.08); } }
+
+/* ─────────── Barra ─────────── */
+.pt-barra { position: sticky; top: 12px; z-index: 40; margin-top: 12px; }
+.pt-barra-fila {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 68px; padding-block: 8px; border-radius: 9999px; background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--pt-sombra); -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px);
+}
+@media (min-width: 640px) { .pt-barra-fila { padding-inline: 24px; } }
+.pt-marca { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.pt-marca img { height: 46px; width: auto; }
+.pt-marca-texto {
+  padding-left: 14px; border-left: 1px solid var(--pt-linea); font-family: var(--pt-display); font-weight: 600;
+  font-size: 15px; white-space: nowrap;
+}
+.pt-barra-enlace {
+  display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 9999px;
+  font-size: 14px; font-weight: 600; color: var(--pt-tinta-2); white-space: nowrap;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+.pt-barra-enlace:hover { background: var(--pt-vino-lavado); color: var(--pt-vino); }
+@media (max-width: 520px) {
+  .pt-marca-texto { display: none; }
+  .pt-barra-enlace { padding: 10px 12px; font-size: 13px; }
+}
+
+/* ─────────── Héroe ─────────── */
+.pt-heroe { padding-top: clamp(40px, 8vw, 88px); padding-bottom: clamp(28px, 4vw, 44px); max-width: 1180px; }
+.pt-heroe-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 9999px;
+  background: var(--pt-blanco); box-shadow: var(--pt-sombra); font-size: 13px; font-weight: 600; color: var(--pt-tinta-2);
+}
+.pt-heroe-eyebrow svg { color: var(--pt-vino); }
+.pt-titulo {
+  margin-top: 20px; max-width: 16ch; font-family: var(--pt-display); font-weight: 700;
+  font-size: clamp(38px, 7vw, 76px); line-height: 1.02; letter-spacing: -0.035em; overflow-wrap: anywhere;
+}
+/* Subrayado vino dibujado (no cambia color ni estilo de la palabra). */
+.pt-subrayado { position: relative; white-space: nowrap; }
+.pt-subrayado::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0.02em; height: 0.12em; border-radius: 9999px;
+  background: linear-gradient(90deg, var(--pt-vino), var(--pt-vino-suave)); opacity: 0.75;
+  transform-origin: left; transform: scaleX(1);
+}
+.pt-root[data-listo] .pt-subrayado::after { animation: pt-trazo 900ms var(--pt-ease) 700ms both; }
+@keyframes pt-trazo { from { transform: scaleX(0.02); } to { transform: scaleX(1); } }
+@media (max-width: 420px) { .pt-subrayado { white-space: normal; } }
+.pt-heroe-texto { margin-top: 18px; max-width: 60ch; font-size: clamp(16px, 1.6vw, 19px); color: var(--pt-tinta-2); }
+
+/* Entrada escalonada (una sola orquestación). Sin JS o con movimiento reducido: todo visible. */
+.pt-entra { opacity: 1; }
+.pt-root:not([data-listo]) .pt-entra { opacity: 0; transform: translateY(14px); }
+.pt-root[data-listo] .pt-entra { animation: pt-aparece 700ms var(--pt-ease) both; animation-delay: calc(var(--i, 0) * 80ms); }
+@keyframes pt-aparece { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* ─────────── Tarjetas de sistema ─────────── */
+.pt-sistemas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+@media (min-width: 880px) { .pt-sistemas { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; } }
+.pt-sistema-marco { display: flex; min-width: 0; }
+.pt-sistema {
+  --mx: 50%; --my: 0%;
+  --acento: var(--pt-cielo); --acento-tinta: var(--pt-cielo-tinta);
+  position: relative; display: flex; flex-direction: column; width: 100%; min-width: 0;
+  padding: clamp(24px, 3.4vw, 40px); border-radius: 32px; background: var(--pt-blanco);
+  box-shadow: var(--pt-sombra); overflow: hidden; transform-style: preserve-3d;
+  transition: box-shadow 320ms var(--pt-ease), opacity 320ms var(--pt-ease), scale 320ms var(--pt-ease);
+}
+.pt-sistema[data-sistema='sicei'] { --acento: var(--pt-menta); --acento-tinta: var(--pt-menta-tinta); }
+.pt-sistema::before {
+  /* Franja pastel del sistema, arriba. */
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 132px; background: linear-gradient(180deg, var(--acento), transparent);
+  opacity: 0.8; pointer-events: none;
+}
+.pt-sistema-luz {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 300ms ease;
+  background: radial-gradient(360px circle at var(--mx) var(--my), oklch(36% 0.1 358 / 0.07), transparent 60%);
+}
+@media (hover: hover) and (pointer: fine) {
+  .pt-sistema:hover { box-shadow: var(--pt-sombra-alta); }
+  .pt-sistema:hover .pt-sistema-luz { opacity: 1; }
+}
+.pt-sistema[data-destacado] { box-shadow: var(--pt-sombra-alta), 0 0 0 2px var(--pt-vino-borde); }
+.pt-sistema[data-atenuado] { opacity: 0.55; scale: 0.985; }
+.pt-sistema > * { position: relative; }
+
+.pt-sistema-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pt-sistema-icono {
+  display: grid; place-items: center; width: 52px; height: 52px; border-radius: 18px;
+  background: var(--pt-blanco); color: var(--acento-tinta); box-shadow: var(--pt-sombra);
+}
+.pt-sistema-icono svg { width: 24px; height: 24px; }
+.pt-estado {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 9999px;
+  background: var(--pt-blanco); font-size: 12.5px; font-weight: 700; color: var(--pt-tinta);
+  box-shadow: 0 0 0 1px var(--pt-linea);
+}
+.pt-estado > span { width: 8px; height: 8px; border-radius: 50%; background: var(--pt-menta-tinta); box-shadow: 0 0 0 4px var(--pt-menta); }
+.pt-estado[data-estado='proximamente'] > span { background: var(--pt-vino); box-shadow: 0 0 0 4px var(--pt-vino-lavado); }
+@media (prefers-reduced-motion: no-preference) {
+  .pt-estado[data-estado='disponible'] > span { animation: pt-latido 2.4s ease-in-out infinite; }
+}
+@keyframes pt-latido { 50% { box-shadow: 0 0 0 7px var(--pt-menta); } }
+
+.pt-sigla {
+  margin-top: 28px; font-family: var(--pt-display); font-weight: 800; font-size: clamp(48px, 8vw, 84px);
+  line-height: 0.95; letter-spacing: -0.04em; color: var(--pt-tinta);
+}
+.pt-nombre { margin-top: 10px; font-family: var(--pt-display); font-weight: 600; font-size: clamp(17px, 1.9vw, 21px); line-height: 1.3; }
+.pt-para { margin-top: 12px; color: var(--pt-tinta-2); max-width: 52ch; }
+.pt-puntos { display: grid; gap: 10px; margin-top: 20px; margin-bottom: 28px; }
+.pt-puntos li { display: flex; gap: 12px; align-items: baseline; font-size: 15px; }
+.pt-puntos li::before {
+  content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--pt-vino); transform: translateY(-2px);
+}
+
+/* Botón: contorno + relleno que barre al pasar el cursor (vino MUY suave; nunca un bloque saturado). */
+.pt-cta {
+  position: relative; isolation: isolate; overflow: hidden; margin-top: auto; align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 14px 24px; border-radius: 9999px;
+  font-weight: 700; font-size: 16px; color: var(--pt-blanco); background: var(--pt-tinta);
+  transition: transform 160ms var(--pt-ease), box-shadow 220ms ease;
+}
+.pt-cta::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: linear-gradient(100deg, oklch(40% 0.085 358), oklch(50% 0.08 4));
+  transform: scaleX(0.001); transform-origin: left; transition: transform 420ms var(--pt-ease);
+}
+.pt-cta[data-variante='secundario'] { background: var(--pt-blanco); color: var(--pt-tinta); box-shadow: inset 0 0 0 1.5px var(--pt-tinta); }
+.pt-cta[data-variante='secundario']::before { background: var(--pt-vino-lavado); }
+.pt-cta-flecha { transition: transform 260ms var(--pt-ease); }
+@media (hover: hover) and (pointer: fine) {
+  .pt-cta:hover::before { transform: scaleX(1); }
+  .pt-cta:hover .pt-cta-flecha { transform: translateX(4px); }
+  .pt-cta[data-variante='secundario']:hover { color: var(--pt-vino); box-shadow: inset 0 0 0 1.5px var(--pt-vino-borde); }
+}
+.pt-cta:active { transform: scale(0.97); }
+@media (max-width: 480px) { .pt-cta { align-self: stretch; justify-content: center; } }
+
+/* ─────────── ¿Cuál es para mí? ─────────── */
+.pt-guia { margin-top: 28px; }
+.pt-guia-caja {
+  display: grid; gap: 18px; padding: clamp(22px, 3vw, 32px); border-radius: 28px; background: var(--pt-blanco);
+  box-shadow: var(--pt-sombra);
+}
+@media (min-width: 960px) { .pt-guia-caja { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr); align-items: center; } .pt-guia-respuesta { grid-column: 1 / -1; } }
+.pt-h2 { font-family: var(--pt-display); font-weight: 700; font-size: clamp(22px, 2.6vw, 30px); letter-spacing: -0.02em; line-height: 1.15; }
+.pt-guia-sub { margin-top: 6px; color: var(--pt-tinta-2); font-size: 15px; }
+.pt-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.pt-chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 16px; border: 0; border-radius: 9999px;
+  background: var(--pt-niebla); color: var(--pt-tinta); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: background-color 200ms ease, color 200ms ease, box-shadow 200ms ease, transform 140ms var(--pt-ease);
+}
+.pt-chip svg { color: var(--pt-tinta-2); transition: color 200ms ease; }
+@media (hover: hover) and (pointer: fine) { .pt-chip:hover { background: var(--pt-vino-lavado); } }
+.pt-chip:active { transform: scale(0.97); }
+.pt-chip[aria-checked='true'] { background: var(--pt-blanco); box-shadow: 0 0 0 2px var(--pt-vino); color: var(--pt-vino); }
+.pt-chip[aria-checked='true'] svg { color: var(--pt-vino); }
+.pt-guia-respuesta { min-height: 48px; padding: 14px 18px; border-radius: 18px; background: var(--pt-papel); font-size: 15px; }
+.pt-guia-respuesta strong { color: var(--pt-vino); }
+.pt-guia-vacio { color: var(--pt-tinta-2); }
+.pt-enlace { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: var(--pt-tinta); border-bottom: 1.5px solid var(--pt-vino-borde); }
+.pt-enlace:hover { color: var(--pt-vino); }
+
+/* ─────────── Accesos rápidos ─────────── */
+.pt-accesos { margin-top: 48px; margin-bottom: 72px; }
+.pt-accesos-lista { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 16px; }
+@media (min-width: 760px) { .pt-accesos-lista { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.pt-acceso {
+  display: flex; align-items: center; gap: 14px; height: 100%; padding: 18px 20px; border-radius: 22px; background: var(--pt-blanco);
+  box-shadow: var(--pt-sombra); transition: box-shadow 260ms var(--pt-ease), transform 160ms var(--pt-ease);
+}
+.pt-acceso-icono { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 14px; background: var(--pt-vino-lavado); color: var(--pt-vino); }
+.pt-acceso-texto { display: grid; min-width: 0; flex: 1; }
+.pt-acceso-etiqueta { font-weight: 700; }
+.pt-acceso-detalle { font-size: 13.5px; color: var(--pt-tinta-2); }
+.pt-acceso-flecha { color: var(--pt-tinta-2); transition: transform 260ms var(--pt-ease), color 200ms ease; }
+@media (hover: hover) and (pointer: fine) {
+  .pt-acceso:hover { box-shadow: var(--pt-sombra-alta); }
+  .pt-acceso:hover .pt-acceso-flecha { transform: translateX(4px); color: var(--pt-vino); }
+}
+.pt-acceso:active { transform: scale(0.985); }
+
+/* ─────────── Pie ─────────── */
+.pt-pie { background: var(--pt-blanco); border-top: 1px solid var(--pt-linea); padding-top: 48px; }
+.pt-pie-rejilla { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
+@media (min-width: 720px) { .pt-pie-rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1040px) { .pt-pie-rejilla { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.8fr); } }
+.pt-pie-marca img { width: 180px; height: auto; }
+.pt-pie-nombre { margin-top: 14px; font-family: var(--pt-display); font-weight: 700; font-size: 17px; }
+.pt-pie-desc { margin-top: 6px; max-width: 42ch; color: var(--pt-tinta-2); font-size: 14.5px; }
+.pt-pie-col { display: grid; align-content: start; gap: 10px; font-size: 14.5px; }
+.pt-pie-col > a { display: inline-flex; align-items: center; gap: 6px; width: fit-content; color: var(--pt-tinta-2); transition: color 200ms ease; }
+.pt-pie-col > a:hover { color: var(--pt-vino); }
+.pt-pie-titulo { font-family: var(--pt-display); font-weight: 700; color: var(--pt-tinta); position: relative; padding-bottom: 8px; margin-bottom: 2px; }
+.pt-pie-titulo::after { content: ''; position: absolute; left: 0; bottom: 0; width: 24px; height: 2px; border-radius: 9999px; background: var(--pt-vino); opacity: 0.7; }
+.pt-pie-contacto { display: grid; gap: 10px; font-style: normal; color: var(--pt-tinta-2); }
+.pt-pie-contacto > * { display: flex; gap: 10px; align-items: flex-start; overflow-wrap: break-word; min-width: 0; }
+.pt-pie-contacto a[href^='mailto:'] span { overflow-wrap: normal; }
+.pt-pie-contacto svg { margin-top: 3px; color: var(--pt-vino); }
+.pt-pie-contacto a:hover { color: var(--pt-vino); }
+.pt-pie-legal { margin-top: 40px; padding-block: 20px; border-top: 1px solid var(--pt-linea); font-size: 13px; color: var(--pt-tinta-2); }
+
+/* ─────────── Página de SICEI (próximamente) ─────────── */
+.pt-sicei { padding-block: clamp(48px, 9vw, 110px); }
+.pt-sicei-caja {
+  position: relative; overflow: hidden; max-width: 880px; padding: clamp(28px, 5vw, 56px); border-radius: 36px; background: var(--pt-blanco);
+  box-shadow: var(--pt-sombra-alta);
+}
+.pt-sicei-caja::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 180px; background: linear-gradient(180deg, var(--pt-menta), transparent); pointer-events: none; }
+.pt-sicei-caja > * { position: relative; }
+.pt-sicei-acciones { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-root *, .pt-root *::before, .pt-root *::after { animation: none !important; transition-duration: 1ms !important; }
+  .pt-root .pt-entra { opacity: 1 !important; transform: none !important; }
+  .pt-fondo-puntero { display: none; }
+}

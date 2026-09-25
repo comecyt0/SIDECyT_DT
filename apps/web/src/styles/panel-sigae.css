@@ -1,4 +1,4 @@
-/* Hallmark · system: panel-sigac (unificación de los 4 paneles con la landing /sigac)
+/* Hallmark · system: panel-sigae (unificación de los 4 paneles con la landing /sigae)
  * theme: studied-DNA (portrait.so) + vino institucional de detalle — el mismo sistema que landing.css
  * genre: modern-minimal institucional · states: default · hover · focus-visible · active · disabled
  * pre-emit critique: P4 H4 E4 S5 R5 V4
@@ -24,7 +24,7 @@
 
 .panel-root,
 html.sg-panel body {
-  /* ── Paleta SIGAC (misma que landing.css) ── */
+  /* ── Paleta SIGAE (misma que landing.css) ── */
   --sg-ink: #08304c;
   --sg-ink-hover: #0e4368;
   --sg-ink-2: #585858;
@@ -1245,6 +1245,12 @@ html.sg-panel [data-slot="dialog-content"] {
 :is(.panel-root, html.sg-panel) .seg-tabs [role="tab"]:hover { color: var(--sg-ink); background: var(--sg-canvas); }
 :is(.panel-root, html.sg-panel) .seg-tabs [role="tab"]:active { transform: scale(0.97); }
 :is(.panel-root, html.sg-panel) .seg-tabs [role="tab"][aria-selected="true"] { background: var(--pastel-vino); color: var(--sg-vino); }
+/* 25/09/2026 — en teléfono las pestañas no caben en una línea (Folios medía 554 px en una pantalla de 320): se
+   reparten en dos líneas en vez de salirse de la pantalla. */
+@media (max-width: 639px) {
+  :is(.panel-root, html.sg-panel) .seg-tabs { display: flex; flex-wrap: wrap; gap: 2px; border-radius: 22px; }
+  :is(.panel-root, html.sg-panel) .seg-tabs [role="tab"] { flex: 1 1 auto; justify-content: center; padding: 8px 12px; }
+}
 /* El contenedor de las pestañas traía un filo inferior propio: fuera. */
 :is(.panel-root, html.sg-panel) :has(> .seg-tabs) { border-bottom: 0; }
 
@@ -1273,9 +1279,24 @@ html.sg-panel [data-slot="dialog-content"] {
 
 /* Botón "Menú" abierto: tinta navy (antes vino sólido). Menú de escritorio con altura máxima y scroll. */
 :is(.panel-root, html.sg-panel) .panel-topbar [aria-haspopup="dialog"][aria-expanded="true"] { background: var(--sg-ink); color: var(--app-card-bg); box-shadow: none; }
-@media (min-width: 768px) {
-  :is(.panel-root, html.sg-panel) .panel-menu { max-height: calc(100dvh - 104px); overflow-y: auto; overscroll-behavior: contain; }
+/* 25/09/2026 — el menú se desplaza en TODAS las anchuras. Antes el scroll solo existía desde 768 px: en teléfono
+   `.panel-menu { overflow: hidden }` (esta capa va sin @layer) ganaba a `max-md:overflow-y-auto` de Tailwind y las
+   últimas opciones quedaban fuera de la pantalla; el dedo movía la página de atrás. `overscroll-behavior: contain`
+   evita que el gesto pase a la página al llegar al final; la página se bloquea mientras el menú está abierto (JS). */
+:is(.panel-root, html.sg-panel) .panel-menu {
+  max-height: calc(100dvh - 104px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
+@media (max-width: 767px) {
+  :is(.panel-root, html.sg-panel) .panel-menu { max-height: calc(100dvh - 6.5rem - env(safe-area-inset-bottom, 0px)); }
+  /* Panel de avisos de la campana: mismo problema y misma solución. */
+  :is(.panel-root, html.sg-panel) .panel-notifs { max-height: calc(100dvh - 6.5rem); overflow-y: auto; overscroll-behavior: contain; }
+}
+/* Página detrás del menú móvil: fija mientras está abierto (clase la pone useBloqueoScroll). */
+html.sg-scroll-bloqueado, html.sg-scroll-bloqueado body { overflow: hidden; overscroll-behavior: none; }
 /* Buscador de las listas: el placeholder se veía transparente (heredado del campo flotante del login). */
 :is(.panel-root, html.sg-panel) .panel-main input[type="search"].auth-input::placeholder { color: var(--sg-ink-2); opacity: 1; }
 

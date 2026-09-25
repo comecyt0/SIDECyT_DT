@@ -1,7 +1,7 @@
 import localFont from 'next/font/local';
 
 /**
- * Fuentes del sistema visual SIGAC (landing /sigac y paneles), auto-hospedadas: la CSP solo permite
+ * Fuentes del sistema visual SIGAE (landing /sigae y paneles), auto-hospedadas: la CSP solo permite
  * `font-src 'self'` y el servidor no alcanza Google Fonts. Ambas de Fontshare, licencia FFL (uso
  * comercial y web permitido) — ver src/fonts/LICENSE-FFL.txt.
  *

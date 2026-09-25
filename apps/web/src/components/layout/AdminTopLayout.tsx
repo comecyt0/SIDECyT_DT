@@ -29,6 +29,7 @@ import { INSTITUTION } from '@/lib/institution';
 import { useT } from '@/i18n/I18nProvider';
 import { formatDate } from '@/lib/format';
 import { usePanelScope } from '@/hooks/usePanelScope';
+import { useBloqueoScroll } from '@/hooks/useBloqueoScroll';
 
 interface NavItem {
   name: string;
@@ -129,6 +130,8 @@ export default function AdminTopLayout({
   const notifsRef = useRef<HTMLDivElement>(null);
   const prevNotifCount = useRef(notificationCount);
   const [bellShake, setBellShake] = useState(false);
+  // 25/09/2026: con el menú o los avisos abiertos en el teléfono, la página de atrás no se desplaza.
+  useBloqueoScroll(menuOpen || showNotifs);
 
   useEffect(() => {
     if (notificationCount > prevNotifCount.current) {
@@ -206,7 +209,7 @@ export default function AdminTopLayout({
   const sectionTone = MENU_TONES[Math.max(0, activeGroupIndex) % MENU_TONES.length];
 
   return (
-    // `panel-root`: alcance del sistema visual SIGAC (styles/panel-sigac.css). La estructura del menú no cambia (E26).
+    // `panel-root`: alcance del sistema visual SIGAE (styles/panel-sigae.css). La estructura del menú no cambia (E26).
     <div className="panel-root min-h-screen flex flex-col">
       {/* Salpicaduras de color muy tenues al fondo (landing + referencia Aboard): vino, cielo y menta. */}
       <div className="panel-splash" aria-hidden="true"><span /><span /><span /></div>
@@ -215,12 +218,12 @@ export default function AdminTopLayout({
       <header className="panel-topbar sticky z-50">
         <div className="panel-topbar-row h-16 flex items-center gap-2 sm:gap-3">
 
-          {/* Logo (recortado, mismo que la landing) + marca SIGAC */}
-          <Link href="/admin/dashboard" className="panel-brand flex items-center gap-3 shrink-0" title="SIGAC — Sistema de Gestión de Apoyos Científicos">
+          {/* Logo (recortado, mismo que la landing) + marca SIGAE */}
+          <Link href="/admin/dashboard" className="panel-brand flex items-center gap-3 shrink-0" title="SIGAE — Sistema de Gestión de Apoyo Empresarial">
             <Image src="/logo-recortado.png" alt={INSTITUTION.name} width={99} height={44} priority className="h-10 w-auto object-contain" />
-            <div className="hidden sm:block">
-              <span className="panel-brand-name">SIGAC<span className="panel-swatch" aria-hidden="true" /></span>
-              <span className="panel-brand-sub">Gestión de Apoyos Científicos</span>
+            <div className="hidden lg:block">
+              <span className="panel-brand-name">SIGAE<span className="panel-swatch" aria-hidden="true" /></span>
+              <span className="panel-brand-sub">Gestión de Apoyo Empresarial</span>
             </div>
           </Link>
 
@@ -246,7 +249,7 @@ export default function AdminTopLayout({
               </motion.div>
               <span className="hidden sm:block">{t('nav.menu')}</span>
               {activeGroup && !menuOpen && (
-                <span className="hidden md:inline-flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-300 font-normal">
+                <span className="panel-menu-seccion hidden lg:inline-flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-300 font-normal">
                   · {activeGroup}
                 </span>
               )}
@@ -377,7 +380,7 @@ export default function AdminTopLayout({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.97 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-[calc(100%+10px)] w-80 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-100 dark:border-neutral-700 overflow-hidden z-50"
+                    className="panel-notifs absolute right-0 top-[calc(100%+10px)] w-80 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-100 dark:border-neutral-700 overflow-hidden z-50 max-md:fixed max-md:left-3 max-md:right-3 max-md:top-[5.5rem] max-md:w-auto max-md:max-w-none"
                   >
                     <div className="p-4 border-b border-neutral-100 dark:border-neutral-700 flex items-center justify-between gap-2">
                       <span className="font-bold text-sm text-neutral-800 dark:text-neutral-100">{t('notifications.title')}</span>
@@ -446,7 +449,7 @@ export default function AdminTopLayout({
 
             {/* User avatar + name */}
             <Link href="/admin/cuenta" className="panel-user flex items-center gap-3 group rounded-full" title="Mi cuenta">
-              <div className="hidden sm:block text-right">
+              <div className="hidden lg:block text-right">
                 <p className="text-sm font-bold text-neutral-900 dark:text-neutral-50 leading-none">{perfil?.name ?? localUserName}</p>
                 <p className="text-[11px] text-accent dark:text-amber-300 font-semibold uppercase tracking-wider mt-0.5">{rol ? ROL_ETIQUETA[rol] : t('roles.admin')}</p>
               </div>

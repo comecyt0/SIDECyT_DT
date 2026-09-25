@@ -2,7 +2,7 @@
     <x-slot:header>
         <div class="header">
             <h1>📬 Solicitud Enviada</h1>
-            <p>COMECYT - Sistema de Gestión de Apoyo Científico</p>
+            <p>COMECYT - Sistema de Gestión de Apoyo Empresarial</p>
         </div>
     </x-slot:header>
 
