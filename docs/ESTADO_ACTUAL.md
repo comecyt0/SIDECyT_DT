@@ -2,6 +2,13 @@
 
 **Fecha de actualización:** 25 de septiembre de 2026 (versión anterior: 24/09/2026)
 
+> 🔚 **Cierre de sesión 25/09/2026.** Publicado y verificado: E48 (SIGAC → SIGAE, portal SIDECyT en `/`, menú móvil,
+> auditoría responsive 270 vistas / 0 hallazgos) y E49 (SIDECyT definido, programas/sectores/documentos editables en
+> `/admin/sitio`, SIGAE con 9 programas, SICEI documentado y pendiente). Regresión de seguridad 38/38. **Para retomar:**
+> leer `docs/SIDECYT.md`; (1) push a GitHub (lo hace el usuario); (2) definir SICEI (preguntas en `SIDECYT.md` §7);
+> (3) enlace de "Asistencia Técnica e Innovación"; (4) pendientes del 24/09: borrador 4, recuperación pendiente, correo
+> real del admin. Resto en la tabla de Pendientes.
+>
 > 🌐 **25/09/2026 (tarde) — SIDECyT definido y contenido administrable (E49).** **SIDECyT = Sistema Digital de
 > Emprendimiento, Ciencia y Talento Mexiquense** (el dominio y el portal). SIGAE se nutre de
 > comecyt.edomex.gob.mx/apoyo-empresarial: ahora muestra sus **9 programas** (antes 4), y programas, sectores,
