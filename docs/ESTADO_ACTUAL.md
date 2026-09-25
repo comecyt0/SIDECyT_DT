@@ -1,7 +1,16 @@
 # Estado Actual del Sistema COMECYT
 
-**Fecha de actualización:** 24 de septiembre de 2026, noche (versión anterior: 23/09/2026)
+**Fecha de actualización:** 24 de septiembre de 2026, cierre de la noche (versión anterior: 23/09/2026)
 
+> 🔚 **Cierre de sesión 24/09/2026 (noche).** Publicado y verificado en producción: E44 (auditoría de seguridad), E45
+> (alcance por convocatoria/periodo, perfiles, buzón, folios, límites de archivo), avisos del buzón ligados a su hilo,
+> E46 (correo de recuperación: aviso al admin también en la campana, enlaces sin localhost) y E47 (asistente de
+> convocatorias atómico + borradores). **Para retomar:** (1) completar el **borrador 4** "Programa Jóvenes Emprendedores
+> e Innovadores 2026" (faltan opciones de una pregunta de lista, el criterio y revisar fechas, que ya pasaron);
+> (2) aprobar la **recuperación de contraseña pendiente** en Recuperación Contraseñas; (3) **correo real para la cuenta
+> admin**; (4) el usuario debe hacer el **push** (`git -C "F:\Desarrollo Tecnologico" push -u origin main`; 4 commits
+> nuevos hoy además de E44). Pendientes completos en la tabla de abajo.
+>
 > 🧩 **24/09/2026 (noche, 3) — Seis funciones nuevas (E45).** Roles **Admin de convocatoria** (opera solo sus
 > convocatorias) y **Consulta** (solo lectura); **periodos** en las convocatorias y alcance por periodo; **foto de
 > perfil y portada** (WebP) visibles en todo el sistema y **ficha completa** por usuario/folio; **historial y
@@ -362,6 +371,9 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 | ~~**Correo (SMTP)**~~ | ✅ **Resuelto 23/09/2026 (tarde)** | Infraestructura respondió: la cuenta tenía el autenticador (MFA) activo y se le asignó licencia Exchange Online. Tras el cambio, `smtp.office365.com:587` STARTTLS autentica y envía, también desde Laravel. `MAIL_MAILER=smtp` activo (E38 en `CLAUDE.md`) |
 | **2FA del admin desactivado** | Alta | Apagado desde el 14/09 por falta de correo. Ya hay SMTP: reactivarlo con el usuario presente y probar el restablecimiento de contraseña por correo de punta a punta |
 | ~~**Convocatorias `activa` que parecen de prueba**~~ | ✅ Resuelto 24/09/2026 | Cerradas y archivadas (`deleted_at`) a pedido del usuario; ya no aparecen en la landing ni en la lista del admin. Reversibles (E40) |
+| **Push a GitHub** | **Alta** | El repositorio remoto `comecyt0/SIDECyT_DT` está configurado pero el servidor no tiene credenciales: el usuario debe correr `git -C "F:\Desarrollo Tecnologico" push -u origin main`. Commits locales sin subir: E44, E45, avisos del buzón, E46 y E47 |
+| **Borrador 4 de convocatoria** | Media | Recuperado del intento fallido (E47). Faltan: opciones de "Número de personas solicitantes?", el criterio de evaluación (nombre corto, detalle en la descripción) y revisar las fechas (01/05–01/06/2026 ya pasaron) |
+| **Recuperación de contraseña pendiente** | Media | Solicitud del 24/09 16:45 para una cuenta de solicitante (`un***@edomex.gob.mx`): el enlace sale solo cuando el admin la aprueba en Recuperación Contraseñas |
 | **Correo real para la cuenta admin** | **Alta** | El único admin tiene un correo de dominio sin servidor de correo (`comecyt.gob.mx`, sin MX): no le llega ningún aviso por correo (recuperaciones, accesos). Desde el 24/09 los avisos también llegan a la campana y el dashboard lo alerta, pero conviene cambiarlo en Usuarios (E46) |
 | **`env()` fuera de `config/`** | Media | Cookies, límites de peticiones, SSO, VAPID y TSA leen `env()` directo: si algún día se corre `config:cache` en este servidor devolverían null. Los enlaces de correo ya están corregidos (E46). Moverlos a `config/` antes de cachear |
 | **3 correos que nunca salieron (14 y 22/09)** | Baja | `failed_jobs` 1–3, de antes del SMTP real: 2 avisos de solicitud de acceso al admin y 1 "acceso aprobado" a un usuario (14/09). Se pueden reenviar con `php artisan queue:retry 2` si se quiere avisar al usuario |

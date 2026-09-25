@@ -651,6 +651,20 @@ GET /documentos/dictamen/{id}
 GET /documentos/convenio/{solicitud_id}
 ```
 
+**Asistente de convocatorias (E47, solo admin):**
+```
+POST   /admin/asistente-convocatoria                 → crea programa+preguntas+documentos+rubros+criterios+convocatoria (transacción)
+GET    /admin/asistente-convocatoria/borradores      → borradores propios (sin datos)
+GET    /admin/asistente-convocatoria/borradores/{id} → borrador propio (ajeno → 404)
+POST   /admin/asistente-convocatoria/borradores      → { paso, datos }   (≤ 256 KB, máx. 20 por usuario)
+PUT    /admin/asistente-convocatoria/borradores/{id}
+DELETE /admin/asistente-convocatoria/borradores/{id}
+```
+
+**E45 (resumen; detalle en `docs/IMPLEMENTACIONES_E45.md`):** `/admin/periodos`, `/admin/folios` (+ publicar/despublicar),
+`/buzon` (hilos, mensajes, leer, resolver), `/mi-perfil` (+ avatar/banner), `/perfiles/{user}`, `/media/perfil/{archivo}`,
+`/config/documentos-fijos`, `/admin/documentos-fijos`, público `GET /folios-aprobados`.
+
 ---
 
 ## Seguridad Implementada

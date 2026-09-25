@@ -127,7 +127,15 @@ límite de entradas y de tamaño descomprimido) y descargados como adjunto; endp
    muestra solo sus notificaciones (antes las de todos, sin poder marcarlas leídas). Verificado en navegador 6/6.
 5. En la vista: iniciales "P(" para nombres con paréntesis, botón "Nuevo" del buzón cortado a 375 px y el menú del delegado decía "Administrador". Corregidos.
 
-## 9. Pendiente / fuera de alcance
+## 9. Seguimiento posterior (misma noche)
+
+| Cambio | Detalle |
+|---|---|
+| Avisos del buzón ligados a su hilo | `notificaciones_log.conversacion_id` (FK en cascada, migración `2026_09_24_000004`); clic → `…/buzon?hilo=ID`; la campana del admin muestra solo sus notificaciones. Reportado por el usuario: "tengo mensajes nuevos y el buzón está vacío" (restos de las pruebas) |
+| E46 — correo de recuperación | Aviso al admin también en la campana (`CampanaChannel`, que reemplaza el canal `database` que nadie leía); enlaces de correo con `config('app.frontend_url')`; alerta de correo de admin sin MX. Ver `CLAUDE.md` E46 |
+| E47 — asistente de convocatorias | Guardado atómico + borradores con autoguardado; las opciones de listas y el % de rubros ya no se pierden. Ver `CLAUDE.md` E47 |
+
+## 10. Pendiente / fuera de alcance
 
 - Vista previa en línea solo para PDF e imágenes; DOCX/XLSX/ZIP se descargan (a propósito: no se renderizan en el navegador).
 - El correo de "mensaje sin leer" no incluye el texto del mensaje (a propósito: el correo sale del sistema).
