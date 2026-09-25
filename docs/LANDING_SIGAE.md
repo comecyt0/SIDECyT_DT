@@ -14,6 +14,11 @@ del hero, en la tarjeta final, en el `title` del logo del nav y en los metadatos
 > de Gestión de Apoyo Empresarial"); la landing se movió de `/sigac` a **`/sigae`** (carpeta `app/sigae`) y `/sigac`
 > redirige con 308. Además **`/` ya no redirige a la landing**: muestra el portal de sistemas del COMECYT (SIGAE y SICEI),
 > documentado en `docs/DISENO_UI.md` §16. Las secciones de abajo conservan su historia con el nombre nuevo.
+>
+> **25/09/2026 (E49):** **programas, sectores estratégicos, documentos y notas ya no están en `Landing.tsx`**: vienen de
+> `GET /api/sitio/sigae` y se editan en el panel (Configuración → Contenido público, `/admin/sitio`). Son 9 programas
+> (los del sitio oficial). El titular cuenta los programas reales ("Nueve programas…"). Las etapas del recorrido, los
+> roles y los pasos de acceso siguen en el código porque describen el sistema, no un programa. Ver `docs/SIDECYT.md`.
 
 ## 0. Cambios del 23/09/2026 (tarde), en orden
 

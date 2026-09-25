@@ -18,23 +18,21 @@ import {
   FilePlus,
   FileText,
   FolderCheck,
-  GraduationCap,
   Handshake,
   Loader2,
   Mail,
   MapPin,
   Megaphone,
   MessageSquareText,
-  Network,
   Phone,
-  Rocket,
   Scale,
   Settings2,
-  Wrench,
 } from 'lucide-react';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
 import { useGlobalLoader } from '@/components/ui/GlobalLoader';
 import FoliosAprobados from './FoliosAprobados';
+import { useSitio } from '@/lib/sitio';
+import IconoPrograma from '@/components/portal/IconoPrograma';
 
 /**
  * Landing pública de SIGAE — Sistema de Gestión de Apoyo Empresarial (/sigae), puerta de entrada a las
@@ -84,75 +82,26 @@ const ACCESS: { title: string; body: string }[] = [
 ];
 
 /**
- * Programas de Apoyo Empresarial. Fuente: https://comecyt.edomex.gob.mx/apoyo-empresarial y la
- * página de cada programa (consultadas el 23/09/2026). No se ponen fechas ni estatus de convocatoria
- * aquí porque cambian cada año: cada tarjeta enlaza a la página oficial, que sí los publica.
+ * Sitio oficial del COMECYT (enlace del pie). Los programas ya no viven aquí: ver E49 abajo.
  */
 const COMECYT_SITE = 'https://comecyt.edomex.gob.mx';
 
 /** Correo de contacto del pie, indicado por el usuario (23/09/2026). */
 const CONTACT_EMAIL = 'proyectos.comecyt@edomex.gob.mx';
 
-const PROGRAMS: {
-  title: string; audience: string; body: string; email: string; href: string; icon: ReactNode; tone: Tone;
-}[] = [
-  {
-    title: 'Programa para el Desarrollo de Prototipos',
-    audience: 'MiPyMEs, personas físicas con actividad empresarial y cooperativas',
-    body: 'Apoyo económico para desarrollar prototipos que resulten de un desarrollo o una innovación tecnológica susceptible de propiedad intelectual, y fortalecer tus capacidades tecnológicas y productivas.',
-    email: 'dt.prototipos@edomex.gob.mx',
-    href: `${COMECYT_SITE}/apoyo-desarrollo-prototipos`,
-    icon: <Wrench />,
-    tone: 'sky',
-  },
-  {
-    title: 'Incorporación de Profesionistas para el Fortalecimiento Empresarial',
-    audience: 'MiPyMEs y grandes empresas',
-    body: 'Apoyo económico para integrar a tu empresa profesionistas con grado de técnico superior universitario, licenciatura, maestría o doctorado, que desarrollen un proyecto tecnológico o de innovación.',
-    email: 'focacyte@edomex.gob.mx',
-    href: `${COMECYT_SITE}/incorporacion-profesionistas-fortalecimiento-empresarial`,
-    icon: <GraduationCap />,
-    tone: 'mint',
-  },
-  {
-    title: 'Jóvenes Emprendedores e Innovadores',
-    audience: 'Jóvenes de hasta 29 años, estudiantes o egresados de educación superior, que residan en el Estado de México',
-    body: 'Apoyo económico para un proyecto de desarrollo tecnológico o de innovación de un producto, proceso o servicio, con el que emprendas una empresa o negocio.',
-    email: 'vinculacionempresas@edomex.gob.mx',
-    href: `${COMECYT_SITE}/jovenes-emprendedores-innovadores`,
-    icon: <Rocket />,
-    tone: 'peach',
-  },
-  {
-    title: 'Vinculación de Empresas con Instituciones Educativas y Centros de Investigación',
-    audience: 'MiPyMEs y grandes empresas',
-    body: 'Apoyo económico para proyectos de innovación y desarrollo tecnológico hechos en colaboración con instituciones de educación media superior, superior o centros de investigación.',
-    email: 'sceron.comecyt@edomex.gob.mx',
-    href: `${COMECYT_SITE}/vinculacion-empresas`,
-    icon: <Network />,
-    tone: 'sky',
-  },
-];
-
-/** Sectores estratégicos que listan las convocatorias 2026 (mismos en los cuatro programas, salvo Agroquímica). */
-const SECTORS = [
-  'Aeronáutica', 'Agroindustria', 'Agrotecnología', 'Agroquímica', 'Alimentos', 'Ambiental', 'Arquitectura',
-  'Automotriz', 'Bioingeniería', 'Biotecnología', 'Desarrollo sustentable', 'Dispositivos médicos',
-  'Economía circular', 'Eficiencia energética', 'Electromecánica', 'Farmacéutica', 'Gestión integral de residuos',
-  'Informática', 'Inteligencia artificial', 'Logística', 'Manufactura', 'Mecatrónica', 'Movilidad', 'Plásticos',
-  'Química', 'Robótica', 'Salud', 'Textil', 'Tecnologías para el agua', 'Telecomunicaciones',
-];
+/*
+ * E49 (25/09/2026): programas, sectores estratégicos, documentos y notas YA NO están en el código. Se administran en
+ * /admin/sitio y llegan de GET /api/sitio/sigae (lib/sitio.ts). Carga inicial tomada de
+ * comecyt.edomex.gob.mx/apoyo-empresarial y la página de cada programa.
+ */
 const SECTOR_TONES: Tone[] = ['sky', 'mint', 'peach'];
 
-/** Formatos que piden las convocatorias (los nombres exactos y la plantilla cambian por programa). */
-const DOCUMENTS: { title: string; body: string }[] = [
-  { title: 'Ficha técnica', body: 'Los datos generales de tu proyecto.' },
-  { title: 'Plan de trabajo', body: 'Actividades, entregables y tiempos (Anexo 1).' },
-  { title: 'Presupuesto', body: 'Cómo se usará el apoyo, por rubro (Anexo 2).' },
-  { title: 'Carta de intención', body: 'Tu intención de participar en la convocatoria.' },
-  { title: 'Escrito bajo protesta de decir verdad', body: 'O carta compromiso, según el programa.' },
-  { title: 'Resumen de la empresa', body: 'Quién eres y a qué se dedica tu empresa.' },
-];
+/** Número en palabras para el titular ("Nueve programas…"); con 13 o más se usa la cifra. */
+const NUMEROS = ['Cero', 'Un', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez', 'Once', 'Doce'];
+function tituloProgramas(n: number): string {
+  if (n === 1) return 'Un programa de apoyo, una sola plataforma';
+  return `${NUMEROS[n] ?? n} programas de apoyo, una sola plataforma`;
+}
 
 /* ───────────────────────── Convocatorias por estado (API pública) ───────────────────────── */
 
@@ -626,8 +575,10 @@ export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
   const reduceMotion = mounted && Boolean(prefersReducedMotion);
   const [stepsRef, stepsInView] = useInViewAttr<HTMLOListElement>();
-  const [programsRef, programsInView] = useInViewAttr<HTMLUListElement>();
+  const [programsRef, programsInView] = useInViewAttr<HTMLDivElement>();
   const calls = useCalls();
+  // E49: programas, sectores y documentos administrables desde el panel.
+  const { estado: estadoSitio, datos: sitio } = useSitio('sigae');
   const openCount = calls.status === 'ready' ? calls.grupos.abiertas.length : 0;
   const nextCount = calls.status === 'ready' ? calls.grupos.proximas.length : 0;
 
@@ -729,39 +680,59 @@ export default function Landing() {
         <section id="programas" className="lp-section" aria-labelledby="lp-programas">
           <div className="lp-wrap">
             <div className="lp-head">
-              <h2 id="lp-programas" className="lp-h2">Cuatro programas de apoyo, una sola plataforma</h2>
+              <h2 id="lp-programas" className="lp-h2">
+                {sitio.programas.length ? tituloProgramas(sitio.programas.length) : 'Programas de apoyo, una sola plataforma'}
+              </h2>
               <p className="lp-h2-sub">
                 El {INSTITUTION.name} brinda a empresas y emprendedores asesoría, capacitación y apoyos económicos
                 para impulsar proyectos de ciencia, tecnología e innovación en el {INSTITUTION.state}. Todas sus
                 convocatorias de Apoyo Empresarial se postulan en SIGAE.
               </p>
             </div>
-            <ul ref={programsRef} className="lp-programs lp-reveal" data-inview={programsInView ? 'true' : 'false'}>
-              {PROGRAMS.map((p, i) => (
-                <li
-                  key={p.title}
-                  className="lp-program lp-reveal-item"
-                  style={{ '--i': i, '--r': `${i % 2 === 0 ? -0.8 : 0.8}deg` } as CSSProperties}
-                >
-                  <div className="lp-program-top">
-                    <span className="lp-role-icon" data-tone={p.tone} aria-hidden="true">{p.icon}</span>
-                    <h3>{p.title}</h3>
-                  </div>
-                  <p className="lp-program-audience"><strong>Para:</strong> {p.audience}</p>
-                  <p className="lp-program-body">{p.body}</p>
-                  <div className="lp-program-foot">
-                    <a href={`mailto:${p.email}`} className="lp-program-mail">
-                      <Mail aria-hidden="true" />{p.email}
-                    </a>
-                    <a href={p.href} target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn-ghost lp-program-link">
-                      Ver convocatoria y formatos
-                      <ArrowUpRight className="lp-btn-arrow-up" aria-hidden="true" />
-                      <span className="sr-only">(abre el sitio del {INSTITUTION.name} en otra pestaña)</span>
-                    </a>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {/* El ref va en un contenedor que existe desde el primer render (regla de E36 para useInView). */}
+            <div ref={programsRef}>
+              {estadoSitio === 'cargando' ? (
+                <ul className="lp-programs" aria-busy="true" aria-label="Cargando programas">
+                  {[0, 1, 2, 3].map((i) => <li key={i} className="lp-program lp-program-skeleton" aria-hidden="true" />)}
+                </ul>
+              ) : sitio.programas.length === 0 ? (
+                <p className="lp-note-line">
+                  {estadoSitio === 'error' ? 'No pudimos cargar los programas. Recarga la página en un momento.' : 'Pronto publicaremos aquí los programas de apoyo.'}
+                </p>
+              ) : (
+                <ul className="lp-programs lp-reveal" data-inview={programsInView ? 'true' : 'false'}>
+                  {sitio.programas.map((p, i) => (
+                    <li
+                      key={`${p.nombre}-${i}`}
+                      className="lp-program lp-reveal-item"
+                      style={{ '--i': i, '--r': `${i % 2 === 0 ? -0.8 : 0.8}deg` } as CSSProperties}
+                    >
+                      <div className="lp-program-top">
+                        <span className="lp-role-icon" data-tone={p.tono} aria-hidden="true"><IconoPrograma icono={p.icono} /></span>
+                        <h3>{p.nombre}</h3>
+                      </div>
+                      {p.dirigido_a && <p className="lp-program-audience"><strong>Para:</strong> {p.dirigido_a}</p>}
+                      {p.resumen && <p className="lp-program-body">{p.resumen}</p>}
+                      <div className="lp-program-foot">
+                        {p.correo && (
+                          <a href={`mailto:${p.correo}`} className="lp-program-mail">
+                            <Mail aria-hidden="true" />{p.correo}
+                          </a>
+                        )}
+                        {p.telefono && <span className="lp-program-mail"><Phone aria-hidden="true" />{p.telefono}</span>}
+                        {p.url_info && (
+                          <a href={p.url_info} target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn-ghost lp-program-link">
+                            Ver convocatoria y formatos
+                            <ArrowUpRight className="lp-btn-arrow-up" aria-hidden="true" />
+                            <span className="sr-only">(abre el sitio del {INSTITUTION.name} en otra pestaña)</span>
+                          </a>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <p className="lp-note-line">
               Las fechas, montos y requisitos de cada convocatoria se publican en su página oficial. Cuando una
               convocatoria está abierta, la registras aquí en SIGAE.
@@ -769,22 +740,24 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ── Sectores estratégicos ── */}
-        <section className="lp-section lp-section-tight" aria-labelledby="lp-sectores">
-          <div className="lp-wrap">
-            <div className="lp-head">
-              <h2 id="lp-sectores" className="lp-h2">¿Tu proyecto encaja?</h2>
-              <p className="lp-h2-sub">
-                Las convocatorias apoyan proyectos en {SECTORS.length} sectores estratégicos para el {INSTITUTION.state}.
-              </p>
+        {/* ── Sectores estratégicos (administrables, E49) ── */}
+        {sitio.sectores.length > 0 && (
+          <section className="lp-section lp-section-tight" aria-labelledby="lp-sectores">
+            <div className="lp-wrap">
+              <div className="lp-head">
+                <h2 id="lp-sectores" className="lp-h2">¿Tu proyecto encaja?</h2>
+                <p className="lp-h2-sub">
+                  Las convocatorias apoyan proyectos en {sitio.sectores.length} sectores estratégicos para el {INSTITUTION.state}.
+                </p>
+              </div>
+              <ul className="lp-sectors" aria-label="Sectores estratégicos">
+                {sitio.sectores.map((s, i) => (
+                  <li key={s} className="lp-sector" data-tone={SECTOR_TONES[i % SECTOR_TONES.length]}>{s}</li>
+                ))}
+              </ul>
             </div>
-            <ul className="lp-sectors" aria-label="Sectores estratégicos">
-              {SECTORS.map((s, i) => (
-                <li key={s} className="lp-sector" data-tone={SECTOR_TONES[i % SECTOR_TONES.length]}>{s}</li>
-              ))}
-            </ul>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* ── Recorrido (secuencia real: numeración con sentido) ── */}
         <section id="recorrido" className="lp-section" aria-labelledby="lp-recorrido">
@@ -825,19 +798,19 @@ export default function Landing() {
                 Cada convocatoria publica sus formatos para descargar y llenar. En general piden estos documentos,
                 que después adjuntas a tu solicitud en SIGAE.
               </p>
-              <ul className="lp-doc-notes">
-                <li>Consulta antes la convocatoria, sus <strong>Reglas de Operación</strong> y los Lineamientos del Comité de Admisión y Seguimiento.</li>
-                <li>Algunos programas piden una <strong>garantía</strong> con una institución afianzadora.</li>
-                <li>En Desarrollo de Prototipos se pide además el <strong>Reporte de Información Tecnológica del IMPI</strong>.</li>
-              </ul>
+              {sitio.documentos_notas.length > 0 && (
+                <ul className="lp-doc-notes">
+                  {sitio.documentos_notas.map((n) => <li key={n}>{n}</li>)}
+                </ul>
+              )}
             </div>
             <ul className="lp-docs">
-              {DOCUMENTS.map((d) => (
-                <li key={d.title} className="lp-doc">
+              {sitio.documentos.map((d) => (
+                <li key={d.titulo} className="lp-doc">
                   <FileText aria-hidden="true" />
                   <div>
-                    <h3>{d.title}</h3>
-                    <p>{d.body}</p>
+                    <h3>{d.titulo}</h3>
+                    {d.detalle && <p>{d.detalle}</p>}
                   </div>
                 </li>
               ))}

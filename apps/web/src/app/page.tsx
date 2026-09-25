@@ -8,12 +8,12 @@ import '@/components/portal/portal.css';
  * Accesos a SIGAE (/sigae) y SICEI (/sicei). Pública para todos (proxy.ts ya no redirige la raíz).
  */
 export const metadata: Metadata = {
-  title: `Sistemas del ${INSTITUTION.name} — SIGAE y SICEI`,
+  title: `SIDECyT — Sistema Digital de Emprendimiento, Ciencia y Talento Mexiquense · ${INSTITUTION.name}`,
   description:
-    `Portal de sistemas del ${INSTITUTION.fullName}: SIGAE, Sistema de Gestión de Apoyo Empresarial, y SICEI, ` +
-    'Sistema de Impulso a la Ciencia, Educación e Innovación.',
+    `SIDECyT, el portal de sistemas del ${INSTITUTION.fullName}: SIGAE, Sistema de Gestión de Apoyo Empresarial, y ` +
+    'SICEI, Sistema de Impulso a la Ciencia, Educación e Innovación (becas a estudiantes e impulso a la investigación).',
   alternates: { canonical: '/' },
-  openGraph: { title: `Sistemas del ${INSTITUTION.name}`, description: 'SIGAE y SICEI en un solo lugar.', type: 'website', locale: 'es_MX' },
+  openGraph: { title: `SIDECyT · ${INSTITUTION.name}`, description: 'SIGAE y SICEI en un solo lugar.', type: 'website', locale: 'es_MX' },
 };
 
 export default function RootPage() {

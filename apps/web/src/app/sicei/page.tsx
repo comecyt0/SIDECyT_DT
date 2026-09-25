@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, FlaskConical } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, FlaskConical, GraduationCap } from 'lucide-react';
 import { INSTITUTION } from '@/lib/institution';
 import { PiePortal } from '@/components/portal/Portal';
+import ProgramasSistema from '@/components/portal/ProgramasSistema';
+
+const COMECYT = 'https://comecyt.edomex.gob.mx';
 import '@/components/portal/portal.css';
 
 /**
@@ -12,7 +15,7 @@ import '@/components/portal/portal.css';
  */
 export const metadata: Metadata = {
   title: `SICEI — Sistema de Impulso a la Ciencia, Educación e Innovación · ${INSTITUTION.name}`,
-  description: `SICEI, el nuevo sistema del ${INSTITUTION.fullName} para la ciencia, la educación y la innovación. Próximamente.`,
+  description: `SICEI, el sistema de SIDECyT del ${INSTITUTION.fullName} para las becas a estudiantes y el impulso a la investigación. Próximamente.`,
   alternates: { canonical: '/sicei' },
 };
 
@@ -29,7 +32,7 @@ export default function SiceiPage() {
           <Link href="/" className="pt-marca" aria-label={`${INSTITUTION.name} — portal de sistemas`}>
             {/* eslint-disable-next-line @next/next/no-img-element -- logo institucional */}
             <img src="/logo-recortado.png" alt={INSTITUTION.name} width={124} height={55} />
-            <span className="pt-marca-texto">Portal de sistemas</span>
+            <span className="pt-marca-texto"><strong>SIDECyT</strong><span className="pt-marca-sub">Portal de sistemas</span></span>
           </Link>
           <Link href="/" className="pt-barra-enlace"><ArrowLeft aria-hidden="true" /> Volver al portal</Link>
         </div>
@@ -43,10 +46,30 @@ export default function SiceiPage() {
           <h1 id="sicei-titulo" className="pt-sigla">SICEI</h1>
           <p className="pt-nombre">Sistema de Impulso a la Ciencia, Educación e Innovación</p>
           <p className="pt-heroe-texto">
-            Estamos preparando el sistema donde la comunidad científica, académica y estudiantil, y quienes impulsan la
-            innovación, podrán postular a los programas del {INSTITUTION.name} y dar seguimiento a sus solicitudes. Muy pronto
-            estará disponible aquí.
+            SICEI será el sistema de SIDECyT para las <strong>becas a estudiantes</strong> mexiquenses y el <strong>impulso
+            a la investigación</strong> científica y tecnológica del {INSTITUTION.name}: ahí podrás postular y dar seguimiento
+            a tu solicitud. Estamos preparándolo; muy pronto estará disponible aquí.
           </p>
+          <div className="pt-sicei-areas">
+            <a href={`${COMECYT}/becas-estudiantes`} target="_blank" rel="noopener noreferrer" className="pt-acceso">
+              <span className="pt-acceso-icono"><GraduationCap aria-hidden="true" /></span>
+              <span className="pt-acceso-texto">
+                <span className="pt-acceso-etiqueta">Becas a estudiantes</span>
+                <span className="pt-acceso-detalle">Mientras tanto, consulta las becas vigentes en el sitio del COMECYT</span>
+              </span>
+              <ArrowUpRight className="pt-acceso-flecha" aria-hidden="true" />
+            </a>
+            <a href={`${COMECYT}/impulso-investigacion`} target="_blank" rel="noopener noreferrer" className="pt-acceso">
+              <span className="pt-acceso-icono"><FlaskConical aria-hidden="true" /></span>
+              <span className="pt-acceso-texto">
+                <span className="pt-acceso-etiqueta">Impulso a la investigación</span>
+                <span className="pt-acceso-detalle">Estímulos, fondos y premios, en el sitio del COMECYT</span>
+              </span>
+              <ArrowUpRight className="pt-acceso-flecha" aria-hidden="true" />
+            </a>
+          </div>
+          {/* Programas de SICEI: solo aparecen cuando el admin los activa en /admin/sitio (hoy, ninguno). */}
+          <ProgramasSistema sistema="sicei" />
           <div className="pt-sicei-acciones">
             <Link href="/" className="pt-cta" data-variante="principal">
               <ArrowLeft className="pt-cta-flecha" aria-hidden="true" /><span className="pt-cta-texto">Volver al portal</span>

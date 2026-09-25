@@ -19,7 +19,7 @@ import {
   LayoutDashboard, FileText, Users, BookOpen, Building,
   Banknote, ShieldAlert, Zap, Images, UserCheck,
   BarChart3, KeyRound, FileSignature, ClipboardList, BellRing, Activity,
-  MessagesSquare, Award, CalendarRange, FileCog, UserCircle,
+  MessagesSquare, Award, CalendarRange, FileCog, UserCircle, Globe,
 } from 'lucide-react';
 import UserAvatar from '@/components/ui/user-avatar';
 import { useMiPerfil } from '@/hooks/useMiPerfil';
@@ -102,6 +102,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     group: 'Configuración',
     items: [
+      { name: 'Contenido público', href: '/admin/sitio', icon: Globe, description: 'Programas, sectores y documentos de las páginas públicas' },
       { name: 'Carrusel Login', href: '/admin/carrusel', icon: Images, description: 'Slides de la pantalla de inicio' },
       { name: 'Periodos', href: '/admin/periodos', icon: CalendarRange, description: 'Periodos de las convocatorias y alcance' },
       { name: 'Límites de archivos', href: '/admin/documentos-fijos', icon: FileCog, description: 'Tipos y tamaño de los documentos fijos' },

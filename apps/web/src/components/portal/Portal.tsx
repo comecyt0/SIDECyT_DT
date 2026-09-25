@@ -8,6 +8,7 @@ import {
   Megaphone, Phone, Sparkles, UserPlus,
 } from 'lucide-react';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
+import { useSitio } from '@/lib/sitio';
 
 /**
  * Portal de sistemas del COMECYT — https://sidecyt-comecyt.edomex.gob.mx/ (25/09/2026).
@@ -51,8 +52,8 @@ const SISTEMAS: Sistema[] = [
     id: 'sicei',
     sigla: 'SICEI',
     nombre: 'Sistema de Impulso a la Ciencia, Educación e Innovación',
-    para: 'Para la comunidad científica, académica y estudiantil, y para quienes impulsan la innovación.',
-    puntos: ['Programas de ciencia, educación e innovación', 'Un solo lugar para postular y dar seguimiento', 'Muy pronto: te avisaremos aquí cuando abra'],
+    para: 'Para estudiantes, docentes, investigadoras e investigadores del Estado de México: becas y estímulos a la investigación.',
+    puntos: ['Becas COMECYT para estudiantes mexiquenses', 'Estímulos e impulso a la investigación científica y tecnológica', 'Muy pronto: te avisaremos aquí cuando abra'],
     estado: 'proximamente',
     href: '/sicei',
     cta: 'Conocer SICEI',
@@ -62,10 +63,10 @@ const SISTEMAS: Sistema[] = [
 
 /** "¿Cuál es para mí?": perfil → sistema recomendado. */
 const PERFILES: { id: string; etiqueta: string; icono: ReactNode; sistema: SistemaId; motivo: string }[] = [
-  { id: 'empresa', etiqueta: 'Tengo una empresa', icono: <Building2 aria-hidden="true" />, sistema: 'sigae', motivo: 'Los programas de Apoyo Empresarial —prototipos, profesionistas, vinculación— se postulan en SIGAE.' },
-  { id: 'emprendo', etiqueta: 'Emprendo un proyecto', icono: <Lightbulb aria-hidden="true" />, sistema: 'sigae', motivo: 'Jóvenes Emprendedores e Innovadores es un programa de Apoyo Empresarial: entra por SIGAE.' },
-  { id: 'investigo', etiqueta: 'Investigo o doy clases', icono: <FlaskConical aria-hidden="true" />, sistema: 'sicei', motivo: 'Los apoyos para investigación y docencia estarán en SICEI, el sistema de ciencia, educación e innovación.' },
-  { id: 'estudio', etiqueta: 'Estudio', icono: <GraduationCap aria-hidden="true" />, sistema: 'sicei', motivo: 'Becas y programas para estudiantes estarán en SICEI.' },
+  { id: 'empresa', etiqueta: 'Tengo una empresa', icono: <Building2 aria-hidden="true" />, sistema: 'sigae', motivo: 'Los programas de Apoyo Empresarial del COMECYT se consultan y postulan en SIGAE.' },
+  { id: 'emprendo', etiqueta: 'Emprendo un proyecto', icono: <Lightbulb aria-hidden="true" />, sistema: 'sigae', motivo: 'Los apoyos para emprender un proyecto de innovación son parte del Apoyo Empresarial: entra por SIGAE.' },
+  { id: 'investigo', etiqueta: 'Investigo o doy clases', icono: <FlaskConical aria-hidden="true" />, sistema: 'sicei', motivo: 'Los estímulos e impulso a la investigación estarán en SICEI, el sistema de ciencia, educación e innovación.' },
+  { id: 'estudio', etiqueta: 'Estudio', icono: <GraduationCap aria-hidden="true" />, sistema: 'sicei', motivo: 'Las becas COMECYT para estudiantes estarán en SICEI.' },
 ];
 
 const ACCESOS: { href: string; etiqueta: string; detalle: string; icono: ReactNode }[] = [
@@ -88,7 +89,7 @@ function usePunteroFino(): boolean {
   return fino;
 }
 
-function TarjetaSistema({ s, destacado, atenuado, animar }: { s: Sistema; destacado: boolean; atenuado: boolean; animar: boolean }) {
+function TarjetaSistema({ s, destacado, atenuado, animar, programas = [] }: { s: Sistema; destacado: boolean; atenuado: boolean; animar: boolean; programas?: string[] }) {
   const ref = useRef<HTMLElement>(null);
   const rx = useMotionValue(0);
   const ry = useMotionValue(0);
@@ -133,6 +134,18 @@ function TarjetaSistema({ s, destacado, atenuado, animar }: { s: Sistema; destac
       <ul className="pt-puntos">
         {s.puntos.map((p) => <li key={p}>{p}</li>)}
       </ul>
+      {/* E49: programas vigentes, en vivo desde el panel (/admin/sitio); nada escrito en el código. */}
+      {programas.length > 0 && (
+        <div className="pt-programas">
+          <p className="pt-programas-titulo">{programas.length} programas vigentes</p>
+          <ul className="pt-programas-lista">
+            {programas.slice(0, 4).map((n) => <li key={n}>{n}</li>)}
+            {programas.length > 4 && (
+              <li><Link href={`${s.href}#programas`} className="pt-programas-mas">y {programas.length - 4} más</Link></li>
+            )}
+          </ul>
+        </div>
+      )}
       <Link href={s.href} className="pt-cta" data-variante={s.estado === 'disponible' ? 'principal' : 'secundario'}>
         <span className="pt-cta-texto">{s.cta}</span>
         <ArrowRight className="pt-cta-flecha" aria-hidden="true" />
@@ -174,6 +187,8 @@ export default function Portal() {
   }, [animar]);
 
   const elegido = PERFILES.find((p) => p.id === perfil) ?? null;
+  // E49: programas activos de SIGAE (administrables). SICEI queda pendiente: sin programas publicados aún.
+  const { datos: sigae } = useSitio('sigae');
 
   return (
     <div className="pt-root" data-listo={listo || reducir ? 'true' : undefined}>
@@ -190,7 +205,7 @@ export default function Portal() {
           <Link href="/" className="pt-marca" aria-label={`${INSTITUTION.name} — portal de sistemas`}>
             {/* eslint-disable-next-line @next/next/no-img-element -- logo institucional */}
             <img src="/logo-recortado.png" alt={INSTITUTION.name} width={124} height={55} />
-            <span className="pt-marca-texto">Portal de sistemas</span>
+            <span className="pt-marca-texto"><strong>SIDECyT</strong><span className="pt-marca-sub">Portal de sistemas</span></span>
           </Link>
           <a href={COMECYT_SITE} target="_blank" rel="noopener noreferrer" className="pt-barra-enlace">
             comecyt.edomex.gob.mx <ArrowUpRight aria-hidden="true" />
@@ -201,14 +216,15 @@ export default function Portal() {
       <main id="pt-contenido">
         <section className="pt-wrap pt-heroe" aria-labelledby="pt-titulo">
           <p className="pt-heroe-eyebrow pt-entra" style={{ '--i': 0 } as CSSProperties}>
-            <Sparkles aria-hidden="true" />{INSTITUTION.fullName}
+            <Sparkles aria-hidden="true" /><strong>SIDECyT</strong> · Sistema Digital de Emprendimiento, Ciencia y Talento Mexiquense
           </p>
           <h1 id="pt-titulo" className="pt-titulo pt-entra" style={{ '--i': 1 } as CSSProperties}>
             ¿A qué sistema <span className="pt-subrayado">quieres entrar</span>?
           </h1>
           <p className="pt-heroe-texto pt-entra" style={{ '--i': 2 } as CSSProperties}>
-            El COMECYT atiende sus programas en dos sistemas: uno para el apoyo a empresas y otro para la ciencia,
-            la educación y la innovación. Elige el tuyo; si no sabes cuál, te ayudamos abajo.
+            SIDECyT es la puerta digital del {INSTITUTION.fullName}: reúne <strong>SIGAE</strong>, para el apoyo a
+            empresas y emprendedores, y <strong>SICEI</strong>, para las becas a estudiantes y el impulso a la
+            investigación. Elige el tuyo; si no sabes cuál, te ayudamos abajo.
           </p>
         </section>
 
@@ -220,6 +236,7 @@ export default function Portal() {
                 animar={animar}
                 destacado={elegido?.sistema === s.id}
                 atenuado={Boolean(elegido) && elegido?.sistema !== s.id}
+                programas={s.id === 'sigae' ? sigae.programas.map((p) => p.nombre) : []}
               />
             </div>
           ))}
@@ -294,6 +311,7 @@ export function PiePortal() {
           <img src="/logo-recortado.png" alt={INSTITUTION.name} width={235} height={104} />
           <p className="pt-pie-nombre">{INSTITUTION.fullName}</p>
           <p className="pt-pie-desc">Organismo del Gobierno del {INSTITUTION.state} que impulsa la ciencia, la tecnología y la innovación.</p>
+          <p className="pt-pie-sidecyt"><strong>SIDECyT</strong> · Sistema Digital de Emprendimiento, Ciencia y Talento Mexiquense</p>
         </div>
         <nav className="pt-pie-col" aria-label="Sistemas">
           <p className="pt-pie-titulo">Sistemas</p>

@@ -2,6 +2,13 @@
 
 **Fecha de actualización:** 25 de septiembre de 2026 (versión anterior: 24/09/2026)
 
+> 🌐 **25/09/2026 (tarde) — SIDECyT definido y contenido administrable (E49).** **SIDECyT = Sistema Digital de
+> Emprendimiento, Ciencia y Talento Mexiquense** (el dominio y el portal). SIGAE se nutre de
+> comecyt.edomex.gob.mx/apoyo-empresarial: ahora muestra sus **9 programas** (antes 4), y programas, sectores,
+> documentos y notas **se editan en el panel → Configuración → Contenido público** (`/admin/sitio`), nada en el código.
+> SICEI (becas e investigación) queda **pendiente**: sus 19 programas están cargados ocultos y documentados en
+> `docs/SIDECYT.md`. Verificado 28/28 (backend) y 18/18 (navegador).
+>
 > 🏛 **25/09/2026 — SIGAE, portal de sistemas y responsive (E48).** El sistema se llama ahora **SIGAE — Sistema de
 > Gestión de Apoyo Empresarial** (antes SIGAC); la landing está en **`/sigae`** y `/sigac` redirige. **El dominio
 > (`/`) muestra el portal de sistemas del COMECYT** con acceso a SIGAE y a **SICEI — Sistema de Impulso a la Ciencia,
@@ -379,7 +386,8 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 | **2FA del admin desactivado** | Alta | Apagado desde el 14/09 por falta de correo. Ya hay SMTP: reactivarlo con el usuario presente y probar el restablecimiento de contraseña por correo de punta a punta |
 | ~~**Convocatorias `activa` que parecen de prueba**~~ | ✅ Resuelto 24/09/2026 | Cerradas y archivadas (`deleted_at`) a pedido del usuario; ya no aparecen en la landing ni en la lista del admin. Reversibles (E40) |
 | **Push a GitHub** | **Alta** | El repositorio remoto `comecyt0/SIDECyT_DT` está configurado pero el servidor no tiene credenciales: el usuario debe correr `git -C "F:\Desarrollo Tecnologico" push -u origin main`. Commits locales sin subir: E44, E45, avisos del buzón, E46 y E47 |
-| **SICEI** | Según el usuario | `/sicei` es una página de "Próximamente". Cuando el usuario defina el sistema, sustituirla por su landing/sistema (el portal ya enlaza ahí) |
+| **SICEI** | Según el usuario | `/sicei` es "Próximamente". Información reunida y preguntas abiertas en `docs/SIDECYT.md` §7; sus 19 programas están ocultos en `/admin/sitio` → Programas SICEI (completar descripción/contacto y activarlos cuando se defina) |
+| **Enlace de "Asistencia Técnica e Innovación"** | Baja | La página oficial da 404; el programa quedó sin enlace. Ponerlo en `/admin/sitio` cuando se conozca |
 | **Borrador 4 de convocatoria** | Media | Recuperado del intento fallido (E47). Faltan: opciones de "Número de personas solicitantes?", el criterio de evaluación (nombre corto, detalle en la descripción) y revisar las fechas (01/05–01/06/2026 ya pasaron) |
 | **Recuperación de contraseña pendiente** | Media | Solicitud del 24/09 16:45 para una cuenta de solicitante (`un***@edomex.gob.mx`): el enlace sale solo cuando el admin la aprueba en Recuperación Contraseñas |
 | **Correo real para la cuenta admin** | **Alta** | El único admin tiene un correo de dominio sin servidor de correo (`comecyt.gob.mx`, sin MX): no le llega ningún aviso por correo (recuperaciones, accesos). Desde el 24/09 los avisos también llegan a la campana y el dashboard lo alerta, pero conviene cambiarlo en Usuarios (E46) |
@@ -414,6 +422,7 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 
 | Fecha | Cambio |
 |---|---|
+| 2026-09-25 (tarde) | **E49:** SIDECyT definido; tablas `programas_publicos` y `contenido_sitio` (migración `2026_09_25_000001`, respaldo `comecyt_2026-09-25_1456.dump`); `/admin/sitio`; landing SIGAE con 9 programas, sectores y documentos desde la API; portal y SICEI con SIDECyT; `docs/SIDECYT.md` |
 | 2026-09-25 | **E48:** SIGAC → **SIGAE** (código, correos, metadatos, docs; `/sigac` → 308 `/sigae`); **portal de sistemas en `/`** (SIGAE + SICEI, interactivo, pie con datos del COMECYT) y `/sicei` "Próximamente"; menú móvil con scroll y página fija; auditoría responsive (barra en 768 px, `.seg-tabs`, indicador del asistente) |
 | 2026-09-24 (noche, 5) | **E47 — "Nueva convocatoria":** guardado atómico (una petición, todo o nada, errores por campo), borradores con autoguardado en el servidor y lista "Borradores sin terminar"; corregida la pérdida de opciones de listas y % de rubros. El intento fallido del usuario se recuperó como borrador. Migración `2026_09_24_000005` con respaldo previo. Verificado 24/24 + 16/16 |
 | 2026-09-24 (noche, 4) | **E46 — correo de recuperación:** el SMTP funcionaba; la solicitud esperaba aprobación del admin y su aviso iba solo a un correo sin MX. Aviso ahora también en la campana (canal `CampanaChannel`, que además reemplaza el canal `database` que nadie leía), clic → página de la acción, alerta de correo de admin inválido, enlaces de correo sin localhost. Verificado 15/15 con envío real. Buzón: avisos ligados a su hilo (migración `2026_09_24_000004`) y campana del admin solo con lo propio |

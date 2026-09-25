@@ -5,10 +5,18 @@
 
 ## Visión General del Proyecto
 
-**SIGAE — Sistema de Gestión de Apoyo Empresarial** (nombre confirmado por el usuario el 23/09/2026) es el
-sistema del **COMECYT** (Consejo Mexiquense de Ciencia y Tecnología) que administra el ciclo completo de las
-convocatorias de financiamiento de Apoyo Empresarial. Landing pública: `/sigae` (E36). El dominio conserva el
-nombre anterior (`sidecyt-comecyt.edomex.gob.mx`).
+**SIDECyT — Sistema Digital de Emprendimiento, Ciencia y Talento Mexiquense** es el nombre del dominio
+(`sidecyt-comecyt.edomex.gob.mx`) y del portal que agrupa los sistemas del **COMECYT** (Consejo Mexiquense de Ciencia y
+Tecnología). **Documento guía: `docs/SIDECYT.md`** (definido por el usuario el 25/09/2026).
+
+| Sistema | Qué es | Ruta | Estado |
+|---|---|---|---|
+| Portal SIDECyT | Accesos a los dos sistemas + datos del COMECYT | `/` | Publicado (E48/E49) |
+| **SIGAE — Sistema de Gestión de Apoyo Empresarial** (antes SIGAC) | Ciclo completo de las convocatorias de Apoyo Empresarial (este código) | `/sigae` + paneles | En operación |
+| **SICEI — Sistema de Impulso a la Ciencia, Educación e Innovación** | Becas a estudiantes e impulso a la investigación | `/sicei` | **Pendiente** ("Próximamente") |
+
+**Programas y convocatorias nunca se escriben en el código** (regla del usuario, E49): se administran en el panel
+(`/admin/convocatorias`, `/admin/folios`, `/admin/sitio`) y las páginas los leen de la API.
 
 ```
 Convocatoria → Solicitud → Revisión documental → Evaluación técnica
@@ -649,6 +657,15 @@ DELETE /admin/asignaciones-evaluador/{id}
 ```
 GET /documentos/dictamen/{id}
 GET /documentos/convenio/{solicitud_id}
+```
+
+**Contenido público de SIDECyT (E49):**
+```
+GET  /sitio/{sigae|sicei}                 público (throttle 30/min, caché 5 min, lista blanca): programas activos, sectores, documentos, notas
+GET|POST /admin/programas-publicos        admin (?sistema=)
+PUT|DELETE /admin/programas-publicos/{id} admin
+POST /admin/programas-publicos/orden      admin { sistema, ids[] }
+GET|PUT /admin/contenido-sitio/{clave}    admin (claves: sigae.sectores, sigae.documentos, sigae.documentos_notas)
 ```
 
 **Asistente de convocatorias (E47, solo admin):**
@@ -1675,3 +1692,31 @@ de 7 pasos del asistente en 320 px → círculos de 28 px y sin conectores bajo 
 **Lección:** esta capa de estilos va sin `@layer` a propósito (gana a Tailwind), así que **cualquier `overflow`, `display`
 o `color` declarado aquí anula la utilidad de Tailwind del JSX** — al diagnosticar "la clase no hace nada", buscar primero
 en `panel-sigae.css`.
+**Auditoría final:** 270 vistas (6 roles × 6 anchos + públicas), **0 hallazgos**, 0 errores de JavaScript.
+
+### E49 — SIDECyT definido; programas, sectores y documentos administrables [publicado 25-09-2026]
+**Pedido del usuario:** el dominio es **SIDECyT = Sistema Digital de Emprendimiento, Ciencia y Talento Mexiquense**
+(referirlo en el portal y en SICEI); **SIGAE** ↔ comecyt.edomex.gob.mx/apoyo-empresarial; **SICEI** ↔ /becas-estudiantes e
+/impulso-investigacion; nutrir las landings con esa información; **nada de programas o convocatorias en el código, todo
+desde el panel**; SICEI queda pendiente pero documentado. Guía completa: **`docs/SIDECYT.md`**.
+- **Tablas** `programas_publicos` (por `sistema`) y `contenido_sitio` (listas por clave en lista blanca), migración
+  `2026_09_25_000001` con respaldo previo. Carga inicial: **9 programas de SIGAE** del sitio oficial (antes la landing tenía
+  4 escritos en el código) y **19 de SICEI inactivos**; 30 sectores, 6 documentos y 3 notas que antes eran constantes.
+- **API** `GET /api/sitio/{sigae|sicei}` (pública, lista blanca, solo activos, caché que se invalida al guardar,
+  throttle con prefijo propio) y CRUD admin en `Admin\ContenidoSitioController` (enlaces solo https de dominios del
+  COMECYT, texto sin HTML, ícono/tono en lista cerrada, bitácora `sitio.*`).
+- **Panel `/admin/sitio`** ("Contenido público", en Configuración, solo admin): programas SIGAE / SICEI (crear, editar,
+  ocultar, ordenar, eliminar), sectores, documentos y notas.
+- **Front:** `lib/sitio.ts` (tipos, validación de la respuesta, `useSitio`), `components/portal/IconoPrograma.tsx` y
+  `ProgramasSistema.tsx`. La landing de SIGAE pinta programas ("Nueve programas…", cuenta real), sectores, documentos y
+  notas desde la API con esqueleto de carga y estados vacío/error. El portal se llama **SIDECyT** y la tarjeta de SIGAE
+  muestra "N programas vigentes" en vivo; SICEI habla de becas e investigación y `/sicei` enlaza las dos páginas
+  oficiales y lista sus programas **solo si el admin los activa**.
+- **Bugs encontrados al probar:** una línea vacía en una lista invalidaba todo el guardado (llega como `null` por
+  `ConvertEmptyStringsToNull`; ahora se descarta); la rejilla del panel sin `grid-cols-1` crecía a 1003 px en un teléfono
+  por un texto truncado (regla: toda rejilla de una columna con textos `truncate` lleva `grid-cols-1` = `minmax(0,1fr)`).
+- **Verificado:** backend 28/28 (`e2e_sitio.php`: lista blanca, SICEI oculto, 401/403, enlaces y HTML maliciosos, orden
+  entre sistemas, caché invalidada, restauración), navegador 18/18 (landing con 9 programas y 30 sectores, portal SIDECyT,
+  SICEI, las 4 pestañas del panel, 375 px), vitest 129/129.
+- **Nota de datos:** la página oficial de "Asistencia Técnica e Innovación" da 404; el programa quedó sin enlace hasta
+  que el admin ponga el correcto.

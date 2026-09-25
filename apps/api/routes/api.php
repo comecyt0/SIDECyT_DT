@@ -118,6 +118,9 @@ Route::middleware([
         ->middleware('throttle:30,1');
     // E45: folios aprobados que el admin publicó (solo folio + convocatoria). Lista blanca, caché, throttle.
     Route::get('folios-aprobados', [FolioController::class, 'publicos'])->middleware('throttle:30,1');
+    // E49: contenido de las landings de SIDECyT (programas, sectores, documentos), administrable en /admin/sitio.
+    Route::get('sitio/{sistema}', [\App\Http\Controllers\SitioPublicoController::class, 'show'])
+        ->whereIn('sistema', ['sigae', 'sicei'])->middleware('throttle:30,1,sitio');
 
     // === PROTECTED ROUTES ===
     Route::group(['middleware' => 'api.auth'], function () {
@@ -223,6 +226,14 @@ Route::middleware([
             // Convocatorias: crear/editar/borrar solo el admin general (la lectura está en el grupo a).
             Route::post('convocatorias', [ConvocatoriaController::class, 'store']);
             Route::match(['put', 'patch'], 'convocatorias/{convocatoria}', [ConvocatoriaController::class, 'update']);
+            // E49 — contenido público de las landings (solo admin general).
+            Route::get('programas-publicos', [\App\Http\Controllers\Admin\ContenidoSitioController::class, 'programas']);
+            Route::post('programas-publicos', [\App\Http\Controllers\Admin\ContenidoSitioController::class, 'guardarPrograma'])->middleware('throttle:60,1,sitio-admin');
+            Route::post('programas-publicos/orden', [\App\Http\Controllers\Admin\ContenidoSitioController::class, 'ordenar'])->middleware('throttle:60,1,sitio-admin');
+            Route::put('programas-publicos/{programa}', [\App\Http\Controllers\Admin\ContenidoSitioController::class, 'guardarPrograma'])->whereNumber('programa')->middleware('throttle:60,1,sitio-admin');
+            Route::delete('programas-publicos/{programa}', [\App\Http\Controllers\Admin\ContenidoSitioController::class, 'eliminarPrograma'])->whereNumber('programa')->middleware('throttle:60,1,sitio-admin');
+            Route::get('contenido-sitio/{clave}', [\App\Http\Controllers\Admin\ContenidoSitioController::class, 'contenido'])->where('clave', '[a-z_.]{3,60}');
+            Route::put('contenido-sitio/{clave}', [\App\Http\Controllers\Admin\ContenidoSitioController::class, 'guardarContenido'])->where('clave', '[a-z_.]{3,60}')->middleware('throttle:60,1,sitio-admin');
             // E47 — asistente: guardado atómico (todo o nada) y borradores por usuario (autoguardado).
             Route::post('asistente-convocatoria', [\App\Http\Controllers\Admin\AsistenteConvocatoriaController::class, 'crear'])->middleware('throttle:20,1,asistente');
             Route::get('asistente-convocatoria/borradores', [\App\Http\Controllers\Admin\AsistenteConvocatoriaController::class, 'borradores']);

@@ -673,3 +673,17 @@ botón y deja el texto del color heredado (pasó: botón navy sin texto visible)
 - **Barra 640–1023 px:** solo logo (sin "SIGAE / Gestión de…"), "Menú" sin la etiqueta de sección y avatar sin nombre:
   todo cabe en 768 px (antes se salía hasta 170 px por la derecha en todos los roles).
 - **`.seg-tabs` bajo 640 px:** dos líneas en vez de salirse de la pantalla.
+
+## 18. SIDECyT y contenido administrable — E49, 25/09/2026
+
+- **Portal:** barra con logo + palabra **SIDECyT** (y "Portal de sistemas" debajo; en teléfono solo SIDECyT), etiqueta
+  del héroe "SIDECyT · Sistema Digital de Emprendimiento, Ciencia y Talento Mexiquense", pie con la misma línea en vino.
+  La tarjeta de SIGAE suma un bloque papel "N programas vigentes" con los primeros 4 en píldoras blancas y "y N más"
+  (vino) que lleva a `/sigae#programas`. SICEI: becas COMECYT e impulso a la investigación.
+- **`/sicei`:** dos accesos (Becas a estudiantes · Impulso a la investigación) al sitio oficial, en tarjetas papel; la
+  lista de programas aparece solo con programas activos.
+- **Landing SIGAE:** tarjetas de programa iguales a las anteriores, alimentadas por la API; esqueleto con brillo mientras
+  cargan (sin animación con movimiento reducido); correo/teléfono/enlace solo si existen.
+- **Panel `/admin/sitio`:** mismo patrón que Periodos (formulario a la izquierda, lista en marco pastel a la derecha);
+  cada programa con chip de ícono de su color, píldora "oculto", flechas para ordenar, ojo para mostrar/ocultar, editar y
+  eliminar. Sectores y notas en área de texto "uno por línea" con contador; documentos como filas título + detalle.

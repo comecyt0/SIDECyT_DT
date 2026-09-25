@@ -988,6 +988,14 @@
 /* Programas de Apoyo Empresarial */
 .lp-programs { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--spacing-20); }
 @media (min-width: 880px) { .lp-programs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--spacing-24); } }
+/* E49: esqueleto mientras llegan los programas desde /api/sitio/sigae. */
+.lp-program-skeleton {
+  min-height: 240px;
+  background: linear-gradient(100deg, var(--color-mist-hairline) 30%, #f7f7f7 50%, var(--color-mist-hairline) 70%) 0 0 / 300% 100%;
+  animation: lp-esqueleto 1.4s ease-in-out infinite;
+}
+@keyframes lp-esqueleto { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .lp-program-skeleton { animation: none; } }
 .lp-program {
   display: flex;
   flex-direction: column;
