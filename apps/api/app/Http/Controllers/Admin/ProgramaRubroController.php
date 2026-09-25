@@ -31,11 +31,12 @@ class ProgramaRubroController extends Controller
     public function store(Request $request, TipoPrograma $tipoPrograma)
     {
         $validated = $request->validate([
-            'clave' => 'required|string|max:20',
+            'clave' => 'required|string|max:50',
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
-            'monto_minimo' => 'nullable|numeric|min:0',
-            'monto_maximo' => 'nullable|numeric|min:0',
+            // 24/09/2026: validaba monto_minimo/monto_maximo, columnas que NO existen en programa_rubros (enviarlas
+            // daba 500) y descartaba porcentaje_maximo, que es la columna real.
+            'porcentaje_maximo' => 'nullable|numeric|min:0|max:100',
             'activo' => 'boolean',
         ]);
 
@@ -58,11 +59,10 @@ class ProgramaRubroController extends Controller
         }
 
         $validated = $request->validate([
-            'clave' => 'string|max:20',
+            'clave' => 'string|max:50',
             'nombre' => 'string|max:255',
             'descripcion' => 'nullable|string',
-            'monto_minimo' => 'nullable|numeric|min:0',
-            'monto_maximo' => 'nullable|numeric|min:0',
+            'porcentaje_maximo' => 'nullable|numeric|min:0|max:100',
             'activo' => 'boolean',
         ]);
 

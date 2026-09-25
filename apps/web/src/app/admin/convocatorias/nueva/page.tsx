@@ -27,6 +27,11 @@ import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import ConvocatoriaPreviewPanel from '@/components/admin/ConvocatoriaPreviewPanel';
 import SelectorFormatos from '@/components/admin/SelectorFormatos';
+import {
+  LIMITES, CLAVE_PROGRAMA_RE, armarPayload, erroresDelServidor, restaurarBorrador, tieneContenido,
+  type EstadoAsistente,
+} from '@/lib/asistente-convocatoria';
+import { Save, CloudOff, Cloud } from 'lucide-react';
 
 interface Campo {
   nombre_campo: string;
@@ -188,6 +193,18 @@ export default function ConvocatoriasNuevaPage() {
   const [saving, setSaving] = useState(false);
   const [saveProgress, setSaveProgress] = useState<string>('');
   const [saveError, setSaveError] = useState<string>('');
+  // E47: errores del servidor, uno por línea y con el paso donde se corrigen.
+  const [saveErrors, setSaveErrors] = useState<string[]>([]);
+
+  // ── E47: borrador en el servidor (autoguardado) ──
+  const [borradorId, setBorradorId] = useState<number | null>(null);
+  const [estadoBorrador, setEstadoBorrador] = useState<'idle' | 'guardando' | 'guardado' | 'error'>('idle');
+  const [guardadoEn, setGuardadoEn] = useState<Date | null>(null);
+  const [cargandoBorrador, setCargandoBorrador] = useState(false);
+  const borradorIdRef = useRef<number | null>(null);
+  const guardandoRef = useRef<Promise<number | null> | null>(null);
+  const pendienteRef = useRef(false);
+  const saltarAutoguardado = useRef(true); // no guardar el estado vacío inicial ni el recién cargado
 
   const [inlineAlert, setInlineAlert] = useState<{type: 'error'|'success'|'info'|'warning', message: string}|null>(null);
   const [confirmState, setConfirmState] = useState<{open: boolean, action: () => void, title: string, description: string}>({open: false, action: () => {}, title: '', description: ''});
@@ -224,6 +241,96 @@ export default function ConvocatoriasNuevaPage() {
     api.get('/admin/periodos').then(({ data }) => setPeriodos(Array.isArray(data) ? data.filter((p: { activo: boolean }) => p.activo) : [])).catch(() => setPeriodos([]));
   }, []);
 
+  // ── E47: borradores ──
+  // ?borrador=ID → retoma lo guardado (el servidor solo devuelve borradores propios).
+  useEffect(() => {
+    const id = Number(new URLSearchParams(window.location.search).get('borrador'));
+    if (!Number.isInteger(id) || id <= 0) return;
+    setCargandoBorrador(true);
+    api.get(`/admin/asistente-convocatoria/borradores/${id}`)
+      .then(({ data }) => {
+        saltarAutoguardado.current = true;
+        setState(restaurarBorrador(data?.datos, emptyWizardState as unknown as EstadoAsistente) as unknown as WizardState);
+        const paso = Number(data?.paso);
+        setCurrentStep(Number.isInteger(paso) && paso >= 1 && paso <= 7 ? paso : 1);
+        borradorIdRef.current = id;
+        setBorradorId(id);
+        setEstadoBorrador('guardado');
+        setGuardadoEn(data?.updated_at ? new Date(data.updated_at) : null);
+        claveTouched.current = true;
+      })
+      .catch(() => setInlineAlert({ type: 'error', message: 'No se encontró ese borrador. Empiezas una convocatoria nueva.' }))
+      .finally(() => setCargandoBorrador(false));
+  }, []);
+
+  // Último estado a guardar; las peticiones se hacen de una en una y siempre con lo más reciente.
+  const ultimo = useRef<{ s: WizardState; paso: number }>({ s: emptyWizardState, paso: 1 });
+  const sinGuardar = useRef(false);
+  const guardarBorrador = useCallback(async (): Promise<number | null> => {
+    if (guardandoRef.current) { pendienteRef.current = true; return guardandoRef.current; }
+    const run = (async () => {
+      do {
+        pendienteRef.current = false;
+        const { s, paso } = ultimo.current;
+        if (!tieneContenido(s as unknown as EstadoAsistente)) break;
+        setEstadoBorrador('guardando');
+        try {
+          const body = { paso, datos: { v: 1, state: s } };
+          if (borradorIdRef.current) {
+            await api.put(`/admin/asistente-convocatoria/borradores/${borradorIdRef.current}`, body);
+          } else {
+            const { data } = await api.post('/admin/asistente-convocatoria/borradores', body);
+            const id = Number(data?.id);
+            if (Number.isInteger(id) && id > 0) {
+              borradorIdRef.current = id;
+              setBorradorId(id);
+              // La URL lleva el borrador: recargar o copiar el enlace retoma el trabajo.
+              const url = new URL(window.location.href);
+              url.searchParams.set('borrador', String(id));
+              window.history.replaceState(window.history.state, '', url.toString());
+            }
+          }
+          sinGuardar.current = false;
+          setEstadoBorrador('guardado');
+          setGuardadoEn(new Date());
+        } catch {
+          setEstadoBorrador('error');
+          break;
+        }
+      } while (pendienteRef.current);
+      return borradorIdRef.current;
+    })();
+    guardandoRef.current = run;
+    try { return await run; } finally { guardandoRef.current = null; }
+  }, []);
+
+  // Autoguardado 1.5 s después del último cambio.
+  useEffect(() => {
+    ultimo.current = { s: state, paso: currentStep };
+    if (saltarAutoguardado.current) { saltarAutoguardado.current = false; return; }
+    if (saving || cargandoBorrador) return;
+    sinGuardar.current = true;
+    const t = window.setTimeout(() => { void guardarBorrador(); }, 1500);
+    return () => window.clearTimeout(t);
+  }, [state, currentStep, guardarBorrador, saving, cargandoBorrador]);
+
+  // Aviso del navegador si se intenta salir con cambios aún sin guardar.
+  useEffect(() => {
+    const aviso = (e: BeforeUnloadEvent) => {
+      if (sinGuardar.current && tieneContenido(ultimo.current.s as unknown as EstadoAsistente)) { e.preventDefault(); e.returnValue = ''; }
+    };
+    window.addEventListener('beforeunload', aviso);
+    return () => window.removeEventListener('beforeunload', aviso);
+  }, []);
+
+  const guardarYSalir = async () => {
+    ultimo.current = { s: state, paso: currentStep };
+    if (!tieneContenido(state as unknown as EstadoAsistente)) { router.push('/admin/convocatorias'); return; }
+    await guardarBorrador();
+    if (!sinGuardar.current && borradorIdRef.current) router.push('/admin/convocatorias');
+    else setInlineAlert({ type: 'error', message: 'No se pudo guardar el borrador. Revisa tu conexión e inténtalo de nuevo.' });
+  };
+
   const [rubroForm, setRubroForm] = useState<Rubro>({
     clave: '',
     nombre: '',
@@ -254,12 +361,20 @@ export default function ConvocatoriasNuevaPage() {
       if (state.convocatoria.porcentaje_aportacion_minima < 0 || state.convocatoria.porcentaje_aportacion_minima > 100) {
         errors.porcentaje_aportacion_minima = 'Porcentaje debe estar entre 0 y 100';
       }
+      // E47: mismos límites que el servidor, para no descubrirlos hasta el final.
+      if (state.convocatoria.nombre.length > LIMITES.nombreConvocatoria) errors.nombre = `Máximo ${LIMITES.nombreConvocatoria} caracteres.`;
+      if (state.convocatoria.ejercicio_fiscal.trim() && !/^\d{4}$/.test(state.convocatoria.ejercicio_fiscal.trim())) errors.ejercicio_fiscal = 'Escribe el año con 4 dígitos (p. ej. 2026).';
     }
 
     if (step === 2) {
       if (!state.programa.clave.trim()) errors.clave = 'Clave requerida';
+      else if (!CLAVE_PROGRAMA_RE.test(state.programa.clave.trim())) errors.clave = 'Usa solo letras, números y _ - / . (sin espacios).';
       if (!state.programa.nombre.trim()) errors.nombre = 'Nombre requerido';
-      if (state.programa.monto_maximo <= 0) errors.monto_maximo = 'Monto debe ser > 0';
+      else if (state.programa.nombre.length > LIMITES.nombrePrograma) errors.nombre = `Máximo ${LIMITES.nombrePrograma} caracteres.`;
+      if (state.programa.monto_maximo < 1000) errors.monto_maximo = 'El monto máximo por proyecto debe ser de al menos $1,000.';
+      if (state.programa.tiene_equipo && state.programa.min_miembros_equipo > state.programa.max_miembros_equipo) {
+        errors.num_etapas = 'El máximo de integrantes no puede ser menor que el mínimo.';
+      }
       if (state.programa.tiene_etapas && state.programa.num_etapas < 1) {
         errors.num_etapas = 'Número de etapas debe ser > 0';
       }
@@ -270,18 +385,26 @@ export default function ConvocatoriasNuevaPage() {
 
     if (step === 3) {
       if (state.campos.length === 0) errors.campos = 'Agrega al menos un campo';
+      const i = state.campos.findIndex((c) => c.etiqueta.length > LIMITES.etiquetaPregunta || (c.tipo_campo === 'select' && !c.opciones_json?.trim()));
+      if (i >= 0) errors.campos = `Revisa la pregunta ${i + 1}: el texto admite hasta ${LIMITES.etiquetaPregunta} caracteres y las de lista necesitan opciones.`;
     }
 
     if (step === 4) {
       if (state.documentos.length === 0) errors.documentos = 'Agrega al menos un documento';
+      const i = state.documentos.findIndex((d) => d.nombre.length > LIMITES.nombreDocumento);
+      if (i >= 0) errors.documentos = `El nombre del documento ${i + 1} pasa de ${LIMITES.nombreDocumento} caracteres; lo demás va en «Qué debe contener».`;
     }
 
     if (step === 5) {
       if (state.rubros.length === 0) errors.rubros = 'Agrega al menos un rubro';
+      const i = state.rubros.findIndex((r) => r.nombre.length > LIMITES.nombreRubro || r.clave.length > LIMITES.claveRubro);
+      if (i >= 0) errors.rubros = `El concepto ${i + 1} tiene un nombre demasiado largo (máximo ${LIMITES.nombreRubro} caracteres).`;
     }
 
     if (step === 6) {
       if (state.criterios.length === 0) errors.criterios = 'Agrega al menos un criterio';
+      const i = state.criterios.findIndex((c) => c.nombre.length > LIMITES.nombreCriterio || c.puntaje_maximo < 1 || c.puntaje_maximo > 100);
+      if (i >= 0) errors.criterios = `Revisa el criterio ${i + 1}: el nombre admite hasta ${LIMITES.nombreCriterio} caracteres (el detalle va en la descripción) y la calificación máxima va de 1 a 100.`;
       const totalPonderacion = state.criterios.reduce((sum, c) => sum + c.ponderacion, 0);
       if (totalPonderacion !== 100) {
         errors.ponderacion = `La suma de ponderaciones debe ser 100 (actual: ${totalPonderacion})`;
@@ -454,6 +577,10 @@ export default function ConvocatoriasNuevaPage() {
       setInlineAlert({ type: 'error', message: 'Nombre del criterio es requerido' });
       return;
     }
+    if (criterioForm.nombre.length > LIMITES.nombreCriterio) {
+      setInlineAlert({ type: 'error', message: `El nombre del criterio admite hasta ${LIMITES.nombreCriterio} caracteres. Deja un nombre corto y pon el detalle en la descripción.` });
+      return;
+    }
     const newCriterios = [...state.criterios];
     if (editCriterioIdx !== null) {
       newCriterios[editCriterioIdx] = criterioForm;
@@ -473,102 +600,40 @@ export default function ConvocatoriasNuevaPage() {
     });
   };
 
+  /**
+   * E47: UNA sola petición. El servidor valida todo y crea programa, preguntas, documentos, conceptos, criterios y
+   * convocatoria en una transacción: si algo falla no se crea nada y se puede corregir y reintentar.
+   */
   const handleSaveConvocatoria = async () => {
-    if (!validateStep(7)) return;
-
+    for (let paso = 1; paso <= 6; paso++) {
+      if (!validateStep(paso)) { setCurrentStep(paso); return; }
+    }
     setSaving(true);
     setSaveError('');
-
+    setSaveErrors([]);
+    setSaveProgress('Creando la convocatoria…');
     try {
-      setSaveProgress('Creando programa...');
-      const programaRes = await api.post('/admin/programas', {
-        clave: state.programa.clave,
-        nombre: state.programa.nombre,
-        tipo_apoyo: state.programa.tipo_apoyo,
-        monto_maximo: state.programa.monto_maximo,
-        tiene_etapas: state.programa.tiene_etapas,
-        num_etapas: state.programa.num_etapas,
-        tiene_equipo: state.programa.tiene_equipo,
-        min_miembros_equipo: state.programa.min_miembros_equipo,
-        max_miembros_equipo: state.programa.max_miembros_equipo,
-        requiere_evaluacion_tecnica: state.programa.requiere_evaluacion_tecnica,
-        puntaje_minimo_aprobatorio: state.programa.puntaje_minimo_aprobatorio,
-        activo: true,
-      });
-
-      const programaId = programaRes.data.id || programaRes.data.data?.id;
-
-      if (state.campos.length > 0) {
-        setSaveProgress('Agregando campos...');
-        for (const campo of state.campos) {
-          await api.post(`/admin/programas/${programaId}/campos`, {
-            ...campo,
-            programa_id: programaId,
-          });
-        }
-      }
-
-      if (state.documentos.length > 0) {
-        setSaveProgress('Agregando documentos...');
-        for (const doc of state.documentos) {
-          const { formatos, tamano_mb, ...resto } = doc;
-          await api.post(`/admin/programas/${programaId}/documentos`, {
-            ...resto,
-            formato_permitido: formatos,
-            'tamaño_maximo_mb': tamano_mb,
-            programa_id: programaId,
-          });
-        }
-      }
-
-      if (state.rubros.length > 0) {
-        setSaveProgress('Agregando rubros...');
-        for (const rubro of state.rubros) {
-          await api.post(`/admin/programas/${programaId}/rubros`, {
-            ...rubro,
-            programa_id: programaId,
-          });
-        }
-      }
-
-      if (state.criterios.length > 0) {
-        setSaveProgress('Agregando criterios...');
-        for (const criterio of state.criterios) {
-          await api.post(`/admin/programas/${programaId}/criterios`, {
-            ...criterio,
-            programa_id: programaId,
-          });
-        }
-      }
-
-      setSaveProgress('Creando convocatoria...');
-      const { data: creada } = await api.post('/admin/convocatorias', {
-        nombre: state.convocatoria.nombre,
-        ejercicio_fiscal: state.convocatoria.ejercicio_fiscal,
-        periodo_id: state.convocatoria.periodo_id ? Number(state.convocatoria.periodo_id) : null,
-        estado: 'activa',
-        descripcion: state.convocatoria.descripcion,
-        fecha_apertura: state.convocatoria.fecha_apertura,
-        fecha_cierre: state.convocatoria.fecha_cierre,
-        monto_maximo_apoyo: state.convocatoria.monto_maximo_apoyo,
-        porcentaje_aportacion_minima: state.convocatoria.porcentaje_aportacion_minima,
-        tipo_programa_id: programaId,
-      });
-
+      // Primero asegura el borrador con lo último (si la red falla a medio camino, nada se pierde).
+      ultimo.current = { s: state, paso: 7 };
+      await guardarBorrador();
+      const { data } = await api.post('/admin/asistente-convocatoria', armarPayload(state as unknown as EstadoAsistente, borradorIdRef.current));
+      sinGuardar.current = false;
       setSaveProgress('¡Convocatoria creada! Abriendo su ficha para que cargues el banner…');
-      // E40: se publica como 'activa'; su estado público (próxima/abierta/cerrada) sale de las fechas.
-      // Se abre la ficha para cargar el banner ahí mismo.
-      const nuevaId = creada?.convocatoria?.id;
+      const nuevaId = Number(data?.convocatoria?.id);
       setTimeout(() => {
-        router.push(nuevaId ? `/admin/convocatorias/${nuevaId}` : '/admin/convocatorias');
-      }, 1500);
-    } catch (error: any) {
-      console.error('Error:', error);
-      setSaveError(
-        error.response?.data?.message ||
-        error.message ||
-        'Error al guardar la convocatoria'
-      );
+        router.push(Number.isInteger(nuevaId) && nuevaId > 0 ? `/admin/convocatorias/${nuevaId}` : '/admin/convocatorias');
+      }, 1200);
+    } catch (error: unknown) {
+      const res = (error as { response?: { status?: number; data?: { message?: string; errors?: unknown } } })?.response;
+      const detalle = res?.status === 422 ? erroresDelServidor(res.data?.errors, state as unknown as EstadoAsistente) : null;
+      if (detalle) {
+        setSaveErrors(detalle.lineas);
+        setSaveError(detalle.lineas.length === 1 ? 'Hay un dato por corregir.' : `Hay ${detalle.lineas.length} datos por corregir.`);
+      } else if (res?.status === 429) {
+        setSaveError('Demasiados intentos seguidos. Espera un minuto y vuelve a intentarlo.');
+      } else {
+        setSaveError(res?.data?.message && res.status !== 500 ? res.data.message : 'No se pudo crear la convocatoria. Tu trabajo está guardado como borrador; inténtalo de nuevo en un momento.');
+      }
       setSaving(false);
     }
   };
@@ -630,6 +695,15 @@ export default function ConvocatoriasNuevaPage() {
       <p className="text-center text-xs font-bold uppercase tracking-[0.14em] -mt-3" style={{ color: 'var(--auth-vino)' }}>
         Paso {currentStep} de 7 · {WIZARD_STEPS[currentStep - 1]}
       </p>
+      {/* E47: estado del borrador (autoguardado en el servidor). */}
+      <p className="-mt-3 flex items-center justify-center gap-1.5 text-xs text-[var(--app-ink-2)]" aria-live="polite">
+        {cargandoBorrador ? (<><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />Abriendo tu borrador…</>)
+          : estadoBorrador === 'guardando' ? (<><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />Guardando borrador…</>)
+          : estadoBorrador === 'error' ? (<span className="inline-flex items-center gap-1.5" style={{ color: 'var(--auth-danger)' }}><CloudOff className="h-3.5 w-3.5" aria-hidden="true" />No se pudo guardar el borrador; se reintentará con tu siguiente cambio.</span>)
+          : estadoBorrador === 'guardado' && guardadoEn ? (<><Cloud className="h-3.5 w-3.5" aria-hidden="true" />Borrador guardado a las {guardadoEn.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</>)
+          : (<>Lo que captures se guarda solo como borrador.</>)}
+        {borradorId && <span className="sr-only"> (borrador {borradorId})</span>}
+      </p>
 
       <Card>
         <CardHeader>
@@ -660,6 +734,7 @@ export default function ConvocatoriasNuevaPage() {
                   <Label htmlFor="conv_nombre" className={wizLabelCls}>Nombre de la convocatoria *</Label>
                   <input
                     id="conv_nombre"
+                    maxLength={LIMITES.nombreConvocatoria}
                     value={state.convocatoria.nombre}
                     onChange={(e) => setState({ ...state, convocatoria: { ...state.convocatoria, nombre: e.target.value } })}
                     placeholder="Ej. Convocatoria 2026 · Prototipos de tecnología"
@@ -778,6 +853,7 @@ export default function ConvocatoriasNuevaPage() {
                   <Label htmlFor="prog_nombre" className={wizLabelCls}>Nombre del programa *</Label>
                   <input
                     id="prog_nombre"
+                    maxLength={LIMITES.nombrePrograma}
                     value={state.programa.nombre}
                     onChange={(e) => {
                       const nombre = e.target.value;
@@ -962,6 +1038,7 @@ export default function ConvocatoriasNuevaPage() {
                           <Label htmlFor="campo_etiqueta" className={wizLabelCls}>Texto de la pregunta *</Label>
                           <input
                             id="campo_etiqueta"
+                            maxLength={LIMITES.etiquetaPregunta}
                             value={campoForm.etiqueta}
                             onChange={(e) => {
                               const etiqueta = e.target.value;
@@ -1095,6 +1172,7 @@ export default function ConvocatoriasNuevaPage() {
                           <Label htmlFor="doc_nombre" className={wizLabelCls}>Nombre del documento *</Label>
                           <input
                             id="doc_nombre"
+                            maxLength={LIMITES.nombreDocumento}
                             value={documentoForm.nombre}
                             onChange={(e) => {
                               const nombre = e.target.value;
@@ -1213,6 +1291,7 @@ export default function ConvocatoriasNuevaPage() {
                           <Label htmlFor="rubro_nombre" className={wizLabelCls}>Nombre del concepto *</Label>
                           <input
                             id="rubro_nombre"
+                            maxLength={LIMITES.nombreRubro}
                             value={rubroForm.nombre}
                             onChange={(e) => {
                               const nombre = e.target.value;
@@ -1339,7 +1418,8 @@ export default function ConvocatoriasNuevaPage() {
                     key: 'nombre',
                     label: 'Qué se evalúa',
                     question: '¿Qué aspecto del proyecto se califica?',
-                    validate: () => (!criterioForm.nombre.trim() ? 'Escribe el nombre del criterio.' : null),
+                    validate: () => (!criterioForm.nombre.trim() ? 'Escribe el nombre del criterio.'
+                      : criterioForm.nombre.length > LIMITES.nombreCriterio ? `El nombre admite hasta ${LIMITES.nombreCriterio} caracteres; pon el detalle en la descripción.` : null),
                     content: (
                       <>
                         <div className="space-y-1.5">
@@ -1347,10 +1427,15 @@ export default function ConvocatoriasNuevaPage() {
                           <input
                             id="criterio_nombre"
                             value={criterioForm.nombre}
+                            maxLength={LIMITES.nombreCriterio}
                             onChange={(e) => setCriterioForm({ ...criterioForm, nombre: e.target.value })}
                             placeholder="Ej. Viabilidad técnica"
                             className={wizInputCls}
+                            aria-describedby="criterio_nombre_ayuda"
                           />
+                          <p id="criterio_nombre_ayuda" className="text-xs text-[var(--app-ink-2)]">
+                            {criterioForm.nombre.length} / {LIMITES.nombreCriterio}. Un nombre corto; listas o explicaciones van en la descripción.
+                          </p>
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="criterio_descripcion" className={wizLabelCls}>Qué debe considerar el evaluador (opcional)</Label>
@@ -1369,7 +1454,8 @@ export default function ConvocatoriasNuevaPage() {
                     key: 'peso',
                     label: 'Cuánto pesa',
                     question: '¿Qué tanto cuenta en la calificación final?',
-                    validate: () => (criterioForm.ponderacion <= 0 || criterioForm.ponderacion > 100 ? 'El peso va de 1 a 100.' : null),
+                    validate: () => (criterioForm.ponderacion <= 0 || criterioForm.ponderacion > 100 ? 'El peso va de 1 a 100.'
+                      : criterioForm.puntaje_maximo < 1 || criterioForm.puntaje_maximo > 100 ? 'La calificación máxima va de 1 a 100.' : null),
                     content: (
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="space-y-1.5">
@@ -1391,7 +1477,8 @@ export default function ConvocatoriasNuevaPage() {
                             type="number"
                             value={criterioForm.puntaje_maximo}
                             onChange={(e) => setCriterioForm({ ...criterioForm, puntaje_maximo: parseFloat(e.target.value) || 100 })}
-                            min={0}
+                            min={1}
+                            max={100}
                             className={wizInputCls}
                           />
                         </div>
@@ -1418,7 +1505,22 @@ export default function ConvocatoriasNuevaPage() {
           {currentStep === 7 && (
             <div className="space-y-6">
               {saveError && (
-                <AlertBox type="error" title="No se pudo guardar" message={saveError} />
+                <div role="alert" className="rounded-[18px] border px-5 py-4" style={{ borderColor: 'var(--auth-danger)', backgroundColor: 'var(--tile-red-bg, #fff1f2)' }}>
+                  <p className="flex items-center gap-2 font-semibold" style={{ color: 'var(--auth-danger)' }}>
+                    <XCircle className="h-5 w-5 shrink-0" aria-hidden="true" />No se creó la convocatoria. {saveError}
+                  </p>
+                  {saveErrors.length > 0 && (
+                    <ul className="mt-2 list-disc space-y-1 pl-9 text-sm text-[var(--app-ink)]">
+                      {saveErrors.map((l, i) => <li key={i}>{l}</li>)}
+                    </ul>
+                  )}
+                  <p className="mt-2 pl-7 text-xs text-[var(--app-ink-2)]">
+                    No se guardó nada a medias: corrige y vuelve a pulsar «Crear convocatoria». Lo capturado sigue en tu borrador.
+                  </p>
+                </div>
+              )}
+              {state.convocatoria.fecha_cierre && state.convocatoria.fecha_cierre < new Date().toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' }) && (
+                <AlertBox type="warning" message={`La fecha de cierre (${state.convocatoria.fecha_cierre}) ya pasó: la convocatoria se publicará como «Cerrada» y no recibirá solicitudes. Si no es lo que quieres, corrige las fechas en el paso 1.`} />
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1501,13 +1603,18 @@ export default function ConvocatoriasNuevaPage() {
         </CardContent>
 
         <div className="border-t border-[var(--app-rule)] px-5 sm:px-6 py-4 flex flex-col-reverse sm:flex-row gap-3 sm:justify-between">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentStep === 1 || saving}
-          >
-            <ChevronLeft className="h-4 w-4" /> Anterior
-          </Button>
+          <div className="flex flex-col-reverse sm:flex-row gap-3">
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 1 || saving}
+            >
+              <ChevronLeft className="h-4 w-4" /> Anterior
+            </Button>
+            <Button variant="soft" onClick={guardarYSalir} disabled={saving || estadoBorrador === 'guardando'}>
+              <Save className="h-4 w-4" aria-hidden="true" /> Guardar borrador y salir
+            </Button>
+          </div>
 
           {currentStep < 7 ? (
             <Button

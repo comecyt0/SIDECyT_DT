@@ -1590,5 +1590,45 @@ solicitud, la cola avisa al admin (correo + campana) sin fallos, aprobar envía 
 al buzón del sistema, el enlace usa el dominio, restablecer con el token funciona y un token falso da 422.
 **Reglas:** (1) nunca `env()` fuera de `config/` (con caché devuelve null); (2) toda notificación que deba verse en el
 panel usa `CampanaChannel`, no `database`; (3) un aviso que pide una acción no puede depender solo del correo.
-**Pendiente del usuario:** poner un correo real a la cuenta admin (Usuarios); quedan otros `env()` fuera de config
+**Pendiente del usuario (E46):** poner un correo real a la cuenta admin (Usuarios); quedan otros `env()` fuera de config
 (cookies, rate limits, SSO, VAPID, TSA) que fallarían si algún día se corre `config:cache` en este servidor.
+
+### E47 — "Nueva convocatoria" fallaba con "Validation failed" y dejaba basura; borradores [resuelto 24-09-2026]
+**Síntoma:** en el paso 7 del asistente, "No se pudo guardar · Validation failed", sin decir qué campo.
+**Causa (4 bugs):**
+1. El asistente guardaba con **6+ peticiones sueltas** (programa, cada pregunta, documento, rubro, criterio, convocatoria).
+   Un criterio de más de 255 caracteres (lista de sectores en el nombre) falló en el penúltimo paso: **el programa ya
+   estaba creado** (quedó huérfano, id 6) y al reintentar su clave "ya existía" → **imposible terminar**.
+2. El error mostraba solo `message` ("Validation failed"), no `errors` por campo; el front no validaba longitudes.
+3. **Pérdida silenciosa de datos:** las opciones de las preguntas de lista viajaban como `opciones_json` (texto) y el
+   backend validaba `opciones` (y la columna es `opciones_json`) → se guardaban vacías; el % máximo de los rubros viajaba
+   como `porcentaje_maximo` y `ProgramaRubroController` validaba `monto_minimo/monto_maximo`, **columnas que no existen**
+   (enviarlas daba 500) → el % se perdía.
+4. No había borrador: cualquier fallo o cerrar la pestaña perdía todo.
+**Fix:**
+- `POST /admin/asistente-convocatoria` (`Admin\AsistenteConvocatoriaController@crear`): **una petición, una transacción,
+  todo o nada**; reglas = columnas reales; reglas entre campos (suma de ponderaciones = 100, opciones de listas, mín ≤ máx
+  de equipo) en la **misma pasada** (`Validator::after`) para mostrar todos los errores juntos; nombres de atributo en
+  español; opciones → `[{id,label}]` (formato que lee `DynamicFieldRenderer`); bitácora `convocatoria.creada_asistente`.
+- **Borradores** (`convocatoria_borradores`, migración `2026_09_24_000005`): por usuario, JSON ≤ 256 KB, máx. 20;
+  `GET/POST/PUT/DELETE /admin/asistente-convocatoria/borradores[/id]`; ajeno → 404 (se comprueba antes del cuerpo). El
+  asistente **autoguarda 1.5 s después de cada cambio** (una petición a la vez, siempre lo último), pone `?borrador=ID`
+  en la URL, avisa al salir con cambios sin guardar, botón "Guardar borrador y salir", y al crear se borra el borrador.
+  Lista "Borradores sin terminar" en `/admin/convocatorias` (`components/admin/BorradoresConvocatoria.tsx`).
+- Front: `lib/asistente-convocatoria.ts` (límites = backend, `armarPayload`, `erroresDelServidor` → líneas legibles
+  "Criterio 1 «…» — nombre: …" + salto al paso, `restaurarBorrador` defensivo); `maxLength` y contador en los campos;
+  validación de longitudes y clave por paso; aviso si la fecha de cierre ya pasó (se publicaría "Cerrada").
+- `ProgramaCampoController` guarda `opciones` → `opciones_json`; `ProgramaRubroController` valida `porcentaje_maximo`.
+- Throttle con **prefijo propio** (`throttle:120,1,borrador`): sin prefijo, todas las rutas `throttle:*` de un usuario
+  comparten contador y el autoguardado agotaría el límite de prórroga/banners.
+- **Datos:** el intento fallido del usuario (programa 6 huérfano) se convirtió en **borrador 4** con sus 5 preguntas, 9
+  documentos y el rubro (+ los datos de la convocatoria tomados de su captura) y se borró el programa. Hay que volver a
+  escribir las opciones de "Número de personas solicitantes?" y el criterio (no se habían guardado).
+**Bug encontrado al probar:** el nombre del borrador se leía de `datos.convocatoria.nombre` pero el asistente manda
+`{v, state}` → tras el primer autoguardado la lista decía "sin nombre". Corregido.
+**Verificado:** backend 24/24 (`e2e_asistente.php`: criterio largo → 422 sin crear nada, errores simultáneos, permisos,
+aislamiento de borradores, creación completa, reintento con clave repetida), navegador 16/16 (borrador recuperado, error
+lleva al paso 6, corregir, autoguardado, recargar, crear con una sola petición, 375 px, sin errores de consola), regresión
+E44 38/38 y E45 72/72, vitest 124/124.
+**Regla:** un flujo que crea varios registros relacionados va en **un endpoint con transacción**, nunca como cadena de
+peticiones desde el front; y todo formulario largo tiene borrador.

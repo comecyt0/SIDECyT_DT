@@ -41,13 +41,14 @@ class ProgramaCampoController extends Controller
             'etiqueta' => 'required|string|max:255',
             'tipo_campo' => 'required|in:text,number,textarea,date,select,checkbox,email',
             'descripcion' => 'nullable|string',
-            'opciones' => 'nullable|array',
+            'opciones' => 'nullable', // lista o texto (una por línea) → opciones_json [{id,label}] (24/09/2026: antes se descartaba)
             'orden' => 'required|integer|min:1',
             'requerido' => 'boolean',
             'activo' => 'boolean',
             'etapa_id' => 'nullable|exists:programa_etapas,id',
         ]);
 
+        $validated = $this->conOpciones($validated);
         $validated['tipo_programa_id'] = $tipoPrograma->id;
 
         $campo = ProgramaCampo::create($validated);
@@ -74,14 +75,14 @@ class ProgramaCampoController extends Controller
             'etiqueta' => 'string|max:255',
             'tipo_campo' => 'in:text,number,textarea,date,select,checkbox,email',
             'descripcion' => 'nullable|string',
-            'opciones' => 'nullable|array',
+            'opciones' => 'nullable', // lista o texto (una por línea) → opciones_json [{id,label}] (24/09/2026: antes se descartaba)
             'orden' => 'integer|min:1',
             'requerido' => 'boolean',
             'activo' => 'boolean',
             'etapa_id' => 'nullable|exists:programa_etapas,id',
         ]);
 
-        $campo->update($validated);
+        $campo->update($this->conOpciones($validated));
 
         $this->clearProgramCache($tipoPrograma->id);
 
@@ -89,6 +90,18 @@ class ProgramaCampoController extends Controller
             'message' => 'Campo actualizado exitosamente',
             'data' => $campo,
         ]);
+    }
+
+    /** `opciones` (lista o texto) → columna real `opciones_json` con el formato que lee el solicitante. */
+    private function conOpciones(array $v): array
+    {
+        if (array_key_exists('opciones', $v)) {
+            $o = $v['opciones'];
+            $v['opciones_json'] = (is_array($o) || is_string($o)) ? AsistenteConvocatoriaController::opciones($o) : null;
+            unset($v['opciones']);
+        }
+
+        return $v;
     }
 
     /**

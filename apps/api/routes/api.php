@@ -223,6 +223,13 @@ Route::middleware([
             // Convocatorias: crear/editar/borrar solo el admin general (la lectura está en el grupo a).
             Route::post('convocatorias', [ConvocatoriaController::class, 'store']);
             Route::match(['put', 'patch'], 'convocatorias/{convocatoria}', [ConvocatoriaController::class, 'update']);
+            // E47 — asistente: guardado atómico (todo o nada) y borradores por usuario (autoguardado).
+            Route::post('asistente-convocatoria', [\App\Http\Controllers\Admin\AsistenteConvocatoriaController::class, 'crear'])->middleware('throttle:20,1,asistente');
+            Route::get('asistente-convocatoria/borradores', [\App\Http\Controllers\Admin\AsistenteConvocatoriaController::class, 'borradores']);
+            Route::get('asistente-convocatoria/borradores/{id}', [\App\Http\Controllers\Admin\AsistenteConvocatoriaController::class, 'borrador'])->whereNumber('id');
+            Route::post('asistente-convocatoria/borradores', [\App\Http\Controllers\Admin\AsistenteConvocatoriaController::class, 'guardarBorrador'])->middleware('throttle:30,1,borrador-nuevo');
+            Route::put('asistente-convocatoria/borradores/{id}', [\App\Http\Controllers\Admin\AsistenteConvocatoriaController::class, 'guardarBorrador'])->whereNumber('id')->middleware('throttle:120,1,borrador');
+            Route::delete('asistente-convocatoria/borradores/{id}', [\App\Http\Controllers\Admin\AsistenteConvocatoriaController::class, 'eliminarBorrador'])->whereNumber('id');
             // E40 — prórroga y banner
             Route::post('convocatorias/{convocatoria}/prorroga', [ConvocatoriaController::class, 'prorroga'])->middleware('throttle:20,1');
             Route::post('convocatorias/{convocatoria}/banner', [BannerController::class, 'storeConvocatoria'])->middleware('throttle:20,1');

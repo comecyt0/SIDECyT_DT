@@ -13,6 +13,7 @@ import { formatDate } from '@/lib/format';
 import { ESTADO_PUBLICO, estadoPublico, puedeProrrogar } from '@/lib/convocatoria-estado';
 import ProrrogaDialog from '@/components/admin/ProrrogaDialog';
 import { useRol } from '@/hooks/useRol';
+import BorradoresConvocatoria from '@/components/admin/BorradoresConvocatoria';
 
 interface Props {
   convocatorias: Convocatoria[];
@@ -39,6 +40,9 @@ export default function ConvocatoriasClient({ convocatorias }: Props) {
           </Link>
         ) : undefined}
       />
+
+      {/* E47: borradores del asistente (solo el admin general crea convocatorias). */}
+      {esAdmin && <BorradoresConvocatoria />}
 
       <Card>
         <CardHeader>
