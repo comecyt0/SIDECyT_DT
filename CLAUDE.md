@@ -416,7 +416,11 @@ previas de "nada de píldoras" y "fondos poco saturados". Wine sigue como color 
 Capa reutilizable en `globals.css` (`data-tone`, `.pill`, `.tone-chip`, `.tone-card`, `.stat-tile`,
 `.btn-sticker`, `.empty-state`) que alcanza a los 4 roles sin tocarlos archivo por archivo; detalle
 completo y el barrido vista por vista en `docs/DISENO_UI.md` §10.
-**El menú/nav del panel NO se toca (E26).** `logo.png` es el favicon del sistema completo.
+**El menú/nav del panel NO se toca (E26).**
+**REGLA PERMANENTE (28/09/2026, E50): el logo oficial COMECYT 2026 es el favicon de TODO el sistema** (favicon, PWA,
+Apple, push), generado con `apps/web/scripts/favicons.php`. **La franja institucional (convivencia de logos) va en el
+ENCABEZADO de páginas públicas y de acceso, nunca en pies ni en paneles.** Logos, colores y tipografía oficiales:
+**`docs/IDENTIDAD.md`** (fuente única en código: `lib/identidad.ts` + `components/branding/Logos.tsx`).
 **23/09/2026 — Landing pública `/sigae`** con sistema visual propio y aislado (ADN de portrait.so, tokens en
 `.lp-root`, fuentes locales Switzer + Satoshi): `docs/LANDING_SIGAE.md` y E36.
 **24/09/2026 — PANELES v3, DIRECCIÓN VIGENTE (E41):** rediseño estructural con la landing + referencia
@@ -1720,3 +1724,40 @@ desde el panel**; SICEI queda pendiente pero documentado. Guía completa: **`doc
   SICEI, las 4 pestañas del panel, 375 px), vitest 129/129.
 - **Nota de datos:** la página oficial de "Asistencia Técnica e Innovación" da 404; el programa quedó sin enlace hasta
   que el admin ponga el correcto.
+
+### E50 — Identidad institucional 2026, encuadre del carrusel, traducción de menús, login sin scroll [publicado 28-09-2026]
+Referencia: **`docs/IDENTIDAD.md`** (logos, colores, tipografía, favicons) y `docs/DISENO_UI.md` §19 (decisiones de diseño).
+- **Identidad:** logos oficiales en `public/identidad/` (color, negativo, positivo, convivencia, educación; PNG + WebP).
+  Todo logo pasa por `LogoComecyt` / `FranjaInstitucional` / `BandaInstitucional` (`components/branding/Logos.tsx`).
+  Fondo oscuro = versión negativa, **nunca** `brightness-0 invert`. `DualBranding` quedó como logo único (el marcador
+  de Edomex se retiró: lo sustituye la franja oficial). Vino `#56212F`, dorado `#BC955B` en todos los tokens.
+- **Favicons (regla permanente):** `scripts/favicons.php` genera ico/PNG/Apple/maskable desde el logo; conectados en
+  `layout.tsx`, `manifest.webmanifest`, `sw.js` y `PushSender.php`. `apps/api/public/favicon.ico` era de 0 bytes.
+- **Tipografía:** `--font-titulos` = Gotham → Montserrat (OFL, `src/fonts/`). Solo títulos (`h1–h3` en capa base y los
+  tokens display de paneles, landing y portal).
+- **Carrusel:** columnas `ajuste, foco_x, foco_y, zoom, fondo, margen, mostrar_textos` (migración
+  `2026_09_28_000001`), validadas en `CarouselController::reglasEncuadre()`; `GET /carousel/slides` devuelve lista
+  blanca armada a mano (máx. 20) con `throttle:60,1,carrusel`. Front: `ui/BannerImagen.tsx` (render compartido) y
+  `admin/EncuadreEditor.tsx`. `login-carousel.tsx` solo acepta imágenes `/storage/carousel/*` o https. Respaldo de los
+  valores previos: `backups/carrusel-antes-e50.json`.
+- **Traducción (ES/EN):** `NAV_GROUPS` guarda **claves** (`admin_nav.*`) y se traduce al pintar; barra, pie, avisos,
+  búsqueda y botones comunes usan `t()`. Página nueva del admin = entrada en `NAV_GROUPS` + clave en `es.json` y
+  `en.json` (la prueba `i18n/messages.test.ts` falla si los dos diccionarios no tienen las mismas claves). `useT()` sin
+  proveedor devuelve español, no la clave. El contenido de cada vista sigue en español (decisión del usuario).
+- **Otros pedidos:** sin "Acceso Institucional Cifrado 256-bit"; sin botón de tema (todos siguen al sistema operativo;
+  `ThemeContext` descarta preferencias viejas); "Regresar a SIDECyT" en `/sigae`; el correo del héroe de `/sigae` se
+  prellena en el login (sessionStorage `sidecyt:correo-login`, se borra al leerlo; `?email=` como respaldo); login,
+  recuperar contraseña y solicitar acceso sin scroll de página (`h-dvh`, columna del formulario con scroll interno).
+- **Bugs encontrados en el despliegue (no repetir):**
+  1. **`/identidad/*.png` → 307 al login:** el `matcher` de `proxy.ts` solo excluía imágenes de la raíz de `public/`.
+     Toda subcarpeta pública nueva necesita su exclusión explícita (acotada).
+  2. **El service worker guardó el HTML del login como imagen** (caché primero + redirección seguida = 200 HTML): logos
+     rotos para siempre en esos navegadores. `cacheFirst` ya no guarda respuestas redirigidas ni `text/html`; `comecyt-v5`.
+  3. Utilidades de Tailwind (`max-w-full`) ganan a reglas en `@layer`: para limitar la franja se usa un contenedor.
+  4. Con Montserrat (más ancha) y el botón nuevo, la píldora de la barra de `/sigae` se encimaba sobre la marca entre
+     900 y 1240 px: marca `flex: none` y píldora desde 1240 px.
+- **Portal `/` más interactivo:** señal en vivo de convocatorias reales, selector "¿Cuál es para mí?" con píldora
+  deslizante, teclado e insignia "Recomendado para ti", sección "Cómo funciona" y revelado al entrar en pantalla.
+- **Verificado:** seguridad 38/38, vitest 129/129 (incluye la prueba nueva de diccionarios), tsc 0 errores, eslint 0
+  errores; login/recuperación/solicitud medidos en 13 tamaños sin scroll de página; `/carousel/slides` con lista blanca,
+  405/411 a POST y 429 tras 60/min; cabeceras de seguridad intactas en `/identidad/*`.

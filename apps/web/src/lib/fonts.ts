@@ -17,6 +17,20 @@ export const switzer = localFont({
   display: 'swap',
 });
 
+/**
+ * Titulares institucionales (E50, 28/09/2026). El manual de identidad COMECYT 2026 pide Gotham, que es
+ * comercial y no está en el servidor: se usa Montserrat (SIL OFL 1.1, src/fonts/LICENSE-OFL-Montserrat.txt),
+ * su equivalente geométrico libre más cercano. Solo para títulos y textos importantes (regla del usuario);
+ * el texto corrido sigue en Switzer. Si COMECYT entrega los archivos oficiales de Gotham, basta con
+ * agregarlos aquí: la pila `--font-titulos` ya pone "Gotham" primero (globals.css).
+ */
+export const montserrat = localFont({
+  src: '../fonts/Montserrat-Variable.woff2',
+  variable: '--font-montserrat',
+  weight: '100 900',
+  display: 'swap',
+});
+
 export const satoshi = localFont({
   src: '../fonts/Satoshi-Variable.woff2',
   variable: '--font-lp-display',

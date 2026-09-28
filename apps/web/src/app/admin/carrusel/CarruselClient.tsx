@@ -2,7 +2,6 @@
 
 import { useRef, useState, type DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -26,8 +25,10 @@ import {
 import PageHeader from '@/components/ui/page-header';
 import api from '@/lib/api';
 import { INSTITUTION } from '@/lib/institution';
+import BannerImagen, { ENCUADRE_INICIAL, normalizarEncuadre, type Encuadre } from '@/components/ui/BannerImagen';
+import EncuadreEditor from '@/components/admin/EncuadreEditor';
 
-export interface CarouselSlide {
+export interface CarouselSlide extends Partial<Encuadre> {
   id: number;
   titulo: string;
   subtitulo?: string;
@@ -36,6 +37,7 @@ export interface CarouselSlide {
   badge_texto?: string;
   orden: number;
   activo: boolean;
+  mostrar_textos?: boolean;
 }
 
 interface Props {
@@ -45,7 +47,9 @@ interface Props {
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_MB = 8;
 
-const emptyForm = (): Omit<CarouselSlide, 'id'> => ({
+type FormSlide = Omit<CarouselSlide, 'id'> & Encuadre & { mostrar_textos: boolean };
+
+const emptyForm = (): FormSlide => ({
   titulo: '',
   subtitulo: '',
   descripcion: '',
@@ -53,7 +57,20 @@ const emptyForm = (): Omit<CarouselSlide, 'id'> => ({
   badge_texto: '',
   orden: 0,
   activo: true,
+  ...ENCUADRE_INICIAL,
+  mostrar_textos: true,
 });
+
+/**
+ * E50: sugerencia automática al subir una imagen (el admin la puede cambiar en el paso "El encuadre").
+ * Banner ancho (≥ 2:1, p. ej. 1024×229) → completo, fondo difuminado y sin la tarjeta de textos (ya trae los suyos).
+ */
+function sugerirEncuadre(ancho: number, alto: number): Partial<FormSlide> | null {
+  if (!ancho || !alto) return null;
+  const r = ancho / alto;
+  if (r >= 2) return { ajuste: 'completa', fondo: 'desenfoque', margen: 0, mostrar_textos: false };
+  return null;
+}
 
 export default function CarruselClient({ slides }: Props) {
   const router = useRouter();
@@ -75,10 +92,12 @@ export default function CarruselClient({ slides }: Props) {
   const [, setDeleting] = useState(false);
 
   const [previewSlide, setPreviewSlide] = useState<CarouselSlide | null>(null);
+  const [sugerencia, setSugerencia] = useState('');
 
   const openCreate = () => {
     setEditingSlide(null);
     setForm(emptyForm());
+    setSugerencia('');
     setError('');
     setSuccess('');
     setUploadError('');
@@ -95,7 +114,10 @@ export default function CarruselClient({ slides }: Props) {
       badge_texto: slide.badge_texto || '',
       orden: slide.orden,
       activo: slide.activo,
+      ...normalizarEncuadre(slide),
+      mostrar_textos: slide.mostrar_textos !== false,
     });
+    setSugerencia('');
     setError('');
     setSuccess('');
     setUploadError('');
@@ -125,7 +147,16 @@ export default function CarruselClient({ slides }: Props) {
       const { data } = await api.post<{ imagen_url: string }>('/admin/carousel/upload', fd, {
         headers: { 'Content-Type': undefined },
       });
-      setForm((f) => ({ ...f, imagen_url: data.imagen_url }));
+      // E50: medir la imagen para sugerir el encuadre (banner ancho → completo y sin textos encima).
+      const medidas = await new Promise<{ w: number; h: number }>((ok) => {
+        const img = new window.Image();
+        img.onload = () => ok({ w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = () => ok({ w: 0, h: 0 });
+        img.src = URL.createObjectURL(file);
+      });
+      const sug = sugerirEncuadre(medidas.w, medidas.h);
+      setForm((f) => ({ ...f, imagen_url: data.imagen_url, ...(sug ?? {}) }));
+      setSugerencia(sug ? `Detectamos un banner ancho (${medidas.w}×${medidas.h}): lo configuramos para verse completo y sin la tarjeta de textos. Puedes cambiarlo en el siguiente paso.` : '');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
       const errs = axiosErr.response?.data?.errors;
@@ -256,16 +287,7 @@ export default function CarruselClient({ slides }: Props) {
                   style={{ borderColor: slide.activo ? 'color-mix(in oklch, var(--auth-vino) 25%, var(--app-rule))' : 'var(--app-rule)' }}
                 >
                   <div className="relative h-40 overflow-hidden" style={{ background: 'linear-gradient(135deg, var(--auth-vino), var(--brand-vino-800))' }}>
-                    {slide.imagen_url && (
-                      <Image
-                        src={slide.imagen_url}
-                        alt={slide.titulo}
-                        fill
-                        unoptimized
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                        className="absolute inset-0 w-full h-full object-cover opacity-75 group-hover:scale-105 transition-transform duration-500"
-                      />
-                    )}
+                    {slide.imagen_url && <BannerImagen src={slide.imagen_url} encuadre={normalizarEncuadre(slide)} />}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
 
                     <div className="absolute top-2 left-2 flex gap-2">
@@ -321,9 +343,10 @@ export default function CarruselClient({ slides }: Props) {
       {/* Alta / edición por pasos (StepFrame) */}
       <StepFrame
         open={showModal}
+        size="xl"
         title={editingSlide ? 'Editar diapositiva' : 'Nueva diapositiva'}
         icon={<Images className="h-5 w-5" />}
-        intro={<>Cada diapositiva es <strong>una pantalla del carrusel del inicio de sesión</strong>. Primero la foto, luego los textos y al final decides si se muestra.</>}
+        intro={<>Cada diapositiva es <strong>una pantalla del carrusel del inicio de sesión</strong>. Primero la foto, luego cómo se encuadra, los textos y al final decides si se muestra.</>}
         error={error || null}
         success={success || null}
         submitting={saving || uploading}
@@ -367,15 +390,8 @@ export default function CarruselClient({ slides }: Props) {
                   >
                     {form.imagen_url ? (
                       <>
-                        <Image
-                          src={form.imagen_url}
-                          alt="Vista previa"
-                          fill
-                          unoptimized
-                          sizes="560px"
-                          className="object-cover"
-                          onError={(e) => (e.currentTarget.style.display = 'none')}
-                        />
+                        {/* La imagen completa (el encuadre se ajusta en el paso siguiente). */}
+                        <BannerImagen src={form.imagen_url} encuadre={{ ...ENCUADRE_INICIAL, fondo: 'desenfoque' }} />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                         <p className="absolute bottom-2 left-3 text-white text-sm font-bold drop-shadow">{form.titulo || 'Vista previa'}</p>
                         <button
@@ -408,6 +424,7 @@ export default function CarruselClient({ slides }: Props) {
                     )}
                   </div>
                   {uploadError && <p className="text-xs" style={{ color: 'var(--auth-danger)' }}>{uploadError}</p>}
+                  {sugerencia && <p className="text-xs rounded-xl px-3 py-2" style={{ background: 'var(--tile-sky-bg)', color: 'var(--app-ink)' }}>{sugerencia}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="slide-url" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest flex items-center gap-1.5">
@@ -424,6 +441,24 @@ export default function CarruselClient({ slides }: Props) {
                   </p>
                 </div>
               </>
+            ),
+          },
+          {
+            // E50: cómo se ve la imagen en el banner del login (completa o recortada), con vista previa real.
+            key: 'encuadre',
+            label: 'El encuadre',
+            question: '¿Cómo se verá la imagen en el inicio de sesión?',
+            content: form.imagen_url ? (
+              <EncuadreEditor
+                src={form.imagen_url}
+                valor={{ ajuste: form.ajuste, foco_x: form.foco_x, foco_y: form.foco_y, zoom: form.zoom, fondo: form.fondo, margen: form.margen }}
+                onChange={(enc) => setForm((f) => ({ ...f, ...enc }))}
+                mostrarTextos={form.mostrar_textos}
+                onMostrarTextos={(v) => setForm((f) => ({ ...f, mostrar_textos: v }))}
+                titulo={form.titulo}
+              />
+            ) : (
+              <p className="text-sm text-[var(--app-ink-2)]">Esta diapositiva no tiene imagen: se mostrará con el fondo institucional. Si quieres una foto, vuelve al paso anterior.</p>
             ),
           },
           {
@@ -499,18 +534,19 @@ export default function CarruselClient({ slides }: Props) {
       <Dialog open={!!previewSlide} onOpenChange={(open) => !open && setPreviewSlide(null)}>
         <DialogContent className="sm:max-w-2xl p-0 overflow-hidden rounded-[28px]">
           {previewSlide && (
-            <div className="relative h-80 auth-banner rounded-none">
-              {previewSlide.imagen_url && (
-                <Image src={previewSlide.imagen_url} alt={previewSlide.titulo} fill unoptimized sizes="(max-width: 768px) 100vw, 672px" className="object-cover opacity-55" style={{ filter: 'saturate(0.8)' }} />
-              )}
-              <div className="absolute inset-0 p-8 flex flex-col justify-end text-white">
-                {previewSlide.badge_texto && <p className="auth-tag mb-3">{previewSlide.badge_texto}</p>}
-                <div className="auth-glass p-6">
-                  <h3 className="auth-banner-title">{previewSlide.titulo}</h3>
-                  {previewSlide.subtitulo && <p className="mt-2 text-[15px] font-semibold text-white/90">{previewSlide.subtitulo}</p>}
-                  {previewSlide.descripcion && <p className="mt-1.5 text-[15px] leading-relaxed text-white/80 line-clamp-2">{previewSlide.descripcion}</p>}
+            <div className="relative h-[28rem] auth-banner rounded-none">
+              {previewSlide.imagen_url && <BannerImagen src={previewSlide.imagen_url} encuadre={normalizarEncuadre(previewSlide)} />}
+              {previewSlide.imagen_url && <span className="auth-banner-scrim" data-textos={previewSlide.mostrar_textos !== false} />}
+              {previewSlide.mostrar_textos !== false && (
+                <div className="absolute inset-0 p-8 flex flex-col justify-end text-white">
+                  {previewSlide.badge_texto && <p className="auth-tag mb-3">{previewSlide.badge_texto}</p>}
+                  <div className="auth-glass p-6">
+                    <h3 className="auth-banner-title">{previewSlide.titulo}</h3>
+                    {previewSlide.subtitulo && <p className="mt-2 text-[15px] font-semibold text-white/90">{previewSlide.subtitulo}</p>}
+                    {previewSlide.descripcion && <p className="mt-1.5 text-[15px] leading-relaxed text-white/80 line-clamp-2">{previewSlide.descripcion}</p>}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </DialogContent>

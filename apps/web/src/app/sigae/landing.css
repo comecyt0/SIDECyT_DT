@@ -41,15 +41,17 @@
   /* Vino institucional (mismo valor que --auth-vino del login). SOLO para detalles: etiqueta "Nuevo",
      "Para:" de los programas, enlaces a convocatorias, números de acceso, viñetas y acentos del pie.
      Nunca fondos grandes ni botones rellenos (pedido del usuario, 23/09/2026). */
-  --color-vino: oklch(36% 0.1 358);
-  --color-vino-strong: oklch(30% 0.09 358);
+  --color-vino: #56212f; /* vino oficial COMECYT 2026 (E50) */
+  --color-dorado: #bc955b;
+  --color-arena: #ddc8a4;
+  --color-vino-strong: #43192a;
   --color-vino-wash: oklch(96.5% 0.014 358);
   /* Halo detrás del titular: vino institucional (antes lavanda de la referencia; cambio pedido por el usuario). */
   --color-hero-bloom: oklch(36% 0.1 358 / 0.13);
 
   /* ── Tipografía ── */
   --font-switzer: var(--font-lp-text), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-basier-circle: var(--font-lp-display), var(--font-lp-text), ui-sans-serif, system-ui, sans-serif;
+  --font-basier-circle: var(--font-titulos);
   --text-caption: 10px;
   --text-sm: 14px;
   --text-body: 16px;
@@ -164,8 +166,8 @@
   min-width: 0;
   white-space: nowrap;
 }
-/* Logo recortado al contenido (public/logo-recortado.png). 23/09/2026: el usuario lo pidió 3 veces más
-   grande — el dibujo visible pasó de ~26 px a 78 px de alto. En teléfono se limita para que quepa. */
+/* Logo oficial COMECYT 2026 (public/identidad/comecyt-color.png, E50). 23/09/2026: el usuario lo pidió 3 veces
+   más grande — 78 px de alto. En teléfono se limita para que quepa. */
 .lp-brand img { height: 46px; width: auto; }
 @media (min-width: 640px) { .lp-brand img { height: 78px; } }
 @media (max-width: 420px) {
@@ -261,9 +263,14 @@
 
 /* ─────────────────────────── Nav flotante ─────────────────────────── */
 
+/* Banda institucional arriba (E50): alto = franja (≈13.43:1, máx. 680 px de ancho) + 22 px de relleno/filete. */
+.lp-root { --banda-h: calc(min(680px, 100vw - 32px) / 13.43 + 22px); }
 .lp-nav {
   position: fixed;
   top: var(--spacing-12);
+  /* Arranca debajo de la banda y sube al desplazarse: se anima `translate` (no `top`) para no forzar layout. */
+  translate: 0 var(--banda-h);
+  transition: translate 320ms var(--ease-out);
   left: 50%;
   z-index: 50;
   width: calc(100% - 24px);
@@ -284,9 +291,18 @@
 }
 @media (min-width: 640px) { .lp-nav-bar { height: 96px; padding-left: 22px; border-radius: 36px; } }
 .lp-nav[data-scrolled='true'] .lp-nav-bar { box-shadow: var(--shadow-subtle); }
+.lp-nav[data-scrolled='true'] { translate: 0 0; }
+@media (prefers-reduced-motion: reduce) { .lp-nav { transition: none; } }
 .lp-nav-actions { display: flex; align-items: center; gap: var(--spacing-4); }
 .lp-nav-ghost { display: none; }
 @media (min-width: 560px) { .lp-nav-ghost { display: inline-flex; } }
+/* 28/09/2026 — "Regresar a SIDECyT": texto completo desde 1100 px; en pantallas menores solo "SIDECyT" con la flecha. */
+.lp-nav-back { display: inline-flex; align-items: center; gap: 6px; padding-inline: 12px; }
+.lp-nav-back .lp-btn-arrow-back { width: 16px; height: 16px; transition: transform var(--dur-ui) var(--ease-out); }
+.lp-nav-back-largo { display: none; }
+@media (min-width: 1100px) { .lp-nav-back-largo { display: inline; } .lp-nav-back-corto { display: none; } }
+@media (hover: hover) and (pointer: fine) { .lp-nav-back:hover .lp-btn-arrow-back { transform: translateX(-3px); } }
+@media (max-width: 380px) { .lp-nav-back-corto { display: none; } .lp-nav-back { padding-inline: 10px; } }
 
 /* Píldora de anuncio dentro del nav */
 .lp-announce {
@@ -304,7 +320,11 @@
 .lp-announce:active { transform: scale(0.97); }
 .lp-announce svg { width: 14px; height: 14px; transition: transform var(--dur-ui) var(--ease-out); }
 @media (hover: hover) and (pointer: fine) { .lp-announce:hover svg { transform: translateY(2px); } }
-@media (min-width: 900px) { .lp-announce { display: inline-flex; } }
+/* 28/09/2026 (E50): con "Regresar a SIDECyT" y los títulos en Montserrat la píldora se encimaba sobre "SIGAE" entre
+   900 y ~1240 px. La marca ya no se encoge (flex: none) y la píldora aparece solo desde 1240 px; si aun así no cabe,
+   se recorta con puntos suspensivos en vez de montarse sobre la marca. */
+.lp-nav-bar .lp-brand { flex: none; }
+@media (min-width: 1240px) { .lp-announce { display: inline-flex; min-width: 0; overflow: hidden; text-overflow: ellipsis; } }
 
 .lp-eyebrow {
   display: inline-flex;
@@ -785,13 +805,13 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: 104px;
+  width: 164px;
   height: 104px;
   border-radius: 22px;
   background: var(--color-white-canvas);
   box-shadow: var(--shadow-subtle-5);
 }
-.lp-final-mark img { width: 96px; height: auto; }
+.lp-final-mark img { width: 140px; height: auto; }
 .lp-final-text { flex: 1; min-width: 0; }
 .lp-final-text h3 { color: var(--color-vino); font-family: var(--font-basier-circle); font-weight: 600; font-size: 24px; letter-spacing: -0.03em; line-height: 1.15; }
 .lp-final-text p { margin-top: 4px; color: var(--color-iron-quiet); font-size: var(--text-sm); }

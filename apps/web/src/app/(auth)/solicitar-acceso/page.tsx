@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, Children, cloneElement, isValidElement, type ReactElement, type InputHTMLAttributes } from 'react';
-import Image from 'next/image';
+import { LogoComecyt, BandaInstitucional } from '@/components/branding/Logos';
 import Link from 'next/link';
 import { AlertBox } from '@/components/ui/alert-box';
 import DualBranding from '@/components/branding/DualBranding';
@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 import { validarPassword } from '@/lib/password-policy';
-import { INSTITUTION, copyrightLine } from '@/lib/institution';
+import { INSTITUTION } from '@/lib/institution';
+import PieAuth from '@/components/branding/PieAuth';
 import { useT } from '@/i18n/I18nProvider';
 
 type TipoPersona = '' | 'fisica' | 'moral' | 'asociacion_civil' | 'otro';
@@ -176,9 +177,12 @@ export default function SolicitarAccesoPage() {
   const blurb = STEP_BLURB[step];
 
   return (
-    <div className="flex min-h-screen bg-[var(--auth-paper)] font-sans text-[var(--auth-ink)]">
+    <div className="auth-pantalla flex h-dvh flex-col overflow-hidden bg-[var(--auth-paper)] font-sans text-[var(--auth-ink)]">
+      {/* Convivencia oficial de logos en el encabezado (E50, regla del usuario): fila completa arriba */}
+      <BandaInstitucional className="flex-none" />
+      <div className="flex min-h-0 flex-1">
       {/* ── Izquierda: panel institucional (estático, sigue el paso activo) ── */}
-      <div className="sticky top-0 hidden h-screen p-4 lg:block lg:w-[42%] xl:w-[38%] xl:p-5">
+      <div className="hidden h-full min-h-0 p-4 lg:block lg:w-[42%] xl:w-[38%] xl:p-5">
         <section className="auth-banner h-full w-full">
           <div aria-hidden="true" className="absolute inset-0 -z-10">
             <span className="auth-blob auth-blob-1" style={{ transform: 'translate(-10%, -16%) scale(1)' }} />
@@ -188,7 +192,7 @@ export default function SolicitarAccesoPage() {
           </div>
           <div className="relative flex h-full flex-col p-8 text-white xl:p-10">
             <div className="auth-reveal" style={{ '--i': 0 } as React.CSSProperties}>
-              <Image src="/logo.png" alt={INSTITUTION.name} width={401} height={312} priority className="h-20 w-auto object-contain brightness-0 invert xl:h-24" />
+              <LogoComecyt variante="negativo" className="h-24 xl:h-28" />
             </div>
             <div className="mt-auto">
               <div key={step} className="auth-reveal" style={{ '--i': 1 } as React.CSSProperties}>
@@ -221,7 +225,7 @@ export default function SolicitarAccesoPage() {
       </div>
 
       {/* ── Derecha: formulario ── */}
-      <main className="flex min-h-screen w-full flex-col lg:w-[58%] xl:w-[62%]">
+      <main className="auth-columna flex min-h-0 w-full flex-col overflow-y-auto lg:w-[58%] xl:w-[62%]">
         <div className="flex justify-end px-6 pt-5">
           <LanguageSwitcher />
         </div>
@@ -492,8 +496,9 @@ export default function SolicitarAccesoPage() {
           </div>
         </div>
 
-        <footer className="px-6 pb-6 text-center text-xs text-[var(--auth-ink-2)]">{copyrightLine()}</footer>
+        <PieAuth />
       </main>
+      </div>
     </div>
   );
 }

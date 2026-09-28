@@ -136,7 +136,9 @@ export function proxy(request: NextRequest) {
 export const config = {
   // Se excluye lo que sirve Next.js estático y los assets propios. Las extensiones van ANCLADAS al final del
   // último segmento: antes `.*\.png` en cualquier posición saltaba el proxy (p. ej. `/admin/usuarios/x.png`).
+  // E50: `identidad/<archivo>.(png|webp)` = logos oficiales públicos (public/identidad); solo esa carpeta y solo
+  // un nivel con extensión de imagen, para no abrir otras rutas anidadas.
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico$|logo\\.png$|logo-recortado\\.png$|logo-edomex\\.svg$|manifest\\.webmanifest$|sw\\.js$|robots\\.txt$|sitemap\\.xml$|[^/]+\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)',
+    '/((?!_next/static|_next/image|identidad/[\\w-]+\\.(?:png|webp)$|favicon\\.ico$|logo\\.png$|logo-recortado\\.png$|logo-edomex\\.svg$|manifest\\.webmanifest$|sw\\.js$|robots\\.txt$|sitemap\\.xml$|[^/]+\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)',
   ],
 };

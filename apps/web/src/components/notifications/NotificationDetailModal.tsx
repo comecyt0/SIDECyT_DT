@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { X, Bell, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useT } from '@/i18n/I18nProvider';
 
 export interface NotificationDetail {
   id: string | number;
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export default function NotificationDetailModal({ notification, onClose, solicitudHrefPattern }: Props) {
+  const { t } = useT();
   // Cerrar con Escape
   useEffect(() => {
     if (!notification) return;
@@ -72,7 +74,7 @@ export default function NotificationDetailModal({ notification, onClose, solicit
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Cerrar"
+                aria-label={t('common.close')}
                 className="text-white/60 hover:text-white p-1 rounded-md transition-colors shrink-0"
               >
                 <X className="w-4 h-4" />
@@ -88,7 +90,7 @@ export default function NotificationDetailModal({ notification, onClose, solicit
                   {notification.mensaje.replace(/<[^>]*>/g, '')}
                 </p>
               ) : (
-                <p className="text-sm text-neutral-500 dark:text-neutral-300 italic">Sin contenido adicional.</p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-300 italic">{t('notifications.no_content')}</p>
               )}
 
               <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-700">
@@ -110,7 +112,7 @@ export default function NotificationDetailModal({ notification, onClose, solicit
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-primary hover:bg-[var(--brand-vino-700)] px-3 py-1.5 rounded-lg transition-colors"
                   >
                     <FileText className="w-3.5 h-3.5" />
-                    Ver solicitud {notification.solicitud?.folio ?? `#${solicitudId}`}
+                    {t('notifications.open_request')} {notification.solicitud?.folio ?? `#${solicitudId}`}
                   </Link>
                 )}
               </div>

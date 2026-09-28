@@ -52,7 +52,9 @@ html.sg-panel body {
   --sg-peach-ink: #7a3a06;
   --sg-danger: #b3261e;
   --sg-danger-wash: #fdecea;
-  --sg-vino: oklch(36% 0.1 358);
+  --sg-vino: #56212f; /* vino oficial COMECYT 2026 (E50) */
+  --sg-dorado: #bc955b;
+  --sg-arena: #ddc8a4;
   --sg-vino-wash: oklch(96.5% 0.014 358);
   /* Antes el arcoíris de la referencia; desde el 24/09/2026 vino no saturado (mismo que la landing).
      Se conserva el nombre de la variable para no tocar cada regla que la usa. */
@@ -63,7 +65,7 @@ html.sg-panel body {
   --sg-shadow-hair: rgba(0, 0, 0, 0.1) 0px 0px 0px 1px;
   --sg-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --sg-font-text: var(--font-lp-text), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --sg-font-display: var(--font-lp-display), var(--font-lp-text), ui-sans-serif, system-ui, sans-serif;
+  --sg-font-display: var(--font-titulos);
 
   /* ── shadcn (HSL sin envoltura, como los consume globals.css) ── */
   --background: 0 0% 100%;
@@ -1332,7 +1334,7 @@ html.sg-scroll-bloqueado, html.sg-scroll-bloqueado body { overflow: hidden; over
   :is(.panel-root, html.sg-panel) .pfoot-card { flex-direction: row; align-items: center; justify-content: space-between; padding: 32px 40px; }
 }
 :is(.panel-root, html.sg-panel) .pfoot-brand { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; min-width: 0; }
-/* 5× el pie anterior: 76 px de logo recortado (antes 28 px de logo.png con ~46 % de margen). */
+/* 76 px de alto: logo oficial COMECYT 2026 (E50; antes logo-recortado.png, mismo tamaño visible). */
 :is(.panel-root, html.sg-panel) .pfoot-logo { width: auto; height: 76px; }
 /* En oscuro el logo (tinta vino/gris) se apaga sobre navy: placa clara detrás, mismo tamaño visible. */
 :is(.dark .panel-root, html.dark.sg-panel) .pfoot-logo { box-sizing: content-box; padding: 10px 14px; border-radius: 18px; background: #ffffff; }
@@ -1567,3 +1569,74 @@ html.sg-scroll-bloqueado, html.sg-scroll-bloqueado body { overflow: hidden; over
   :is(.panel-root, html.sg-panel) [data-slot="button"]:active:not(:disabled) { transform: none; }
   :is(.panel-root, html.sg-panel) .stat-tile[data-interactive="true"]:active { transform: none; }
 }
+
+/* ═══════════════ E50 (28/09/2026) — Herramienta de encuadre del carrusel (/admin/carrusel) ═══════════════ */
+:is(.panel-root, html.sg-panel) .encuadre { display: grid; gap: 18px; min-width: 0; }
+:is(.panel-root, html.sg-panel) .encuadre-modo [role="radio"] {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border: 0; border-radius: 9999px;
+  font-size: 14px; font-weight: 600; color: var(--sg-ink-2); background: transparent; cursor: pointer;
+  transition: background-color 180ms ease, color 180ms ease, transform 140ms var(--sg-ease-out);
+}
+:is(.panel-root, html.sg-panel) .encuadre-modo [role="radio"][aria-checked="true"] { background: var(--pastel-vino); color: var(--sg-vino); }
+:is(.panel-root, html.sg-panel) .encuadre-modo [role="radio"]:active { transform: scale(0.97); }
+:is(.panel-root, html.sg-panel) .encuadre-ayuda { font-size: 13px; color: var(--sg-ink-2); }
+:is(.panel-root, html.sg-panel) .encuadre-rejilla { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (min-width: 720px) { :is(.panel-root, html.sg-panel) .encuadre-rejilla { grid-template-columns: minmax(0, 260px) minmax(0, 1fr); } }
+:is(.panel-root, html.sg-panel) .encuadre-zona { border-radius: 22px; outline: none; touch-action: none; }
+:is(.panel-root, html.sg-panel) .encuadre-zona[data-modo="recorte"] { cursor: grab; }
+:is(.panel-root, html.sg-panel) .encuadre-zona[data-arrastrando] { cursor: grabbing; }
+:is(.panel-root, html.sg-panel) .encuadre-zona:focus-visible { box-shadow: 0 0 0 3px var(--sg-vino); }
+:is(.panel-root, html.sg-panel) .encuadre-marco {
+  position: relative; width: 100%; overflow: hidden; isolation: isolate; border-radius: 18px;
+  background: linear-gradient(150deg, #56212f, #3b1520); box-shadow: var(--sg-shadow-soft);
+}
+:is(.panel-root, html.sg-panel) .encuadre-marco img { user-select: none; -webkit-user-drag: none; }
+:is(.panel-root, html.sg-panel) .encuadre-scrim {
+  position: absolute; inset: auto 0 0 0; height: 30%; pointer-events: none;
+  background: linear-gradient(to top, rgb(28 10 18 / 0.62), rgb(28 10 18 / 0.28) 55%, transparent);
+}
+:is(.panel-root, html.sg-panel) .encuadre-scrim[data-textos="true"] { height: 58%; }
+:is(.panel-root, html.sg-panel) .encuadre-sim { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 7%; pointer-events: none; }
+:is(.panel-root, html.sg-panel) .encuadre-sim-logo { height: 13%; max-height: 42px; min-height: 16px; width: auto; align-self: flex-start; }
+:is(.panel-root, html.sg-panel) .encuadre-sim-abajo { display: grid; gap: 6px; }
+:is(.panel-root, html.sg-panel) .encuadre-sim-tarjeta {
+  padding: 8% 7%; border-radius: 10px; background: rgb(255 255 255 / 0.14); backdrop-filter: blur(6px);
+  border: 1px solid rgb(255 255 255 / 0.16); color: #fff; font-weight: 700; font-size: clamp(9px, 2.4vw, 13px); line-height: 1.2;
+}
+:is(.panel-root, html.sg-panel) .encuadre-sim-tarjeta span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+:is(.panel-root, html.sg-panel) .encuadre-sim-barra { display: flex; gap: 3px; }
+:is(.panel-root, html.sg-panel) .encuadre-sim-barra i { flex: 1; height: 3px; border-radius: 9999px; background: rgb(255 255 255 / 0.55); }
+:is(.panel-root, html.sg-panel) .encuadre-mira {
+  position: absolute; z-index: 2; display: grid; place-items: center; width: 34px; height: 34px; margin: -17px 0 0 -17px;
+  border-radius: 50%; background: rgb(255 255 255 / 0.9); color: var(--sg-vino); box-shadow: 0 2px 10px rgb(0 0 0 / 0.3); pointer-events: none;
+}
+:is(.panel-root, html.sg-panel) .encuadre-controles { display: grid; gap: 16px; min-width: 0; }
+:is(.panel-root, html.sg-panel) .encuadre-control { display: grid; gap: 8px; min-width: 0; border: 0; padding: 0; margin: 0; }
+:is(.panel-root, html.sg-panel) .encuadre-control > span,
+:is(.panel-root, html.sg-panel) .encuadre-control > legend { font-size: 13px; font-weight: 700; color: var(--sg-ink); margin-bottom: 2px; }
+:is(.panel-root, html.sg-panel) .encuadre-control small,
+:is(.panel-root, html.sg-panel) .encuadre-check small { font-size: 12px; color: var(--sg-ink-2); font-weight: 400; }
+:is(.panel-root, html.sg-panel) .encuadre-control input[type="range"] { width: 100%; accent-color: var(--sg-vino); }
+:is(.panel-root, html.sg-panel) .encuadre-fondos { display: grid; gap: 8px; }
+:is(.panel-root, html.sg-panel) .encuadre-fondo {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; cursor: pointer; font-size: 14px;
+  background: var(--app-card-bg); box-shadow: inset 0 0 0 1px var(--sg-mist); transition: box-shadow 160ms ease;
+}
+:is(.panel-root, html.sg-panel) .encuadre-fondo[data-activo] { box-shadow: inset 0 0 0 2px var(--sg-vino); }
+:is(.panel-root, html.sg-panel) .encuadre-fondo:focus-within { box-shadow: inset 0 0 0 2px var(--sg-vino), 0 0 0 3px var(--pastel-vino); }
+:is(.panel-root, html.sg-panel) .encuadre-fondo-muestra { width: 22px; height: 22px; border-radius: 7px; flex: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08); }
+:is(.panel-root, html.sg-panel) .encuadre-fondo-muestra[data-fondo="desenfoque"] { background: linear-gradient(135deg, #c9a9b3, #7a5563, #d8c7a7); filter: blur(0.5px); }
+:is(.panel-root, html.sg-panel) .encuadre-fondo-muestra[data-fondo="claro"] { background: #f7f4ef; }
+:is(.panel-root, html.sg-panel) .encuadre-fondo-muestra[data-fondo="vino"] { background: #56212f; }
+:is(.panel-root, html.sg-panel) .encuadre-check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; cursor: pointer; }
+:is(.panel-root, html.sg-panel) .encuadre-check input { margin-top: 3px; accent-color: var(--sg-vino); width: 16px; height: 16px; }
+:is(.panel-root, html.sg-panel) .encuadre-check span { display: grid; gap: 2px; }
+:is(.panel-root, html.sg-panel) .encuadre-reset { justify-self: start; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--sg-ink-2); background: none; border: 0; cursor: pointer; }
+:is(.panel-root, html.sg-panel) .encuadre-reset:hover { color: var(--sg-vino); }
+:is(.panel-root, html.sg-panel) .encuadre-subtitulo { font-size: 13px; font-weight: 700; color: var(--sg-ink); margin-bottom: 10px; }
+:is(.panel-root, html.sg-panel) .encuadre-previas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
+:is(.panel-root, html.sg-panel) .encuadre-previas figure { margin: 0; display: grid; gap: 6px; min-width: 0; }
+:is(.panel-root, html.sg-panel) .encuadre-previas figcaption { font-size: 12px; color: var(--sg-ink-2); text-align: center; }
+
+/* E50 — La franja institucional NO va en los paneles (regla del usuario, 28/09/2026): solo en el encabezado de las
+   páginas públicas y de acceso (`BandaInstitucional`). */

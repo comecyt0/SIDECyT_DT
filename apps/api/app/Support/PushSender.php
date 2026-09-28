@@ -58,7 +58,7 @@ class PushSender
                         'title' => $payload['title'] ?? 'COMECYT',
                         'body' => $payload['body'] ?? '',
                         'url' => $payload['url'] ?? '/',
-                        'icon' => $payload['icon'] ?? '/logo.png',
+                        'icon' => $payload['icon'] ?? '/icon-192.png', // logo COMECYT 2026 (E50)
                         'tag' => $payload['tag'] ?? 'comecyt',
                     ])
                 );

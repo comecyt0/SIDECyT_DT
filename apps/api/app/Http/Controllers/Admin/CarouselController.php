@@ -121,14 +121,46 @@ class CarouselController extends Controller
         return $rule;
     }
 
-    /** Public: list active slides ordered */
+    /**
+     * Público (login): diapositivas activas en orden. 28/09/2026 (E50): lista blanca de campos armada a mano
+     * (antes serializaba el modelo completo, contra la regla §0 de endpoints públicos) y throttle en la ruta.
+     */
     public function publicIndex()
     {
-        $slides = CarouselSlide::where('activo', true)
-            ->orderBy('orden')
-            ->get();
+        $slides = CarouselSlide::where('activo', true)->orderBy('orden')->limit(20)->get()
+            ->map(fn (CarouselSlide $s) => [
+                'id' => $s->id,
+                'titulo' => $s->titulo,
+                'subtitulo' => $s->subtitulo,
+                'descripcion' => $s->descripcion,
+                'imagen_url' => $s->imagen_url,
+                'badge_texto' => $s->badge_texto,
+                'orden' => $s->orden,
+                'activo' => true,
+                'ajuste' => $s->ajuste ?? 'completa',
+                'foco_x' => $s->foco_x ?? 50,
+                'foco_y' => $s->foco_y ?? 50,
+                'zoom' => $s->zoom ?? 100,
+                'fondo' => $s->fondo ?? 'desenfoque',
+                'margen' => $s->margen ?? 0,
+                'mostrar_textos' => (bool) ($s->mostrar_textos ?? true),
+            ])->values();
 
         return response()->json($slides);
+    }
+
+    /** E50: reglas del encuadre (compartidas por alta y edición). */
+    private function reglasEncuadre(): array
+    {
+        return [
+            'ajuste' => ['sometimes', 'in:'.implode(',', CarouselSlide::AJUSTES)],
+            'foco_x' => 'sometimes|integer|min:0|max:100',
+            'foco_y' => 'sometimes|integer|min:0|max:100',
+            'zoom' => 'sometimes|integer|min:100|max:300',
+            'fondo' => ['sometimes', 'in:'.implode(',', CarouselSlide::FONDOS)],
+            'margen' => 'sometimes|integer|min:0|max:30',
+            'mostrar_textos' => 'sometimes|boolean',
+        ];
     }
 
     /** Admin: list all slides */
@@ -147,7 +179,7 @@ class CarouselController extends Controller
             'badge_texto' => 'nullable|string|max:100',
             'orden' => 'nullable|integer|min:0',
             'activo' => 'boolean',
-        ]);
+        ] + $this->reglasEncuadre());
 
         $slide = CarouselSlide::create($validated);
 
@@ -164,7 +196,7 @@ class CarouselController extends Controller
             'badge_texto' => 'nullable|string|max:100',
             'orden' => 'nullable|integer|min:0',
             'activo' => 'boolean',
-        ]);
+        ] + $this->reglasEncuadre());
 
         $carouselSlide->update($validated);
 

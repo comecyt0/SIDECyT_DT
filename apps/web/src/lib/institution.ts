@@ -12,7 +12,6 @@
  *   NEXT_PUBLIC_INSTITUTION_STATE      — Entidad política (ej. "Estado de México")
  *   NEXT_PUBLIC_INSTITUTION_EMAIL      — Correo de contacto (ej. "administracion@comecyt.gob.mx")
  *   NEXT_PUBLIC_INSTITUTION_EMAIL_HINT — Placeholder de inputs de correo (ej. "usuario@institucion.edu.mx")
- *   NEXT_PUBLIC_INSTITUTION_SECURITY_BADGE — Mensaje del badge inferior del login
  */
 export const INSTITUTION = {
   name: process.env.NEXT_PUBLIC_INSTITUTION_NAME || 'COMECYT',
@@ -29,9 +28,6 @@ export const INSTITUTION = {
     process.env.NEXT_PUBLIC_INSTITUTION_EMAIL || 'administracion@comecyt.gob.mx',
   emailHint:
     process.env.NEXT_PUBLIC_INSTITUTION_EMAIL_HINT || 'usuario@institucion.edu.mx',
-  securityBadge:
-    process.env.NEXT_PUBLIC_INSTITUTION_SECURITY_BADGE ||
-    'Acceso Institucional Cifrado 256-bit',
   locale: process.env.NEXT_PUBLIC_INSTITUTION_LOCALE || 'es-MX',
   currency: process.env.NEXT_PUBLIC_INSTITUTION_CURRENCY || 'MXN',
 } as const;

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Search, FileText, Users as UsersIcon, Building, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
+import { useT } from '@/i18n/I18nProvider';
 
 interface SolicitudHit {
   id: number;
@@ -47,6 +48,7 @@ export default function GlobalSearch({
   endpoint = '/admin/search',
   solicitudHrefPattern,
 }: GlobalSearchProps = {}) {
+  const { t } = useT();
   const [q, setQ] = useState('');
   const [results, setResults] = useState<SearchResponse>(EMPTY);
   const [loading, setLoading] = useState(false);
@@ -113,7 +115,7 @@ export default function GlobalSearch({
         )}
         <input
           type="text"
-          placeholder="Buscar folio, usuario, institución…"
+          placeholder={t('search.placeholder')}
           value={q}
           onChange={(e) => {
             setQ(e.target.value);
@@ -128,7 +130,7 @@ export default function GlobalSearch({
             onClick={() => setQ('')}
             className="text-[10px] font-bold text-neutral-500 dark:text-neutral-300 hover:text-primary uppercase tracking-wider"
           >
-            limpiar
+            {t('search.clear')}
           </button>
         )}
       </div>
@@ -137,7 +139,7 @@ export default function GlobalSearch({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Buscar"
+        aria-label={t('common.search')}
         className="lg:hidden p-2.5 rounded-xl text-neutral-500 dark:text-neutral-400 hover:text-primary hover:bg-primary/[8%] transition-all duration-200"
       >
         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
@@ -150,7 +152,7 @@ export default function GlobalSearch({
             <input
               autoFocus
               type="text"
-              placeholder="Buscar folio, usuario, institución…"
+              placeholder={t('search.placeholder')}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               className="bg-transparent border-none focus:ring-0 text-sm w-full outline-none text-neutral-700 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
@@ -181,21 +183,22 @@ interface SearchResultsBodyProps {
 }
 
 function SearchResultsBody({ loading, q, results, onSelect, solicitudHrefPattern }: SearchResultsBodyProps & { solicitudHrefPattern?: (folio: string) => string }) {
+  const { t } = useT();
   const hrefFor = solicitudHrefPattern ?? ((folio: string) => `/admin/solicitudes?folio=${encodeURIComponent(folio)}`);
   const totalHits = results.solicitudes.length + results.usuarios.length + results.instituciones.length;
 
   if (loading && totalHits === 0) {
-    return <div className="p-6 text-center text-xs text-neutral-500 dark:text-neutral-300">Buscando…</div>;
+    return <div className="p-6 text-center text-xs text-neutral-500 dark:text-neutral-300">{t('search.searching')}</div>;
   }
   if (totalHits === 0) {
-    return <div className="p-6 text-center text-xs text-neutral-500 dark:text-neutral-300">Sin resultados para “{q}”.</div>;
+    return <div className="p-6 text-center text-xs text-neutral-500 dark:text-neutral-300">{t('search.no_results_for', { q })}</div>;
   }
 
   return (
     <div className="divide-y divide-neutral-50 dark:divide-neutral-800">
       {results.solicitudes.length > 0 && (
         <div className="p-3">
-          <p className="px-2 pb-2 text-[10px] font-bold text-neutral-500 dark:text-neutral-300 uppercase tracking-widest">Solicitudes</p>
+          <p className="px-2 pb-2 text-[10px] font-bold text-neutral-500 dark:text-neutral-300 uppercase tracking-widest">{t('admin_nav.items.solicitudes.name')}</p>
           {results.solicitudes.map((s) => (
             <Link
               key={`s-${s.id}`}
@@ -218,7 +221,7 @@ function SearchResultsBody({ loading, q, results, onSelect, solicitudHrefPattern
 
       {results.usuarios.length > 0 && (
         <div className="p-3">
-          <p className="px-2 pb-2 text-[10px] font-bold text-neutral-500 dark:text-neutral-300 uppercase tracking-widest">Usuarios</p>
+          <p className="px-2 pb-2 text-[10px] font-bold text-neutral-500 dark:text-neutral-300 uppercase tracking-widest">{t('admin_nav.items.usuarios.name')}</p>
           {results.usuarios.map((u) => (
             <Link
               key={`u-${u.id}`}
@@ -231,7 +234,7 @@ function SearchResultsBody({ loading, q, results, onSelect, solicitudHrefPattern
                 <p className="text-xs font-bold text-neutral-800 dark:text-neutral-100 truncate">{u.name}</p>
                 <p className="text-[10px] text-neutral-500 dark:text-neutral-300 truncate">
                   {u.email} · {u.rol?.nombre ?? `rol ${u.rol_id}`}
-                  {!u.activo && <span className="text-red-500"> · inactivo</span>}
+                  {!u.activo && <span className="text-red-500"> · {t('search.inactive')}</span>}
                 </p>
               </div>
             </Link>
@@ -241,7 +244,7 @@ function SearchResultsBody({ loading, q, results, onSelect, solicitudHrefPattern
 
       {results.instituciones.length > 0 && (
         <div className="p-3">
-          <p className="px-2 pb-2 text-[10px] font-bold text-neutral-500 dark:text-neutral-300 uppercase tracking-widest">Empresas</p>
+          <p className="px-2 pb-2 text-[10px] font-bold text-neutral-500 dark:text-neutral-300 uppercase tracking-widest">{t('admin_nav.items.empresas.name')}</p>
           {results.instituciones.map((i) => (
             <Link
               key={`i-${i.id}`}

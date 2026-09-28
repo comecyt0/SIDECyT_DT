@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import Image from 'next/image';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Pause, Play, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Pause, Play } from 'lucide-react';
 import { INSTITUTION } from '@/lib/institution';
 import { useT } from '@/i18n/I18nProvider';
+import BannerImagen, { fondoEsClaro, normalizarEncuadre, type Encuadre } from '@/components/ui/BannerImagen';
+import { LogoComecyt } from '@/components/branding/Logos';
 
 interface CarouselSlide {
   id: number;
@@ -16,6 +17,16 @@ interface CarouselSlide {
   badge_texto?: string;
   orden: number;
   activo: boolean;
+  // E50: encuadre de la imagen y si se muestra la tarjeta de textos.
+  encuadre?: Encuadre;
+  mostrar_textos?: boolean;
+}
+
+/** Solo imágenes propias (/storage/carousel/…) o https: el front no pinta otra cosa aunque la API la mandara. */
+function imagenSegura(v: unknown): string | null {
+  if (typeof v !== 'string' || !v) return null;
+  if (/^\/storage\/carousel\/[a-z0-9]+\.(jpg|png|webp)$/.test(v)) return v;
+  try { return new URL(v).protocol === 'https:' ? v : null; } catch { return null; }
 }
 
 /**
@@ -121,7 +132,14 @@ export function LoginCarousel() {
     fetch(`${baseUrl}/api/carousel/slides`)
       .then((r) => r.json())
       .then((data) => {
-        const items = Array.isArray(data) ? data : [];
+        const items: CarouselSlide[] = (Array.isArray(data) ? data : [])
+          .filter((s) => s && typeof s === 'object' && typeof s.titulo === 'string')
+          .map((s) => ({
+            ...s,
+            imagen_url: imagenSegura(s.imagen_url),
+            encuadre: normalizarEncuadre(s),
+            mostrar_textos: s.mostrar_textos !== false,
+          }));
         if (items.length > 0) {
           setSlides(items);
           setIndex(0);
@@ -167,6 +185,10 @@ export function LoginCarousel() {
 
   const layout = BLOB_LAYOUTS[index % BLOB_LAYOUTS.length];
   const variants = textVariants(reduceMotion);
+  // E50: con imagen, se ve la imagen tal cual (sin velo ni manchas); sin imagen, el fondo institucional de manchas.
+  const conImagen = Boolean(current.imagen_url);
+  const claro = conImagen && current.encuadre ? fondoEsClaro(current.encuadre) : false;
+  const mostrarTextos = current.mostrar_textos !== false;
 
   return (
     <section
@@ -199,48 +221,35 @@ export function LoginCarousel() {
         else prev();
       }}
     >
-      {/* Fondo: imagen opcional del admin + manchas de color + grano */}
+      {/* Fondo: imagen del admin con su encuadre (E50) o, sin imagen, manchas de color + grano */}
       <div aria-hidden="true" className="absolute inset-0 -z-10">
         {slides.map((slide, i) =>
           slide.imagen_url ? (
-            <Image
+            <BannerImagen
               key={slide.id}
               src={slide.imagen_url}
-              alt=""
-              fill
-              unoptimized
-              sizes="(max-width: 1280px) 55vw, 58vw"
-              priority={i === 0}
-              data-active={i === index}
-              className="auth-banner-image object-cover"
+              encuadre={slide.encuadre ?? normalizarEncuadre(null)}
+              activo={i === index}
+              className="auth-banner-image"
             />
           ) : null
         )}
-        {layout.map((blob, i) => (
+        {!conImagen && layout.map((blob, i) => (
           <span
             key={i}
             className={`auth-blob auth-blob-${i + 1}`}
             style={{ transform: `translate(${blob.x}, ${blob.y}) scale(${blob.s})` }}
           />
         ))}
-        <span className="auth-grain" />
+        {!conImagen && <span className="auth-grain" />}
+        {/* Degradado oscuro solo abajo: los controles (y los textos, si se muestran) se leen sobre cualquier imagen */}
+        {conImagen && <span className="auth-banner-scrim" data-textos={mostrarTextos} />}
       </div>
 
       <div className="relative flex h-full flex-col p-8 text-white xl:p-10">
-        {/* Arriba: logo + sello de seguridad (texto con ícono, sin cápsula) */}
+        {/* Arriba: logo oficial (negativo sobre fondos oscuros, a color sobre fondo claro). Sin sello de texto (28/09/2026). */}
         <div className="auth-reveal flex items-start justify-between gap-6" style={{ '--i': 0 } as React.CSSProperties}>
-          <Image
-            src="/logo.png"
-            alt={INSTITUTION.name}
-            width={401}
-            height={312}
-            priority
-            className="h-28 w-auto object-contain brightness-0 invert xl:h-32"
-          />
-          <p className="flex items-center gap-2 pt-1 text-[13px] font-medium text-white/85">
-            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-            {INSTITUTION.securityBadge}
-          </p>
+          <LogoComecyt variante={claro ? 'color' : 'negativo'} className="h-24 xl:h-28" />
         </div>
 
         {/* Abajo: texto de la diapositiva. pr deja libre el recorte de los botones */}
@@ -255,18 +264,25 @@ export function LoginCarousel() {
                 animate="center"
                 exit="exit"
               >
-                {current.badge_texto && <p className="auth-tag mb-4">{current.badge_texto}</p>}
-                <div className="auth-glass p-7 xl:p-8">
-                  <h2 className="auth-banner-title">{current.titulo}</h2>
-                  {current.subtitulo && (
-                    <p className="mt-3 text-[15px] font-semibold text-white/90">{current.subtitulo}</p>
-                  )}
-                  {current.descripcion && (
-                    <p className="mt-2 max-w-[52ch] text-[15px] leading-relaxed text-white/80">
-                      {current.descripcion}
-                    </p>
-                  )}
-                </div>
+                {mostrarTextos ? (
+                  <>
+                    {current.badge_texto && <p className="auth-tag mb-4">{current.badge_texto}</p>}
+                    <div className="auth-glass p-7 xl:p-8">
+                      <h2 className="auth-banner-title">{current.titulo}</h2>
+                      {current.subtitulo && (
+                        <p className="mt-3 text-[15px] font-semibold text-white/90">{current.subtitulo}</p>
+                      )}
+                      {current.descripcion && (
+                        <p className="mt-2 max-w-[52ch] text-[15px] leading-relaxed text-white/80">
+                          {current.descripcion}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  // La imagen ya trae su texto: el título queda solo para lectores de pantalla.
+                  <h2 className="sr-only">{current.titulo}</h2>
+                )}
               </motion.div>
             </AnimatePresence>
           </div>

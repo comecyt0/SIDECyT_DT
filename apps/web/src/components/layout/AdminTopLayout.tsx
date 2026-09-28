@@ -10,7 +10,6 @@ import Cookies from 'js-cookie';
 import { cerrarSesion } from '@/lib/logout';
 import PageTransition from '@/components/ui/PageTransition';
 import GlobalSearch from '@/components/admin/GlobalSearch';
-import ThemeToggle from '@/components/ui/ThemeToggle';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import NotificationDetailModal, { type NotificationDetail } from '@/components/notifications/NotificationDetailModal';
 import PanelFooter from '@/components/layout/PanelFooter';
@@ -24,8 +23,9 @@ import {
 import UserAvatar from '@/components/ui/user-avatar';
 import { useMiPerfil } from '@/hooks/useMiPerfil';
 import { useRol } from '@/hooks/useRol';
-import { ROL_ETIQUETA, subrutaPermitida } from '@/lib/roles';
+import { subrutaPermitida } from '@/lib/roles';
 import { INSTITUTION } from '@/lib/institution';
+import { LOGO_COMECYT } from '@/lib/identidad';
 import { useT } from '@/i18n/I18nProvider';
 import { formatDate } from '@/lib/format';
 import { usePanelScope } from '@/hooks/usePanelScope';
@@ -66,47 +66,51 @@ interface AdminTopLayoutProps {
 /** Tono pastel del chip de cada grupo del menú (v3, sin saturar). */
 const MENU_TONES = ['lavender', 'powder', 'mint', 'butter'] as const;
 
+/**
+ * E50 (28/09/2026): `group`, `name` y `description` son CLAVES del diccionario (i18n/messages/*.json, sección
+ * `admin_nav`); se traducen al pintar con `t()`. Página nueva del admin = entrada aquí + su clave en es.json y en.json.
+ */
 const NAV_GROUPS: NavGroup[] = [
   {
-    group: 'Gestión Principal',
+    group: 'admin_nav.groups.gestion',
     items: [
-      { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, description: 'Métricas y estadísticas generales' },
-      { name: 'Programas', href: '/admin/programas', icon: Zap, description: 'Configuración de programas dinámicos' },
-      { name: 'Convocatorias', href: '/admin/convocatorias', icon: BookOpen, description: 'Publicaciones y periodos de solicitud' },
-      { name: 'Solicitudes', href: '/admin/solicitudes', icon: FileText, description: 'Seguimiento de solicitudes activas' },
-      { name: 'Folios', href: '/admin/folios', icon: Award, description: 'Histórico de aprobados y no aprobados, y publicación' },
+      { name: 'admin_nav.items.dashboard.name', href: '/admin/dashboard', icon: LayoutDashboard, description: 'admin_nav.items.dashboard.desc' },
+      { name: 'admin_nav.items.programas.name', href: '/admin/programas', icon: Zap, description: 'admin_nav.items.programas.desc' },
+      { name: 'admin_nav.items.convocatorias.name', href: '/admin/convocatorias', icon: BookOpen, description: 'admin_nav.items.convocatorias.desc' },
+      { name: 'admin_nav.items.solicitudes.name', href: '/admin/solicitudes', icon: FileText, description: 'admin_nav.items.solicitudes.desc' },
+      { name: 'admin_nav.items.folios.name', href: '/admin/folios', icon: Award, description: 'admin_nav.items.folios.desc' },
     ],
   },
   {
-    group: 'Operaciones',
+    group: 'admin_nav.groups.operaciones',
     items: [
-      { name: 'Ministraciones', href: '/admin/ministraciones', icon: Banknote, description: 'Control de pagos y tranches' },
-      { name: 'Convenios', href: '/admin/convenios', icon: FileSignature, description: 'Convenios formales con empresas' },
-      { name: 'Informes Finales', href: '/admin/informes', icon: ClipboardList, description: 'Revisión y aprobación de informes' },
-      { name: 'Empresas', href: '/admin/empresas', icon: Building, description: 'Catálogo de empresas registradas' },
-      { name: 'Evaluadores', href: '/admin/evaluadores', icon: BarChart3, description: 'Asignación y seguimiento' },
-      { name: 'Buzón', href: '/admin/buzon', icon: MessagesSquare, description: 'Sugerencias y chat con solicitantes' },
+      { name: 'admin_nav.items.ministraciones.name', href: '/admin/ministraciones', icon: Banknote, description: 'admin_nav.items.ministraciones.desc' },
+      { name: 'admin_nav.items.convenios.name', href: '/admin/convenios', icon: FileSignature, description: 'admin_nav.items.convenios.desc' },
+      { name: 'admin_nav.items.informes.name', href: '/admin/informes', icon: ClipboardList, description: 'admin_nav.items.informes.desc' },
+      { name: 'admin_nav.items.empresas.name', href: '/admin/empresas', icon: Building, description: 'admin_nav.items.empresas.desc' },
+      { name: 'admin_nav.items.evaluadores.name', href: '/admin/evaluadores', icon: BarChart3, description: 'admin_nav.items.evaluadores.desc' },
+      { name: 'admin_nav.items.buzon.name', href: '/admin/buzon', icon: MessagesSquare, description: 'admin_nav.items.buzon.desc' },
     ],
   },
   {
-    group: 'Administración',
+    group: 'admin_nav.groups.administracion',
     items: [
-      { name: 'Usuarios', href: '/admin/usuarios', icon: Users, description: 'Gestión de cuentas y roles' },
-      { name: 'Notificaciones', href: '/admin/notificaciones', icon: BellRing, description: 'Historial de correos y alertas' },
-      { name: 'Solicitudes de Acceso', href: '/admin/solicitudes-acceso', icon: UserCheck, description: 'Nuevos registros pendientes' },
-      { name: 'Recuperación Contraseñas', href: '/admin/reset-requests', icon: KeyRound, description: 'Solicitudes de restablecimiento' },
-      { name: 'Lista Negra', href: '/admin/lista-negra', icon: ShieldAlert, description: 'Empresas con restricción' },
-      { name: 'Bitácora de Auditoría', href: '/admin/audit-logs', icon: Activity, description: 'Registro de acciones por usuario' },
+      { name: 'admin_nav.items.usuarios.name', href: '/admin/usuarios', icon: Users, description: 'admin_nav.items.usuarios.desc' },
+      { name: 'admin_nav.items.notificaciones.name', href: '/admin/notificaciones', icon: BellRing, description: 'admin_nav.items.notificaciones.desc' },
+      { name: 'admin_nav.items.solicitudes_acceso.name', href: '/admin/solicitudes-acceso', icon: UserCheck, description: 'admin_nav.items.solicitudes_acceso.desc' },
+      { name: 'admin_nav.items.reset_requests.name', href: '/admin/reset-requests', icon: KeyRound, description: 'admin_nav.items.reset_requests.desc' },
+      { name: 'admin_nav.items.lista_negra.name', href: '/admin/lista-negra', icon: ShieldAlert, description: 'admin_nav.items.lista_negra.desc' },
+      { name: 'admin_nav.items.audit_logs.name', href: '/admin/audit-logs', icon: Activity, description: 'admin_nav.items.audit_logs.desc' },
     ],
   },
   {
-    group: 'Configuración',
+    group: 'admin_nav.groups.configuracion',
     items: [
-      { name: 'Contenido público', href: '/admin/sitio', icon: Globe, description: 'Programas, sectores y documentos de las páginas públicas' },
-      { name: 'Carrusel Login', href: '/admin/carrusel', icon: Images, description: 'Slides de la pantalla de inicio' },
-      { name: 'Periodos', href: '/admin/periodos', icon: CalendarRange, description: 'Periodos de las convocatorias y alcance' },
-      { name: 'Límites de archivos', href: '/admin/documentos-fijos', icon: FileCog, description: 'Tipos y tamaño de los documentos fijos' },
-      { name: 'Mi cuenta', href: '/admin/cuenta', icon: UserCircle, description: 'Foto, portada y datos de tu perfil' },
+      { name: 'admin_nav.items.sitio.name', href: '/admin/sitio', icon: Globe, description: 'admin_nav.items.sitio.desc' },
+      { name: 'admin_nav.items.carrusel.name', href: '/admin/carrusel', icon: Images, description: 'admin_nav.items.carrusel.desc' },
+      { name: 'admin_nav.items.periodos.name', href: '/admin/periodos', icon: CalendarRange, description: 'admin_nav.items.periodos.desc' },
+      { name: 'admin_nav.items.documentos_fijos.name', href: '/admin/documentos-fijos', icon: FileCog, description: 'admin_nav.items.documentos_fijos.desc' },
+      { name: 'admin_nav.items.cuenta.name', href: '/admin/cuenta', icon: UserCircle, description: 'admin_nav.items.cuenta.desc' },
     ],
   },
 ];
@@ -220,11 +224,11 @@ export default function AdminTopLayout({
         <div className="panel-topbar-row h-16 flex items-center gap-2 sm:gap-3">
 
           {/* Logo (recortado, mismo que la landing) + marca SIGAE */}
-          <Link href="/admin/dashboard" className="panel-brand flex items-center gap-3 shrink-0" title="SIGAE — Sistema de Gestión de Apoyo Empresarial">
-            <Image src="/logo-recortado.png" alt={INSTITUTION.name} width={99} height={44} priority className="h-10 w-auto object-contain" />
+          <Link href="/admin/dashboard" className="panel-brand flex items-center gap-3 shrink-0" title={`SIGAE — ${t('footer.system_name')}`}>
+            <Image src={LOGO_COMECYT.color.src} alt={LOGO_COMECYT.color.alt} width={LOGO_COMECYT.color.ancho} height={LOGO_COMECYT.color.alto} priority className="h-10 w-auto object-contain" />
             <div className="hidden lg:block">
               <span className="panel-brand-name">SIGAE<span className="panel-swatch" aria-hidden="true" /></span>
-              <span className="panel-brand-sub">Gestión de Apoyo Empresarial</span>
+              <span className="panel-brand-sub">{t('nav.brand_sub')}</span>
             </div>
           </Link>
 
@@ -251,7 +255,7 @@ export default function AdminTopLayout({
               <span className="hidden sm:block">{t('nav.menu')}</span>
               {activeGroup && !menuOpen && (
                 <span className="panel-menu-seccion hidden lg:inline-flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-300 font-normal">
-                  · {activeGroup}
+                  · {t(activeGroup)}
                 </span>
               )}
             </motion.button>
@@ -280,17 +284,17 @@ export default function AdminTopLayout({
                 >
                   <div className="panel-menu-head">
                     <div className="min-w-0">
-                      <p className="panel-hero-pill !mb-2"><span aria-hidden="true" />{rol ? ROL_ETIQUETA[rol] : t('roles.admin')}</p>
+                      <p className="panel-hero-pill !mb-2"><span aria-hidden="true" />{t(`roles.${rol || 'admin'}`)}</p>
                       <p className="panel-menu-title">{t('nav.control_panel')}</p>
                       <p className="panel-menu-hint">{t('nav.control_panel_hint')}</p>
                     </div>
-                    <Image src="/logo-recortado.png" alt="" width={99} height={44} className="hidden sm:block h-10 w-auto opacity-90" />
+                    <Image src={LOGO_COMECYT.color.src} alt="" width={LOGO_COMECYT.color.ancho} height={LOGO_COMECYT.color.alto} className="hidden sm:block h-12 w-auto" />
                   </div>
 
                   <div className="panel-menu-body">
                     {grupos.map((group, gi) => (
                       <section key={group.group} className="panel-menu-group" data-pastel={MENU_TONES[gi % MENU_TONES.length]}>
-                        <p className="panel-menu-label">{group.group}</p>
+                        <p className="panel-menu-label">{t(group.group)}</p>
                         <ul className="space-y-0.5">
                           {group.items.map((item) => {
                             const isActive = pathname.startsWith(item.href);
@@ -306,8 +310,8 @@ export default function AdminTopLayout({
                                 >
                                   <span className="panel-menu-icon" aria-hidden="true"><Icon className="w-4 h-4" /></span>
                                   <span className="min-w-0 flex-1">
-                                    <span className="panel-menu-name">{item.name}</span>
-                                    {item.description && <span className="panel-menu-desc">{item.description}</span>}
+                                    <span className="panel-menu-name">{t(item.name)}</span>
+                                    {item.description && <span className="panel-menu-desc">{t(item.description)}</span>}
                                   </span>
                                   <ChevronRight className="panel-menu-go w-4 h-4" aria-hidden="true" />
                                 </Link>
@@ -338,7 +342,6 @@ export default function AdminTopLayout({
           <div className="ml-auto flex items-center gap-1 sm:gap-3">
 
             <LanguageSwitcher />
-            <ThemeToggle />
 
             {/* Bell */}
             <div ref={notifsRef} className="relative">
@@ -437,7 +440,7 @@ export default function AdminTopLayout({
                     </div>
                     <Link href="/admin/notificaciones" onClick={() => setShowNotifs(false)}>
                       <div className="p-3 text-center text-xs font-bold text-primary hover:bg-primary/5 transition-colors cursor-pointer border-t border-neutral-100 dark:border-neutral-700">
-                        Ver todas →
+                        {t('notifications.view_all')}
                       </div>
                     </Link>
                   </motion.div>
@@ -449,10 +452,10 @@ export default function AdminTopLayout({
             <div className="h-7 w-px bg-neutral-200 dark:bg-neutral-700 hidden sm:block" />
 
             {/* User avatar + name */}
-            <Link href="/admin/cuenta" className="panel-user flex items-center gap-3 group rounded-full" title="Mi cuenta">
+            <Link href="/admin/cuenta" className="panel-user flex items-center gap-3 group rounded-full" title={t('nav.my_account')}>
               <div className="hidden lg:block text-right">
                 <p className="text-sm font-bold text-neutral-900 dark:text-neutral-50 leading-none">{perfil?.name ?? localUserName}</p>
-                <p className="text-[11px] text-accent dark:text-amber-300 font-semibold uppercase tracking-wider mt-0.5">{rol ? ROL_ETIQUETA[rol] : t('roles.admin')}</p>
+                <p className="text-[11px] text-accent dark:text-amber-300 font-semibold uppercase tracking-wider mt-0.5">{t(`roles.${rol || 'admin'}`)}</p>
               </div>
               {/* E45: la foto de perfil identifica al usuario en la barra (iniciales si no tiene). */}
               <UserAvatar user={perfil ?? { name: localUserName || userInitial }} size="sm" />
@@ -476,7 +479,7 @@ export default function AdminTopLayout({
       {/* ── CONTENT ── */}
       <main className="panel-main flex-1 mx-auto w-full px-4 md:px-8" data-section-tone={sectionTone}>
         {/* ─── Breadcrumb / Active section bar ─── */}
-        <nav aria-label="Ubicación" className="panel-crumbs">
+        <nav aria-label={t('nav.breadcrumb')} className="panel-crumbs">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             {NAV_GROUPS.map((group) =>
               group.items.map((item) => {
@@ -484,11 +487,11 @@ export default function AdminTopLayout({
                 const Icon = item.icon;
                 return (
                   <React.Fragment key={item.href}>
-                    <span className="text-xs text-neutral-500 dark:text-neutral-300">{group.group}</span>
+                    <span className="text-xs text-neutral-500 dark:text-neutral-300">{t(group.group)}</span>
                     <ChevronRight className="w-3 h-3 text-neutral-300 dark:text-neutral-500" />
                     <div className="flex items-center gap-1.5 bg-primary/[8%] text-primary px-3 py-1 rounded-full">
                       <Icon className="w-3 h-3" />
-                      <span className="text-xs font-semibold whitespace-nowrap">{item.name}</span>
+                      <span className="text-xs font-semibold whitespace-nowrap">{t(item.name)}</span>
                     </div>
                   </React.Fragment>
                 );

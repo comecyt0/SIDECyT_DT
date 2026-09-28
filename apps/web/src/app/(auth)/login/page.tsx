@@ -10,7 +10,9 @@ import { LoginCarousel } from '@/components/ui/login-carousel';
 import DualBranding from '@/components/branding/DualBranding';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import { useT } from '@/i18n/I18nProvider';
-import { INSTITUTION, copyrightLine } from '@/lib/institution';
+import { INSTITUTION } from '@/lib/institution';
+import PieAuth from '@/components/branding/PieAuth';
+import { BandaInstitucional } from '@/components/branding/Logos';
 import { useGlobalLoader } from '@/components/ui/GlobalLoader';
 
 /** Estilos: clases .auth-* en globals.css. Diseño documentado en docs/DISENO_UI.md. */
@@ -30,8 +32,15 @@ export default function LoginPage() {
 
   // La landing (/sigae) manda el correo que escribió el usuario como ?email=. Se lee tras montar
   // (no useSearchParams, para no exigir un Suspense) y solo si parece un correo.
+  // 28/09/2026: se lee primero sessionStorage (la landing lo deja ahí) porque, con la navegación de cliente, este
+  // efecto puede correr antes de que la URL tenga ?email= y el campo quedaba vacío. Se borra al leerlo.
   useEffect(() => {
-    const fromLanding = new URLSearchParams(window.location.search).get('email');
+    let guardado: string | null = null;
+    try {
+      guardado = sessionStorage.getItem('sidecyt:correo-login');
+      sessionStorage.removeItem('sidecyt:correo-login');
+    } catch { /* almacenamiento bloqueado */ }
+    const fromLanding = guardado || new URLSearchParams(window.location.search).get('email');
     if (fromLanding && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(fromLanding) && fromLanding.length <= 254) {
       setEmail(fromLanding);
       document.getElementById('password')?.focus();
@@ -149,14 +158,19 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="flex min-h-screen bg-[var(--auth-paper)] font-sans text-[var(--auth-ink)]">
+    // 28/09/2026 (E50): la página mide exactamente el alto de la ventana (banda institucional + resto) y no tiene scroll.
+    // Si en una pantalla muy baja el formulario no cabe, solo la columna del formulario se desplaza por dentro.
+    <div className="auth-pantalla flex h-dvh flex-col overflow-hidden bg-[var(--auth-paper)] font-sans text-[var(--auth-ink)]">
+      {/* Convivencia oficial de logos en el encabezado (E50, regla del usuario) */}
+      <BandaInstitucional className="flex-none" />
+      <div className="flex min-h-0 flex-1">
       {/* ── Izquierda: banner (solo escritorio) ── */}
-      <div className="sticky top-0 hidden h-screen p-4 lg:block lg:w-[55%] xl:w-[58%] xl:p-5">
+      <div className="hidden h-full min-h-0 p-4 lg:block lg:w-[55%] xl:w-[58%] xl:p-5">
         <LoginCarousel />
       </div>
 
       {/* ── Derecha: formulario ── */}
-      <main className="flex min-h-screen w-full flex-col lg:w-[45%] xl:w-[42%]">
+      <main className="auth-columna flex min-h-0 w-full flex-col overflow-y-auto lg:w-[45%] xl:w-[42%]">
         <div className="flex items-center justify-between gap-3 px-6 pt-5">
           {/* Regreso a la landing pública (/sigae), pedido del usuario el 23/09/2026. */}
           <Link
@@ -330,8 +344,9 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <footer className="px-6 pb-6 text-center text-xs text-[var(--auth-ink-2)]">{copyrightLine()}</footer>
+        <PieAuth />
       </main>
+      </div>
     </div>
   );
 }

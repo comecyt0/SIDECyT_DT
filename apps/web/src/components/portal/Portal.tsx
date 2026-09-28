@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type ReactNode, type RefObject, type KeyboardEvent as RKeyboardEvent } from 'react';
 import Link from 'next/link';
-import { motion, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
+import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
 import {
   ArrowRight, ArrowUpRight, Briefcase, Building2, FlaskConical, GraduationCap, Lightbulb, LogIn, Mail, MapPin,
   Megaphone, Phone, Sparkles, UserPlus,
 } from 'lucide-react';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
 import { useSitio } from '@/lib/sitio';
+import { LogoComecyt, BandaInstitucional } from '@/components/branding/Logos';
 
 /**
  * Portal de sistemas del COMECYT — https://sidecyt-comecyt.edomex.gob.mx/ (25/09/2026).
@@ -75,6 +76,61 @@ const ACCESOS: { href: string; etiqueta: string; detalle: string; icono: ReactNo
   { href: '/solicitar-acceso', etiqueta: 'Solicitar acceso', detalle: 'Pide tu cuenta para postular', icono: <UserPlus aria-hidden="true" /> },
 ];
 
+/** "Cómo funciona": secuencia real del sistema (por eso va numerada). Sin datos inventados. */
+const PASOS: { titulo: string; texto: string; icono: ReactNode }[] = [
+  { titulo: 'Elige tu sistema', texto: 'SIGAE si tienes una empresa o emprendes; SICEI si estudias, investigas o das clases.', icono: <Sparkles aria-hidden="true" /> },
+  { titulo: 'Pide tu cuenta', texto: 'Llena la solicitud de acceso. Un administrador del COMECYT la revisa y te avisa por correo.', icono: <UserPlus aria-hidden="true" /> },
+  { titulo: 'Postula y da seguimiento', texto: 'Registra tu proyecto, adjunta tus documentos y mira en qué etapa va, hasta el convenio.', icono: <Megaphone aria-hidden="true" /> },
+];
+
+/**
+ * Revelado al entrar en pantalla (una vez). Sin JS o con movimiento reducido todo queda visible: el CSS solo oculta
+ * cuando `.pt-root` tiene `data-js` (se pone al montar).
+ */
+function useRevela<T extends HTMLElement>(): [RefObject<T | null>, boolean] {
+  const ref = useRef<T>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') { setVisible(true); return; }
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setVisible(true); io.disconnect(); }
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.15 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return [ref, visible];
+}
+
+/** Resumen en vivo de convocatorias (endpoint público con lista blanca; solo se leen los tamaños de las listas). */
+function useResumenConvocatorias(): { abiertas: number; proximas: number } | null {
+  const [r, setR] = useState<{ abiertas: number; proximas: number } | null>(null);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetch('/api/convocatorias/publicas', { credentials: 'omit', signal: ctrl.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d: unknown) => {
+        if (!d || typeof d !== 'object') return;
+        const o = d as Record<string, unknown>;
+        setR({ abiertas: Array.isArray(o.abiertas) ? o.abiertas.length : 0, proximas: Array.isArray(o.proximas) ? o.proximas.length : 0 });
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, []);
+  return r;
+}
+
+/** Número que cuenta desde 0 cuando llega el dato (una vez; sin animación con movimiento reducido). */
+function Contador({ valor, animar }: { valor: number; animar: boolean }) {
+  const [n, setN] = useState(animar ? 0 : valor);
+  useEffect(() => {
+    if (!animar) { setN(valor); return; }
+    const c = animate(0, valor, { duration: 0.9, ease: [0.23, 1, 0.32, 1], onUpdate: (v) => setN(Math.round(v)) });
+    return () => c.stop();
+  }, [valor, animar]);
+  return <span className="pt-contador">{n}</span>;
+}
+
 /** ¿Se puede animar con el puntero? (no en táctil ni con movimiento reducido). */
 function usePunteroFino(): boolean {
   const [fino, setFino] = useState(false);
@@ -128,6 +184,20 @@ function TarjetaSistema({ s, destacado, atenuado, animar, programas = [] }: { s:
           <span aria-hidden="true" />{s.estado === 'disponible' ? 'Disponible' : 'Próximamente'}
         </span>
       </div>
+      {/* Respuesta visible de "¿Cuál es para mí?": la tarjeta elegida se marca aquí mismo. */}
+      <AnimatePresence>
+        {destacado && (
+          <motion.span
+            className="pt-recomendado"
+            initial={{ opacity: 0, y: -6, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.97, transition: { duration: 0.14 } }}
+            transition={{ type: 'spring' as const, duration: 0.45, bounce: 0.2 }}
+          >
+            <Sparkles aria-hidden="true" /> Recomendado para ti
+          </motion.span>
+        )}
+      </AnimatePresence>
       <h2 id={`pt-${s.id}-titulo`} className="pt-sigla">{s.sigla}</h2>
       <p className="pt-nombre">{s.nombre}</p>
       <p className="pt-para">{s.para}</p>
@@ -139,7 +209,8 @@ function TarjetaSistema({ s, destacado, atenuado, animar, programas = [] }: { s:
         <div className="pt-programas">
           <p className="pt-programas-titulo">{programas.length} programas vigentes</p>
           <ul className="pt-programas-lista">
-            {programas.slice(0, 4).map((n) => <li key={n}>{n}</li>)}
+            {/* Llegan de la API después del primer pintado: entran escalonados, no de golpe. */}
+            {programas.slice(0, 4).map((n, i) => <li key={n} className="pt-programa-chip" style={{ '--j': i } as CSSProperties}>{n}</li>)}
             {programas.length > 4 && (
               <li><Link href={`${s.href}#programas`} className="pt-programas-mas">y {programas.length - 4} más</Link></li>
             )}
@@ -189,9 +260,42 @@ export default function Portal() {
   const elegido = PERFILES.find((p) => p.id === perfil) ?? null;
   // E49: programas activos de SIGAE (administrables). SICEI queda pendiente: sin programas publicados aún.
   const { datos: sigae } = useSitio('sigae');
+  const resumen = useResumenConvocatorias();
+  const [js, setJs] = useState(false);
+  useEffect(() => { setJs(true); }, []);
+  const [guiaRef, guiaVisible] = useRevela<HTMLElement>();
+  const [pasosRef, pasosVisible] = useRevela<HTMLElement>();
+  const [accesosRef, accesosVisible] = useRevela<HTMLElement>();
+  const chipsRef = useRef<HTMLDivElement>(null);
+
+  /** Elige un perfil; en teléfono lleva la vista a la tarjeta recomendada (la respuesta queda arriba, fuera de vista). */
+  const elegir = (id: string, alternar = true) => {
+    const nuevo = alternar && perfil === id ? null : id;
+    setPerfil(nuevo);
+    const p = PERFILES.find((x) => x.id === nuevo);
+    if (p && window.innerWidth < 880) {
+      window.setTimeout(() => {
+        document.getElementById(`pt-${p.sistema}-titulo`)?.closest('article')
+          ?.scrollIntoView({ behavior: reducir ? 'auto' : 'smooth', block: 'center' });
+      }, 120);
+    }
+  };
+
+  /** Radiogroup accesible: flechas mueven el foco y eligen (patrón WAI-ARIA), Inicio/Fin a los extremos. */
+  const teclaChips = (e: RKeyboardEvent<HTMLDivElement>) => {
+    const teclas = ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'];
+    if (!teclas.includes(e.key)) return;
+    e.preventDefault();
+    const actual = Math.max(0, PERFILES.findIndex((p) => p.id === perfil));
+    const n = PERFILES.length;
+    const sig = e.key === 'Home' ? 0 : e.key === 'End' ? n - 1
+      : (actual + (e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1) + n) % n;
+    elegir(PERFILES[sig].id, false);
+    chipsRef.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[sig]?.focus();
+  };
 
   return (
-    <div className="pt-root" data-listo={listo || reducir ? 'true' : undefined}>
+    <div className="pt-root" data-listo={listo || reducir ? 'true' : undefined} data-js={js || undefined}>
       <a href="#pt-contenido" className="pt-saltar">Saltar al contenido</a>
       <div ref={fondo} className="pt-fondo" data-vivo={animar || undefined} aria-hidden="true">
         <span className="pt-fondo-reticula" />
@@ -200,11 +304,12 @@ export default function Portal() {
         <span className="pt-fondo-puntero" />
       </div>
 
+      {/* Convivencia oficial de logos en el encabezado (E50, regla del usuario) */}
+      <BandaInstitucional />
       <header className="pt-barra">
         <div className="pt-wrap pt-barra-fila">
           <Link href="/" className="pt-marca" aria-label={`${INSTITUTION.name} — portal de sistemas`}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- logo institucional */}
-            <img src="/logo-recortado.png" alt={INSTITUTION.name} width={124} height={55} />
+            <LogoComecyt />
             <span className="pt-marca-texto"><strong>SIDECyT</strong><span className="pt-marca-sub">Portal de sistemas</span></span>
           </Link>
           <a href={COMECYT_SITE} target="_blank" rel="noopener noreferrer" className="pt-barra-enlace">
@@ -226,6 +331,26 @@ export default function Portal() {
             empresas y emprendedores, y <strong>SICEI</strong>, para las becas a estudiantes y el impulso a la
             investigación. Elige el tuyo; si no sabes cuál, te ayudamos abajo.
           </p>
+          {/* Señal en vivo: solo aparece si hay convocatorias reales (abiertas o por abrir). Nunca una cifra inventada. */}
+          <AnimatePresence>
+            {resumen && (resumen.abiertas > 0 || resumen.proximas > 0) && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+              >
+                <Link href="/sigae#convocatorias" className="pt-senal" data-tipo={resumen.abiertas > 0 ? 'abiertas' : 'proximas'}>
+                  <span className="pt-senal-punto" aria-hidden="true" />
+                  {resumen.abiertas > 0 ? (
+                    <><Contador valor={resumen.abiertas} animar={!reducir} /> {resumen.abiertas === 1 ? 'convocatoria abierta' : 'convocatorias abiertas'} en SIGAE</>
+                  ) : (
+                    <><Contador valor={resumen.proximas} animar={!reducir} /> {resumen.proximas === 1 ? 'convocatoria próxima a abrir' : 'convocatorias próximas a abrir'}</>
+                  )}
+                  <ArrowRight className="pt-senal-flecha" aria-hidden="true" />
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </section>
 
         <section className="pt-wrap pt-sistemas" aria-label="Sistemas del COMECYT">
@@ -242,25 +367,40 @@ export default function Portal() {
           ))}
         </section>
 
-        <section className="pt-wrap pt-guia pt-entra" style={{ '--i': 5 } as CSSProperties} aria-labelledby="pt-guia-titulo">
+        <section ref={guiaRef} className="pt-wrap pt-guia pt-revela" data-visible={guiaVisible || undefined} aria-labelledby="pt-guia-titulo">
           <div className="pt-guia-caja">
             <div>
               <h2 id="pt-guia-titulo" className="pt-h2">¿Cuál es para mí?</h2>
               <p className="pt-guia-sub">Elige lo que mejor te describe y marcamos el sistema que te corresponde.</p>
             </div>
-            <div className="pt-chips" role="radiogroup" aria-label="¿Quién eres?">
-              {PERFILES.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={perfil === p.id}
-                  className="pt-chip"
-                  onClick={() => setPerfil((a) => (a === p.id ? null : p.id))}
-                >
-                  {p.icono}{p.etiqueta}
-                </button>
-              ))}
+            <div ref={chipsRef} className="pt-chips" role="radiogroup" aria-label="¿Quién eres?" onKeyDown={teclaChips}>
+              {PERFILES.map((p, i) => {
+                const activo = perfil === p.id;
+                // Foco itinerante: solo la opción elegida (o la primera) entra con Tab; las flechas recorren el resto.
+                const enfocable = activo || (!perfil && i === 0);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={activo}
+                    tabIndex={enfocable ? 0 : -1}
+                    className="pt-chip"
+                    onClick={() => elegir(p.id)}
+                  >
+                    {/* Una sola píldora que se desliza de una opción a otra (muestra qué cambió). */}
+                    {activo && (
+                      <motion.span
+                        layoutId="pt-chip-activo"
+                        className="pt-chip-fondo"
+                        transition={reducir ? { duration: 0 } : { type: 'spring' as const, duration: 0.4, bounce: 0.15 }}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <span className="pt-chip-contenido">{p.icono}{p.etiqueta}</span>
+                  </button>
+                );
+              })}
             </div>
             <p className="pt-guia-respuesta" aria-live="polite">
               {elegido ? (
@@ -277,7 +417,24 @@ export default function Portal() {
           </div>
         </section>
 
-        <section className="pt-wrap pt-accesos" aria-labelledby="pt-accesos-titulo">
+        <section ref={pasosRef} className="pt-wrap pt-pasos pt-revela" data-visible={pasosVisible || undefined} aria-labelledby="pt-pasos-titulo">
+          <h2 id="pt-pasos-titulo" className="pt-h2">Cómo funciona</h2>
+          <p className="pt-guia-sub">Tres pasos, del primer clic a tu proyecto en marcha.</p>
+          {/* La línea que une los pasos es `.pt-pasos-lista::before`: se dibuja al entrar en pantalla. */}
+          <ol className="pt-pasos-lista">
+            {PASOS.map((p, i) => (
+              <li key={p.titulo} className="pt-paso" style={{ '--k': i } as CSSProperties}>
+                <span className="pt-paso-num" aria-hidden="true">{i + 1}</span>
+                <div className="pt-paso-cuerpo">
+                  <h3 className="pt-paso-titulo"><span className="pt-paso-icono">{p.icono}</span>{p.titulo}</h3>
+                  <p className="pt-paso-texto">{p.texto}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section ref={accesosRef} className="pt-wrap pt-accesos pt-revela" data-visible={accesosVisible || undefined} aria-labelledby="pt-accesos-titulo">
           <h2 id="pt-accesos-titulo" className="pt-h2">Accesos rápidos</h2>
           <ul className="pt-accesos-lista">
             {ACCESOS.map((a) => (
@@ -307,8 +464,7 @@ export function PiePortal() {
     <footer className="pt-pie">
       <div className="pt-wrap pt-pie-rejilla">
         <div className="pt-pie-marca">
-          {/* eslint-disable-next-line @next/next/no-img-element -- logo institucional */}
-          <img src="/logo-recortado.png" alt={INSTITUTION.name} width={235} height={104} />
+          <LogoComecyt />
           <p className="pt-pie-nombre">{INSTITUTION.fullName}</p>
           <p className="pt-pie-desc">Organismo del Gobierno del {INSTITUTION.state} que impulsa la ciencia, la tecnología y la innovación.</p>
           <p className="pt-pie-sidecyt"><strong>SIDECyT</strong> · Sistema Digital de Emprendimiento, Ciencia y Talento Mexiquense</p>

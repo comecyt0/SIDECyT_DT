@@ -687,3 +687,37 @@ botón y deja el texto del color heredado (pasó: botón navy sin texto visible)
 - **Panel `/admin/sitio`:** mismo patrón que Periodos (formulario a la izquierda, lista en marco pastel a la derecha);
   cada programa con chip de ícono de su color, píldora "oculto", flechas para ordenar, ojo para mostrar/ocultar, editar y
   eliminar. Sectores y notas en área de texto "uno por línea" con contador; documentos como filas título + detalle.
+
+## 19. Identidad institucional 2026, encuadre del carrusel, login sin scroll y portal interactivo — E50, 28/09/2026
+
+Referencia completa de logos, colores, tipografía y favicons: **`docs/IDENTIDAD.md`**. Decisiones de diseño:
+
+- **Colores:** el vino de todo el sistema pasó a `#56212F` (oficial); el dorado `#BC955B` es el acento secundario
+  (filete de la banda institucional, línea de pasos, anillo de la pantalla de carga). Sin nuevos colores saturados.
+- **Títulos en Montserrat** (sustituto de Gotham) — solo títulos; el texto sigue en Switzer. Montserrat es más ancha que
+  Satoshi: la barra de `/sigae` se reacomodó (marca con `flex: none`; píldora "Nuevo" solo desde 1240 px y con puntos
+  suspensivos) porque la píldora se encimaba sobre "SIGAE" entre 900 y 1240 px.
+- **Banda institucional** (convivencia de logos) blanca con filete dorado, **arriba** de las páginas públicas y de acceso;
+  nunca en pies ni en paneles. En `/sigae` la barra flotante arranca debajo de la banda y sube a su sitio al desplazarse
+  (se anima `translate`, no `top`).
+- **Logo en fondos oscuros:** versión negativa oficial (se eliminaron los `brightness-0 invert`).
+- **Login, recuperar contraseña y solicitar acceso sin scroll de página:** `h-dvh` en columna (banda + fila); el banner
+  ocupa el alto restante y, si algo no cabe, solo se desplaza la columna del formulario. Los espacios verticales del
+  login se escalan con el **alto** de la pantalla (`clamp(…vh…)`, clases `.auth-pantalla`/`.auth-columna`, sin
+  `@layer`). Medido en 13 tamaños (1920×1080 a 320×568): 0 px de scroll de página; login y recuperación caben completos.
+- **Carrusel del login — encuadre no destructivo** (`BannerImagen` + `EncuadreEditor` en `/admin/carrusel`, paso "El
+  encuadre"): *Imagen completa* (contain sobre fondo desenfocado de la misma imagen, claro o vino, con margen) o
+  *Recortar y enfocar* (punto focal arrastrable, flechas del teclado, zoom). Vista previa en los tres anchos reales del
+  panel del login (monitor 1.05, laptop 0.8, tablet 0.66) con el logo y la tarjeta de texto simulados. Al subir una
+  imagen muy ancha (≥ 2:1) sugiere "completa + desenfoque + sin textos". Se quitó "Acceso Institucional Cifrado 256-bit".
+- **Portal SIDECyT (`/`) más interactivo** (pedido del usuario; skills emil-design-eng / hallmark):
+  - señal en vivo "N convocatorias abiertas/próximas" con contador animado — solo si hay datos reales;
+  - "¿Cuál es para mí?": una sola píldora que se desliza entre opciones (`layoutId`), flechas/Inicio/Fin con foco
+    itinerante (radiogroup WAI-ARIA), insignia "Recomendado para ti" en la tarjeta (en la fila del ícono: no mueve el
+    contenido bajo el cursor) y, en teléfono, desplazamiento suave hasta la tarjeta recomendada;
+  - sección nueva **"Cómo funciona"** (3 pasos reales, numerados porque es secuencia) con línea vino→dorado que se dibuja
+    al entrar en pantalla (horizontal en escritorio, vertical en teléfono);
+  - las secciones bajo el pliegue se revelan al llegar a ellas (antes se animaban fuera de la vista al cargar);
+  - chips de programas escalonados al llegar de la API. Todo respeta `prefers-reduced-motion` y anima solo
+    `transform`/`opacity`.
+- **Sin botón de tema** en la barra de los paneles: todos siguen el tema del sistema operativo.

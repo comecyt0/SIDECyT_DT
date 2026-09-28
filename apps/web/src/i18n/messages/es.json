@@ -81,7 +81,9 @@
       "bandeja_entrada": "Solicitudes pendientes de validación",
       "en_subsanacion": "Solicitudes devueltas para corrección",
       "completadas": "Solicitudes aprobadas y enviadas a evaluación",
-      "informes_finales": "Revisión de informes de proyectos"
+      "informes_finales": "Revisión de informes de proyectos",
+      "buzon_solicitante": "Sugerencias y chat con el equipo de tu convocatoria",
+      "cuenta": "Foto, portada y datos de tu perfil"
     },
     "dashboard": "Dashboard",
     "mi_panel": "Mi Panel",
@@ -110,14 +112,26 @@
     "lista_negra": "Lista Negra",
     "carrusel": "Carrusel Login",
     "audit_logs": "Bitácora de Auditoría",
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "breadcrumb": "Ubicación",
+    "my_account": "Mi cuenta",
+    "brand_sub": "Gestión de Apoyo Empresarial",
+    "buzon": "Buzón",
+    "menu_open": "Abrir menú",
+    "menu_close": "Cerrar menú"
   },
   "notifications": {
     "title": "Notificaciones",
     "unread_count": "{count} sin leer",
     "mark_all_read": "leer todas",
     "empty": "Sin notificaciones recientes.",
-    "view_all": "Ver todas →"
+    "view_all": "Ver todas →",
+    "detail": "Detalle de la notificación",
+    "open_request": "Ver solicitud",
+    "new": "Nueva notificación",
+    "view_now": "Ver ahora →",
+    "dismiss": "Cerrar aviso",
+    "no_content": "Sin contenido adicional."
   },
   "theme": {
     "light": "Modo claro",
@@ -134,7 +148,9 @@
     "admin": "Administrador",
     "revisor": "Revisor Documental",
     "evaluador": "Evaluador Técnico",
-    "solicitante": "Solicitante"
+    "solicitante": "Solicitante",
+    "admin_convocatoria": "Administrador de convocatoria",
+    "consulta": "Consulta"
   },
   "request_access": {
     "title": "Solicitar Acceso al Sistema",
@@ -170,5 +186,119 @@
     "system_status_backup": "Respaldo diario programado a las 02:00 hrs.",
     "system_status_audit_link": "Bitácora de auditoría disponible en {link}.",
     "system_status_support": "Si las notificaciones en tiempo real no responden, contactar al equipo de soporte técnico."
+  },
+  "admin_nav": {
+    "groups": {
+      "gestion": "Gestión Principal",
+      "operaciones": "Operaciones",
+      "administracion": "Administración",
+      "configuracion": "Configuración"
+    },
+    "items": {
+      "dashboard": {
+        "name": "Dashboard",
+        "desc": "Métricas y estadísticas generales"
+      },
+      "programas": {
+        "name": "Programas",
+        "desc": "Configuración de programas dinámicos"
+      },
+      "convocatorias": {
+        "name": "Convocatorias",
+        "desc": "Publicaciones y periodos de solicitud"
+      },
+      "solicitudes": {
+        "name": "Solicitudes",
+        "desc": "Seguimiento de solicitudes activas"
+      },
+      "folios": {
+        "name": "Folios",
+        "desc": "Histórico de aprobados y no aprobados, y publicación"
+      },
+      "ministraciones": {
+        "name": "Ministraciones",
+        "desc": "Control de pagos y tranches"
+      },
+      "convenios": {
+        "name": "Convenios",
+        "desc": "Convenios formales con empresas"
+      },
+      "informes": {
+        "name": "Informes Finales",
+        "desc": "Revisión y aprobación de informes"
+      },
+      "empresas": {
+        "name": "Empresas",
+        "desc": "Catálogo de empresas registradas"
+      },
+      "evaluadores": {
+        "name": "Evaluadores",
+        "desc": "Asignación y seguimiento"
+      },
+      "buzon": {
+        "name": "Buzón",
+        "desc": "Sugerencias y chat con solicitantes"
+      },
+      "usuarios": {
+        "name": "Usuarios",
+        "desc": "Gestión de cuentas y roles"
+      },
+      "notificaciones": {
+        "name": "Notificaciones",
+        "desc": "Historial de correos y alertas"
+      },
+      "solicitudes_acceso": {
+        "name": "Solicitudes de Acceso",
+        "desc": "Nuevos registros pendientes"
+      },
+      "reset_requests": {
+        "name": "Recuperación Contraseñas",
+        "desc": "Solicitudes de restablecimiento"
+      },
+      "lista_negra": {
+        "name": "Lista Negra",
+        "desc": "Empresas con restricción"
+      },
+      "audit_logs": {
+        "name": "Bitácora de Auditoría",
+        "desc": "Registro de acciones por usuario"
+      },
+      "sitio": {
+        "name": "Contenido público",
+        "desc": "Programas, sectores y documentos de las páginas públicas"
+      },
+      "carrusel": {
+        "name": "Carrusel Login",
+        "desc": "Slides de la pantalla de inicio"
+      },
+      "periodos": {
+        "name": "Periodos",
+        "desc": "Periodos de las convocatorias y alcance"
+      },
+      "documentos_fijos": {
+        "name": "Límites de archivos",
+        "desc": "Tipos y tamaño de los documentos fijos"
+      },
+      "cuenta": {
+        "name": "Mi cuenta",
+        "desc": "Foto, portada y datos de tu perfil"
+      }
+    }
+  },
+  "footer": {
+    "system_name": "Sistema de Gestión de Apoyo Empresarial",
+    "links_label": "Enlaces del pie",
+    "sidecyt": "Portal SIDECyT",
+    "public_site": "Sitio público",
+    "privacy": "Aviso de privacidad",
+    "terms": "Términos de uso"
+  },
+  "search": {
+    "placeholder": "Buscar folio, usuario, empresa…",
+    "label": "Búsqueda global",
+    "clear": "limpiar",
+    "searching": "Buscando…",
+    "no_results_for": "Sin resultados para «{q}».",
+    "inactive": "inactivo"
   }
 }

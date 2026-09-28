@@ -107,7 +107,7 @@ Route::middleware([
     });
 
     // Carousel público (login page) — no authentication required
-    Route::get('carousel/slides', [CarouselController::class, 'publicIndex']);
+    Route::get('carousel/slides', [CarouselController::class, 'publicIndex'])->middleware('throttle:60,1,carrusel');
 
     // Convocatorias para la landing pública /sigae (E37, E40): solo lectura, lista blanca de campos,
     // agrupadas por estado público, caché de 5 min. 30/min por IP basta para una página que la pide una vez.

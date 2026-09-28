@@ -22,23 +22,27 @@
     --popover-foreground: 224 71% 4%;
 
     /* Primary Vino institucional: #6B1F3A -> HSL 339 55% 27% (default COMECYT) */
-    --primary: 339 55% 27%;
+    --primary: 344 45% 23%; /* #56212F, vino oficial (E50) */
     --primary-foreground: 210 40% 98%;
 
-    /* Secondary Dorado institucional: #C9A96E -> HSL 39 45% 61% */
-    --secondary: 39 45% 61%;
+    /* Secondary: dorado institucional oficial (E50) #BC955B -> HSL 36 41% 55% */
+    --secondary: 36 41% 55%;
     --secondary-foreground: 224 71% 4%;
 
     /* === Tonos institucionales adicionales (utilizar via bg-[var(--brand-vino-700)]) ===
        Reemplazan los hex hardcoded en el código. Mantenidos como hex para casos
        donde Tailwind opacity con HSL var() es engorroso. */
-    --brand-vino:      #6B1F3A;
+    --brand-vino:      #56212F; /* vino oficial COMECYT 2026 (E50) */
     --brand-vino-50:   #F8F4F6;
     --brand-vino-600:  #A0254F;
     --brand-vino-700:  #8A2049;
     --brand-vino-800:  #4A1528;
     --brand-vino-900:  #3A0F22;
-    --brand-gold:      #C9A96E;
+    --brand-gold:      #BC955B; /* dorado oficial (E50) */
+    --brand-arena:     #DDC8A4;
+    /* Titulares y textos importantes (E50): Gotham es la del manual (comercial, no instalada en el servidor);
+       Montserrat (OFL, auto-hospedada) es su sustituto. El texto corrido NO usa esta pila. */
+    --font-titulos: 'Gotham', var(--font-montserrat), 'Montserrat', ui-sans-serif, system-ui, sans-serif;
     --brand-gold-50:   #FDF8EC;
  
     --muted: 220 14% 96%;
@@ -131,6 +135,12 @@
     color: hsl(var(--foreground));
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* E50: títulos con la tipografía institucional (Gotham → Montserrat). Capa base: cualquier clase que fije su
+     propia fuente gana; el texto corrido no cambia. */
+  h1, h2, h3 {
+    font-family: var(--font-titulos);
   }
 
   /* Accesibilidad: focus visible consistente y visible para usuarios de teclado.
@@ -320,11 +330,11 @@
   --auth-ink-2: oklch(47% 0.02 355);
   --auth-rule: oklch(89% 0.01 350);
   --auth-rule-strong: oklch(80% 0.02 350);
-  --auth-vino: oklch(36% 0.1 358);
+  --auth-vino: #56212f; /* vino oficial COMECYT 2026 (E50) */
   --auth-vino-strong: oklch(30% 0.09 358);
   --auth-vino-soft: oklch(36% 0.1 358 / 0.12);
   --auth-vino-shadow: oklch(36% 0.1 358 / 0.55);
-  --auth-gold: oklch(80% 0.075 82);
+  --auth-gold: #bc955b; /* dorado oficial COMECYT 2026 (E50) */
   --auth-success: oklch(45% 0.09 150);
   --auth-danger: oklch(52% 0.19 27);
 
@@ -376,12 +386,23 @@
     outline-offset: 4px;
     border-radius: var(--auth-radius-card);
   }
+  /* E50 (28/09/2026): la imagen se ve tal cual (antes al 55 % y desaturada, con manchas encima: los flyers se veían
+     lavados). El encuadre lo resuelve BannerImagen; aquí solo el cambio suave entre diapositivas. */
   .auth-banner-image {
     opacity: 0;
-    filter: saturate(0.8);
     transition: opacity 700ms ease;
   }
-  .auth-banner-image[data-active="true"] { opacity: 0.55; }
+  .auth-banner-image[data-activo="true"] { opacity: 1; }
+  /* Degradado oscuro solo en la franja de abajo: pausa, progreso y flechas se leen sobre cualquier imagen. Más alto
+     cuando hay tarjeta de textos. */
+  .auth-banner-scrim {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 30%;
+    background: linear-gradient(to top, rgb(28 10 18 / 0.62), rgb(28 10 18 / 0.28) 55%, transparent);
+    pointer-events: none;
+  }
+  .auth-banner-scrim[data-textos="true"] { height: 58%; }
 
   .auth-blob {
     position: absolute;
@@ -415,7 +436,21 @@
     border-radius: 22px;
   }
 
+  /* E50: banda institucional en el ENCABEZADO de páginas públicas y de acceso (regla del usuario: no en pies ni en
+     paneles). Siempre blanca —la versión a color del manual no se recolorea— con filete dorado oficial abajo.
+     La franja es ≈13:1: se limita por ancho (máx. ~50 px de alto). */
+  .banda-institucional {
+    display: flex;
+    justify-content: center;
+    padding: 10px 16px;
+    background: #ffffff;
+    border-bottom: 2px solid #bc955b;
+  }
+  .banda-institucional-marco { width: 100%; max-width: 680px; }
+  .banda-institucional-marco img { display: block; }
+
   .auth-banner-title {
+    font-family: var(--font-titulos);
     font-size: clamp(1.875rem, 2.4vw, 3rem);
     line-height: 1.08;
     font-weight: 600;
@@ -1136,4 +1171,25 @@
     .pill, .tone-chip, .tone-card, .btn-sticker, .stat-tile { transition: none; }
     .btn-sticker:active:not(:disabled) { transform: none; }
   }
+}
+
+/* E50 (28/09/2026) — Login sin scroll: la página mide el alto de la ventana (banda + resto). Los espacios verticales
+   del formulario se escalan con el ALTO de la pantalla para que quepa en laptops de 720-800 px. Sin @layer a propósito:
+   tiene que ganarle a las utilidades de Tailwind del JSX (py-10, mb-8, mb-9, h-20/h-24). */
+.auth-pantalla .auth-columna > div:nth-child(2) { padding-block: clamp(8px, 2.2vh, 40px); }
+.auth-pantalla .auth-columna [data-testid='dual-branding'] img { height: clamp(52px, 10.5vh, 96px); }
+.auth-pantalla .auth-columna .auth-reveal.mb-8 { margin-bottom: clamp(10px, 2.6vh, 32px); }
+.auth-pantalla .auth-columna .auth-reveal.mb-9 { margin-bottom: clamp(12px, 3vh, 36px); }
+.auth-pantalla .auth-columna h1 { font-size: clamp(1.6rem, min(3.2vw, 4.6vh), 2.5rem); }
+@media (max-height: 760px) {
+  .auth-pantalla .auth-columna form > * + * { margin-top: 10px; }
+  .auth-pantalla .auth-columna footer { padding-bottom: 10px; }
+}
+/* Teléfonos pequeños (360×640, 320×568): barra superior y subtítulo más compactos. */
+@media (max-height: 660px) {
+  .auth-pantalla .auth-columna > div:first-child { padding-top: 8px; }
+  .auth-pantalla .auth-columna [data-testid='dual-branding'] img { height: 44px; }
+  .auth-pantalla .auth-columna h1 + p { margin-top: 4px; font-size: 13.5px; }
+  .auth-pantalla .auth-columna .auth-reveal.mb-9 { margin-bottom: 10px; }
+  .auth-pantalla .banda-institucional { padding-block: 6px; }
 }

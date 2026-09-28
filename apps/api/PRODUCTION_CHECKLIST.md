@@ -53,7 +53,7 @@ Personalización institucional (Next.js — se hornea en build):
 
 Estos archivos NO son código — los provee el área institucional:
 
-- [ ] `apps/web/public/logo.png` — Logo COMECYT (o equivalente) en PNG ≥ 401×312 px
+- [x] `apps/web/public/identidad/*` — logos oficiales COMECYT 2026 y convivencia; favicons generados con `apps/web/scripts/favicons.php` (E50, `docs/IDENTIDAD.md`)
 - [ ] `apps/web/public/logo-edomex.svg` — Escudo oficial Gobierno Estado de México (o `NEXT_PUBLIC_EDOMEX_LOGO_URL` apuntando a CDN gubernamental)
 - [ ] Imágenes del carrusel del login (admin las sube vía `/admin/carrusel`, mientras tanto usa `picsum.photos`)
 - [ ] Favicon SVG e iconos PWA en `apps/web/public/`

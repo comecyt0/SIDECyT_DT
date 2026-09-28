@@ -165,13 +165,14 @@ export default function InstallPrompt() {
           </button>
 
           <div className="flex items-start gap-3 p-4 pr-9">
-            <div className="shrink-0 rounded-lg bg-primary/10 p-2 dark:bg-primary/20">
+            <div className="shrink-0 rounded-lg bg-white p-1 ring-1 ring-black/5">
+              {/* El ícono de la app instalada = favicon oficial (logo COMECYT 2026, E50) */}
               <Image
-                src="/logo.png"
+                src="/icon-192.png"
                 alt={INSTITUTION.name}
-                width={32}
-                height={32}
-                className="h-8 w-8 object-contain"
+                width={192}
+                height={192}
+                className="h-10 w-10 object-contain"
               />
             </div>
             <div className="min-w-0">

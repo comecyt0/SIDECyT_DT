@@ -89,11 +89,11 @@ export function I18nProvider({ children, defaultLocale = 'es' }: { children: Rea
 export function useT() {
   const ctx = useContext(I18nContext);
   if (!ctx) {
-    // Permitir uso sin provider (devuelve la key) — útil para tests
+    // Sin provider (pruebas, renders aislados): español, nunca la clave cruda (E50).
     return {
       locale: 'es' as Locale,
       setLocale: () => {},
-      t: (key: string) => key,
+      t: (key: string, values?: Record<string, string | number>) => interpolate(lookup(esMessages, key), values),
     } satisfies I18nContextType;
   }
   return ctx;

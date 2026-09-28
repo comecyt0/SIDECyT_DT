@@ -1,6 +1,16 @@
 # Estado Actual del Sistema COMECYT
 
-**Fecha de actualización:** 25 de septiembre de 2026 (versión anterior: 24/09/2026)
+**Fecha de actualización:** 28 de septiembre de 2026 (versión anterior: 25/09/2026)
+
+> 🏛 **28/09/2026 — Identidad institucional 2026 (E50).** Logos oficiales COMECYT 2026 en todo el sistema; **regla
+> permanente: el favicon de todo el sistema es el logo COMECYT**; franja institucional (convivencia de logos) en el
+> **encabezado** de portal, `/sigae`, `/sicei`, páginas de acceso y legales (no en pies ni paneles); colores oficiales
+> (vino `#56212F`, dorado `#BC955B`); títulos en Montserrat como sustituto de Gotham. Además: herramienta de **encuadre
+> del carrusel** en `/admin/carrusel` (imagen completa o recorte con punto focal, vista previa en 3 tamaños); login,
+> recuperación y solicitud de acceso **sin scroll**; "Regresar a SIDECyT" y correo que se prellena en el login desde
+> `/sigae`; menú, barra, pie y avisos de los paneles **traducibles** ES/EN; sin botón de tema; portal más interactivo
+> ("Cómo funciona", señal en vivo, selector con teclado). Referencia: `docs/IDENTIDAD.md`, `DISENO_UI.md` §19, `CLAUDE.md`
+> E50. Verificado: seguridad 38/38, vitest 129/129, login en 13 tamaños sin scroll de página.
 
 > 🔚 **Cierre de sesión 25/09/2026.** Publicado y verificado: E48 (SIGAC → SIGAE, portal SIDECyT en `/`, menú móvil,
 > auditoría responsive 270 vistas / 0 hallazgos) y E49 (SIDECyT definido, programas/sectores/documentos editables en
@@ -392,7 +402,10 @@ Revisión de solo lectura hecha al cerrar la sesión. **No se cambió nada.** Lo
 | ~~**Correo (SMTP)**~~ | ✅ **Resuelto 23/09/2026 (tarde)** | Infraestructura respondió: la cuenta tenía el autenticador (MFA) activo y se le asignó licencia Exchange Online. Tras el cambio, `smtp.office365.com:587` STARTTLS autentica y envía, también desde Laravel. `MAIL_MAILER=smtp` activo (E38 en `CLAUDE.md`) |
 | **2FA del admin desactivado** | Alta | Apagado desde el 14/09 por falta de correo. Ya hay SMTP: reactivarlo con el usuario presente y probar el restablecimiento de contraseña por correo de punta a punta |
 | ~~**Convocatorias `activa` que parecen de prueba**~~ | ✅ Resuelto 24/09/2026 | Cerradas y archivadas (`deleted_at`) a pedido del usuario; ya no aparecen en la landing ni en la lista del admin. Reversibles (E40) |
-| **Push a GitHub** | **Alta** | El repositorio remoto `comecyt0/SIDECyT_DT` está configurado pero el servidor no tiene credenciales: el usuario debe correr `git -C "F:\Desarrollo Tecnologico" push -u origin main`. Commits locales sin subir: E44, E45, avisos del buzón, E46 y E47 |
+| **Push a GitHub** | **Alta** | El repositorio remoto `comecyt0/SIDECyT_DT` está configurado pero el servidor no tiene credenciales: el usuario debe correr `git -C "F:\Desarrollo Tecnologico" push -u origin main`. Commits locales sin subir: E44, E45, avisos del buzón, E46, E47, E48, E49 y E50 |
+| **Archivos oficiales de Gotham** | Media | El manual pide Gotham (comercial). Hoy se usa Montserrat (libre) en los títulos. Si COMECYT entrega los `.woff2` de Gotham con licencia web, se agregan en `lib/fonts.ts` y todo el sistema los toma (la pila ya los pone primero). Ver `docs/IDENTIDAD.md` §4 |
+| **Traducción completa ES/EN** | Baja | E50 traduce menú, barra, pie, avisos, búsqueda y botones comunes de los 4 paneles. El contenido de cada vista (títulos, tablas, formularios) sigue en español: hay que pasarlo al diccionario vista por vista si se quiere el panel completo en inglés |
+| **Diseño del resto del sistema (pedido 28/09)** | Media | El usuario pidió "mejorar todo el diseño del sistema con más animaciones e interacción". En E50 se hizo el portal (`/`); faltan la landing `/sigae`, el login y los paneles, por partes y con capturas para que el usuario apruebe cada una |
 | **SICEI** | Según el usuario | `/sicei` es "Próximamente". Información reunida y preguntas abiertas en `docs/SIDECYT.md` §7; sus 19 programas están ocultos en `/admin/sitio` → Programas SICEI (completar descripción/contacto y activarlos cuando se defina) |
 | **Enlace de "Asistencia Técnica e Innovación"** | Baja | La página oficial da 404; el programa quedó sin enlace. Ponerlo en `/admin/sitio` cuando se conozca |
 | **Borrador 4 de convocatoria** | Media | Recuperado del intento fallido (E47). Faltan: opciones de "Número de personas solicitantes?", el criterio de evaluación (nombre corto, detalle en la descripción) y revisar las fechas (01/05–01/06/2026 ya pasaron) |

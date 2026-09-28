@@ -232,5 +232,19 @@ log en `logs\deploy-landing-20260923.log`). Solo frontend; el backend no cambió
 - **Polaroids:** arreglo `PINS` (`slot` a–f fija la posición en escritorio, `r` la inclinación, `depth` la
   intensidad del paralaje).
 - **Colores:** tokens al inicio de `landing.css`, dentro de `.lp-root`. No introducir otro color de marca:
-  la paleta es tinta navy + arcoíris + tres lavados pastel.
+  la paleta es tinta navy + vino oficial `#56212F` (detalles) + dorado `#BC955B` (acentos) + tres lavados pastel.
 - Después de cualquier cambio: `npx vitest run src/app/sigae` y `deploy-web.ps1`.
+
+## 11. Cambios del 28/09/2026 (E50)
+
+- **Banda institucional arriba** (`BandaInstitucional`, convivencia oficial de logos) en flujo antes de la barra; la
+  barra flotante empieza desplazada `--banda-h` y sube a su sitio cuando el scroll pasa de 64 px (`data-scrolled`,
+  animación de `translate`). El pie ya no lleva franja ni el marcador de Edomex.
+- **Logo oficial** en barra, tarjeta final y pie (`LogoComecyt`); el pie suma el enlace "SIDECyT".
+- **"Regresar a SIDECyT"** en la barra (`/`): texto completo desde 1100 px, "SIDECyT" debajo, solo flecha < 380 px.
+- **Correo del héroe → login:** `EmailClaim` guarda el correo en `sessionStorage['sidecyt:correo-login']` antes de ir a
+  `/login?email=…`; el login lo lee primero (y lo borra) y usa `?email=` como respaldo. Evita la carrera entre la
+  navegación del cliente y la lectura de la URL.
+- **Barra sin encimarse:** marca `flex: none`; la píldora "Nuevo" aparece desde 1240 px (antes 900) y se recorta con
+  puntos suspensivos si no cabe.
+- **Títulos en Montserrat** (`--font-basier-circle` = `--font-titulos`, sustituto de Gotham). Ver `docs/IDENTIDAD.md`.

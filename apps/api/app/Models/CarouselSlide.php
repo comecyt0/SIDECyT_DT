@@ -14,5 +14,15 @@ class CarouselSlide extends Model
     protected $casts = [
         'activo' => 'boolean',
         'orden' => 'integer',
+        // E50: encuadre de la imagen en el banner del login.
+        'foco_x' => 'integer',
+        'foco_y' => 'integer',
+        'zoom' => 'integer',
+        'margen' => 'integer',
+        'mostrar_textos' => 'boolean',
     ];
+
+    public const AJUSTES = ['completa', 'recorte'];
+
+    public const FONDOS = ['desenfoque', 'claro', 'vino'];
 }

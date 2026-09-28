@@ -1,112 +1,49 @@
 'use client';
 
 import Image from 'next/image';
+import { LOGO_COMECYT } from '@/lib/identidad';
 
 type Size = 'sm' | 'md' | 'lg' | 'xl';
 
 interface DualBrandingProps {
-  /** Tamaño del par de logos. Default: 'md'. */
+  /** Tamaño del logo. Default: 'md'. */
   size?: Size;
-  /** Apila los logos verticalmente en lugar de horizontalmente. Default: false. */
+  /** Se conserva por compatibilidad (antes apilaba COMECYT + Edomex). */
   vertical?: boolean;
   /** Clases extra opcionales. */
   className?: string;
 }
 
 /**
- * Branding dual COMECYT + Gobierno del Estado de México.
+ * Logo institucional de las páginas de acceso (login, recuperar contraseña, solicitar acceso).
  *
- * Se controla con `NEXT_PUBLIC_EDOMEX_LOGO_URL`:
- *  - Sin definir       → usa `/logo-edomex.svg` (placeholder local)
- *  - Ruta/URL custom   → la usa
- *  - Valor literal `'none'` → oculta el logo Edomex (modo solo-COMECYT)
- *
- * El logo COMECYT (`/logo.png`) es siempre obligatorio y nunca se omite.
+ * E50 (28/09/2026): usa el logo oficial COMECYT 2026 (`lib/identidad.ts`). El par COMECYT + "logo Edomex" (un
+ * marcador de posición controlado por NEXT_PUBLIC_EDOMEX_LOGO_URL, apagado en producción) se retiró: la presencia
+ * del Gobierno del Estado de México va ahora en la franja institucional oficial (`FranjaInstitucional`), que el
+ * manual de identidad define como la única combinación válida de logos.
+ * El logo nunca se recolorea: sobre fondo oscuro se usa la versión negativa oficial (otro componente).
  */
-export default function DualBranding({
-  size = 'md',
-  vertical = false,
-  className = '',
-}: DualBrandingProps) {
-  const edomexUrlRaw = process.env.NEXT_PUBLIC_EDOMEX_LOGO_URL;
-  const edomexEnabled = edomexUrlRaw !== 'none';
-  const edomexUrl = edomexUrlRaw && edomexUrlRaw !== 'none' ? edomexUrlRaw : '/logo-edomex.svg';
-
-  // Dimensiones intrínsecas (para next/image). El tamaño visual lo controla Tailwind.
-  // COMECYT: 401x312 (ratio ~1.286). Edomex default: 240x160 (ratio 1.5).
-  const dims = {
-    sm: {
-      comecyt: { w: 64, h: 50, cls: 'h-7 w-auto' },
-      edomex: { w: 60, h: 40, cls: 'h-7 w-auto' },
-      sep: 'h-7',
-    },
-    md: {
-      comecyt: { w: 96, h: 75, cls: 'h-10 md:h-12 w-auto' },
-      edomex: { w: 90, h: 60, cls: 'h-10 md:h-12 w-auto' },
-      sep: 'h-10 md:h-12',
-    },
-    lg: {
-      comecyt: { w: 144, h: 112, cls: 'h-20 md:h-24 w-auto' },
-      edomex: { w: 135, h: 90, cls: 'h-20 md:h-24 w-auto' },
-      sep: 'h-16 md:h-20',
-    },
-    // Login (14/09/2026): logo protagonista sobre el formulario.
-    xl: {
-      comecyt: { w: 247, h: 192, cls: 'h-32 md:h-40 w-auto' },
-      edomex: { w: 216, h: 144, cls: 'h-28 md:h-32 w-auto' },
-      sep: 'h-24 md:h-28',
-    },
+export default function DualBranding({ size = 'md', className = '' }: DualBrandingProps) {
+  // El archivo oficial ya viene ajustado al dibujo (≈2.3:1): alturas menores que las del logo anterior, que
+  // traía ~46 % de margen transparente.
+  const alto = {
+    sm: 'h-7',
+    md: 'h-10 md:h-12',
+    lg: 'h-16 md:h-20',
+    xl: 'h-20 md:h-24', // login: logo protagonista sobre el formulario
   } as const;
-
-  const d = dims[size];
-
-  // En modo vertical separamos los logos con un divisor horizontal en lugar de vertical.
-  const containerCls = vertical
-    ? 'flex flex-col items-center gap-3'
-    : 'flex items-center gap-3 md:gap-4';
+  const l = LOGO_COMECYT.color;
 
   return (
-    <div
-      className={`${containerCls} ${className}`.trim()}
-      data-testid="dual-branding"
-    >
+    <div className={`flex items-center ${className}`.trim()} data-testid="dual-branding">
       <Image
-        src="/logo.png"
-        alt="COMECYT"
-        width={d.comecyt.w}
-        height={d.comecyt.h}
+        src={l.src}
+        alt={l.alt}
+        width={l.ancho}
+        height={l.alto}
         priority
-        className={`${d.comecyt.cls} object-contain drop-shadow-[0_4px_8px_rgba(107,31,58,0.18)]`}
+        className={`${alto[size]} w-auto object-contain`}
       />
-
-      {edomexEnabled && (
-        <>
-          {/* Separador */}
-          {vertical ? (
-            <span
-              aria-hidden="true"
-              className="block w-12 h-px bg-neutral-300 dark:bg-neutral-600"
-              data-testid="dual-branding-separator"
-            />
-          ) : (
-            <span
-              aria-hidden="true"
-              className={`${d.sep} w-px bg-neutral-300 dark:bg-neutral-600`}
-              data-testid="dual-branding-separator"
-            />
-          )}
-
-          <Image
-            src={edomexUrl}
-            alt="Gobierno del Estado de México"
-            width={d.edomex.w}
-            height={d.edomex.h}
-            priority
-            className={`${d.edomex.cls} object-contain`}
-            unoptimized={edomexUrl.endsWith('.svg')}
-          />
-        </>
-      )}
     </div>
   );
 }

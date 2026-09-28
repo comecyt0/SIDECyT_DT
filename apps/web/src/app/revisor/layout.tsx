@@ -25,7 +25,7 @@ export default function RevisorLayout({ children }: { children: React.ReactNode 
     { name: t('nav.en_subsanacion'),   href: '/revisor/observadas',   icon: Clock,           description: t('nav.desc.en_subsanacion') },
     { name: t('nav.completadas'),      href: '/revisor/completadas',  icon: FileCheck2,      description: t('nav.desc.completadas') },
     { name: t('nav.informes_finales'), href: '/revisor/informes',     icon: FileText,        description: t('nav.desc.informes_finales') },
-    { name: 'Mi cuenta', href: '/revisor/cuenta', icon: UserCircle, description: 'Foto, portada y datos de tu perfil' },
+    { name: t('nav.my_account'), href: '/revisor/cuenta', icon: UserCircle, description: t('nav.desc.cuenta') },
   ];
 
   return (

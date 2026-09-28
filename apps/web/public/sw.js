@@ -16,12 +16,14 @@
  */
 
 // v3 (24/09/2026): bytes nuevos para que todo navegador reinstale el SW con la CSP correcta de sw.js.
-const CACHE_VERSION = 'comecyt-v3';
+// v4 (28/09/2026, E50): favicon e íconos nuevos del logo COMECYT 2026 — purga los íconos viejos guardados.
+// v5 (28/09/2026, E50): purga imágenes de /identidad guardadas como HTML durante una redirección; ya no se guardan.
+const CACHE_VERSION = 'comecyt-v5';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const STATIC_ASSETS = [
-  '/logo.png',
   '/favicon.ico',
+  '/icon-192.png',
   '/manifest.webmanifest',
 ];
 
@@ -63,7 +65,6 @@ function isStaticAsset(url) {
   if (url.origin !== self.location.origin) return false;
   // Documentos e imágenes subidos por usuarios: jamás al disco del navegador.
   if (url.pathname.startsWith('/storage/')) return false;
-  if (url.pathname === '/logo.png') return true;
   if (url.pathname === '/favicon.ico') return true;
   if (url.pathname === '/manifest.webmanifest') return true;
   if (url.pathname.startsWith('/_next/static/')) return true;
@@ -84,7 +85,10 @@ async function cacheFirst(request) {
   if (cached) return cached;
   try {
     const response = await fetch(request);
-    if (response.ok) {
+    // E50: solo se guarda un recurso real. Una redirección (p. ej. el proxy mandando al login) llega como 200
+    // con HTML: guardarlo dejaba la imagen rota para siempre en ese navegador.
+    const tipo = response.headers.get('content-type') || '';
+    if (response.ok && !response.redirected && response.type === 'basic' && !tipo.includes('text/html')) {
       const cache = await caches.open(STATIC_CACHE);
       cache.put(request, response.clone());
     }
@@ -166,8 +170,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: payload.body,
-    icon: payload.icon || '/logo.png',
-    badge: payload.badge || '/logo.png',
+    icon: payload.icon || '/icon-192.png',
+    badge: payload.badge || '/favicon-48.png',
     data: { url: payload.url || '/' },
     tag: payload.tag || 'comecyt-notification',
     renotify: !!payload.renotify,

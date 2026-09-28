@@ -4,7 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 // Sistema visual SIGAE de los paneles (23/09/2026). Todo acotado a `.panel-root`: el login no cambia.
 import "../styles/panel-sigae.css";
-import { switzer, satoshi } from "@/lib/fonts";
+import { switzer, satoshi, montserrat } from "@/lib/fonts";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { GlobalLoaderProvider } from "@/components/ui/GlobalLoader";
@@ -34,13 +34,18 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: INSTITUTION.name,
   },
-  // logo.png es el único ícono del sistema: no hay favicon.ico (el archivo no existía y el
-  // navegador caía al ícono por defecto). Metadata en el layout raíz alcanza a todas las
-  // páginas sin excepción — ninguna ruta la sobreescribe (14/09/2026).
+  // REGLA PERMANENTE (E50, 28/09/2026): todos los favicons del sistema salen del logo oficial COMECYT 2026
+  // (public/identidad/comecyt-color.png), completo, sin recortar ni recolorear. Se generan con
+  // scripts/favicons.php. Metadata en el layout raíz alcanza a todas las páginas: ninguna la sobreescribe.
   icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/logo.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: { url: "/apple-touch-icon.png", sizes: "180x180" },
   },
 };
 
@@ -81,7 +86,7 @@ export default async function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} ${switzer.variable} ${satoshi.variable} h-full antialiased scroll-smooth`}
+      className={`${geistSans.variable} ${geistMono.variable} ${switzer.variable} ${satoshi.variable} ${montserrat.variable} h-full antialiased scroll-smooth`}
     >
       <head>
         <link rel="manifest" href="/manifest.webmanifest" />
@@ -99,7 +104,7 @@ export default async function RootLayout({
             <span className="route-loading-ring" aria-hidden="true" />
             <span className="route-loading-ring" aria-hidden="true" />
             {/* eslint-disable-next-line @next/next/no-img-element -- splash previo a la hidratación */}
-            <img src="/logo.png" alt="" width={185} height={144} className="route-loading-logo h-36 w-auto object-contain" />
+            <img src="/identidad/comecyt-color.png" alt="" width={721} height={312} className="route-loading-logo h-24 w-auto object-contain" />
           </div>
         </div>
         <PWAInit />

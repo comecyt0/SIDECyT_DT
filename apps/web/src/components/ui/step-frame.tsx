@@ -40,17 +40,21 @@ interface StepFrameProps {
   error?: ReactNode;
   /** Mensaje de éxito: reemplaza el formulario. */
   success?: string | null;
-  size?: 'md' | 'lg';
+  /** md 576 px · lg 768 px (por defecto) · xl 1024 px (herramientas con vista previa, E50). */
+  size?: 'md' | 'lg' | 'xl';
   /** Tarjeta dentro de la página en vez de ventana modal. */
   inline?: boolean;
   /** Oculta "Cancelar" en el primer paso (flujos que no se pueden abandonar, como la bienvenida). */
   hideCancel?: boolean;
 }
 
+const ANCHO: Record<NonNullable<StepFrameProps['size']>, string> = { md: 'max-w-xl', lg: 'max-w-3xl', xl: 'max-w-5xl' };
+
 export default function StepFrame(props: StepFrameProps) {
+  const ancho = ANCHO[props.size ?? 'lg'];
   if (props.inline) {
     return (
-      <div className={`w-full mx-auto ${props.size === 'md' ? 'max-w-xl' : 'max-w-3xl'}`}>
+      <div className={`w-full mx-auto ${ancho}`}>
         <StepFrameBody {...props} />
       </div>
     );
@@ -63,7 +67,7 @@ export default function StepFrame(props: StepFrameProps) {
       style={{ background: 'color-mix(in oklch, var(--auth-ink) 40%, transparent)', backdropFilter: 'blur(6px)' }}
       onClick={(e) => { if (e.target === e.currentTarget && !props.submitting) props.onClose(); }}
     >
-      <div className={`w-full ${props.size === 'md' ? 'max-w-xl' : 'max-w-3xl'} max-h-[100dvh] sm:max-h-[92dvh] flex animate-in slide-in-from-bottom-4 sm:zoom-in-95 fade-in duration-200`}>
+      <div className={`w-full ${ancho} max-h-[100dvh] sm:max-h-[92dvh] flex animate-in slide-in-from-bottom-4 sm:zoom-in-95 fade-in duration-200`}>
         <StepFrameBody {...props} />
       </div>
     </div>

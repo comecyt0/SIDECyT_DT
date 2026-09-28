@@ -81,7 +81,9 @@
       "bandeja_entrada": "Applications pending validation",
       "en_subsanacion": "Applications returned for correction",
       "completadas": "Approved applications sent for evaluation",
-      "informes_finales": "Review of project reports"
+      "informes_finales": "Review of project reports",
+      "buzon_solicitante": "Suggestions and chat with your call team",
+      "cuenta": "Photo, cover and profile details"
     },
     "dashboard": "Dashboard",
     "mi_panel": "My Dashboard",
@@ -110,14 +112,26 @@
     "lista_negra": "Blacklist",
     "carrusel": "Login carousel",
     "audit_logs": "Audit log",
-    "settings": "Settings"
+    "settings": "Settings",
+    "breadcrumb": "Location",
+    "my_account": "My account",
+    "brand_sub": "Business Support Management",
+    "buzon": "Inbox",
+    "menu_open": "Open menu",
+    "menu_close": "Close menu"
   },
   "notifications": {
     "title": "Notifications",
     "unread_count": "{count} unread",
     "mark_all_read": "mark all read",
     "empty": "No recent notifications.",
-    "view_all": "View all →"
+    "view_all": "View all →",
+    "detail": "Notification details",
+    "open_request": "View application",
+    "new": "New notification",
+    "view_now": "View now →",
+    "dismiss": "Dismiss notice",
+    "no_content": "No additional content."
   },
   "theme": {
     "light": "Light mode",
@@ -134,7 +148,9 @@
     "admin": "Administrator",
     "revisor": "Document Reviewer",
     "evaluador": "Technical Evaluator",
-    "solicitante": "Applicant"
+    "solicitante": "Applicant",
+    "admin_convocatoria": "Call administrator",
+    "consulta": "Read-only"
   },
   "request_access": {
     "title": "Request System Access",
@@ -170,5 +186,119 @@
     "system_status_backup": "Daily backup scheduled at 02:00.",
     "system_status_audit_link": "Audit log available at {link}.",
     "system_status_support": "If real-time notifications are not responding, please contact technical support."
+  },
+  "admin_nav": {
+    "groups": {
+      "gestion": "Core management",
+      "operaciones": "Operations",
+      "administracion": "Administration",
+      "configuracion": "Settings"
+    },
+    "items": {
+      "dashboard": {
+        "name": "Dashboard",
+        "desc": "General metrics and statistics"
+      },
+      "programas": {
+        "name": "Programs",
+        "desc": "Dynamic program setup"
+      },
+      "convocatorias": {
+        "name": "Calls for proposals",
+        "desc": "Publications and application periods"
+      },
+      "solicitudes": {
+        "name": "Applications",
+        "desc": "Tracking of active applications"
+      },
+      "folios": {
+        "name": "Folio numbers",
+        "desc": "History of approved and rejected applications, and publishing"
+      },
+      "ministraciones": {
+        "name": "Disbursements",
+        "desc": "Payments and tranches"
+      },
+      "convenios": {
+        "name": "Agreements",
+        "desc": "Formal agreements with companies"
+      },
+      "informes": {
+        "name": "Final reports",
+        "desc": "Report review and approval"
+      },
+      "empresas": {
+        "name": "Companies",
+        "desc": "Registered companies"
+      },
+      "evaluadores": {
+        "name": "Evaluators",
+        "desc": "Assignment and tracking"
+      },
+      "buzon": {
+        "name": "Inbox",
+        "desc": "Suggestions and chat with applicants"
+      },
+      "usuarios": {
+        "name": "Users",
+        "desc": "Accounts and roles"
+      },
+      "notificaciones": {
+        "name": "Notifications",
+        "desc": "Email and alert history"
+      },
+      "solicitudes_acceso": {
+        "name": "Access requests",
+        "desc": "New pending sign-ups"
+      },
+      "reset_requests": {
+        "name": "Password recovery",
+        "desc": "Password reset requests"
+      },
+      "lista_negra": {
+        "name": "Blacklist",
+        "desc": "Restricted companies"
+      },
+      "audit_logs": {
+        "name": "Audit log",
+        "desc": "Actions recorded per user"
+      },
+      "sitio": {
+        "name": "Public content",
+        "desc": "Programs, sectors and documents on public pages"
+      },
+      "carrusel": {
+        "name": "Login carousel",
+        "desc": "Sign-in screen slides"
+      },
+      "periodos": {
+        "name": "Periods",
+        "desc": "Call periods and access scope"
+      },
+      "documentos_fijos": {
+        "name": "File limits",
+        "desc": "Types and size of fixed documents"
+      },
+      "cuenta": {
+        "name": "My account",
+        "desc": "Photo, cover and profile details"
+      }
+    }
+  },
+  "footer": {
+    "system_name": "Business Support Management System",
+    "links_label": "Footer links",
+    "sidecyt": "SIDECyT portal",
+    "public_site": "Public site",
+    "privacy": "Privacy notice",
+    "terms": "Terms of use"
+  },
+  "search": {
+    "placeholder": "Search folio, user, company…",
+    "label": "Global search",
+    "clear": "clear",
+    "searching": "Searching…",
+    "no_results_for": "No results for “{q}”.",
+    "inactive": "inactive"
   }
 }

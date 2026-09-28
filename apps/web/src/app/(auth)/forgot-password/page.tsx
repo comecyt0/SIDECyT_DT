@@ -2,14 +2,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { LogoComecyt, BandaInstitucional } from '@/components/branding/Logos';
 import { Check, Loader2, Mail, ArrowLeft, ShieldCheck, Clock, UserCheck } from 'lucide-react';
 import { AlertBox } from '@/components/ui/alert-box';
 import DualBranding from '@/components/branding/DualBranding';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import api from '@/lib/api';
 import { useT } from '@/i18n/I18nProvider';
-import { INSTITUTION, copyrightLine } from '@/lib/institution';
+import { INSTITUTION } from '@/lib/institution';
+import PieAuth from '@/components/branding/PieAuth';
 
 /** Mismo sistema --auth-* del login. Ver docs/DISENO_UI.md §Login. */
 export default function ForgotPasswordPage() {
@@ -38,9 +39,12 @@ export default function ForgotPasswordPage() {
   const submitState = sent ? 'success' : loading ? 'loading' : 'idle';
 
   return (
-    <div className="flex min-h-screen bg-[var(--auth-paper)] font-sans text-[var(--auth-ink)]">
+    <div className="auth-pantalla flex h-dvh flex-col overflow-hidden bg-[var(--auth-paper)] font-sans text-[var(--auth-ink)]">
+      {/* Convivencia oficial de logos en el encabezado (E50, regla del usuario): fila completa arriba */}
+      <BandaInstitucional className="flex-none" />
+      <div className="flex min-h-0 flex-1">
       {/* ── Izquierda: panel institucional (estático) ── */}
-      <div className="sticky top-0 hidden h-screen p-4 lg:block lg:w-[48%] xl:w-[45%] xl:p-5">
+      <div className="hidden h-full min-h-0 p-4 lg:block lg:w-[48%] xl:w-[45%] xl:p-5">
         <section className="auth-banner h-full w-full">
           <div aria-hidden="true" className="absolute inset-0 -z-10">
             <span className="auth-blob auth-blob-1" style={{ transform: 'translate(-8%, -14%) scale(1)' }} />
@@ -50,7 +54,7 @@ export default function ForgotPasswordPage() {
           </div>
           <div className="relative flex h-full flex-col p-8 text-white xl:p-10">
             <div className="auth-reveal" style={{ '--i': 0 } as React.CSSProperties}>
-              <Image src="/logo.png" alt={INSTITUTION.name} width={401} height={312} priority className="h-20 w-auto object-contain brightness-0 invert xl:h-24" />
+              <LogoComecyt variante="negativo" className="h-24 xl:h-28" />
             </div>
             <div className="auth-reveal mt-auto" style={{ '--i': 1 } as React.CSSProperties}>
               <p className="auth-tag mb-4">
@@ -69,7 +73,7 @@ export default function ForgotPasswordPage() {
       </div>
 
       {/* ── Derecha: formulario ── */}
-      <main className="flex min-h-screen w-full flex-col lg:w-[52%] xl:w-[55%]">
+      <main className="auth-columna flex min-h-0 w-full flex-col overflow-y-auto lg:w-[52%] xl:w-[55%]">
         <div className="flex justify-end px-6 pt-5">
           <LanguageSwitcher />
         </div>
@@ -164,8 +168,9 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
 
-        <footer className="px-6 pb-6 text-center text-xs text-[var(--auth-ink-2)]">{copyrightLine()}</footer>
+        <PieAuth />
       </main>
+      </div>
     </div>
   );
 }

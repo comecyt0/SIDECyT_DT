@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion, useInView, useMotionValue, useReducedMotion, useSpring, useTransform, type MotionValue } from 'framer-motion';
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowRight,
   ArrowUpRight,
   Banknote,
@@ -29,6 +30,7 @@ import {
   Settings2,
 } from 'lucide-react';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
+import { LogoComecyt, BandaInstitucional } from '@/components/branding/Logos';
 import { useGlobalLoader } from '@/components/ui/GlobalLoader';
 import FoliosAprobados from './FoliosAprobados';
 import { useSitio } from '@/lib/sitio';
@@ -45,11 +47,9 @@ import IconoPrograma from '@/components/portal/IconoPrograma';
 
 type Tone = 'sky' | 'mint' | 'peach';
 
-/** Misma regla que DualBranding: `none` oculta el logo de Edomex (así está en producción). */
-const EDOMEX_RAW = process.env.NEXT_PUBLIC_EDOMEX_LOGO_URL;
-const EDOMEX_LOGO = EDOMEX_RAW === 'none' ? null : (EDOMEX_RAW || '/logo-edomex.svg');
-
 const EMAIL_RE =/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+/** Clave compartida con el login para prellenar el correo (sessionStorage, se borra al leerse). */
+const CORREO_LOGIN_KEY = 'sidecyt:correo-login';
 
 /** Mismo mínimo que BOOT_MS en RouteChangeOverlay: la entrada arranca cuando se va el splash. */
 const BOOT_MS = 1100;
@@ -525,6 +525,9 @@ function EmailClaim() {
     setState('loading');
     setMessage('Abriendo inicio de sesión…');
     setIsLoading(true);
+    // 28/09/2026: además de ?email=, se deja en sessionStorage (solo esta pestaña; el login lo lee una vez y lo
+    // borra). Con la navegación de cliente el login puede montarse antes de que cambie la URL y no ver el parámetro.
+    try { sessionStorage.setItem(CORREO_LOGIN_KEY, value); } catch { /* almacenamiento bloqueado: queda el parámetro */ }
     router.push(`/login?email=${encodeURIComponent(value)}`);
   };
 
@@ -586,7 +589,8 @@ export default function Landing() {
     setMounted(true);
     // La entrada espera a que se retire la pantalla de carga del sistema (#boot-splash).
     const t = setTimeout(() => setReady(true), Math.max(0, BOOT_MS - performance.now()) + 160);
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    // Umbral = alto de la banda institucional: la barra baja a su lugar cuando la banda ya salió de la vista.
+    const onScroll = () => setScrolled(window.scrollY > 64);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
@@ -601,14 +605,16 @@ export default function Landing() {
         <style>{'.lp-root .lp-in,.lp-root .lp-pin-in,.lp-reveal .lp-reveal-item{opacity:1!important}'}</style>
       </noscript>
       <a href="#contenido" className="lp-skip">Saltar al contenido</a>
+      {/* Convivencia oficial de logos en el encabezado (E50). En flujo: se va con el scroll; la barra flotante
+          arranca debajo de ella y sube a su posición normal al desplazarse (data-scrolled). */}
+      <BandaInstitucional className="lp-banda" />
 
       {/* ── Nav flotante ── */}
       <header className="lp-nav" data-scrolled={scrolled ? 'true' : 'false'}>
         <nav className="lp-nav-bar" aria-label="Principal">
           <a href="#contenido" className="lp-brand" aria-label="SIGAE, Sistema de Gestión de Apoyo Empresarial — inicio" title="Sistema de Gestión de Apoyo Empresarial">
-            {/* logo-recortado.png = logo.png sin el margen transparente (el dibujo ocupa solo la mitad del alto) */}
-            {/* eslint-disable-next-line @next/next/no-img-element -- logo institucional */}
-            <img src="/logo-recortado.png" alt="" width={176} height={78} />
+            {/* Logo oficial COMECYT 2026 (E50) */}
+            <LogoComecyt decorativo />
             <span className="lp-brand-name">SIGAE</span>
             <span className="lp-swatch" aria-hidden="true" />
           </a>
@@ -632,6 +638,12 @@ export default function Landing() {
             </a>
           )}
           <div className="lp-nav-actions">
+            {/* 28/09/2026: vuelta al portal SIDECyT (pedido del usuario). */}
+            <Link href="/" className="lp-btn lp-btn-ghost lp-nav-back" aria-label="Regresar a SIDECyT">
+              <ArrowLeft className="lp-btn-arrow-back" aria-hidden="true" />
+              <span className="lp-nav-back-largo">Regresar a SIDECyT</span>
+              <span className="lp-nav-back-corto" aria-hidden="true">SIDECyT</span>
+            </Link>
             <Link href="/solicitar-acceso" className="lp-btn lp-btn-ghost lp-nav-ghost">Solicitar acceso</Link>
             <Link href="/login" className="lp-btn lp-btn-rainbow">Iniciar sesión</Link>
           </div>
@@ -861,8 +873,7 @@ export default function Landing() {
 
             <div className="lp-final">
               <span className="lp-final-mark">
-                {/* eslint-disable-next-line @next/next/no-img-element -- logo institucional */}
-                <img src="/logo.png" alt="" width={72} height={56} />
+                <LogoComecyt decorativo />
               </span>
               <div className="lp-final-text">
                 <h3>Entra a SIGAE</h3>
@@ -882,17 +893,10 @@ export default function Landing() {
       <footer className="lp-footer">
         <div className="lp-wrap lp-footer-row">
           <div className="lp-footer-logos">
-            {/* eslint-disable-next-line @next/next/no-img-element -- logos institucionales */}
-            <img src="/logo-recortado.png" alt={INSTITUTION.name} width={235} height={104} />
-            {EDOMEX_LOGO && (
-              <>
-                <span aria-hidden="true" />
-                {/* eslint-disable-next-line @next/next/no-img-element -- logos institucionales */}
-                <img src={EDOMEX_LOGO} alt="Gobierno del Estado de México" width={60} height={40} />
-              </>
-            )}
+            <LogoComecyt />
           </div>
           <nav className="lp-footer-links" aria-label="Legal y enlaces">
+            <Link href="/">SIDECyT</Link>
             <Link href="/privacidad">Aviso de privacidad</Link>
             <Link href="/terminos">Términos de uso</Link>
             <a href={`${COMECYT_SITE}/apoyo-empresarial`} target="_blank" rel="noopener noreferrer">Apoyo empresarial en comecyt.edomex.gob.mx</a>

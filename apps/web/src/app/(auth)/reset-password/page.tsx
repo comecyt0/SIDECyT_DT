@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import Image from 'next/image';
+import { LogoComecyt, BandaInstitucional } from '@/components/branding/Logos';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -174,7 +174,10 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--brand-vino-50)] via-white to-[var(--brand-gold-50)] dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950 flex items-center justify-center p-4">
+    <div className="flex min-h-screen flex-col">
+    {/* Convivencia oficial de logos en el encabezado (E50, regla del usuario) */}
+    <BandaInstitucional />
+    <div className="relative flex-1 bg-gradient-to-br from-[var(--brand-vino-50)] via-white to-[var(--brand-gold-50)] dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950 flex items-center justify-center p-4">
       <div className="absolute top-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-80 h-80 bg-accent/8 rounded-full blur-3xl translate-x-1/4 translate-y-1/4 pointer-events-none" />
 
@@ -183,7 +186,9 @@ export default function ResetPasswordPage() {
           <div className="h-1 bg-gradient-to-r from-primary via-accent to-primary" />
           <div className="p-8">
             <div className="flex justify-center mb-6">
-              <Image src="/logo.png" alt={INSTITUTION.name} width={72} height={56} priority className="h-14 w-auto object-contain" />
+              {/* Logo oficial (E50): a color en claro, negativo oficial en oscuro — nunca filtros CSS */}
+              <LogoComecyt className="h-16 dark:hidden" />
+              <LogoComecyt variante="negativo" decorativo className="hidden h-16 dark:block" />
             </div>
             <Suspense fallback={<div className="text-center py-8 text-neutral-500 text-sm">Cargando...</div>}>
               <ResetPasswordForm />
@@ -198,6 +203,7 @@ export default function ResetPasswordPage() {
         </div>
         <p className="text-center text-xs text-neutral-400 mt-4">© {new Date().getFullYear()} {INSTITUTION.name} · {INSTITUTION.state}</p>
       </div>
+    </div>
     </div>
   );
 }

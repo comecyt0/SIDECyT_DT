@@ -84,12 +84,12 @@ export function RouteLoadingScreen({ message }: { message?: string }) {
         <span className="route-loading-ring" aria-hidden="true" />
         <span className="route-loading-ring" aria-hidden="true" />
         <Image
-          src="/logo.png"
+          src="/identidad/comecyt-color.png"
           alt={message ?? 'Cargando'}
-          width={185}
-          height={144}
+          width={721}
+          height={312}
           priority
-          className="route-loading-logo h-36 w-auto object-contain"
+          className="route-loading-logo h-24 w-auto object-contain"
         />
       </div>
       {message && <p className="sr-only">{message}</p>}

@@ -10,12 +10,12 @@ import Cookies from 'js-cookie';
 import { cerrarSesion } from '@/lib/logout';
 import PageTransition from '@/components/ui/PageTransition';
 import GlobalSearch from '@/components/admin/GlobalSearch';
-import ThemeToggle from '@/components/ui/ThemeToggle';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import NotificationDetailModal, { type NotificationDetail } from '@/components/notifications/NotificationDetailModal';
 import PanelFooter from '@/components/layout/PanelFooter';
 import { LogOut, Bell, Menu, X, ChevronRight } from 'lucide-react';
 import { INSTITUTION } from '@/lib/institution';
+import { LOGO_COMECYT } from '@/lib/identidad';
 import { useT } from '@/i18n/I18nProvider';
 import { formatDate } from '@/lib/format';
 import { usePanelScope } from '@/hooks/usePanelScope';
@@ -74,7 +74,7 @@ export default function RoleTopLayout({
   navItems,
   userName = '',
   roleLabel,
-  menuTitle = 'Panel de Control',
+  menuTitle,
   homeHref,
   notificationCount = 0,
   notifications = [],
@@ -179,11 +179,11 @@ export default function RoleTopLayout({
         <div className="panel-topbar-row h-16 flex items-center gap-2 sm:gap-3">
 
           {/* Logo (recortado, mismo que la landing) + marca SIGAE */}
-          <Link href={homeHref} className="panel-brand flex items-center gap-3 shrink-0" title="SIGAE — Sistema de Gestión de Apoyo Empresarial">
-            <Image src="/logo-recortado.png" alt={INSTITUTION.name} width={99} height={44} priority className="h-10 w-auto object-contain" />
+          <Link href={homeHref} className="panel-brand flex items-center gap-3 shrink-0" title={`SIGAE — ${t('footer.system_name')}`}>
+            <Image src={LOGO_COMECYT.color.src} alt={LOGO_COMECYT.color.alt} width={LOGO_COMECYT.color.ancho} height={LOGO_COMECYT.color.alto} priority className="h-10 w-auto object-contain" />
             <div className="hidden lg:block">
               <span className="panel-brand-name">SIGAE<span className="panel-swatch" aria-hidden="true" /></span>
-              <span className="panel-brand-sub">Gestión de Apoyo Empresarial</span>
+              <span className="panel-brand-sub">{t('nav.brand_sub')}</span>
             </div>
           </Link>
 
@@ -237,14 +237,14 @@ export default function RoleTopLayout({
                   style={{ transformOrigin: 'top left' }}
                   className="panel-menu absolute left-0 top-[calc(100%+12px)] w-[460px] max-w-[92vw] z-50 max-md:fixed max-md:left-3 max-md:right-3 max-md:top-[5.5rem] max-md:w-auto max-md:max-w-none max-md:max-h-[calc(100dvh-6.5rem)] max-md:overflow-y-auto"
                   role="dialog"
-                  aria-label={menuTitle}
+                  aria-label={menuTitle ?? t('nav.control_panel')}
                 >
                   <div className="panel-menu-head">
                     <div className="min-w-0">
                       <p className="panel-hero-pill !mb-2"><span aria-hidden="true" />{roleLabel}</p>
-                      <p className="panel-menu-title">{menuTitle}</p>
+                      <p className="panel-menu-title">{menuTitle ?? t('nav.control_panel')}</p>
                     </div>
-                    <Image src="/logo-recortado.png" alt="" width={99} height={44} className="hidden sm:block h-10 w-auto opacity-90" />
+                    <Image src={LOGO_COMECYT.color.src} alt="" width={LOGO_COMECYT.color.ancho} height={LOGO_COMECYT.color.alto} className="hidden sm:block h-12 w-auto" />
                   </div>
 
                   <div className="panel-menu-body !grid-cols-1">
@@ -301,7 +301,6 @@ export default function RoleTopLayout({
           <div className="ml-auto flex items-center gap-1 sm:gap-3">
 
             <LanguageSwitcher />
-            <ThemeToggle />
 
             {/* Bell */}
             <div ref={notifsRef} className="relative">
@@ -402,7 +401,7 @@ export default function RoleTopLayout({
                     {notificationsHref && (
                       <Link href={notificationsHref} onClick={() => setShowNotifs(false)}>
                         <div className="p-3 text-center text-xs font-bold text-primary hover:bg-primary/5 transition-colors cursor-pointer border-t border-neutral-100 dark:border-neutral-700">
-                          Ver todas →
+                          {t('notifications.view_all')}
                         </div>
                       </Link>
                     )}
@@ -415,7 +414,7 @@ export default function RoleTopLayout({
             <div className="h-7 w-px bg-neutral-200 dark:bg-neutral-700 hidden sm:block" />
 
             {/* User avatar + name */}
-            <Link href={cuentaHref} className="panel-user flex items-center gap-3 rounded-full" title="Mi cuenta">
+            <Link href={cuentaHref} className="panel-user flex items-center gap-3 rounded-full" title={t('nav.my_account')}>
               <div className="hidden lg:block text-right">
                 <p className="text-sm font-bold text-neutral-900 dark:text-neutral-50 leading-none">{perfil?.name ?? localUserName}</p>
                 <p className="text-[11px] text-accent dark:text-amber-300 font-semibold uppercase tracking-wider mt-0.5">{roleLabel}</p>
@@ -442,7 +441,7 @@ export default function RoleTopLayout({
       {/* ── CONTENT ── */}
       <main className="panel-main flex-1 mx-auto w-full px-4 md:px-8" data-section-tone={sectionTone}>
         {/* ─── Breadcrumb / Active item bar ─── */}
-        <nav aria-label="Ubicación" className="panel-crumbs">
+        <nav aria-label={t('nav.breadcrumb')} className="panel-crumbs">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             {activeItem ? (
               <>

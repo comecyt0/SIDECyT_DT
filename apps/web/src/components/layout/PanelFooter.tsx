@@ -1,39 +1,45 @@
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight, Mail } from 'lucide-react';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
+import { LOGO_COMECYT } from '@/lib/identidad';
+import { useT } from '@/i18n/I18nProvider';
 
 // Mismo correo que el pie de la landing (/sigae): buzón de proyectos de Apoyo Empresarial.
 const CONTACTO = 'proyectos.comecyt@edomex.gob.mx';
 
 const ENLACES = [
-  { href: '/sigae', label: 'Sitio público' },
-  { href: '/privacidad', label: 'Aviso de privacidad' },
-  { href: '/terminos', label: 'Términos de uso' },
+  { href: '/', label: 'footer.sidecyt' },
+  { href: '/sigae', label: 'footer.public_site' },
+  { href: '/privacidad', label: 'footer.privacy' },
+  { href: '/terminos', label: 'footer.terms' },
 ] as const;
 
 /**
- * Pie común de los 4 paneles (E43, 24/09/2026). Tarjeta blanca con el logo de COMECYT 5 veces más grande
- * que el pie anterior (28 px de `logo.png`, con ~46 % de margen transparente → 76 px de `logo-recortado.png`
- * visible), nombre del sistema, enlaces públicos y contacto. Estilos en `styles/panel-sigae.css` (.pfoot-*).
+ * Pie común de los 4 paneles (E43, 24/09/2026). Tarjeta blanca con el logo oficial COMECYT 2026 (E50), nombre del
+ * sistema, enlaces públicos y contacto. Sin franja institucional: por regla del usuario va solo en el encabezado de las
+ * páginas públicas y de acceso, no en los paneles. Textos del diccionario (menú y encabezados traducibles, E50). Estilos: `.pfoot-*`.
  */
 export default function PanelFooter() {
+  const { t } = useT();
   return (
     <footer className="panel-footer pfoot mx-auto w-full px-4 md:px-8">
       <div className="pfoot-card">
         <div className="pfoot-brand">
-          <Image src="/logo-recortado.png" alt="COMECYT" width={398} height={176} className="pfoot-logo" />
+          <Image src={LOGO_COMECYT.color.src} alt={LOGO_COMECYT.color.alt} width={LOGO_COMECYT.color.ancho} height={LOGO_COMECYT.color.alto} className="pfoot-logo" />
           <div className="min-w-0">
             <p className="pfoot-name">SIGAE</p>
-            <p className="pfoot-sub">Sistema de Gestión de Apoyo Empresarial</p>
+            <p className="pfoot-sub">{t('footer.system_name')}</p>
             <p className="pfoot-inst">{INSTITUTION.fullName}</p>
           </div>
         </div>
 
-        <nav aria-label="Enlaces del pie" className="pfoot-links">
+        <nav aria-label={t('footer.links_label')} className="pfoot-links">
           {ENLACES.map((e) => (
             <Link key={e.href} href={e.href} className="pfoot-link">
-              {e.label}
+              {t(e.label)}
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           ))}

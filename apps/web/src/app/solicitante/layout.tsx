@@ -36,8 +36,8 @@ export default function SolicitanteLayout({ children }: { children: React.ReactN
     { name: t('nav.nueva_solicitud'),   href: '/solicitante/solicitudes/nueva',   icon: PlusCircle,      description: t('nav.desc.nueva_solicitud') },
     { name: t('nav.mis_informes'),      href: '/solicitante/informes',            icon: FileText,        description: t('nav.desc.mis_informes') },
     { name: t('nav.mis_ministraciones'),href: '/solicitante/ministraciones',      icon: DollarSign,      description: t('nav.desc.mis_ministraciones') },
-    { name: 'Buzón', href: '/solicitante/buzon', icon: MessagesSquare, description: 'Sugerencias y chat con el equipo de tu convocatoria' },
-    { name: 'Mi cuenta', href: '/solicitante/cuenta', icon: UserCircle, description: 'Foto, portada y datos de tu perfil' },
+    { name: t('nav.buzon'), href: '/solicitante/buzon', icon: MessagesSquare, description: t('nav.desc.buzon_solicitante') },
+    { name: t('nav.my_account'), href: '/solicitante/cuenta', icon: UserCircle, description: t('nav.desc.cuenta') },
     { name: t('nav.configuracion'),     href: '/solicitante/settings',            icon: Settings,        description: t('nav.desc.configuracion') },
   ];
 

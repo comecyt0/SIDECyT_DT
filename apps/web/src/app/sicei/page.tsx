@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, ArrowUpRight, FlaskConical, GraduationCap } from 'lucide-react';
 import { INSTITUTION } from '@/lib/institution';
 import { PiePortal } from '@/components/portal/Portal';
+import { LogoComecyt, BandaInstitucional } from '@/components/branding/Logos';
 import ProgramasSistema from '@/components/portal/ProgramasSistema';
 
 const COMECYT = 'https://comecyt.edomex.gob.mx';
@@ -27,11 +28,11 @@ export default function SiceiPage() {
         <span className="pt-fondo-halo pt-fondo-halo-a" />
         <span className="pt-fondo-halo pt-fondo-halo-b" />
       </div>
+      <BandaInstitucional />
       <header className="pt-barra">
         <div className="pt-wrap pt-barra-fila">
           <Link href="/" className="pt-marca" aria-label={`${INSTITUTION.name} — portal de sistemas`}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- logo institucional */}
-            <img src="/logo-recortado.png" alt={INSTITUTION.name} width={124} height={55} />
+            <LogoComecyt />
             <span className="pt-marca-texto"><strong>SIDECyT</strong><span className="pt-marca-sub">Portal de sistemas</span></span>
           </Link>
           <Link href="/" className="pt-barra-enlace"><ArrowLeft aria-hidden="true" /> Volver al portal</Link>

@@ -30,6 +30,11 @@ proyectos de Apoyo Empresarial (indicado por el usuario): proyectos.comecyt@edom
 | `/sigac` | Redirección 308 a `/sigae` (nombre anterior) | `proxy.ts` |
 | `/sicei` | "Próximamente": qué será SICEI + enlaces a las dos páginas oficiales + programas SICEI **solo si el admin los activa** | `app/sicei/page.tsx`, `components/portal/ProgramasSistema.tsx` |
 
+**Identidad (E50, 28/09/2026):** todas las páginas públicas de SIDECyT (`/`, `/sigae`, `/sicei`, acceso y legales) llevan
+arriba la **franja institucional** oficial del Gobierno del Estado de México y el logo COMECYT 2026; el favicon de todo el
+sistema es ese logo. Detalle: `docs/IDENTIDAD.md`. El portal (`/`) suma la sección "Cómo funciona" (3 pasos) y una señal
+en vivo con el número real de convocatorias abiertas o próximas (se oculta si no hay).
+
 ## 3. Regla: programas y convocatorias NO se escriben en el código
 
 Pedido explícito del usuario (25/09/2026): *"lo que tenga que ver con programas o convocatorias no debe estar
