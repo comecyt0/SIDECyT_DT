@@ -2,6 +2,12 @@
 
 **Fecha de actualización:** 28 de septiembre de 2026 (versión anterior: 25/09/2026)
 
+> 📱 **28/09/2026 (tarde) — E51.** Corregido el **login "atorado" en la pantalla de carga** al entrar desde el correo de
+> `/sigae` (la pantalla global no se apagaba tras navegar; ahora se apaga sola al cambiar de ruta y nunca dura más de
+> 15 s). Barras de `/sigae` y del portal corregidas en teléfono (se encimaban). **Portal rediseñado**: botón "Sitio
+> COMECYT", órbita de sistemas interactiva, sello SIDECyT, pie en vino. Auditoría móvil nueva que detecta
+> encimados: **186 vistas (públicas 320–1024 px y 4 paneles 360/390/768), 0 hallazgos, 0 errores JS**. Ver `CLAUDE.md` E51.
+
 > 🏛 **28/09/2026 — Identidad institucional 2026 (E50).** Logos oficiales COMECYT 2026 en todo el sistema; **regla
 > permanente: el favicon de todo el sistema es el logo COMECYT**; franja institucional (convivencia de logos) en el
 > **encabezado** de portal, `/sigae`, `/sicei`, páginas de acceso y legales (no en pies ni paneles); colores oficiales

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 
 interface LoaderContextType {
@@ -16,6 +17,8 @@ const LoaderContext = createContext<LoaderContextType | undefined>(undefined);
 /** Una vez visible, no desaparece antes de esto — evita el parpadeo de un spinner que se
  * alcanza a ver 80 ms. Ver docs/DISENO_UI.md §Pantalla de carga. */
 const MIN_VISIBLE_MS = 1000;
+/** Tope absoluto: una pantalla de carga olvidada nunca bloquea la página más de esto. */
+const SAFETY_MS = 15000;
 
 /**
  * Global Loader Provider
@@ -27,7 +30,14 @@ export function GlobalLoaderProvider({ children }: { children: React.ReactNode }
   const shownAtRef = useRef<number | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const pathname = usePathname();
+  const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const setIsLoading = useCallback((loading: boolean) => {
+    if (safetyTimerRef.current) {
+      clearTimeout(safetyTimerRef.current);
+      safetyTimerRef.current = null;
+    }
     if (loading) {
       if (hideTimerRef.current) {
         clearTimeout(hideTimerRef.current);
@@ -35,6 +45,12 @@ export function GlobalLoaderProvider({ children }: { children: React.ReactNode }
       }
       shownAtRef.current = Date.now();
       setIsLoadingState(true);
+      // Red de seguridad (28/09/2026): nunca más de SAFETY_MS en pantalla, aunque nadie la apague.
+      safetyTimerRef.current = setTimeout(() => {
+        safetyTimerRef.current = null;
+        shownAtRef.current = null;
+        setIsLoadingState(false);
+      }, SAFETY_MS);
       return;
     }
     const elapsed = shownAtRef.current ? Date.now() - shownAtRef.current : MIN_VISIBLE_MS;
@@ -49,6 +65,22 @@ export function GlobalLoaderProvider({ children }: { children: React.ReactNode }
         setIsLoadingState(false);
       }, remaining);
     }
+  }, []);
+
+  // 28/09/2026 — "se queda atorado en el login": la landing encendía esta pantalla antes de navegar con el router
+  // (navegación de cliente) y nadie la apagaba: el login quedaba cubierto para siempre. Ahora toda pantalla de carga
+  // encendida antes de una navegación se apaga sola cuando la nueva ruta ya se pintó (respetando MIN_VISIBLE_MS).
+  // Las navegaciones con recarga completa (window.location) no llegan aquí: el documento nuevo arranca sin ella.
+  const rutaInicial = useRef(pathname);
+  useEffect(() => {
+    if (pathname === rutaInicial.current) return;
+    rutaInicial.current = pathname;
+    setIsLoading(false);
+  }, [pathname, setIsLoading]);
+
+  useEffect(() => () => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
   }, []);
 
   return (

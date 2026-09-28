@@ -163,7 +163,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-8);
-  min-width: 0;
+  flex: none;
   white-space: nowrap;
 }
 /* Logo oficial COMECYT 2026 (public/identidad/comecyt-color.png, E50). 23/09/2026: el usuario lo pidió 3 veces
@@ -302,7 +302,26 @@
 .lp-nav-back-largo { display: none; }
 @media (min-width: 1100px) { .lp-nav-back-largo { display: inline; } .lp-nav-back-corto { display: none; } }
 @media (hover: hover) and (pointer: fine) { .lp-nav-back:hover .lp-btn-arrow-back { transform: translateX(-3px); } }
-@media (max-width: 380px) { .lp-nav-back-corto { display: none; } .lp-nav-back { padding-inline: 10px; } }
+/* 28/09/2026 (captura del usuario en iPhone, ~390 px): logo + SIGAE + "SIDECyT" + "Iniciar sesión" no cabían y el botón
+   se salía de la barra. En teléfono: regresar solo con la flecha, "Entrar" en vez de "Iniciar sesión", logo y márgenes
+   compactos; en los más angostos se oculta la palabra SIGAE (el logo ya identifica). Nada se encoge por debajo de su
+   contenido: la marca no se aplasta y las acciones no se montan sobre ella. */
+.lp-nav-login-corto { display: none; }
+.lp-nav-actions { flex: none; }
+@media (max-width: 560px) {
+  .lp-nav-back-corto { display: none; }
+  .lp-nav-back { width: 44px; padding-inline: 0; }
+  .lp-nav-bar { padding: 0 8px 0 12px; gap: var(--spacing-8); }
+}
+@media (max-width: 430px) {
+  .lp-nav-login-largo { display: none; }
+  .lp-nav-login-corto { display: inline; }
+  .lp-nav-login { padding-inline: 16px; }
+  .lp-nav-bar .lp-brand img { height: 34px; }
+  .lp-nav-bar .lp-brand { gap: 6px; }
+  .lp-brand-name { font-size: 16px; }
+}
+@media (max-width: 350px) { .lp-nav-bar .lp-brand-name { display: none; } }
 
 /* Píldora de anuncio dentro del nav */
 .lp-announce {
@@ -713,7 +732,10 @@
   font-size: 15px;
   line-height: 1.5;
 }
-.lp-step .lp-actor { margin: auto 12px 0; padding-top: var(--spacing-16); }
+/* 28/09/2026: el espacio arriba del chip era `padding-top` DENTRO del chip (chip alto con el texto hundido, y la
+   auditoría lo detectaba encimado sobre el párrafo). El espacio va fuera: margen inferior del párrafo. */
+.lp-step p { margin-bottom: var(--spacing-16); }
+.lp-step .lp-actor { margin: auto 12px 0; }
 
 .lp-actor {
   display: inline-flex;

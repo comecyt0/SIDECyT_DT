@@ -35,7 +35,7 @@ export default function SiceiPage() {
             <LogoComecyt />
             <span className="pt-marca-texto"><strong>SIDECyT</strong><span className="pt-marca-sub">Portal de sistemas</span></span>
           </Link>
-          <Link href="/" className="pt-barra-enlace"><ArrowLeft aria-hidden="true" /> Volver al portal</Link>
+          <Link href="/" className="pt-barra-enlace" aria-label="Volver al portal"><ArrowLeft aria-hidden="true" /> <span className="pt-barra-enlace-texto">Volver al portal</span></Link>
         </div>
       </header>
       <main className="pt-wrap pt-sicei">

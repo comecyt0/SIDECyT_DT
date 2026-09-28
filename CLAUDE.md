@@ -1761,3 +1761,27 @@ Referencia: **`docs/IDENTIDAD.md`** (logos, colores, tipografía, favicons) y `d
 - **Verificado:** seguridad 38/38, vitest 129/129 (incluye la prueba nueva de diccionarios), tsc 0 errores, eslint 0
   errores; login/recuperación/solicitud medidos en 13 tamaños sin scroll de página; `/carousel/slides` con lista blanca,
   405/411 a POST y 429 tras 60/min; cabeceras de seguridad intactas en `/identidad/*`.
+
+### E51 — Login atorado en la pantalla de carga, barras en móvil y rediseño del portal [publicado 28-09-2026]
+- **"Se queda atorado" al entrar al login desde `/sigae`:** el formulario del correo encendía la pantalla de carga
+  GLOBAL (`GlobalLoaderProvider`, en el layout raíz) y navegaba con `router.push`; nadie la apagaba y el login quedaba
+  cubierto para siempre. **Fix en el proveedor, no en el formulario:** toda pantalla de carga encendida antes de una
+  navegación de cliente se apaga sola cuando cambia la ruta (`usePathname`), y nunca dura más de 15 s (red de
+  seguridad). Prueba `components/ui/GlobalLoader.test.tsx`. Verificado en producción (escritorio y 390 px): el login
+  abre usable y con el correo. **Regla:** quien encienda `setIsLoading(true)` debe navegar con recarga completa o
+  confiar en este apagado automático; nunca dejar una capa global sin salida.
+- **Barras en teléfono (capturas del usuario en iPhone):** en `/sigae` el botón "Iniciar sesión" se salía de la barra;
+  en el portal "comecyt.edomex.gob.mx" se montaba sobre "SIDECyT". Marca y acciones con `flex: none`; en teléfono
+  regresar = solo flecha, "Entrar" en lugar de "Iniciar sesión", botón del sitio = ícono redondo.
+- **Por qué la auditoría de E48 no lo vio:** solo medía scroll horizontal y elementos fuera de pantalla SIN ancestro que
+  recortara, y `.lp-root`/`.pt-root` tienen `overflow-x: clip`. Auditoría nueva (scratchpad `audit_movil.mjs`) que
+  además detecta **hermanos encimados** en filas flex/grid (sin contar sticky/absolute), contenido fuera de pantalla aunque
+  lo recorte la raíz, y texto de botones cortado. Encontró además: `/reset-password` con 80 px de scroll horizontal
+  (círculos decorativos tras agregar la banda → `overflow-hidden`) y los chips de rol de "etapas" en `/sigae` con el
+  espacio *dentro* del chip (`padding-top`) en lugar de fuera.
+- **Rediseño del portal `/`** (pedido del usuario; skills hallmark, frontend-design, ui-ux-pro-max, emil-design-eng):
+  botón "Sitio COMECYT" (no la URL suelta) con brillo al pasar el cursor; secciones en la barra (escritorio) y barra que
+  se compacta al desplazarse; sello de dos partes "SIDECyT | nombre completo"; héroe en dos columnas con la **órbita de
+  sistemas** (`components/portal/OrbitaSistemas.tsx`, motivo de los arcos del logo: se dibuja al cargar, puntos que
+  orbitan, nodos SIGAE/SICEI que resaltan su tarjeta y viceversa); pie en vino con el logo negativo. Trampa: la regla
+  `.pt-root svg { width: 1.1em }` (íconos) encogía el SVG de la órbita → especificidad `.pt-root .pt-orbita-svg`.

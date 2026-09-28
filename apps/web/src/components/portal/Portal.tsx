@@ -4,12 +4,13 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 import Link from 'next/link';
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
 import {
-  ArrowRight, ArrowUpRight, Briefcase, Building2, FlaskConical, GraduationCap, Lightbulb, LogIn, Mail, MapPin,
+  ArrowDown, ArrowRight, ArrowUpRight, Briefcase, Building2, FlaskConical, Globe, GraduationCap, Lightbulb, LogIn, Mail, MapPin,
   Megaphone, Phone, Sparkles, UserPlus,
 } from 'lucide-react';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
 import { useSitio } from '@/lib/sitio';
 import { LogoComecyt, BandaInstitucional } from '@/components/branding/Logos';
+import OrbitaSistemas, { type SistemaOrbita } from './OrbitaSistemas';
 
 /**
  * Portal de sistemas del COMECYT — https://sidecyt-comecyt.edomex.gob.mx/ (25/09/2026).
@@ -74,6 +75,12 @@ const ACCESOS: { href: string; etiqueta: string; detalle: string; icono: ReactNo
   { href: '/sigae#convocatorias', etiqueta: 'Convocatorias abiertas', detalle: 'Qué puedes postular hoy en SIGAE', icono: <Megaphone aria-hidden="true" /> },
   { href: '/login', etiqueta: 'Iniciar sesión', detalle: 'Si ya tienes cuenta en SIGAE', icono: <LogIn aria-hidden="true" /> },
   { href: '/solicitar-acceso', etiqueta: 'Solicitar acceso', detalle: 'Pide tu cuenta para postular', icono: <UserPlus aria-hidden="true" /> },
+];
+
+/** Nodos de la órbita del héroe (posiciones calculadas sobre sus anillos; ver OrbitaSistemas). */
+const NODOS = [
+  { id: 'sigae' as const, sigla: 'SIGAE', detalle: 'Apoyo Empresarial', estado: 'disponible' as const, icono: <Briefcase />, x: 87.2, y: 23.9 },
+  { id: 'sicei' as const, sigla: 'SICEI', detalle: 'Ciencia, Educación e Innovación', estado: 'proximamente' as const, icono: <FlaskConical />, x: 22.1, y: 69.5 },
 ];
 
 /** "Cómo funciona": secuencia real del sistema (por eso va numerada). Sin datos inventados. */
@@ -145,7 +152,7 @@ function usePunteroFino(): boolean {
   return fino;
 }
 
-function TarjetaSistema({ s, destacado, atenuado, animar, programas = [] }: { s: Sistema; destacado: boolean; atenuado: boolean; animar: boolean; programas?: string[] }) {
+function TarjetaSistema({ s, destacado, atenuado, animar, enFoco = false, programas = [] }: { s: Sistema; destacado: boolean; atenuado: boolean; animar: boolean; enFoco?: boolean; programas?: string[] }) {
   const ref = useRef<HTMLElement>(null);
   const rx = useMotionValue(0);
   const ry = useMotionValue(0);
@@ -171,6 +178,7 @@ function TarjetaSistema({ s, destacado, atenuado, animar, programas = [] }: { s:
       className="pt-sistema"
       data-sistema={s.id}
       data-destacado={destacado || undefined}
+      data-foco={enFoco || undefined}
       data-atenuado={atenuado || undefined}
       onPointerMove={mover}
       onPointerLeave={salir}
@@ -267,6 +275,16 @@ export default function Portal() {
   const [pasosRef, pasosVisible] = useRevela<HTMLElement>();
   const [accesosRef, accesosVisible] = useRevela<HTMLElement>();
   const chipsRef = useRef<HTMLDivElement>(null);
+  // Nodo de la órbita ↔ tarjeta: el que tiene el cursor o el foco se resalta en ambos lados.
+  const [foco, setFoco] = useState<SistemaOrbita | null>(null);
+  // La barra se compacta al desplazarse (más sombra, menos alto).
+  const [desplazado, setDesplazado] = useState(false);
+  useEffect(() => {
+    const alDesplazar = () => setDesplazado(window.scrollY > 90);
+    alDesplazar();
+    window.addEventListener('scroll', alDesplazar, { passive: true });
+    return () => window.removeEventListener('scroll', alDesplazar);
+  }, []);
 
   /** Elige un perfil; en teléfono lleva la vista a la tarjeta recomendada (la respuesta queda arriba, fuera de vista). */
   const elegir = (id: string, alternar = true) => {
@@ -306,22 +324,38 @@ export default function Portal() {
 
       {/* Convivencia oficial de logos en el encabezado (E50, regla del usuario) */}
       <BandaInstitucional />
-      <header className="pt-barra">
+      <header className="pt-barra" data-desplazado={desplazado || undefined}>
         <div className="pt-wrap pt-barra-fila">
-          <Link href="/" className="pt-marca" aria-label={`${INSTITUTION.name} — portal de sistemas`}>
-            <LogoComecyt />
-            <span className="pt-marca-texto"><strong>SIDECyT</strong><span className="pt-marca-sub">Portal de sistemas</span></span>
+          <Link href="/" className="pt-marca" aria-label={`SIDECyT, portal de sistemas del ${INSTITUTION.name} — inicio`}>
+            <LogoComecyt decorativo />
+            <span className="pt-marca-texto">
+              <strong>SIDECyT</strong>
+              <span className="pt-marca-sub">Portal de sistemas del COMECYT</span>
+            </span>
           </Link>
-          <a href={COMECYT_SITE} target="_blank" rel="noopener noreferrer" className="pt-barra-enlace">
-            comecyt.edomex.gob.mx <ArrowUpRight aria-hidden="true" />
+          {/* Secciones de la página (escritorio). En teléfono sobra: todo está a un desplazamiento. */}
+          <nav className="pt-barra-nav" aria-label="Secciones">
+            <a href="#pt-sistemas">Sistemas</a>
+            <a href="#pt-guia">¿Cuál es para mí?</a>
+            <a href="#pt-pasos">Cómo funciona</a>
+          </nav>
+          {/* Botón (no un enlace suelto con la URL): sitio oficial del COMECYT en otra pestaña. */}
+          <a href={COMECYT_SITE} target="_blank" rel="noopener noreferrer" className="pt-boton-sitio" aria-label="Sitio del COMECYT (abre en otra pestaña)">
+            <Globe className="pt-boton-sitio-icono" aria-hidden="true" />
+            <span className="pt-boton-sitio-texto">Sitio COMECYT</span>
+            <ArrowUpRight className="pt-boton-sitio-flecha" aria-hidden="true" />
           </a>
         </div>
       </header>
 
       <main id="pt-contenido">
         <section className="pt-wrap pt-heroe" aria-labelledby="pt-titulo">
-          <p className="pt-heroe-eyebrow pt-entra" style={{ '--i': 0 } as CSSProperties}>
-            <Sparkles aria-hidden="true" /><strong>SIDECyT</strong> · Sistema Digital de Emprendimiento, Ciencia y Talento Mexiquense
+          <div className="pt-heroe-texto-col">
+          {/* Sello de dos partes: sigla en bloque vino + nombre completo. En teléfono se apila limpio (no una píldora
+              que se parte a la mitad). */}
+          <p className="pt-sello pt-entra" style={{ '--i': 0 } as CSSProperties}>
+            <span className="pt-sello-sigla"><Sparkles aria-hidden="true" />SIDECyT</span>
+            <span className="pt-sello-nombre">Sistema Digital de Emprendimiento, Ciencia y Talento Mexiquense</span>
           </p>
           <h1 id="pt-titulo" className="pt-titulo pt-entra" style={{ '--i': 1 } as CSSProperties}>
             ¿A qué sistema <span className="pt-subrayado">quieres entrar</span>?
@@ -351,14 +385,34 @@ export default function Portal() {
               </motion.div>
             )}
           </AnimatePresence>
+          <div className="pt-heroe-acciones pt-entra" style={{ '--i': 3 } as CSSProperties}>
+            <a href="#pt-sistemas" className="pt-cta" data-variante="principal">
+              <span className="pt-cta-texto">Ver los sistemas</span><ArrowDown className="pt-cta-flecha pt-cta-flecha-abajo" aria-hidden="true" />
+            </a>
+            <a href="#pt-guia" className="pt-cta" data-variante="secundario">
+              <span className="pt-cta-texto">¿No sabes cuál? Te ayudamos</span>
+            </a>
+          </div>
+          </div>
+          <div className="pt-heroe-visual pt-entra" style={{ '--i': 2 } as CSSProperties}>
+            <OrbitaSistemas nodos={NODOS} foco={foco} onFoco={setFoco} />
+          </div>
         </section>
 
-        <section className="pt-wrap pt-sistemas" aria-label="Sistemas del COMECYT">
+        <section id="pt-sistemas" className="pt-wrap pt-sistemas" aria-label="Sistemas del COMECYT">
           {SISTEMAS.map((s, i) => (
-            <div key={s.id} className="pt-entra pt-sistema-marco" style={{ '--i': 3 + i } as CSSProperties}>
+            <div
+              key={s.id}
+              id={`pt-sistema-${s.id}`}
+              className="pt-entra pt-sistema-marco"
+              style={{ '--i': 4 + i } as CSSProperties}
+              onPointerEnter={() => setFoco(s.id)}
+              onPointerLeave={() => setFoco(null)}
+            >
               <TarjetaSistema
                 s={s}
                 animar={animar}
+                enFoco={foco === s.id}
                 destacado={elegido?.sistema === s.id}
                 atenuado={Boolean(elegido) && elegido?.sistema !== s.id}
                 programas={s.id === 'sigae' ? sigae.programas.map((p) => p.nombre) : []}
@@ -367,7 +421,7 @@ export default function Portal() {
           ))}
         </section>
 
-        <section ref={guiaRef} className="pt-wrap pt-guia pt-revela" data-visible={guiaVisible || undefined} aria-labelledby="pt-guia-titulo">
+        <section id="pt-guia" ref={guiaRef} className="pt-wrap pt-guia pt-revela" data-visible={guiaVisible || undefined} aria-labelledby="pt-guia-titulo">
           <div className="pt-guia-caja">
             <div>
               <h2 id="pt-guia-titulo" className="pt-h2">¿Cuál es para mí?</h2>
@@ -417,7 +471,7 @@ export default function Portal() {
           </div>
         </section>
 
-        <section ref={pasosRef} className="pt-wrap pt-pasos pt-revela" data-visible={pasosVisible || undefined} aria-labelledby="pt-pasos-titulo">
+        <section id="pt-pasos" ref={pasosRef} className="pt-wrap pt-pasos pt-revela" data-visible={pasosVisible || undefined} aria-labelledby="pt-pasos-titulo">
           <h2 id="pt-pasos-titulo" className="pt-h2">Cómo funciona</h2>
           <p className="pt-guia-sub">Tres pasos, del primer clic a tu proyecto en marcha.</p>
           {/* La línea que une los pasos es `.pt-pasos-lista::before`: se dibuja al entrar en pantalla. */}
@@ -464,7 +518,8 @@ export function PiePortal() {
     <footer className="pt-pie">
       <div className="pt-wrap pt-pie-rejilla">
         <div className="pt-pie-marca">
-          <LogoComecyt />
+          {/* Pie en vino oficial: versión negativa del logo (manual de identidad, fondos oscuros). */}
+          <LogoComecyt variante="negativo" />
           <p className="pt-pie-nombre">{INSTITUTION.fullName}</p>
           <p className="pt-pie-desc">Organismo del Gobierno del {INSTITUTION.state} que impulsa la ciencia, la tecnología y la innovación.</p>
           <p className="pt-pie-sidecyt"><strong>SIDECyT</strong> · Sistema Digital de Emprendimiento, Ciencia y Talento Mexiquense</p>

@@ -633,7 +633,7 @@ export default function Landing() {
           ) : (
             <a href="#programas" className="lp-announce">
               <span className="lp-eyebrow">Nuevo</span>
-              Conoce los programas de apoyo empresarial
+              Conoce los programas
               <ArrowDown aria-hidden="true" />
             </a>
           )}
@@ -645,7 +645,11 @@ export default function Landing() {
               <span className="lp-nav-back-corto" aria-hidden="true">SIDECyT</span>
             </Link>
             <Link href="/solicitar-acceso" className="lp-btn lp-btn-ghost lp-nav-ghost">Solicitar acceso</Link>
-            <Link href="/login" className="lp-btn lp-btn-rainbow">Iniciar sesión</Link>
+            {/* En teléfonos angostos dice "Entrar" para que la barra quepa (el nombre accesible sigue completo). */}
+            <Link href="/login" className="lp-btn lp-btn-rainbow lp-nav-login" aria-label="Iniciar sesión">
+              <span className="lp-nav-login-largo">Iniciar sesión</span>
+              <span className="lp-nav-login-corto" aria-hidden="true">Entrar</span>
+            </Link>
           </div>
         </nav>
       </header>

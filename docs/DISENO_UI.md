@@ -721,3 +721,18 @@ Referencia completa de logos, colores, tipografía y favicons: **`docs/IDENTIDAD
   - chips de programas escalonados al llegar de la API. Todo respeta `prefers-reduced-motion` y anima solo
     `transform`/`opacity`.
 - **Sin botón de tema** en la barra de los paneles: todos siguen el tema del sistema operativo.
+
+## 20. Portal rediseñado y barras en teléfono — E51, 28/09/2026
+
+- **Motivo propio:** la órbita del héroe toma los arcos concéntricos del logo COMECYT (vino, dorado, vino suave) con
+  SIDECyT al centro y un nodo por sistema. Interacción con propósito: nodo ↔ tarjeta se resaltan mutuamente
+  (conector punteado + pulso), el nodo lleva a su tarjeta. Movimiento: trazo único al cargar (1.4 s, ease-out fuerte),
+  puntos en giro lento (26–46 s), pulso solo en el nodo activo; todo apagado con `prefers-reduced-motion`.
+- **Barra:** marca "SIDECyT / Portal de sistemas del COMECYT", secciones con subrayado que crece (≥ 1040 px), botón vino
+  "Sitio COMECYT" con globo, brillo dorado que cruza al pasar el cursor y `scale(0.97)` al presionar; ícono redondo en
+  teléfono. Se compacta (58 px, más sombra) tras 90 px de desplazamiento.
+- **Sello:** bloque vino "SIDECyT" + nombre completo; bajo 560 px se apila en dos filas (antes una píldora partida).
+- **Pie:** degradado vino oficial con filete dorado→arena y logo negativo; textos en blanco 78 %.
+- **Regla de barras (aprendida de las capturas del usuario):** en toda barra, marca y grupo de acciones llevan
+  `flex: none`; lo que no quepa se reduce por pasos (texto corto, solo ícono) con `aria-label` completo — nunca se deja
+  que el navegador encoja y encime. Verificar con la auditoría de encimados, no solo con scroll horizontal.
