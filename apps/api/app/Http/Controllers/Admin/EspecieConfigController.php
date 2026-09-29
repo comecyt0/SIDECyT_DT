@@ -26,7 +26,7 @@ class EspecieConfigController extends Controller
         \App\Support\Alcance::exigirConvocatoria($request->user(), $convocatoria->id);
         $cfg = $convocatoria->especieConfig ?? new EspecieConfig();
 
-        return response()->json($this->payload($convocatoria, $cfg));
+        return response()->json(self::payloadPersonal($convocatoria, $cfg));
     }
 
     public function update(Request $request, Convocatoria $convocatoria)
@@ -49,7 +49,8 @@ class EspecieConfigController extends Controller
             'campos.*.tipo_campo' => 'required|in:'.implode(',', Especie::TIPOS_CAMPO),
             'campos.*.requerido' => 'boolean',
             'campos.*.opciones' => 'nullable|string|max:10000|required_if:campos.*.tipo_campo,select',
-        ], ['max_integrantes.gte' => 'El máximo de integrantes no puede ser menor que el mínimo.']);
+        ] + array_map(fn ($r) => str_replace('required|array', 'sometimes|array', $r), \App\Support\EtapasEspecie::reglas()),
+            ['max_integrantes.gte' => 'El máximo de integrantes no puede ser menor que el mínimo.'], \App\Support\EtapasEspecie::atributos());
 
         $vistos = [];
         foreach ($v['campos'] as $i => $c) {
@@ -87,10 +88,15 @@ class EspecieConfigController extends Controller
                 $campo->convocatoria_id = $convocatoria->id;
                 $campo->save();
             }
+
+            // E52 · F2: etapas de revisión (con clubes ya enviados solo cambian sus datos, no la estructura).
+            if (isset($v['etapas'])) {
+                \App\Support\EtapasEspecie::guardar($convocatoria->id, $v['etapas']);
+            }
         });
         Audit::log('especie.config_actualizada', $convocatoria);
 
-        return response()->json($this->payload($convocatoria->fresh(), $convocatoria->fresh()->especieConfig));
+        return response()->json(self::payloadPersonal($convocatoria->fresh(), $convocatoria->fresh()->especieConfig));
     }
 
     /** Forma común (admin y líder) de la configuración con etiquetas de los predefinidos. */
@@ -110,6 +116,16 @@ class EspecieConfigController extends Controller
             'campos' => EspecieCampo::where('convocatoria_id', $c->id)->orderBy('orden')->get(['ambito', 'nombre_campo', 'etiqueta', 'tipo_campo', 'opciones_json', 'requerido', 'orden']),
             'documentos' => ProgramaDocumento::where('tipo_programa_id', $c->tipo_programa_id)->where('activo', true)->orderBy('orden')
                 ->get(['clave', 'nombre', 'descripcion', 'obligatorio', 'formato_permitido', 'tamaño_maximo_mb']),
+            'etapas' => \App\Support\EtapasEspecie::payload($c->id),
+            'etapas_fijas' => \App\Support\EtapasEspecie::estructuraFija($c->id),
         ];
+    }
+
+    /** Para el personal: además del payload común, el estado del acta del comité (nunca el nombre interno del archivo). */
+    public static function payloadPersonal(Convocatoria $c, EspecieConfig $cfg): array
+    {
+        return self::payload($c, $cfg) + ['acta_comite' => $cfg->acta_comite ? [
+            'nombre' => $cfg->acta_comite_nombre, 'subida_at' => $cfg->acta_comite_at,
+        ] : null];
     }
 }

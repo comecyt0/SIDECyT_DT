@@ -5,22 +5,34 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Club escolar registrado en una convocatoria de Apoyo en especie (E52 · F1). Lo crea y edita su líder mientras está en
- * `borrador`; al enviarlo pasa a revisión (F2). `folio`, `estado`, `lider_id` y `enviado_at` solo los escribe el servidor.
+ * Club escolar registrado en una convocatoria de Apoyo en especie (E52 · F1/F2).
+ *
+ * Estados: borrador → enviado (en la etapa `etapa_actual_id`) → observado (subsanar antes de `vence_at`) → subsanado →
+ * … → aprobado_revision (pasó todas las etapas) → aceptado (visto bueno del admin de convocatoria + comité) | rechazado.
+ * "Vencido" no es un estado guardado: es `observado` con `vence_at` ya pasado (lo decide el revisor).
+ * Todo lo operativo (folio, estado, etapa, plazos, marcas de revisión y comité) solo lo escribe el servidor.
  */
 class Club extends Model
 {
     protected $table = 'clubes';
 
-    protected $guarded = ['id', 'folio', 'estado', 'lider_id', 'convocatoria_id', 'enviado_at', 'logo_path', 'created_at', 'updated_at'];
+    protected $guarded = [
+        'id', 'folio', 'estado', 'lider_id', 'convocatoria_id', 'enviado_at', 'logo_path', 'created_at', 'updated_at',
+        'etapa_actual_id', 'ronda', 'vence_at', 'visto_bueno_at', 'visto_bueno_por', 'comite_resultado', 'comite_at',
+        'comite_por', 'aceptado_at', 'rechazo_origen', 'rechazo_motivo', 'aviso_privacidad_at',
+    ];
 
     protected $hidden = ['logo_path'];
 
-    protected $casts = ['datos' => 'array', 'enviado_at' => 'datetime'];
+    protected $casts = [
+        'datos' => 'array', 'enviado_at' => 'datetime', 'vence_at' => 'datetime', 'visto_bueno_at' => 'datetime',
+        'comite_at' => 'datetime', 'aceptado_at' => 'datetime', 'aviso_privacidad_at' => 'datetime', 'ronda' => 'integer',
+    ];
 
     protected $appends = ['logo_url'];
 
-    public const EDITABLES = ['borrador'];
+    /** Estados en los que el club espera la resolución de su etapa actual. */
+    public const EN_REVISION = ['enviado', 'subsanado'];
 
     public function getLogoUrlAttribute(): ?string
     {
@@ -52,8 +64,31 @@ class Club extends Model
         return $this->hasMany(ClubDocumento::class);
     }
 
+    public function etapaActual()
+    {
+        return $this->belongsTo(EspecieEtapa::class, 'etapa_actual_id');
+    }
+
+    public function revisiones()
+    {
+        return $this->hasMany(ClubRevision::class)->orderBy('created_at')->orderBy('id');
+    }
+
+    /** Observado con el plazo ya vencido: el líder ya no puede corregir; decide el revisor (rechazar o prórroga). */
+    public function vencido(): bool
+    {
+        return $this->estado === 'observado' && $this->vence_at !== null && $this->vence_at->isPast();
+    }
+
+    /** Estado para mostrar: igual al guardado, salvo "vencido". */
+    public function estadoVisible(): string
+    {
+        return $this->vencido() ? 'vencido' : $this->estado;
+    }
+
+    /** El líder edita en captura y mientras subsana dentro del plazo (decisión del usuario: puede corregir cualquier dato). */
     public function editable(): bool
     {
-        return in_array($this->estado, self::EDITABLES, true);
+        return $this->estado === 'borrador' || ($this->estado === 'observado' && ! $this->vencido());
     }
 }

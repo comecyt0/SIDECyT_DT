@@ -33,7 +33,7 @@ import {
 } from '@/lib/asistente-convocatoria';
 import { Save, CloudOff, Cloud, Banknote, Package } from 'lucide-react';
 import ConfigEspecieForm from '@/components/admin/especie/ConfigEspecieForm';
-import { configVacia, validarConfig, CAMPOS_CLUB, CAMPOS_INTEGRANTE, TIPO_CAMPO_ETIQUETA, type ConfigEspecie } from '@/lib/especie';
+import { configVacia, validarConfig, CAMPOS_CLUB, CAMPOS_INTEGRANTE, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, type ConfigEspecie } from '@/lib/especie';
 
 interface Campo {
   nombre_campo: string;
@@ -1632,6 +1632,7 @@ export default function ConvocatoriasNuevaPage() {
                     <p><strong>Integrantes por club:</strong> de {state.especie.min_integrantes} a {state.especie.max_integrantes} (incluye al líder)</p>
                     <p><strong>Clubes por escuela:</strong> {state.especie.clubes_por_escuela === '' ? 'Sin límite' : state.especie.clubes_por_escuela}</p>
                     <p><strong>Menores de edad:</strong> {state.especie.participan_menores ? 'Sí participan' : 'No participan'}</p>
+                    <p><strong>Etapas de revisión:</strong> {state.especie.etapas.map((e, i) => `${i + 1}. ${e.nombre} (${REVISA_ETIQUETA[e.revisa].toLowerCase()}, ${e.plazo_horas} h, ${e.max_subsanaciones} corrección${e.max_subsanaciones === 1 ? '' : 'es'})`).join(' · ')}</p>
                   </CardContent>
                 </Card>
 

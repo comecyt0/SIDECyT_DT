@@ -224,6 +224,8 @@ class AsistenteConvocatoriaController extends Controller
                     $campo->convocatoria_id = $convocatoria->id;
                     $campo->save();
                 }
+                // E52 · F2: etapas de revisión (si no llegan, las de por defecto: 2 revisiones, 1 corrección, 24 h).
+                \App\Support\EtapasEspecie::guardar($convocatoria->id, $e['etapas'] ?? \App\Support\RevisionClub::ETAPAS_DEFECTO);
             }
 
             return [$convocatoria, $programa];
@@ -292,6 +294,7 @@ class AsistenteConvocatoriaController extends Controller
         $r['especie.kit_descripcion'] = 'nullable|string|max:5000';
         $r['especie.campos_club'] = 'nullable|array';
         $r['especie.campos_integrante'] = 'nullable|array';
+        $r += array_map(fn ($x) => str_replace('required|array', 'sometimes|array', $x), \App\Support\EtapasEspecie::reglas('especie.etapas'));
 
         return $r;
     }
@@ -451,6 +454,6 @@ class AsistenteConvocatoriaController extends Controller
             'criterios.*.descripcion' => 'descripción del criterio',
             'criterios.*.ponderacion' => 'ponderación del criterio',
             'criterios.*.puntaje_maximo' => 'puntaje máximo del criterio',
-        ];
+        ] + \App\Support\EtapasEspecie::atributos('especie.etapas');
     }
 }

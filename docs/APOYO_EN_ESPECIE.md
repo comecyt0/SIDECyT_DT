@@ -179,7 +179,7 @@ Clubes aceptados · asistencia por evento · box lunch y transporte (solicitado 
 | **Pendiente** | Pase a nacional / internacional (subconvocatorias) | Definición del usuario |
 
 > **Orden real de implementación (decisión del usuario, 29/09/2026): F5 primero**, luego F1 → F2 → F3 → F4.
-> Estado: **F5 ✅ (§10) · F1 ✅ (§11)** · F2, F3, F4 pendientes.
+> Estado: **F5 ✅ (§10) · F1 ✅ (§11) · F2 ✅ (§12)** · F3, F4 pendientes.
 
 ## 10. Fase 5 — Registro general con elección de rol ✅ PUBLICADA (29/09/2026)
 
@@ -276,6 +276,38 @@ Clubes aceptados · asistencia por evento · box lunch y transporte (solicitado 
 | Etapas de revisión | **Configurables por convocatoria**: 1, 2 o más en orden, cada una con quién revisa (revisor, admin de convocatoria o ambos), plazo en horas naturales y número de subsanaciones (§6) |
 | Resultado de una etapa | **Aprobar, observar (pedir correcciones) o rechazar**; rechazar exige motivo, avisa al líder y el club termina ahí |
 | Comité | **Un acta por convocatoria** (la sesión) y **sí/no por club** entre los aprobados en revisión |
+| Etapa con «ambos» | **Cualquiera de los dos resuelve**: aparece en la bandeja del revisor y del admin de convocatoria; el primero que resuelve la cierra |
+| Aceptación | **Dos marcas separadas**: tras las revisiones el admin de convocatoria da su **visto bueno**; luego el **comité** (acta + sí/no). Solo con las dos queda ACEPTADO |
+| Prórroga por plazo vencido | **El revisor escribe las horas** (1 a 168) y el motivo; se reinicia la cuenta regresiva y el líder recibe aviso y correo |
+
+### 12.1 Implementación ✅ PUBLICADA (29/09/2026)
+- **BD** (`2026_09_29_000003_apoyo_especie_f2`): `especie_etapas` (orden, nombre, `revisa` revisor|admin_convocatoria|ambos,
+  `plazo_horas`, `max_subsanaciones`; por defecto 2 etapas, 1 corrección, 24 h, también creadas para las convocatorias
+  que ya existían); `club_revisiones` (historial inmutable: enviado, aprobado, observado, rechazado, prórroga,
+  subsanado, visto_bueno, comite_*); `clubes` + etapa actual, ronda, `vence_at`, visto bueno, comité, aceptación,
+  rechazo (origen y motivo) y `aviso_privacidad_at`; `especie_config` + acta del comité (disco privado).
+- **Estados:** borrador → enviado (etapa N) → observado (plazo) → subsanado → … → aprobado_revision → aceptado |
+  rechazado. **"Vencido" no se guarda**: es observado con el plazo pasado (`Club::vencido()`), así no depende de un
+  proceso programado. El líder edita en borrador y en observado dentro del plazo.
+- **Reglas en un solo lugar:** `App\Support\RevisionClub` (quién resuelve, transiciones con `lockForUpdate` para que
+  "el primero que resuelve" gane y el segundo reciba 422, historial y avisos) y `App\Support\EtapasEspecie` (validar y
+  guardar etapas; con clubes enviados la estructura queda fija y solo cambian sus datos).
+- **API:** `/revision/*` (admin, admin de convocatoria, revisor; alcance en el controlador): bandeja
+  (`vista=pendientes|comite|todos`), ficha, `resolver` (aprobar/observar/rechazar), `prorroga`, `visto-bueno`,
+  `comite`, acta (subir: admin y admin de convocatoria; ver: también revisor y consulta). El envío del líder exige
+  `acepto_privacidad` la primera vez; en observado, el mismo botón envía las correcciones.
+- **Avisos:** campana para el personal (`club_por_revisar`, `club_subsanado`, `club_aprobado_revision`) y para el líder
+  (`etapa_aprobada`, `rechazado`); **correo** al líder en observaciones (con el comentario y el plazo), prórroga y
+  aceptación. Los avisos de clubes llevan a la bandeja del revisor, a `/admin/clubes` o al panel del líder.
+- **Front:** editor de etapas en `ConfigEspecieForm` (asistente y ficha); `/revisor/clubes` (+ ficha) en el menú del
+  revisor; `/admin/clubes` con pestañas Por revisar / Comité (acta) / Todos; ficha compartida `FichaClubPersonal` con
+  `RevisionClubPanel` e `HistorialClub`; líder: `AvisoEstadoClub` (observaciones con `CuentaRegresiva`, vencido,
+  aceptado con **confeti** `lib/confeti.ts` cada vez que entra en pantalla, no aceptado con motivo), línea de avance de 6
+  pasos (registro → revisiones → comité → aceptado → kit → evento) y casilla del aviso de privacidad.
+- **Verificado:** e2e backend **57/57** (`e2e_especie_f2.php`: permisos por etapa, "ambos", alcance, límite de
+  correcciones, vencido/prórroga/rechazo, visto bueno, acta falsa, comité, etapas fijas, avisos), navegador real
+  **23/23** (flujo completo líder → revisora → líder → revisora → admin de convocatoria → líder, 390 y 1440 px),
+  vitest **158/158**, regresión F1 53/53, registro 46/46, errores 13/13.
 
 ## 8. Modelo de datos (borrador técnico, a validar en F1)
 

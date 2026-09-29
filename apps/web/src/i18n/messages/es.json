@@ -82,6 +82,7 @@
       "en_subsanacion": "Solicitudes devueltas para corrección",
       "completadas": "Solicitudes aprobadas y enviadas a evaluación",
       "informes_finales": "Revisión de informes de proyectos",
+      "clubes_revision": "Clubes escolares de Apoyo en especie por revisar",
       "buzon_solicitante": "Sugerencias y chat con el equipo de tu convocatoria",
       "cuenta": "Foto, portada y datos de tu perfil",
       "mi_club": "Registro de tu club, integrantes y avance"
@@ -100,6 +101,7 @@
     "en_subsanacion": "En Subsanación",
     "completadas": "Completadas",
     "informes_finales": "Informes Finales",
+    "clubes_revision": "Clubes",
     "solicitudes": "Solicitudes",
     "convocatorias": "Convocatorias",
     "programas": "Programas",

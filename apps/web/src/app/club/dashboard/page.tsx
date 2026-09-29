@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import CuentaRegresiva from '@/components/especie/CuentaRegresiva';
+import { useConfetiAlVer } from '@/lib/confeti';
 import { useRouter } from 'next/navigation';
 import { School, Loader2, Package, CalendarClock, Plus, ArrowRight, Shapes } from 'lucide-react';
 import api from '@/lib/api';
@@ -15,7 +17,7 @@ import { formatDate } from '@/lib/format';
 
 interface ConvClub {
   id: number; nombre: string; descripcion: string | null; estado_publico: string; acepta: boolean; fecha_limite: string | null; kit: string | null;
-  club: { id: number; folio: string; nombre: string; estado: string } | null;
+  club: { id: number; folio: string; nombre: string; estado: string; vence_at?: string | null } | null;
 }
 
 function err(e: unknown, def: string) {
@@ -37,6 +39,7 @@ export default function ClubDashboardPage() {
   const [escuela, setEscuela] = useState<EscuelaApi | null>(null);
   const [creando, setCreando] = useState(false);
   const [errorRegistro, setErrorRegistro] = useState<string | null>(null);
+  const misClubesRef = useRef<HTMLElement>(null);
 
   const cargar = useCallback(async () => {
     try {
@@ -68,6 +71,8 @@ export default function ClubDashboardPage() {
 
   const conClub = convs.filter((c) => c.club);
   const disponibles = convs.filter((c) => !c.club && c.acepta);
+  // Confeti mientras haya un club aceptado (decisión del usuario: hasta que se entregue el kit, F3).
+  useConfetiAlVer(misClubesRef, conClub.some((c) => c.club?.estado === 'aceptado'));
 
   return (
     <div className="space-y-8">
@@ -80,7 +85,7 @@ export default function ClubDashboardPage() {
       ) : (
         <>
           {conClub.length > 0 && (
-            <section className="space-y-4" aria-labelledby="mis-clubes">
+            <section ref={misClubesRef} className="space-y-4" aria-labelledby="mis-clubes">
               <h2 id="mis-clubes" className="text-base font-bold text-[var(--app-ink)]">Mis clubes</h2>
               <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {conClub.map((c) => {
@@ -97,6 +102,14 @@ export default function ClubDashboardPage() {
                         <span className="pill" data-tone={est.tono} data-dot="on">{est.etiqueta}</span>
                       </div>
                       <LineaAvanceClub estado={club.estado} />
+                      {club.estado === 'observado' && club.vence_at && (
+                        <div className="space-y-1 rounded-[14px] px-3 py-2" style={{ backgroundColor: 'var(--tile-gold-bg)' }}>
+                          <p className="text-sm font-semibold text-[var(--app-ink)]">Tu club tiene observaciones: corrígelas a tiempo.</p>
+                          <CuentaRegresiva vence={club.vence_at} onVence={() => void cargar()} />
+                        </div>
+                      )}
+                      {club.estado === 'vencido' && <p className="text-sm font-semibold" style={{ color: 'var(--auth-danger)' }}>El plazo para corregir venció; el COMECYT decidirá.</p>}
+                      {club.estado === 'aceptado' && <p className="text-sm font-semibold" style={{ color: 'var(--tile-emerald-fg)' }}>¡Tu club fue aceptado! Pronto recibirás la fecha y el lugar de entrega de tu kit.</p>}
                       {club.estado === 'borrador' && c.fecha_limite && (
                         <p className="flex items-center gap-1.5 text-sm text-[var(--app-ink-2)]">
                           <CalendarClock className="h-4 w-4" aria-hidden="true" />
@@ -104,7 +117,7 @@ export default function ClubDashboardPage() {
                         </p>
                       )}
                       <Button onClick={() => router.push(`/club/clubes/${club.id}`)}>
-                        {club.estado === 'borrador' ? 'Completar mi club' : 'Ver mi club'} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                        {club.estado === 'borrador' ? 'Completar mi club' : club.estado === 'observado' ? 'Corregir mi club' : 'Ver mi club'} <ArrowRight className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </li>
                   );

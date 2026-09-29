@@ -21,7 +21,16 @@ class EspecieConfig extends Model
         'min_integrantes' => 'integer',
         'max_integrantes' => 'integer',
         'clubes_por_escuela' => 'integer',
+        'acta_comite_at' => 'datetime',
     ];
+
+    /** El acta del comité solo la escribe su endpoint (nunca el PUT de configuración). */
+    protected $hidden = ['acta_comite'];
+
+    public function etapas()
+    {
+        return $this->hasMany(EspecieEtapa::class, 'convocatoria_id', 'convocatoria_id')->orderBy('orden');
+    }
 
     public function convocatoria()
     {

@@ -17,11 +17,13 @@ import EscuelaPicker from '@/components/especie/EscuelaPicker';
 import CampoDinamico from '@/components/especie/CampoDinamico';
 import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
 import ClubResumen from '@/components/especie/ClubResumen';
+import AvisoEstadoClub from '@/components/especie/AvisoEstadoClub';
+import HistorialClub from '@/components/especie/HistorialClub';
 import { descargarCartaEscuela, descargarDocumentoClub } from '@/lib/especie-api';
 import {
   ACCEPT_FORMATO, ACCEPT_IMAGEN, CAMPOS_INTEGRANTE, CARTA_ESCUELA, ESTADO_CLUB, ETIQUETA_FORMATO, IMAGEN_MAX_MB, SEXO,
   leerCamposApi, normalizarPredef, CAMPOS_CLUB, valorCampo,
-  type CampoApi, type ClubApi, type DocumentoClub, type EscuelaApi, type IntegranteApi, type Predef,
+  type CampoApi, type ClubApi, type DocumentoClub, type EntradaHistorial, type EscuelaApi, type IntegranteApi, type Predef,
 } from '@/lib/especie';
 import { PATRON_CURP, PATRON_TELEFONO, PATRON_CORREO } from '@/lib/registro';
 import { formatDate } from '@/lib/format';
@@ -36,6 +38,7 @@ interface Detalle {
   };
   convocatoria: { id: number; nombre: string; acepta: boolean; fecha_limite: string | null };
   faltantes: string[];
+  historial: EntradaHistorial[];
 }
 
 type FormIntegrante = { nombre: string; fecha_nacimiento: string; sexo: string; curp: string; grado_grupo: string; correo: string; telefono: string; datos: Record<string, string> };
@@ -73,6 +76,7 @@ function leerDetalle(data: unknown): Detalle | null {
     },
     convocatoria: d.convocatoria ?? { id: 0, nombre: '', acepta: false, fecha_limite: null },
     faltantes: Array.isArray(d.faltantes) ? d.faltantes.filter((x): x is string => typeof x === 'string') : [],
+    historial: Array.isArray(d.historial) ? d.historial : [],
   };
 }
 
@@ -124,6 +128,7 @@ export default function MiClubPage() {
   // Envío
   const [confirmarEnvio, setConfirmarEnvio] = useState(false);
   const [faltantesEnvio, setFaltantesEnvio] = useState<string[]>([]);
+  const [aceptoPrivacidad, setAceptoPrivacidad] = useState(false);
 
   const aplicar = useCallback((det: Detalle) => {
     setD(det);
@@ -176,6 +181,8 @@ export default function MiClubPage() {
   const { club, config } = d;
   const est = ESTADO_CLUB[club.estado] ?? { etiqueta: club.estado, tono: 'neutral' };
   const editable = club.editable === true;
+  // E52 · F2: corrigiendo una observación dentro del plazo (misma pantalla de edición, envío = "Enviar correcciones").
+  const subsanando = club.estado === 'observado';
   const camposClub = config.campos.filter((c) => c.ambito === 'club');
   const camposInt = config.campos.filter((c) => c.ambito === 'integrante');
   const pc = config.campos_club;
@@ -264,8 +271,11 @@ export default function MiClubPage() {
     setFaltantesEnvio([]);
     setOcupado('enviar');
     try {
-      await api.post(`/club/clubes/${club.id}/enviar`);
-      setAviso({ tipo: 'success', texto: '¡Listo! Tu club se envió a revisión. Te avisaremos por aquí y por correo.' });
+      // Primer envío: aviso de privacidad aceptado (E52 · F2). Correcciones: no se vuelve a pedir.
+      await api.post(`/club/clubes/${club.id}/enviar`, subsanando ? {} : { acepto_privacidad: aceptoPrivacidad });
+      setAviso({ tipo: 'success', texto: subsanando
+        ? '¡Listo! Enviaste tus correcciones. Te avisaremos del resultado por aquí y por correo.'
+        : '¡Listo! Tu club se envió a revisión. Te avisaremos por aquí y por correo.' });
       await cargar();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (er) {
@@ -287,28 +297,35 @@ export default function MiClubPage() {
   const header = (
     <PageHeader title={club.nombre} eyebrow={d.convocatoria.nombre} icon={<School className="h-5 w-5" />}
       backHref="/club/dashboard" backLabel="Volver a mi club"
-      description={editable
-        ? 'Completa los datos, agrega a los integrantes y sube los documentos. Cuando todo esté listo, envía tu club a revisión.'
-        : 'Tu club ya se envió. Aquí ves lo que registraste y en qué etapa va.'} />
+      description={subsanando
+        ? 'Corrige lo que te pidieron (puedes cambiar cualquier dato) y envía tus correcciones antes de que venza el plazo.'
+        : editable
+          ? 'Completa los datos, agrega a los integrantes y sube los documentos. Cuando todo esté listo, envía tu club a revisión.'
+          : 'Aquí ves lo que registraste, en qué etapa va y el historial de tu club.'} />
   );
 
-  // ─────────── Solo lectura (ya enviado) ───────────
+  // ─────────── Solo lectura (en revisión, aceptado, no aceptado) ───────────
   if (!editable) {
     return (
       <div className="space-y-6">
         {header}
         {aviso && <AlertBox type={aviso.tipo} message={aviso.texto} onClose={() => setAviso(null)} />}
         <section className="app-card space-y-3 p-5" aria-label="Avance">
-          <LineaAvanceClub estado={club.estado} />
-          {club.estado === 'enviado' && <p className="text-center text-sm text-[var(--app-ink-2)]">El COMECYT está revisando tu club. Te avisaremos si hay observaciones.</p>}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-[var(--app-ink-2)]">Folio <span className="font-mono font-semibold text-[var(--app-ink)]">{club.folio}</span></p>
+            <span className="pill" data-tone={est.tono} data-dot="on">{est.etiqueta}</span>
+          </div>
+          <LineaAvanceClub estado={club.estado} avance={club} />
         </section>
+        <AvisoEstadoClub estado={club.estado} avance={club} onVence={() => void cargar()} />
         <ClubResumen club={club} integrantes={d.integrantes} documentos={d.documentos} campos={config.campos} camposIntegrante={pi}
           kit={config.kit_nombre} onDescargar={descargarDoc} descargando={ocupado?.startsWith('dl-') ? ocupado.slice(3) : null} />
+        <HistorialClub entradas={d.historial} />
       </div>
     );
   }
 
-  // ─────────── Edición (borrador) ───────────
+  // ─────────── Edición (captura o corrección dentro del plazo) ───────────
   return (
     <div className="space-y-6 pb-8">
       {header}
@@ -319,13 +336,14 @@ export default function MiClubPage() {
           <p className="text-sm text-[var(--app-ink-2)]">Folio <span className="font-mono font-semibold text-[var(--app-ink)]">{club.folio}</span></p>
           <span className="pill" data-tone={est.tono} data-dot="on">{est.etiqueta}</span>
         </div>
-        <LineaAvanceClub estado={club.estado} />
-        {d.convocatoria.fecha_limite && (
+        <LineaAvanceClub estado={club.estado} avance={club} />
+        {!subsanando && d.convocatoria.fecha_limite && (
           <p className="text-center text-sm text-[var(--app-ink-2)]">
             {d.convocatoria.acepta ? `Tienes hasta el ${formatDate(d.convocatoria.fecha_limite)} para enviarlo.` : 'La convocatoria ya no recibe registros.'}
           </p>
         )}
       </section>
+      {subsanando && <AvisoEstadoClub estado={club.estado} avance={club} onVence={() => void cargar()} />}
 
       {/* ── Datos del club ── */}
       <section className="app-card space-y-5 p-5" aria-labelledby="sec-datos">
@@ -502,7 +520,7 @@ export default function MiClubPage() {
 
       {/* ── Envío ── */}
       <section className="app-card space-y-4 p-5" aria-labelledby="sec-envio">
-        <h2 id="sec-envio" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><ListChecks className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Enviar a revisión</h2>
+        <h2 id="sec-envio" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><ListChecks className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />{subsanando ? 'Enviar correcciones' : 'Enviar a revisión'}</h2>
         {(faltantesEnvio.length ? faltantesEnvio : d.faltantes).length > 0 ? (
           <div className="rounded-[14px] border px-4 py-3" style={{ borderColor: 'var(--tile-gold-fg)', backgroundColor: 'var(--tile-gold-bg)' }}>
             <p className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><AlertTriangle className="h-4 w-4" aria-hidden="true" />Antes de enviar, falta:</p>
@@ -511,17 +529,33 @@ export default function MiClubPage() {
             </ul>
           </div>
         ) : (
-          <p className="flex items-center gap-2 text-sm text-[var(--app-ink)]"><CheckCircle2 className="h-4 w-4" style={{ color: 'var(--tile-emerald-fg)' }} aria-hidden="true" />Tu club está completo. Revisa que todo esté correcto: después de enviarlo ya no podrás cambiarlo.</p>
+          <p className="flex items-center gap-2 text-sm text-[var(--app-ink)]"><CheckCircle2 className="h-4 w-4" style={{ color: 'var(--tile-emerald-fg)' }} aria-hidden="true" />
+            {subsanando ? 'Tu club está completo. Revisa tus correcciones: al enviarlas ya no podrás cambiarlas.' : 'Tu club está completo. Revisa que todo esté correcto: después de enviarlo ya no podrás cambiarlo.'}</p>
+        )}
+        {/* E52 · F2 (decisión del usuario): aviso de privacidad obligatorio en el primer envío; queda registrado con fecha. */}
+        {!subsanando && (
+          <label className="flex cursor-pointer items-start gap-3 rounded-[14px] border px-4 py-3" style={{ borderColor: 'var(--app-rule)', backgroundColor: aceptoPrivacidad ? 'var(--tile-sky-bg)' : 'var(--auth-field)' }}>
+            <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--auth-vino)]" checked={aceptoPrivacidad} onChange={(e) => setAceptoPrivacidad(e.target.checked)} />
+            <span className="text-sm text-[var(--app-ink)]">
+              Leí el <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="font-semibold underline">aviso de privacidad</a> y confirmo que tengo el
+              consentimiento de la escuela y de madres, padres o tutores para registrar los datos y las fotos de los integrantes (incluidos menores de edad).
+            </span>
+          </label>
         )}
         <div className="flex justify-end">
-          <Button onClick={() => setConfirmarEnvio(true)} disabled={d.faltantes.length > 0 || !d.convocatoria.acepta || ocupado === 'enviar'}>
-            {ocupado === 'enviar' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />} Enviar a revisión
+          <Button onClick={() => setConfirmarEnvio(true)}
+            disabled={d.faltantes.length > 0 || (!subsanando && (!d.convocatoria.acepta || !aceptoPrivacidad)) || ocupado === 'enviar'}>
+            {ocupado === 'enviar' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />} {subsanando ? 'Enviar correcciones' : 'Enviar a revisión'}
           </Button>
         </div>
       </section>
 
-      <ConfirmDialog open={confirmarEnvio} title="Enviar mi club a revisión"
-        description="Después de enviarlo ya no podrás editar los datos, integrantes ni documentos. Si el COMECYT encuentra algo por corregir, te avisará."
+      <HistorialClub entradas={d.historial} />
+
+      <ConfirmDialog open={confirmarEnvio} title={subsanando ? 'Enviar mis correcciones' : 'Enviar mi club a revisión'}
+        description={subsanando
+          ? 'Tu club regresará a revisión con tus cambios. Mientras se revisa no podrás editarlo.'
+          : 'Después de enviarlo ya no podrás editar los datos, integrantes ni documentos. Si el COMECYT encuentra algo por corregir, te avisará.'}
         confirmLabel="Enviar" onConfirm={() => void enviar()} onCancel={() => setConfirmarEnvio(false)} />
       <ConfirmDialog open={quitar !== null} title="Quitar integrante" description={`Se quitará a «${quitar?.nombre ?? ''}» del club, con su foto.`}
         confirmLabel="Quitar" variant="destructive" onCancel={() => setQuitar(null)}

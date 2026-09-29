@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Support\Audit;
 use App\Support\Especie;
 use App\Support\ImagenSegura;
+use App\Support\RevisionClub;
 use App\Support\TiposArchivo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -54,7 +55,7 @@ class ClubController extends Controller
                 'acepta' => $c->aceptaSolicitudes(),
                 'fecha_limite' => $c->fecha_cierre_efectiva ? substr((string) $c->fecha_cierre_efectiva, 0, 10) : null,
                 'kit' => $c->especieConfig?->kit_nombre,
-                'club' => $club ? ['id' => $club->id, 'folio' => $club->folio, 'nombre' => $club->nombre, 'estado' => $club->estado] : null,
+                'club' => $club ? ['id' => $club->id, 'folio' => $club->folio, 'nombre' => $club->nombre, 'estado' => $club->estadoVisible(), 'vence_at' => $club->vence_at] : null,
             ];
         })->values());
     }
@@ -311,27 +312,33 @@ class ClubController extends Controller
 
     // ─────────── Enviar a revisión ───────────
 
+    /**
+     * Enviar a revisión (primer envío, con aviso de privacidad aceptado) o enviar las correcciones de una observación
+     * (dentro del plazo). Las correcciones no dependen de que la convocatoria siga abierta: el plazo lo da la etapa.
+     */
     public function enviar(Request $request, Club $club)
     {
         $this->editable($request, $club);
         $club->loadMissing(['convocatoria.tipoPrograma', 'integrantes', 'documentos']);
-        if (! $club->convocatoria->aceptaSolicitudes()) {
-            return response()->json(['message' => 'La convocatoria ya no recibe registros.'], 422);
+        $primerEnvio = $club->estado === 'borrador';
+        if ($primerEnvio) {
+            // E52 · F2 (decisión del usuario): aviso de privacidad aceptado al enviar; queda la fecha en el club.
+            $request->validate(['acepto_privacidad' => 'accepted'], ['acepto_privacidad.accepted' => 'Confirma que leíste el aviso de privacidad y tienes el consentimiento para los datos y fotos de los integrantes.']);
+            if (! $club->convocatoria->aceptaSolicitudes()) {
+                return response()->json(['message' => 'La convocatoria ya no recibe registros.'], 422);
+            }
         }
         $faltantes = $this->faltantes($club);
         if ($faltantes) {
             return response()->json(['message' => 'Tu club aún no está completo.', 'faltantes' => $faltantes], 422);
         }
         $this->exigirCupoEscuela($club->convocatoria, $club->escuela_id, $club->id);
-        $club->forceFill(['estado' => 'enviado', 'enviado_at' => now()])->save();
-        Audit::log('club.enviado', $club, ['folio' => $club->folio]);
-
-        // Aviso en la campana a los admins y a los admins de esa convocatoria.
-        $ids = User::where('activo', true)->where(fn ($q) => $q->where('rol_id', config('comecyt.roles.admin'))
-            ->orWhere(fn ($w) => $w->where('rol_id', config('comecyt.roles.admin_convocatoria'))->whereHas('convocatoriasAsignadas', fn ($c) => $c->where('convocatorias.id', $club->convocatoria_id))))
-            ->pluck('id');
-        foreach (User::whereIn('id', $ids)->get() as $u) {
-            $u->notify(new \App\Notifications\ClubAviso($club, 'enviado'));
+        if ($primerEnvio) {
+            RevisionClub::enviar($club, $request->user());
+            Audit::log('club.enviado', $club, ['folio' => $club->folio]);
+        } else {
+            RevisionClub::subsanar($club, $request->user());
+            Audit::log('club.subsanado', $club, ['folio' => $club->folio]);
         }
 
         return response()->json($this->detalle($club->fresh()));
@@ -389,7 +396,9 @@ class ClubController extends Controller
     {
         $this->propio($request, $club);
         if (! $club->editable()) {
-            abort(response()->json(['message' => 'Tu club ya se envió a revisión y no se puede editar.'], 422));
+            abort(response()->json(['message' => $club->vencido()
+                ? 'El plazo para corregir venció. El COMECYT decidirá si te da una prórroga.'
+                : 'Tu club está en revisión y no se puede editar en este momento.'], 422));
         }
     }
 
@@ -426,10 +435,10 @@ class ClubController extends Controller
 
         return [
             'club' => [
-                'id' => $club->id, 'folio' => $club->folio, 'nombre' => $club->nombre, 'estado' => $club->estado,
+                'id' => $club->id, 'folio' => $club->folio, 'nombre' => $club->nombre, 'estado' => $club->estadoVisible(),
                 'logo_url' => $club->logo_url, 'datos' => $club->datos ?? [], 'enviado_at' => $club->enviado_at,
                 'escuela' => $club->escuela, 'editable' => $club->editable(),
-            ],
+            ] + self::avance($club),
             'integrantes' => $club->integrantes->values(),
             'documentos' => $requeridos->values(),
             'config' => EspecieConfigController::payload($club->convocatoria, $cfg),
@@ -438,6 +447,35 @@ class ClubController extends Controller
                 'fecha_limite' => $club->convocatoria->fecha_cierre_efectiva ? substr((string) $club->convocatoria->fecha_cierre_efectiva, 0, 10) : null,
             ],
             'faltantes' => $club->editable() ? $this->faltantes($club) : [],
+            // Historial para el líder: qué pasó y el comentario general; sin datos de quién revisó (lista blanca).
+            'historial' => $club->revisiones()->with('etapa:id,nombre')->get()
+                ->filter(fn ($r) => in_array($r->resultado, ['enviado', 'aprobado', 'observado', 'rechazado', 'prorroga', 'subsanado', 'comite_aceptado', 'comite_no_aceptado'], true))
+                ->map(fn ($r) => ['resultado' => $r->resultado, 'etapa' => $r->etapa?->nombre, 'comentario' => $r->comentario,
+                    'vence_at' => $r->vence_at, 'horas' => $r->horas, 'fecha' => $r->created_at])->values(),
+        ];
+    }
+
+    /** Avance del club en la revisión (común al líder y al personal). */
+    public static function avance(Club $club): array
+    {
+        $club->loadMissing('etapaActual');
+        $etapas = RevisionClub::etapas($club->convocatoria_id);
+        $observacion = in_array($club->estado, ['observado'], true)
+            ? $club->revisiones()->where('resultado', 'observado')->latest('id')->value('comentario') : null;
+
+        return [
+            'vence_at' => $club->vence_at,
+            'ronda' => $club->ronda,
+            'etapa_actual' => $club->etapaActual ? ['id' => $club->etapaActual->id, 'orden' => $club->etapaActual->orden, 'nombre' => $club->etapaActual->nombre,
+                'max_subsanaciones' => $club->etapaActual->max_subsanaciones, 'plazo_horas' => $club->etapaActual->plazo_horas, 'revisa' => $club->etapaActual->revisa] : null,
+            'etapas' => $etapas->map(fn ($e) => ['orden' => $e->orden, 'nombre' => $e->nombre])->values(),
+            'observacion' => $observacion,
+            'visto_bueno_at' => $club->visto_bueno_at,
+            'comite_resultado' => $club->comite_resultado,
+            'aceptado_at' => $club->aceptado_at,
+            'rechazo_origen' => $club->rechazo_origen,
+            'rechazo_motivo' => $club->rechazo_motivo,
+            'aviso_privacidad_at' => $club->aviso_privacidad_at,
         ];
     }
 }

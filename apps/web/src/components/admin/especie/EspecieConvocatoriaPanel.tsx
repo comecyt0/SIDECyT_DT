@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { AlertBox } from '@/components/ui/alert-box';
 import ConfigEspecieForm from '@/components/admin/especie/ConfigEspecieForm';
 import {
-  CAMPOS_CLUB, CAMPOS_INTEGRANTE, TIPO_CAMPO_ETIQUETA, leerConfig, payloadCampos, payloadConfig, validarConfig,
+  CAMPOS_CLUB, CAMPOS_INTEGRANTE, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, leerConfig, payloadCampos, payloadConfig, validarConfig,
   type ConfigEspecie,
 } from '@/lib/especie';
 
@@ -32,10 +32,11 @@ export default function EspecieConvocatoriaPanel({ convocatoriaId, puedeEditar }
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
+  const [etapasFijas, setEtapasFijas] = useState(false);
 
   useEffect(() => {
     api.get(`/admin/convocatorias/${convocatoriaId}/especie`)
-      .then(({ data }) => setCfg(leerConfig(data)))
+      .then(({ data }) => { setCfg(leerConfig(data)); setEtapasFijas(data?.etapas_fijas === true); })
       .catch(() => setAviso({ tipo: 'error', texto: 'No se pudo cargar la configuración de clubes y kit.' }));
   }, [convocatoriaId]);
 
@@ -48,6 +49,7 @@ export default function EspecieConvocatoriaPanel({ convocatoriaId, puedeEditar }
     try {
       const { data } = await api.put(`/admin/convocatorias/${convocatoriaId}/especie`, { ...payloadConfig(edicion), campos: payloadCampos(edicion) });
       setCfg(leerConfig(data));
+      setEtapasFijas(data?.etapas_fijas === true);
       setEdicion(null);
       setAviso({ tipo: 'success', texto: 'Configuración guardada. Los líderes ya ven los cambios.' });
     } catch (er) {
@@ -81,7 +83,7 @@ export default function EspecieConvocatoriaPanel({ convocatoriaId, puedeEditar }
           <div className="grid place-items-center py-8"><Loader2 className="h-6 w-6 animate-spin" aria-label="Cargando" /></div>
         ) : edicion ? (
           <div className="space-y-6">
-            <ConfigEspecieForm idBase="conv-esp" value={edicion} onChange={setEdicion} errores={errores} />
+            <ConfigEspecieForm idBase="conv-esp" value={edicion} onChange={setEdicion} errores={errores} etapasFijas={etapasFijas} />
             <div className="flex flex-wrap justify-end gap-2 border-t pt-4" style={{ borderColor: 'var(--app-rule)' }}>
               <Button variant="outline" onClick={() => setEdicion(null)} disabled={guardando}>Cancelar</Button>
               <Button onClick={guardar} disabled={guardando}>
@@ -96,6 +98,10 @@ export default function EspecieConvocatoriaPanel({ convocatoriaId, puedeEditar }
             <div><dt className="text-[var(--app-ink-2)]">Integrantes por club</dt><dd className="font-semibold text-[var(--app-ink)]">De {cfg.min_integrantes} a {cfg.max_integrantes} (incluye al líder)</dd></div>
             <div><dt className="text-[var(--app-ink-2)]">Clubes por escuela</dt><dd className="font-semibold text-[var(--app-ink)]">{cfg.clubes_por_escuela === '' ? 'Sin límite' : cfg.clubes_por_escuela}</dd></div>
             <div><dt className="text-[var(--app-ink-2)]">Menores de edad</dt><dd className="font-semibold text-[var(--app-ink)]">{cfg.participan_menores ? 'Sí participan' : 'No participan'}</dd></div>
+            <div className="sm:col-span-2"><dt className="text-[var(--app-ink-2)]">Etapas de revisión</dt>
+              <dd><ol className="mt-1 space-y-0.5">{cfg.etapas.map((e, i) => (
+                <li key={e.id ?? i} className="break-words text-[var(--app-ink)]">{i + 1}. {e.nombre} <span className="text-xs text-[var(--app-ink-2)]">({REVISA_ETIQUETA[e.revisa]} · plazo {e.plazo_horas} h · {e.max_subsanaciones} corrección{e.max_subsanaciones === 1 ? '' : 'es'})</span></li>
+              ))}</ol></dd></div>
             <div><dt className="text-[var(--app-ink-2)]">Del club se pide</dt><dd className="text-[var(--app-ink)]">Nombre, escuela, carta de la escuela; {lista(CAMPOS_CLUB, cfg.campos_club).toLowerCase()}</dd></div>
             <div><dt className="text-[var(--app-ink-2)]">De cada integrante se pide</dt><dd className="text-[var(--app-ink)]">Nombre; {lista(CAMPOS_INTEGRANTE, cfg.campos_integrante).toLowerCase()}</dd></div>
             {cfg.campos.length > 0 && (

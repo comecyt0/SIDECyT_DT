@@ -22,7 +22,7 @@ class ClubAviso extends Notification implements ShouldQueue
     public bool $deleteWhenMissingModels = true;
 
     /** Eventos que además van por correo al líder. */
-    public const CON_CORREO = ['observado', 'aceptado', 'qr_habilitado', 'kit_asignado'];
+    public const CON_CORREO = ['observado', 'prorroga', 'aceptado', 'qr_habilitado', 'kit_asignado'];
 
     public function __construct(public readonly Club $club, public readonly string $evento, public readonly array $extra = []) {}
 
@@ -38,7 +38,11 @@ class ClubAviso extends Notification implements ShouldQueue
 
         return match ($this->evento) {
             'enviado' => ['Nuevo club enviado a revisión', "El club «{$c->nombre}» ({$c->folio}) se envió a revisión."],
+            'por_revisar' => ['Club por revisar', "El club «{$c->nombre}» ({$c->folio}) espera revisión".(isset($x['etapa']) ? " en «{$x['etapa']}»" : '').'.'],
             'observado' => ['Tu club tiene observaciones', "Revisa las observaciones de «{$c->nombre}» y corrígelas antes del ".($x['vence'] ?? 'plazo indicado').'.'],
+            'prorroga' => ['Nuevo plazo para corregir tu club', "Se amplió el plazo para corregir «{$c->nombre}»: ahora tienes hasta el ".($x['vence'] ?? 'plazo indicado').'.'],
+            'etapa_aprobada' => ['Tu club avanzó en la revisión', "«{$c->nombre}» aprobó una etapa de revisión. Te avisaremos del siguiente paso."],
+            'aprobado_revision' => ['Club listo para visto bueno y comité', "El club «{$c->nombre}» ({$c->folio}) aprobó todas las revisiones."],
             'subsanado' => ['Club corregido', "El club «{$c->nombre}» ({$c->folio}) envió sus correcciones."],
             'aceptado' => ['¡Tu club fue aceptado!', "El registro de «{$c->nombre}» fue aceptado. Entra a tu panel para ver los siguientes pasos."],
             'rechazado' => ['Tu club no fue aceptado', "El registro de «{$c->nombre}» no fue aceptado.".(isset($x['motivo']) ? ' Motivo: '.$x['motivo'] : '')],
@@ -60,11 +64,16 @@ class ClubAviso extends Notification implements ShouldQueue
         [$asunto, $mensaje] = $this->textos();
         $url = rtrim((string) config('app.frontend_url'), '/');
 
-        return (new MailMessage)
+        $m = (new MailMessage)
             ->subject($asunto.' — SIDECyT')
             ->greeting('Hola, '.($notifiable->name ?? ''))
-            ->line($mensaje)
-            ->action('Entrar a mi panel', $url.'/club/dashboard')
+            ->line($mensaje);
+        // Observaciones y prórroga: el comentario general del revisor (texto plano; el correo escapa el contenido).
+        if (in_array($this->evento, ['observado', 'prorroga'], true) && ! empty($this->extra['comentario'])) {
+            $m->line($this->evento === 'observado' ? 'Qué debes corregir:' : 'Motivo:')->line(mb_substr((string) $this->extra['comentario'], 0, 1500));
+        }
+
+        return $m->action('Entrar a mi panel', $url.'/club/clubes/'.$this->club->id)
             ->salutation('COMECYT — SIDECyT');
     }
 }

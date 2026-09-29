@@ -82,6 +82,7 @@
       "en_subsanacion": "Applications returned for correction",
       "completadas": "Approved applications sent for evaluation",
       "informes_finales": "Review of project reports",
+      "clubes_revision": "School clubs (in-kind support) to review",
       "buzon_solicitante": "Suggestions and chat with your call team",
       "cuenta": "Photo, cover and profile details",
       "mi_club": "Your club registration, members and progress"
@@ -100,6 +101,7 @@
     "en_subsanacion": "In Correction",
     "completadas": "Completed",
     "informes_finales": "Final Reports",
+    "clubes_revision": "Clubs",
     "solicitudes": "Applications",
     "convocatorias": "Calls for proposals",
     "programas": "Programs",

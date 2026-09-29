@@ -8,15 +8,15 @@
  */
 
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Lock, Users, Package, ListChecks, MessageSquarePlus } from 'lucide-react';
+import { Plus, Edit2, Trash2, Lock, Users, Package, ListChecks, MessageSquarePlus, ClipboardCheck, ArrowUp, ArrowDown } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertBox } from '@/components/ui/alert-box';
 import StepFrame from '@/components/ui/step-frame';
 import {
-  CAMPOS_CLUB, CAMPOS_INTEGRANTE, LIMITES_ESPECIE, TIPO_CAMPO_ETIQUETA, slugCampo,
-  type Ambito, type CampoEspecie, type ConfigEspecie, type Predef, type TipoCampoEspecie,
+  CAMPOS_CLUB, CAMPOS_INTEGRANTE, LIMITES_ESPECIE, MAX_ETAPAS, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, slugCampo,
+  type Ambito, type CampoEspecie, type ConfigEspecie, type EtapaEspecie, type Predef, type Revisa, type TipoCampoEspecie,
 } from '@/lib/especie';
 
 const labelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
@@ -74,14 +74,22 @@ function FilaFija({ etiqueta }: { etiqueta: string }) {
 
 const campoVacio = (ambito: Ambito): CampoEspecie => ({ ambito, nombre_campo: '', etiqueta: '', tipo_campo: 'text', requerido: false, opciones: '' });
 
-export default function ConfigEspecieForm({ value, onChange, errores = {}, idBase = 'esp' }: {
+export default function ConfigEspecieForm({ value, onChange, errores = {}, idBase = 'esp', etapasFijas = false }: {
   value: ConfigEspecie;
   onChange: (c: ConfigEspecie) => void;
   errores?: Record<string, string>;
   idBase?: string;
+  /** Con clubes ya enviados no se agregan, quitan ni reordenan etapas (solo se editan sus datos). */
+  etapasFijas?: boolean;
 }) {
   const c = value;
   const set = (p: Partial<ConfigEspecie>) => onChange({ ...c, ...p });
+  const setEtapa = (i: number, p: Partial<EtapaEspecie>) => set({ etapas: c.etapas.map((e, j) => (j === i ? { ...e, ...p } : e)) });
+  const moverEtapa = (i: number, d: -1 | 1) => {
+    const etapas = [...c.etapas];
+    [etapas[i], etapas[i + d]] = [etapas[i + d], etapas[i]];
+    set({ etapas });
+  };
   const [dialogo, setDialogo] = useState<{ idx: number | null; campo: CampoEspecie } | null>(null);
   const [errDialogo, setErrDialogo] = useState<string | null>(null);
   const [borrar, setBorrar] = useState<number | null>(null);
@@ -149,6 +157,64 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
             placeholder="Contenido del kit, para qué sirve, cuidados…" className={`${inputCls} !h-auto min-h-[96px] resize-y py-3`} />
           {errores.kit_descripcion && <p className="text-xs font-medium" style={errStyle}>{errores.kit_descripcion}</p>}
         </div>
+      </Seccion>
+
+      <Seccion icon={<ClipboardCheck />} titulo="Etapas de revisión"
+        ayuda="Cada club pasa por estas etapas en orden. Si una etapa pide correcciones, el líder tiene el plazo indicado (horas naturales, hora del centro) para corregir.">
+        {errores.etapas && <AlertBox type="error" message={errores.etapas} />}
+        {etapasFijas && (
+          <p className="flex items-start gap-2 rounded-[14px] border px-4 py-3 text-xs text-[var(--app-ink-2)]" style={{ borderColor: 'var(--app-rule)' }}>
+            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            Ya hay clubes en revisión: puedes cambiar el nombre, quién revisa, el plazo y las correcciones de cada etapa, pero no agregar, quitar ni reordenar etapas.
+          </p>
+        )}
+        <ol className="space-y-3">
+          {c.etapas.map((e, i) => (
+            <li key={e.id ?? `n-${i}`} className="rounded-[16px] border p-4" style={{ borderColor: 'var(--app-rule)' }}>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <span className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Etapa {i + 1}</span>
+                {!etapasFijas && (
+                  <span className="inline-flex gap-1">
+                    <Button variant="soft" size="icon-sm" aria-label={`Subir la etapa ${i + 1}`} disabled={i === 0} onClick={() => moverEtapa(i, -1)}><ArrowUp /></Button>
+                    <Button variant="soft" size="icon-sm" aria-label={`Bajar la etapa ${i + 1}`} disabled={i === c.etapas.length - 1} onClick={() => moverEtapa(i, 1)}><ArrowDown /></Button>
+                    <Button variant="destructive" size="icon-sm" aria-label={`Quitar la etapa ${i + 1}`} disabled={c.etapas.length <= 1}
+                      onClick={() => set({ etapas: c.etapas.filter((_, j) => j !== i) })}><Trash2 /></Button>
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+                  <Label htmlFor={`${idBase}-et-${i}-n`} className={labelCls}>Nombre</Label>
+                  <input id={`${idBase}-et-${i}-n`} maxLength={120} value={e.nombre} className={inputCls} onChange={(ev) => setEtapa(i, { nombre: ev.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`${idBase}-et-${i}-r`} className={labelCls}>Quién revisa</Label>
+                  <select id={`${idBase}-et-${i}-r`} value={e.revisa} className={inputCls} onChange={(ev) => setEtapa(i, { revisa: ev.target.value as Revisa })}>
+                    {Object.entries(REVISA_ETIQUETA).map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`${idBase}-et-${i}-p`} className={labelCls}>Plazo (horas)</Label>
+                  <input id={`${idBase}-et-${i}-p`} type="number" inputMode="numeric" min={1} max={720} value={Number.isNaN(e.plazo_horas) ? '' : e.plazo_horas} className={inputCls}
+                    onChange={(ev) => setEtapa(i, { plazo_horas: numero(ev.target.value) })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`${idBase}-et-${i}-s`} className={labelCls}>Correcciones</Label>
+                  <input id={`${idBase}-et-${i}-s`} type="number" inputMode="numeric" min={0} max={5} value={Number.isNaN(e.max_subsanaciones) ? '' : e.max_subsanaciones} className={inputCls}
+                    onChange={(ev) => setEtapa(i, { max_subsanaciones: numero(ev.target.value) })} />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+        {!etapasFijas && c.etapas.length < MAX_ETAPAS && (
+          <Button variant="outline" onClick={() => set({ etapas: [...c.etapas, { nombre: `Revisión ${c.etapas.length + 1}`, revisa: 'ambos', plazo_horas: 24, max_subsanaciones: 1 }] })}>
+            <Plus className="h-4 w-4" aria-hidden="true" /> Agregar etapa
+          </Button>
+        )}
+        <p className="text-xs text-[var(--app-ink-2)]">
+          Después de las revisiones, el admin de convocatoria da su visto bueno y el comité (con su acta) decide; con las dos marcas el club queda aceptado.
+        </p>
       </Seccion>
 
       <Seccion icon={<ListChecks />} titulo="Datos que se piden" ayuda="Elige qué datos pides y cuáles son obligatorios para poder enviar el club a revisión.">

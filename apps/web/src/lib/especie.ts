@@ -20,7 +20,29 @@ export interface CampoEspecie {
   opciones: string;
 }
 
+/** E52 · F2 — Etapa de revisión (en orden). `id` solo existe en las ya guardadas. */
+export type Revisa = 'revisor' | 'admin_convocatoria' | 'ambos';
+export interface EtapaEspecie {
+  id?: number;
+  nombre: string;
+  revisa: Revisa;
+  plazo_horas: number;
+  max_subsanaciones: number;
+}
+export const REVISA_ETIQUETA: Record<Revisa, string> = {
+  revisor: 'Revisor documental',
+  admin_convocatoria: 'Admin de convocatoria',
+  ambos: 'Cualquiera de los dos',
+};
+export const ETAPAS_DEFECTO: EtapaEspecie[] = [
+  { nombre: 'Primera revisión', revisa: 'ambos', plazo_horas: 24, max_subsanaciones: 1 },
+  { nombre: 'Segunda revisión', revisa: 'ambos', plazo_horas: 24, max_subsanaciones: 1 },
+];
+export const MAX_ETAPAS = 6;
+
 export interface ConfigEspecie {
+  /** E52 · F2: etapas de revisión en orden. */
+  etapas: EtapaEspecie[];
   min_integrantes: number;
   max_integrantes: number;
   /** '' = sin límite por escuela. */
@@ -70,6 +92,7 @@ export const LIMITES_ESPECIE = { integrantes: 200, clubesPorEscuela: 1000, kitNo
 
 export function configVacia(): ConfigEspecie {
   return {
+    etapas: structuredClone(ETAPAS_DEFECTO),
     min_integrantes: 3,
     max_integrantes: 10,
     clubes_por_escuela: '',
@@ -112,7 +135,19 @@ export function leerConfig(datos: unknown): ConfigEspecie {
   const d = obj(datos);
   const v = configVacia();
   const cpe = d.clubes_por_escuela;
+  const etapas = (Array.isArray(d.etapas) ? d.etapas : []).slice(0, MAX_ETAPAS).map((e) => {
+    const x = obj(e);
+    const revisa = txt(x.revisa);
+    return {
+      ...(typeof x.id === 'number' && Number.isInteger(x.id) ? { id: x.id } : {}),
+      nombre: txt(x.nombre, 'Revisión'),
+      revisa: (['revisor', 'admin_convocatoria', 'ambos'].includes(revisa) ? revisa : 'ambos') as Revisa,
+      plazo_horas: ent(x.plazo_horas, 24),
+      max_subsanaciones: ent(x.max_subsanaciones, 1),
+    };
+  });
   return {
+    etapas: etapas.length ? etapas : v.etapas,
     min_integrantes: ent(d.min_integrantes, v.min_integrantes),
     max_integrantes: ent(d.max_integrantes, v.max_integrantes),
     clubes_por_escuela: typeof cpe === 'number' && Number.isInteger(cpe) && cpe > 0 ? cpe : '',
@@ -147,6 +182,7 @@ export function payloadConfig(c: ConfigEspecie) {
     kit_descripcion: c.kit_descripcion.trim() || null,
     campos_club: c.campos_club,
     campos_integrante: c.campos_integrante,
+    etapas: c.etapas.map((e) => ({ ...(e.id ? { id: e.id } : {}), nombre: e.nombre.trim(), revisa: e.revisa, plazo_horas: e.plazo_horas, max_subsanaciones: e.max_subsanaciones })),
   };
 }
 
@@ -175,6 +211,13 @@ export function validarConfig(c: ConfigEspecie): Record<string, string> {
   if (!c.kit_nombre.trim()) e.kit_nombre = 'Escribe el nombre del kit.';
   else if (c.kit_nombre.length > L.kitNombre) e.kit_nombre = `Máximo ${L.kitNombre} caracteres.`;
   if (c.kit_descripcion.length > L.kitDescripcion) e.kit_descripcion = `Máximo ${L.kitDescripcion} caracteres.`;
+  if (c.etapas.length < 1) e.etapas = 'Agrega al menos una etapa de revisión.';
+  else if (c.etapas.length > MAX_ETAPAS) e.etapas = `Máximo ${MAX_ETAPAS} etapas.`;
+  else {
+    const i = c.etapas.findIndex((x) => !x.nombre.trim() || x.nombre.length > 120 || !Number.isInteger(x.plazo_horas) || x.plazo_horas < 1 || x.plazo_horas > 720
+      || !Number.isInteger(x.max_subsanaciones) || x.max_subsanaciones < 0 || x.max_subsanaciones > 5);
+    if (i >= 0) e.etapas = `Revisa la etapa ${i + 1}: nombre (hasta 120 caracteres), plazo de 1 a 720 horas y de 0 a 5 correcciones.`;
+  }
   const vistos = new Set<string>();
   c.campos.forEach((x, i) => {
     const k = `${x.ambito}|${x.nombre_campo}`;
@@ -197,10 +240,52 @@ export const ESTADO_CLUB: Record<string, { etiqueta: string; tono: string }> = {
   borrador: { etiqueta: 'En captura', tono: 'sky' },
   enviado: { etiqueta: 'En revisión', tono: 'violet' },
   observado: { etiqueta: 'Con observaciones', tono: 'gold' },
-  subsanado: { etiqueta: 'Corregido', tono: 'violet' },
+  vencido: { etiqueta: 'Plazo vencido', tono: 'red' },
+  subsanado: { etiqueta: 'Corregido, en revisión', tono: 'violet' },
+  aprobado_revision: { etiqueta: 'Aprobado en revisión', tono: 'teal' },
   aceptado: { etiqueta: 'Aceptado', tono: 'emerald' },
   rechazado: { etiqueta: 'No aceptado', tono: 'red' },
 };
+
+/** Historial: texto de cada resultado (el del líder no incluye quién resolvió). */
+export const RESULTADO_HISTORIAL: Record<string, string> = {
+  enviado: 'Enviado a revisión',
+  aprobado: 'Etapa aprobada',
+  observado: 'Observaciones',
+  subsanado: 'Correcciones enviadas',
+  prorroga: 'Prórroga del plazo',
+  rechazado: 'Rechazado en revisión',
+  visto_bueno: 'Visto bueno del admin de convocatoria',
+  comite_aceptado: 'Aceptado por el comité',
+  comite_no_aceptado: 'No aceptado por el comité',
+};
+
+export interface AvanceClub {
+  vence_at: string | null;
+  ronda: number;
+  etapa_actual: { id: number; orden: number; nombre: string; max_subsanaciones: number; plazo_horas: number; revisa: Revisa } | null;
+  etapas: { orden: number; nombre: string }[];
+  observacion: string | null;
+  visto_bueno_at: string | null;
+  comite_resultado: 'aceptado' | 'no_aceptado' | null;
+  aceptado_at: string | null;
+  rechazo_origen: 'revision' | 'comite' | null;
+  rechazo_motivo: string | null;
+  aviso_privacidad_at: string | null;
+}
+
+export interface EntradaHistorial {
+  resultado: string; etapa: string | null; comentario: string | null; vence_at: string | null; horas: number | null; fecha: string;
+  ronda?: number; rol?: string | null; quien?: string | null;
+}
+
+/** Fecha y hora en la zona del negocio (Toluca), para plazos. */
+export function fechaHora(v: string | null | undefined): string {
+  if (!v) return '—';
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 export const NIVEL_ESCUELA: Record<string, string> = {
   primaria: 'Primaria', secundaria: 'Secundaria', media_superior: 'Media superior', superior: 'Superior',
@@ -218,7 +303,7 @@ export interface DocumentoClub {
   clave: string; nombre: string; descripcion?: string | null; obligatorio: boolean; formatos?: string[]; max_mb?: number;
   subido: { nombre_original: string; subido_at: string | null } | null;
 }
-export interface ClubApi {
+export interface ClubApi extends Partial<AvanceClub> {
   id: number; folio: string; nombre: string; estado: string; logo_url: string | null; datos: Record<string, unknown>;
   enviado_at: string | null; escuela: EscuelaApi | null; editable?: boolean;
   lider?: { name: string; email: string; telefono?: string | null; cargo?: string | null; municipio?: string | null } | null;

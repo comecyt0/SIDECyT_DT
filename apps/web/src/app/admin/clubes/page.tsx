@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Shapes, Loader2, Search, Users, School, ChevronRight } from 'lucide-react';
+import { Shapes, Loader2, Search, Users, School, ChevronRight, Inbox, Gavel } from 'lucide-react';
+import { useRol } from '@/hooks/useRol';
+import BandejaClubes from '@/components/especie/BandejaClubes';
+import ActaComite from '@/components/especie/ActaComite';
 import api from '@/lib/api';
 import PageHeader from '@/components/ui/page-header';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -22,11 +25,20 @@ function err(e: unknown, def: string) {
   return d?.message || def;
 }
 
+type Pestana = 'pendientes' | 'comite' | 'todos';
+
 /**
- * E52 · F1 — Clubes de las convocatorias de Apoyo en especie (admin, admin de convocatoria y consulta, cada quien con su
- * alcance: lo aplica el servidor). En F1 es de consulta; la revisión y la aceptación llegan en F2.
+ * E52 · F1/F2 — Clubes de las convocatorias de Apoyo en especie (admin, admin de convocatoria y consulta, cada quien con
+ * su alcance: lo aplica el servidor). Pestañas: "Por revisar" (su bandeja), "Comité" (acta + aprobados en revisión y
+ * aceptados de la convocatoria) y "Todos". Consulta solo ve "Todos".
  */
 export default function ClubesAdminPage() {
+  const { rol, listo } = useRol();
+  const opera = rol === 'admin' || rol === 'admin_convocatoria';
+  const [pestana, setPestana] = useState<Pestana>('todos');
+  const [pestanaElegida, setPestanaElegida] = useState(false);
+  // Primera vez: quien opera empieza en su bandeja; consulta en "Todos".
+  if (listo && !pestanaElegida) { setPestanaElegida(true); if (opera) setPestana('pendientes'); }
   const [convs, setConvs] = useState<ConvEspecie[]>([]);
   const [convId, setConvId] = useState<number | null>(null);
   const [clubes, setClubes] = useState<ClubFila[]>([]);
@@ -97,6 +109,36 @@ export default function ClubesAdminPage() {
         </div>
       ) : (
         <>
+          {opera && (
+            <div className="seg-tabs" role="tablist" aria-label="Vista de clubes">
+              {([['pendientes', 'Por revisar', Inbox], ['comite', 'Comité', Gavel], ['todos', 'Todos', Shapes]] as const).map(([k, l, Icono]) => (
+                <button key={k} type="button" role="tab" aria-selected={pestana === k} onClick={() => setPestana(k)}
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold">
+                  <Icono className="h-3.5 w-3.5" aria-hidden="true" />{l}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {opera && pestana === 'pendientes' && (
+            <BandejaClubes vista="pendientes" hrefFicha={(id) => `/admin/clubes/${id}`} />
+          )}
+
+          {opera && pestana === 'comite' && (
+            <div className="space-y-4">
+              <label className="block max-w-xl">
+                <span className="sr-only">Convocatoria</span>
+                <select className="h-11 w-full" value={convId ?? ''} onChange={(e) => elegir(Number(e.target.value))}>
+                  {convs.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+              </label>
+              {convId && <ActaComite key={convId} convocatoriaId={convId} puedeSubir />}
+              {convId && <BandejaClubes key={`c-${convId}`} vista="comite" convocatoriaId={convId} hrefFicha={(id) => `/admin/clubes/${id}`}
+                vacio="Todavía no hay clubes aprobados en revisión" />}
+            </div>
+          )}
+
+          {(!opera || pestana === 'todos') && (<>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto]">
             <label className="block">
               <span className="sr-only">Convocatoria</span>
@@ -162,6 +204,7 @@ export default function ClubesAdminPage() {
               </ul>
             )}
           </div>
+          </>)}
         </>
       )}
     </div>

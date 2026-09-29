@@ -15,8 +15,9 @@ Tecnología). **Documento guía: `docs/SIDECYT.md`** (definido por el usuario el
 | **SIGAE — Sistema de Gestión de Apoyo Empresarial** (antes SIGAC) | Ciclo completo de las convocatorias de Apoyo Empresarial (este código) | `/sigae` + paneles | En operación |
 | **SICEI — Sistema de Impulso a la Ciencia, Educación e Innovación** | Becas a estudiantes e impulso a la investigación | `/sicei` | **Pendiente** ("Próximamente") |
 
-**GRAN DESARROLLO EN CURSO (definido 28/09/2026): modalidad "Apoyo en especie"** — **F5 (registro general) y F1 (base:
-escuelas, asistente, clubes, panel del líder) publicadas el 29/09/2026**; faltan F2 (revisión), F3 (logística), F4 (QR). (kits para clubes de
+**GRAN DESARROLLO EN CURSO (definido 28/09/2026): modalidad "Apoyo en especie"** — **F5 (registro general), F1 (base:
+escuelas, asistente, clubes, panel del líder) y F2 (etapas de revisión, correcciones con plazo, visto bueno, comité con
+acta, aceptación) publicadas el 29/09/2026**; faltan F3 (logística) y F4 (QR y eventos). (kits para clubes de
 escuelas estatales/federales: líder de club, integrantes con foto, revisiones configurables, comité con acta, logística
 de kit/transporte/box lunch, QR por club, eventos con escaneo, registro general con elección de rol y CP del Edomex).
 Requerimientos, decisiones y fases: **`docs/APOYO_EN_ESPECIE.md`** — leerlo antes de tocar programas, convocatorias o

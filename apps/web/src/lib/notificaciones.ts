@@ -15,7 +15,20 @@ export function hrefBuzon(n: { tipo?: string; conversacion_id?: number | null },
 const DESTINOS_ADMIN: Record<string, string> = {
   reset_password: '/admin/reset-requests',
   nueva_solicitud_acceso: '/admin/solicitudes-acceso',
+  // E52 · F2: clubes que esperan una acción del personal.
+  club_enviado: '/admin/clubes',
+  club_por_revisar: '/admin/clubes',
+  club_subsanado: '/admin/clubes',
+  club_aprobado_revision: '/admin/clubes',
 };
+
+/** E52 · F2: avisos de clubes en los paneles de rol (revisor → su bandeja; líder → su panel). Rutas fijas. */
+export function hrefAvisoClub(n: { tipo?: string }, pathname: string): string | null {
+  if (!n.tipo || !n.tipo.startsWith('club_')) return null;
+  if (pathname.startsWith('/revisor')) return '/revisor/clubes';
+  if (pathname.startsWith('/club')) return '/club/dashboard';
+  return null;
+}
 
 export function hrefAvisoAdmin(n: { tipo?: string }): string | null {
   return (n.tipo && Object.prototype.hasOwnProperty.call(DESTINOS_ADMIN, n.tipo)) ? DESTINOS_ADMIN[n.tipo] : null;

@@ -32,14 +32,21 @@ class ClubAdminController extends Controller
         Alcance::exigirConvocatoria($request->user(), $convocatoria->id);
         $request->validate(['estado' => 'nullable|string|max:30', 'q' => 'nullable|string|max:120']);
         $q = Club::where('convocatoria_id', $convocatoria->id)->with(['escuela:id,cct,nombre,municipio,sistema,nivel', 'lider:id,name,email,telefono'])->withCount('integrantes');
-        if ($request->filled('estado')) $q->where('estado', $request->input('estado'));
+        // "vencido" no se guarda: es observado con el plazo pasado (E52 · F2).
+        match ($request->input('estado')) {
+            null, '' => null,
+            'vencido' => $q->where('estado', 'observado')->where('vence_at', '<', now()),
+            'observado' => $q->where('estado', 'observado')->where(fn ($w) => $w->whereNull('vence_at')->orWhere('vence_at', '>=', now())),
+            default => $q->where('estado', $request->input('estado')),
+        };
         if ($t = trim((string) $request->input('q'))) {
             $q->where(fn ($w) => $w->where('nombre', 'ilike', "%{$t}%")->orWhere('folio', 'ilike', "%{$t}%")->orWhereHas('escuela', fn ($e) => $e->where('nombre', 'ilike', "%{$t}%")->orWhere('cct', 'ilike', "%{$t}%")));
         }
 
         return response()->json($q->orderByDesc('updated_at')->limit(500)->get()->map(fn (Club $c) => [
-            'id' => $c->id, 'folio' => $c->folio, 'nombre' => $c->nombre, 'estado' => $c->estado, 'logo_url' => $c->logo_url,
-            'enviado_at' => $c->enviado_at, 'integrantes_count' => $c->integrantes_count,
+            'id' => $c->id, 'folio' => $c->folio, 'nombre' => $c->nombre, 'estado' => $c->estadoVisible(), 'logo_url' => $c->logo_url,
+            'enviado_at' => $c->enviado_at, 'integrantes_count' => $c->integrantes_count, 'vence_at' => $c->vence_at,
+            'visto_bueno_at' => $c->visto_bueno_at, 'comite_resultado' => $c->comite_resultado,
             'escuela' => $c->escuela, 'lider' => $c->lider,
         ]));
     }
@@ -47,19 +54,8 @@ class ClubAdminController extends Controller
     public function show(Request $request, Club $club)
     {
         Alcance::exigirConvocatoria($request->user(), $club->convocatoria_id);
-        $club->loadMissing(['escuela', 'lider:id,name,email,telefono,cargo,municipio', 'integrantes', 'documentos', 'convocatoria.tipoPrograma']);
-        $ctl = app(ClubController::class);
 
-        return response()->json([
-            'club' => [
-                'id' => $club->id, 'folio' => $club->folio, 'nombre' => $club->nombre, 'estado' => $club->estado,
-                'logo_url' => $club->logo_url, 'datos' => $club->datos ?? [], 'enviado_at' => $club->enviado_at,
-                'escuela' => $club->escuela, 'lider' => $club->lider,
-            ],
-            'integrantes' => $club->integrantes->values(),
-            'documentos' => $club->documentos->map(fn ($d) => ['clave' => $d->clave, 'nombre_original' => $d->nombre_original, 'subido_at' => $d->updated_at])->values(),
-            'config' => EspecieConfigController::payload($club->convocatoria, $club->convocatoria->especieConfig ?? new \App\Models\EspecieConfig()),
-            'faltantes' => $club->estado === 'borrador' ? $ctl->faltantes($club) : [],
-        ]);
+        // E52 · F2: misma ficha que la revisión (avance, historial y permisos de esta persona; consulta no tiene acciones).
+        return response()->json(\App\Http\Controllers\Club\RevisionClubController::detallePersonal($club, $request->user()));
     }
 }
