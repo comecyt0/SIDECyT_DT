@@ -40,7 +40,7 @@ class DeployCheck extends Command
         ) ?: $errors++;
 
         $this->check('JWT_SECRET definida',
-            filled(env('JWT_SECRET')),
+            filled(config('jwt.secret')),
             'Ejecutar: php artisan jwt:secret',
             warning: false
         ) ?: $errors++;
@@ -108,14 +108,15 @@ class DeployCheck extends Command
         ) ?: $warnings++;
 
         // ── Seguridad ─────────────────────────────────────────────
-        $this->check('NEXT_PUBLIC_APP_URL definida',
-            filled(env('NEXT_PUBLIC_APP_URL')),
+        // 30/09/2026: se lee config() (no env()): con config:cache, env() devuelve null y todo daría error falso.
+        $this->check('NEXT_PUBLIC_APP_URL definida (enlaces de los correos)',
+            filled(config('app.frontend_url')) && ! str_contains((string) config('app.frontend_url'), 'localhost'),
             'Definir NEXT_PUBLIC_APP_URL=https://tudominio.mx en .env',
             warning: false
         ) ?: $errors++;
 
         // SEV-2 — CORS estricto en producción
-        $corsEnv = (string) env('CORS_ALLOWED_ORIGINS', '');
+        $corsEnv = implode(',', (array) config('cors.allowed_origins', []));
         $this->check('CORS_ALLOWED_ORIGINS definida (no vacía)',
             $corsEnv !== '',
             'Definir CORS_ALLOWED_ORIGINS=https://dominio.gob.mx (lista CSV)',
@@ -135,14 +136,14 @@ class DeployCheck extends Command
         ) ?: $errors++;
 
         // SEV-1 — Detección de credenciales débiles
-        $dbPass = (string) env('DB_PASSWORD', '');
+        $dbPass = (string) config('database.connections.'.config('database.default').'.password', '');
         $this->check('DB_PASSWORD no es default débil',
             $dbPass !== '' && ! preg_match('/^(12345|password|admin|comecyt|root|secret|1234567)\d*$/i', $dbPass),
             'Rotar DB_PASSWORD a una contraseña fuerte (≥20 chars aleatorios)',
             warning: false
         ) ?: $errors++;
 
-        $jwtSecret = (string) env('JWT_SECRET', '');
+        $jwtSecret = (string) config('jwt.secret', '');
         $this->check('JWT_SECRET no es valor placeholder',
             $jwtSecret !== '' && ! preg_match('/^(secret|change-?me|local|dev|test)/i', $jwtSecret) && strlen($jwtSecret) >= 32,
             'Regenerar JWT_SECRET: php artisan jwt:secret --force',

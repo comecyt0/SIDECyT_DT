@@ -91,7 +91,7 @@ class DocumentSignature
      */
     public static function appendTsaToken(string $hash): ?string
     {
-        $tsaUrl = env('TSA_URL');
+        $tsaUrl = config('comecyt.tsa.url');
         if (! $tsaUrl) {
             return null; // No configurado — fallback al sello local
         }
@@ -99,7 +99,7 @@ class DocumentSignature
         try {
             // Construir TimeStampReq mínimo (RFC 3161 sección 2.4.1)
             // Estructura ASN.1: SEQUENCE { version INTEGER, messageImprint SEQUENCE { hashAlgorithm OID, hashedMessage OCTET STRING }, ... }
-            $hashAlgo = env('TSA_HASH_ALGORITHM', 'sha256');
+            $hashAlgo = (string) config('comecyt.tsa.hash_algorithm', 'sha256');
             $hashAlgoOid = match (strtolower($hashAlgo)) {
                 'sha256' => "\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01",
                 'sha512' => "\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03",
@@ -140,8 +140,8 @@ class DocumentSignature
                 CURLOPT_FOLLOWLOCATION => false,
             ]);
 
-            if ($user = env('TSA_USERNAME')) {
-                curl_setopt($ch, CURLOPT_USERPWD, $user.':'.env('TSA_PASSWORD'));
+            if ($user = config('comecyt.tsa.username')) {
+                curl_setopt($ch, CURLOPT_USERPWD, $user.':'.config('comecyt.tsa.password'));
             }
 
             $response = curl_exec($ch);

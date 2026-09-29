@@ -27,8 +27,8 @@ class CircuitBreakerMiddleware
 
     public function handle(Request $request, Closure $next): Response
     {
-        $threshold = (int) env('CIRCUIT_BREAKER_THRESHOLD', 5);
-        $timeout = (int) env('CIRCUIT_BREAKER_TIMEOUT', 30);
+        $threshold = (int) config('comecyt.security.circuit_breaker_threshold', 5) ?: 5;
+        $timeout = (int) config('comecyt.security.circuit_breaker_timeout', 30) ?: 30;
 
         // Scope per IP so one attacker cannot open the circuit for all users
         $ip = md5($request->ip());

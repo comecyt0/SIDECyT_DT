@@ -23,8 +23,8 @@ class PushController extends Controller
     public function vapidPublicKey()
     {
         return response()->json([
-            'public_key' => env('VAPID_PUBLIC_KEY'),
-            'configured' => ! empty(env('VAPID_PUBLIC_KEY')),
+            'public_key' => config('comecyt.push.vapid_public_key'),
+            'configured' => ! empty(config('comecyt.push.vapid_public_key')),
         ]);
     }
 
@@ -95,9 +95,9 @@ class PushController extends Controller
      *
      *   $webPush = new WebPush([
      *       'VAPID' => [
-     *           'subject' => env('VAPID_SUBJECT'),
-     *           'publicKey' => env('VAPID_PUBLIC_KEY'),
-     *           'privateKey' => env('VAPID_PRIVATE_KEY'),
+     *           'subject' => config('comecyt.push.vapid_subject'),
+     *           'publicKey' => config('comecyt.push.vapid_public_key'),
+     *           'privateKey' => config('comecyt.push.vapid_private_key'),
      *       ],
      *   ]);
      *

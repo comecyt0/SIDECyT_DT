@@ -29,7 +29,7 @@ class ApiGatewayMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $ip = (string) $request->ip();
-        $maxIps = (int) env('API_GATEWAY_MAX_IPS', self::MAX_DISTINCT_IPS);
+        $maxIps = (int) config('comecyt.security.api_gateway_max_ips', self::MAX_DISTINCT_IPS) ?: self::MAX_DISTINCT_IPS;
         $ahora = now()->timestamp;
 
         $ips = Cache::get(self::IPS_SET_KEY, []);

@@ -32,9 +32,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // TrustProxies — only trust X-Forwarded-For from known reverse proxies.
         // Never trust arbitrary clients; prevents IP spoofing to bypass rate limiting.
-        // Set TRUSTED_PROXIES=* only if behind a cloud load balancer that sanitizes the header.
+        // Las IPs de confianza salen de config/trustedproxy.php (TRUSTED_PROXIES), que Laravel lee en cada petición.
+        // No pasar `at:` aquí: este archivo se evalúa antes de cargar la configuración y con config:cache env() es null.
         $middleware->trustProxies(
-            at: env('TRUSTED_PROXIES', '127.0.0.1'),
             headers: Request::HEADER_X_FORWARDED_FOR |
                      Request::HEADER_X_FORWARDED_HOST |
                      Request::HEADER_X_FORWARDED_PORT |

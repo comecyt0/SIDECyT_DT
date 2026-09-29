@@ -143,14 +143,28 @@ class AuthController extends Controller
     /**
      * @return JsonResponse
      */
+    /**
+     * Dominio, Secure y SameSite de la cookie comecyt_auth, iguales al emitirla y al expirarla. Salen de
+     * config('comecyt.cookie') (nunca env() aquí: con config:cache devuelve null y la cookie perdería Secure).
+     */
+    private static function atributosCookie(): array
+    {
+        $c = config('comecyt.cookie');
+        $secure = $c['secure'] ?? null;
+
+        return [
+            $c['domain'] ?? null,
+            $secure === null || $secure === '' ? app()->environment('production') : filter_var($secure, FILTER_VALIDATE_BOOLEAN),
+            (string) ($c['same_site'] ?? 'Strict'),
+        ];
+    }
+
     public function logout()
     {
         auth()->guard('api')->logout();
 
         // Limpiar cookie HttpOnly del JWT — debe usar el mismo dominio/secure/samesite que respondWithToken
-        $cookieDomain = env('COOKIE_DOMAIN');
-        $isSecure = filter_var(env('COOKIE_SECURE', app()->environment('production')), FILTER_VALIDATE_BOOLEAN);
-        $sameSite = (string) env('COOKIE_SAME_SITE', 'Strict');
+        [$cookieDomain, $isSecure, $sameSite] = self::atributosCookie();
         $expiredCookie = cookie('comecyt_auth', '', -1, '/', $cookieDomain, $isSecure, true, false, $sameSite);
 
         return response()->json(['message' => 'Sesión cerrada exitosamente'])
@@ -261,9 +275,7 @@ class AuthController extends Controller
         // Cookie HttpOnly — invisible a JavaScript, protegida contra XSS.
         // En producción: COOKIE_SECURE=true, COOKIE_DOMAIN=.dominio.edomex.gob.mx, COOKIE_SAME_SITE=Strict.
         // En local dev sin HTTPS, COOKIE_SECURE=false para que el browser acepte la cookie.
-        $cookieDomain = env('COOKIE_DOMAIN'); // null en dev
-        $isSecure = filter_var(env('COOKIE_SECURE', app()->environment('production')), FILTER_VALIDATE_BOOLEAN);
-        $sameSite = (string) env('COOKIE_SAME_SITE', 'Strict');
+        [$cookieDomain, $isSecure, $sameSite] = self::atributosCookie();
 
         $cookie = cookie(
             'comecyt_auth',     // nombre

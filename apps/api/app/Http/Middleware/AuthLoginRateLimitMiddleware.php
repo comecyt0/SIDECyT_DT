@@ -42,12 +42,13 @@ class AuthLoginRateLimitMiddleware
     {
         $ip = $request->ip();
         $email = strtolower(trim((string) $request->input('email', '')));
-        $maxAttempts = (int) env('AUTH_LOGIN_RATE_LIMIT', self::MAX_ATTEMPTS);
-        $windowSecs = (int) env('AUTH_LOGIN_RATE_WINDOW', self::WINDOW_SECONDS);
-        $lockoutLimit = (int) env('AUTH_ACCOUNT_LOCKOUT', self::LOCKOUT_ATTEMPTS);
-        $lockoutMins = (int) env('AUTH_LOCKOUT_MINUTES', self::LOCKOUT_MINUTES);
+        // config/comecyt.php (security.*): nunca env() aquí — con config:cache devolvería null.
+        $maxAttempts = (int) config('comecyt.security.auth_login_rate_limit', self::MAX_ATTEMPTS) ?: self::MAX_ATTEMPTS;
+        $windowSecs = (int) config('comecyt.security.auth_login_rate_window', self::WINDOW_SECONDS) ?: self::WINDOW_SECONDS;
+        $lockoutLimit = (int) config('comecyt.security.auth_account_lockout', self::LOCKOUT_ATTEMPTS) ?: self::LOCKOUT_ATTEMPTS;
+        $lockoutMins = (int) config('comecyt.security.auth_lockout_minutes', self::LOCKOUT_MINUTES) ?: self::LOCKOUT_MINUTES;
 
-        $lockoutGlobal = (int) env('AUTH_ACCOUNT_LOCKOUT_GLOBAL', self::LOCKOUT_GLOBAL);
+        $lockoutGlobal = (int) config('comecyt.security.auth_account_lockout_global', self::LOCKOUT_GLOBAL) ?: self::LOCKOUT_GLOBAL;
         $ipKey = "auth_login_attempts:{$ip}";
         $emailKey = "auth_account_attempts:{$email}|{$ip}";
         $lockoutKey = "auth_account_locked:{$email}|{$ip}";

@@ -30,6 +30,8 @@ pgpass.conf
 /apps/web/.next.bak*/
 *.bak-*
 *.tsbuildinfo
+# Reporte de cobertura de vitest (npm run test:coverage), se regenera
+/apps/web/coverage/
 /.claude/
 /.agents/
 /apps/web/out/

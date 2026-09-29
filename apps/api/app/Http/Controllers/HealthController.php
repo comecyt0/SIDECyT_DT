@@ -24,7 +24,7 @@ class HealthController extends Controller
     public function check(Request $request): JsonResponse
     {
         // ── Auth por shared secret (timing-safe) ─────────────────────
-        $expected = (string) env('HEALTH_TOKEN', '');
+        $expected = (string) config('comecyt.security.health_token', '');
         $provided = (string) $request->header('X-Health-Token', '');
 
         if ($expected === '' || ! hash_equals($expected, $provided)) {

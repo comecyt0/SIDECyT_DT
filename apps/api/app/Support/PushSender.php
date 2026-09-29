@@ -30,7 +30,8 @@ class PushSender
      */
     public static function sendToUser(int $userId, array $payload): int
     {
-        if (! env('VAPID_PUBLIC_KEY') || ! env('VAPID_PRIVATE_KEY')) {
+        $vapid = config('comecyt.push');
+        if (empty($vapid['vapid_public_key']) || empty($vapid['vapid_private_key'])) {
             return 0;
         }
 
@@ -42,9 +43,9 @@ class PushSender
         try {
             $webPush = new WebPush([
                 'VAPID' => [
-                    'subject' => env('VAPID_SUBJECT', 'mailto:noreply@comecyt.gob.mx'),
-                    'publicKey' => env('VAPID_PUBLIC_KEY'),
-                    'privateKey' => env('VAPID_PRIVATE_KEY'),
+                    'subject' => $vapid['vapid_subject'] ?: 'mailto:noreply@comecyt.gob.mx',
+                    'publicKey' => $vapid['vapid_public_key'],
+                    'privateKey' => $vapid['vapid_private_key'],
                 ],
             ]);
 

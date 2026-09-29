@@ -87,15 +87,65 @@ return [
     // 🔐 SEGURIDAD
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+    // 30/09/2026: todas las variables de entorno que usa el código se leen AQUÍ (regla E46: nunca env() fuera de
+    // config/, porque con `config:cache` devuelve null). Los valores por defecto son los que tenía el código.
     'security' => [
-        // Rate limiting
-        'auth_login_rate_limit' => env('AUTH_LOGIN_RATE_LIMIT', 5),
-        'auth_login_rate_window' => env('AUTH_LOGIN_RATE_WINDOW', 60),
+        // Login: por IP y bloqueo por cuenta (AuthLoginRateLimitMiddleware)
+        'auth_login_rate_limit' => (int) env('AUTH_LOGIN_RATE_LIMIT', 5),
+        'auth_login_rate_window' => (int) env('AUTH_LOGIN_RATE_WINDOW', 60),
+        'auth_account_lockout' => (int) env('AUTH_ACCOUNT_LOCKOUT', 10),
+        'auth_lockout_minutes' => (int) env('AUTH_LOCKOUT_MINUTES', 15),
+        'auth_account_lockout_global' => (int) env('AUTH_ACCOUNT_LOCKOUT_GLOBAL', 50),
+
+        // Límite global de la API (RateLimitMiddleware), vigilancia de IPs (ApiGateway) y circuito (CircuitBreaker)
+        'rate_limit_max' => (int) env('RATE_LIMIT_MAX', 300),
+        'rate_limit_window' => (int) env('RATE_LIMIT_WINDOW', 60),
+        'api_gateway_max_ips' => (int) env('API_GATEWAY_MAX_IPS', 1000),
+        'circuit_breaker_threshold' => (int) env('CIRCUIT_BREAKER_THRESHOLD', 5),
+        'circuit_breaker_timeout' => (int) env('CIRCUIT_BREAKER_TIMEOUT', 30),
+
+        // Token del endpoint de salud (vacío = deshabilitado)
+        'health_token' => (string) env('HEALTH_TOKEN', ''),
 
         // JWT
         'jwt_ttl_minutes' => env('JWT_TTL', 1440),
         'jwt_algo' => env('JWT_ALGO', 'HS256'),
     ],
+
+    // Cookie de sesión comecyt_auth. `secure` null = solo en producción (AuthController decide).
+    'cookie' => [
+        'domain' => env('COOKIE_DOMAIN') ?: null,
+        'secure' => env('COOKIE_SECURE'),
+        'same_site' => (string) env('COOKIE_SAME_SITE', 'Strict'),
+    ],
+
+    // Notificaciones push (Web Push / VAPID)
+    'push' => [
+        'vapid_public_key' => env('VAPID_PUBLIC_KEY'),
+        'vapid_private_key' => env('VAPID_PRIVATE_KEY'),
+        'vapid_subject' => env('VAPID_SUBJECT', 'mailto:noreply@comecyt.gob.mx'),
+    ],
+
+    // Sello de tiempo (NOM-151) para la firma de documentos; sin URL no se sella
+    'tsa' => [
+        'url' => env('TSA_URL'),
+        'hash_algorithm' => env('TSA_HASH_ALGORITHM', 'sha256'),
+        'username' => env('TSA_USERNAME'),
+        'password' => env('TSA_PASSWORD'),
+    ],
+
+    // Inicio de sesión institucional (OIDC); apagado salvo que todo esté configurado
+    'oidc' => [
+        'enabled' => filter_var(env('OIDC_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
+        'issuer' => env('OIDC_ISSUER'),
+        'client_id' => env('OIDC_CLIENT_ID'),
+        'client_secret' => env('OIDC_CLIENT_SECRET'),
+        'redirect_uri' => env('OIDC_REDIRECT_URI'),
+        'scopes' => env('OIDC_SCOPES', 'openid profile email'),
+        'default_role_slug' => env('OIDC_DEFAULT_ROLE_SLUG', 'solicitante'),
+    ],
+
+    'institucion_nombre' => env('NEXT_PUBLIC_INSTITUTION_NAME', 'COMECYT'),
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // ⏱️ TIMEOUTS Y TIEMPOS
@@ -105,6 +155,12 @@ return [
         'cache_ttl_minutes' => 60,               // Minutos para cachear catálogos
         'session_timeout_minutes' => 120,        // Timeout de sesión (2 horas)
         'file_upload_timeout_seconds' => 300,    // Timeout para subir archivos (5 min)
+    ],
+
+    // Respaldo manual (`php artisan comecyt:backup-db`). El respaldo nocturno lo hace la tarea de Windows
+    // COMECYT-Backup-Diario (backup.ps1). En Windows pg_dump no está en el PATH: se usa la instalación de C:\pgsql.
+    'backup' => [
+        'pg_dump' => env('PG_DUMP_PATH') ?: (PHP_OS_FAMILY === 'Windows' && is_file('C:\\pgsql\\bin\\pg_dump.exe') ? 'C:\\pgsql\\bin\\pg_dump.exe' : 'pg_dump'),
     ],
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

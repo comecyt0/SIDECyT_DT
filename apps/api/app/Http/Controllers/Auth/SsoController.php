@@ -64,9 +64,9 @@ class SsoController extends Controller
 
         $params = http_build_query([
             'response_type' => 'code',
-            'client_id' => env('OIDC_CLIENT_ID'),
-            'redirect_uri' => env('OIDC_REDIRECT_URI'),
-            'scope' => env('OIDC_SCOPES', 'openid profile email'),
+            'client_id' => config('comecyt.oidc.client_id'),
+            'redirect_uri' => config('comecyt.oidc.redirect_uri'),
+            'scope' => config('comecyt.oidc.scopes', 'openid profile email'),
             'state' => $state,
             'code_challenge' => $codeChallenge,
             'code_challenge_method' => 'S256',
@@ -106,13 +106,13 @@ class SsoController extends Controller
 
         // 1. Intercambiar code por tokens
         $tokenResp = Http::asForm()
-            ->withBasicAuth(env('OIDC_CLIENT_ID'), env('OIDC_CLIENT_SECRET'))
+            ->withBasicAuth((string) config('comecyt.oidc.client_id'), (string) config('comecyt.oidc.client_secret'))
             ->post($tokenEndpoint, [
                 'grant_type' => 'authorization_code',
                 'code' => $code,
-                'redirect_uri' => env('OIDC_REDIRECT_URI'),
+                'redirect_uri' => config('comecyt.oidc.redirect_uri'),
                 'code_verifier' => $stateData['verifier'],
-                'client_id' => env('OIDC_CLIENT_ID'),
+                'client_id' => config('comecyt.oidc.client_id'),
             ]);
 
         if (! $tokenResp->successful()) {
@@ -158,7 +158,7 @@ class SsoController extends Controller
         }
 
         // 3. JIT provisioning — crear usuario si no existe
-        $defaultRoleSlug = env('OIDC_DEFAULT_ROLE_SLUG', 'solicitante');
+        $defaultRoleSlug = (string) config('comecyt.oidc.default_role_slug', 'solicitante');
         $rol = Rol::where('slug', $defaultRoleSlug)->first();
 
         $user = User::firstOrCreate(
@@ -177,7 +177,7 @@ class SsoController extends Controller
         }
 
         Audit::log('user.sso_login', $user, [
-            'issuer' => env('OIDC_ISSUER'),
+            'issuer' => config('comecyt.oidc.issuer'),
             'jit_provisioned' => $user->wasRecentlyCreated,
         ]);
 
@@ -189,11 +189,13 @@ class SsoController extends Controller
 
     private function enabled(): bool
     {
-        return filter_var(env('OIDC_ENABLED', false), FILTER_VALIDATE_BOOLEAN)
-            && env('OIDC_ISSUER')
-            && env('OIDC_CLIENT_ID')
-            && env('OIDC_CLIENT_SECRET')
-            && env('OIDC_REDIRECT_URI');
+        $c = config('comecyt.oidc');
+
+        return ($c['enabled'] ?? false) === true
+            && ! empty($c['issuer'])
+            && ! empty($c['client_id'])
+            && ! empty($c['client_secret'])
+            && ! empty($c['redirect_uri']);
     }
 
     /**
@@ -201,7 +203,7 @@ class SsoController extends Controller
      */
     private function discovery(): array
     {
-        $issuer = rtrim((string) env('OIDC_ISSUER'), '/');
+        $issuer = rtrim((string) config('comecyt.oidc.issuer'), '/');
 
         return Cache::remember('oidc:discovery:'.md5($issuer), now()->addHour(), function () use ($issuer) {
             $resp = Http::timeout(5)->get($issuer.'/.well-known/openid-configuration');

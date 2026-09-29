@@ -34,7 +34,7 @@ class ConvocatoriaCierreProximo extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $institutionName = env('NEXT_PUBLIC_INSTITUTION_NAME', 'COMECYT');
+        $institutionName = (string) config('comecyt.institucion_nombre', 'COMECYT');
         $urgencia = $this->diasRestantes <= 1 ? 'URGENTE' : ($this->diasRestantes <= 3 ? 'IMPORTANTE' : 'AVISO');
         $diasText = $this->diasRestantes === 1 ? 'mañana' : "en {$this->diasRestantes} días";
 

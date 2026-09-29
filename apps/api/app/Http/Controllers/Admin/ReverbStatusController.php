@@ -16,7 +16,7 @@ class ReverbStatusController extends Controller
      */
     public function status()
     {
-        $configured = (bool) config('reverb.apps.apps.0.key', null) || env('REVERB_APP_KEY');
+        $configured = (bool) config('reverb.apps.apps.0.key', null);
         $host = (string) config('reverb.servers.reverb.host', '127.0.0.1');
         $port = (int) config('reverb.servers.reverb.port', 8080);
 
@@ -27,8 +27,8 @@ class ReverbStatusController extends Controller
         if (in_array($host, ['0.0.0.0', '::', '[::]', ''], true)) {
             $host = '127.0.0.1';
         }
-        $publicHost = (string) env('REVERB_HOST', $host);
-        $scheme = (string) env('REVERB_SCHEME', 'http');
+        $publicHost = (string) (config('reverb.apps.apps.0.options.host') ?: $host);
+        $scheme = (string) config('reverb.apps.apps.0.options.scheme', 'http');
 
         $reachable = false;
         $errMsg = null;
