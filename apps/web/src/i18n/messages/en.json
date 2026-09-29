@@ -85,7 +85,8 @@
       "clubes_revision": "School clubs (in-kind support) to review",
       "buzon_solicitante": "Suggestions and chat with your call team",
       "cuenta": "Photo, cover and profile details",
-      "mi_club": "Your club registration, members and progress"
+      "mi_club": "Your club registration, members and progress",
+      "escanear": "Scan club QR codes and record attendance, box lunches and kits"
     },
     "dashboard": "Dashboard",
     "mi_panel": "My Dashboard",
@@ -124,7 +125,9 @@
     "menu_close": "Close menu",
     "workspace_club": "My club",
     "mi_club": "My club",
-    "mis_roles": "My roles"
+    "mis_roles": "My roles",
+    "workspace_operador": "Events",
+    "escanear": "Scan"
   },
   "notifications": {
     "title": "Notifications",
@@ -157,7 +160,8 @@
     "solicitante": "Participant",
     "admin_convocatoria": "Call administrator",
     "consulta": "Read-only",
-    "lider_club": "Club leader"
+    "lider_club": "Club leader",
+    "operador_evento": "Event operator"
   },
   "request_access": {
     "title": "Request System Access",
@@ -297,6 +301,10 @@
       "cuenta": {
         "name": "My account",
         "desc": "Photo, cover and profile details"
+      },
+      "escanear": {
+        "name": "Event scanning",
+        "desc": "Club QR codes: attendance, box lunch and kit"
       }
     }
   },

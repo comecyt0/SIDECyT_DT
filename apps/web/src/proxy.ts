@@ -26,6 +26,8 @@ const ROLE_PREFIXES: Record<string, string[]> = {
   '/solicitante': ['solicitante'],
   // E52: panel del líder de club (Apoyo en especie).
   '/club':        ['lider_club'],
+  // E52 · F4: escaneo en eventos.
+  '/operador':    ['operador_evento'],
 };
 
 const DASHBOARD_BY_ROLE: Record<string, string> = PANEL_POR_ROL;
@@ -58,6 +60,7 @@ function roleSlugFromPayload(payload: Record<string, unknown> | null): string | 
     case 5: return 'admin_convocatoria';
     case 6: return 'consulta';
     case 7: return 'lider_club';
+    case 8: return 'operador_evento';
     default: return null;
   }
 }

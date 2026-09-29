@@ -353,6 +353,27 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::get('clubes/{club}/logistica/{logistica}/formato', [$l, 'formato'])->middleware('throttle:20,1,club-carta');
             Route::get('clubes/{club}/resguardo', [$l, 'resguardo'])->middleware('throttle:20,1,club-carta');
             Route::post('clubes/{club}/firmados', [$l, 'subirFirmado'])->middleware('throttle:30,1,club-subidas');
+            // E52 · F4 — QR y credencial (solo con el QR habilitado; 404 si no)
+            $q = \App\Http\Controllers\Club\QrClubController::class;
+            Route::get('clubes/{club}/qr', [$q, 'imagen'])->middleware('throttle:60,1,club-qr');
+            Route::get('clubes/{club}/credencial', [$q, 'credencial'])->middleware('throttle:20,1,club-carta');
+        });
+        // ═══ E52 · F4 — QR (habilitar / revocar) y reportes: admin y admin de convocatoria con alcance. ═══
+        Route::group(['prefix' => 'revision', 'middleware' => 'rol:admin,admin_convocatoria'], function () {
+            $q = \App\Http\Controllers\Club\QrClubController::class;
+            Route::post('qr/habilitar', [$q, 'habilitar'])->middleware('throttle:20,1,club-qr-admin');
+            Route::post('clubes/{club}/qr/revocar', [$q, 'revocar'])->middleware('throttle:30,1,club-qr-admin');
+            Route::get('convocatorias/{convocatoria}/reporte', [\App\Http\Controllers\Club\LogisticaAdminController::class, 'reporte'])
+                ->middleware('throttle:10,1,club-reporte');
+        });
+        // ═══ E52 · F4 — ESCANEO EN EVENTOS (admin, admin de convocatoria, operador de evento; alcance en el controlador). ═══
+        Route::group(['prefix' => 'escaneo', 'middleware' => 'rol:admin,admin_convocatoria,operador_evento'], function () {
+            $e = \App\Http\Controllers\Club\EscaneoController::class;
+            Route::get('eventos', [$e, 'eventos']);
+            Route::post('qr', [$e, 'qr'])->middleware('throttle:120,1,escaneo-qr');
+            Route::get('buscar', [$e, 'buscar'])->middleware('throttle:60,1,escaneo-buscar');
+            Route::get('clubes/{club}', [$e, 'ficha'])->middleware('throttle:120,1,escaneo-ficha');
+            Route::post('registrar', [$e, 'registrar'])->middleware('throttle:120,1,escaneo-registrar');
         });
         // ═══ E52 · F2 — REVISIÓN DE CLUBES (admin, admin de convocatoria, revisor; alcance revisado en el controlador). ═══
         Route::group(['prefix' => 'revision', 'middleware' => 'rol:admin,admin_convocatoria,revisor'], function () {

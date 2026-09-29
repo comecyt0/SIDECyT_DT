@@ -85,7 +85,8 @@
       "clubes_revision": "Clubes escolares de Apoyo en especie por revisar",
       "buzon_solicitante": "Sugerencias y chat con el equipo de tu convocatoria",
       "cuenta": "Foto, portada y datos de tu perfil",
-      "mi_club": "Registro de tu club, integrantes y avance"
+      "mi_club": "Registro de tu club, integrantes y avance",
+      "escanear": "Leer el QR de los clubes y registrar asistencia, box lunch y kit"
     },
     "dashboard": "Dashboard",
     "mi_panel": "Mi Panel",
@@ -124,7 +125,9 @@
     "menu_close": "Cerrar menú",
     "workspace_club": "Mi club",
     "mi_club": "Mi club",
-    "mis_roles": "Mis roles"
+    "mis_roles": "Mis roles",
+    "workspace_operador": "Eventos",
+    "escanear": "Escanear"
   },
   "notifications": {
     "title": "Notificaciones",
@@ -157,7 +160,8 @@
     "solicitante": "Participante",
     "admin_convocatoria": "Administrador de convocatoria",
     "consulta": "Consulta",
-    "lider_club": "Líder de club"
+    "lider_club": "Líder de club",
+    "operador_evento": "Operador de evento"
   },
   "request_access": {
     "title": "Solicitar Acceso al Sistema",
@@ -297,6 +301,10 @@
       "cuenta": {
         "name": "Mi cuenta",
         "desc": "Foto, portada y datos de tu perfil"
+      },
+      "escanear": {
+        "name": "Escanear en eventos",
+        "desc": "QR de los clubes: asistencia, box lunch y kit"
       }
     }
   },

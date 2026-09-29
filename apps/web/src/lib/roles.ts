@@ -13,11 +13,13 @@ export const ROLES = {
   CONSULTA: 6,
   // E52 (29/09/2026): líder de un club escolar (Apoyo en especie).
   LIDER_CLUB: 7,
+  // E52 · F4 (29/09/2026): escanea el QR de los clubes en los eventos de sus convocatorias asignadas.
+  OPERADOR_EVENTO: 8,
 } as const;
 
 export type RoleId = (typeof ROLES)[keyof typeof ROLES];
 
-export type RolSlug = 'admin' | 'revisor' | 'evaluador' | 'solicitante' | 'admin_convocatoria' | 'consulta' | 'lider_club';
+export type RolSlug = 'admin' | 'revisor' | 'evaluador' | 'solicitante' | 'admin_convocatoria' | 'consulta' | 'lider_club' | 'operador_evento';
 
 export const ROL_ETIQUETA: Record<RolSlug, string> = {
   admin: 'Administrador',
@@ -27,6 +29,7 @@ export const ROL_ETIQUETA: Record<RolSlug, string> = {
   evaluador: 'Evaluador técnico',
   solicitante: 'Participante',
   lider_club: 'Líder de club',
+  operador_evento: 'Operador de evento',
 };
 
 /** E52: roles que una persona puede pedir por su cuenta (registro general y "Mis roles"). Igual que el backend. */
@@ -42,6 +45,7 @@ export const PANEL_POR_ROL: Record<RolSlug, string> = {
   evaluador: '/evaluador/evaluaciones',
   solicitante: '/solicitante/dashboard',
   lider_club: '/club/dashboard',
+  operador_evento: '/operador/escanear',
 };
 
 /** Roles que usan el panel /admin (E45). */
@@ -52,7 +56,7 @@ export const SUBRUTAS_POR_ROL: Record<string, string[]> = {
   admin_convocatoria: [
     '/admin/dashboard', '/admin/solicitudes', '/admin/convocatorias', '/admin/folios', '/admin/convenios',
     '/admin/ministraciones', '/admin/informes', '/admin/evaluadores', '/admin/buzon', '/admin/cuenta', '/admin/perfiles',
-    '/admin/clubes',
+    '/admin/clubes', '/admin/escanear',
   ],
   consulta: ['/admin/dashboard', '/admin/solicitudes', '/admin/folios', '/admin/cuenta', '/admin/perfiles', '/admin/clubes'],
 };

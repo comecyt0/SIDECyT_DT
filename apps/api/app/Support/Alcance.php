@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
  *   admin_convocatoria  → sus convocatorias ∩ convocatorias de sus periodos (si tiene periodos); vacío si nada
  *   revisor, evaluador  → convocatorias de sus periodos; null si no tiene periodos
  *   consulta            → convocatorias de sus periodos; vacío si no tiene periodos
+ *   operador_evento     → solo sus convocatorias asignadas (E52 · F4); vacío si no tiene
  *   solicitante         → vacío (lo suyo se filtra por user_id en cada controlador)
  */
 class Alcance
@@ -44,6 +45,9 @@ class Alcance
 
                 return $p ? array_values(array_intersect($propias, $dePeriodos($p))) : $propias;
             })(),
+            // E52 · F4: el operador de evento solo ve las convocatorias que se le asignan (sin asignación, nada).
+            $user->tieneRol('operador_evento') => DB::table('convocatoria_user')->where('user_id', $user->id)->pluck('convocatoria_id')
+                ->map(fn ($i) => (int) $i)->all(),
             $user->tieneRol('revisor', 'evaluador') => (function () use ($periodos, $dePeriodos) {
                 $p = $periodos();
 

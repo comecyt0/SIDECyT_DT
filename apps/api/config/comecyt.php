@@ -163,6 +163,8 @@ return [
         'consulta' => 6,
         // E52 (29/09/2026): líder de un club escolar (Apoyo en especie).
         'lider_club' => 7,
+        // E52 · F4: escanea el QR de los clubes en los eventos de sus convocatorias asignadas.
+        'operador_evento' => 8,
     ],
 
     /*

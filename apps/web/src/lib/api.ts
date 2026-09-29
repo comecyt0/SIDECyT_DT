@@ -7,9 +7,10 @@ import { beginLoading, endLoading } from '@/lib/loading-bus';
  * Pantalla de carga del sistema "al pulsar botones" (14/09/2026): toda petición que ESCRIBE
  * (POST/PUT/PATCH/DELETE) o descarga un archivo (blob) enciende la pantalla global mientras dura.
  * Los GET normales no — encenderla en cada búsqueda o filtro haría lento el sistema en vez de
- * interactivo. Excepciones: marcar notificaciones como leídas y el refresh silencioso del JWT.
+ * interactivo. Excepciones: marcar notificaciones como leídas, el refresh silencioso del JWT y el escaneo en eventos
+ * (E52 · F4: se repite cientos de veces por evento y el escáner muestra su propio estado de carga).
  */
-const LOADING_EXCLUDE = [/\/auth\/refresh$/, /\/auth\/logout$/, /\/leer(-todas)?$/, /\/mis-notificaciones/, /\/notificaciones\//];
+const LOADING_EXCLUDE = [/\/auth\/refresh$/, /\/auth\/logout$/, /\/leer(-todas)?$/, /\/mis-notificaciones/, /\/notificaciones\//, /^\/?escaneo\//];
 type LoadingConfig = InternalAxiosRequestConfig & { __loading?: boolean };
 
 function shouldShowLoading(config: InternalAxiosRequestConfig): boolean {

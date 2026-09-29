@@ -17,8 +17,9 @@ Tecnología). **Documento guía: `docs/SIDECYT.md`** (definido por el usuario el
 
 **GRAN DESARROLLO EN CURSO (definido 28/09/2026): modalidad "Apoyo en especie"** — **F5 (registro general), F1 (base:
 escuelas, asistente, clubes, panel del líder) y F2 (etapas de revisión, correcciones con plazo, visto bueno, comité con
-acta, aceptación) y F3 (logística: kit, carta de resguardo, transporte y box lunch con cupos) publicadas el
-29/09/2026**; falta F4 (QR y eventos). (kits para clubes de
+acta, aceptación), F3 (logística: kit, carta de resguardo, transporte y box lunch con cupos) y F4 (QR por club,
+escaneo en eventos con el rol «Operador de evento», reportes en Excel) publicadas el 29/09/2026** — las 5 fases
+completas; nacional/internacional fuera de alcance. (kits para clubes de
 escuelas estatales/federales: líder de club, integrantes con foto, revisiones configurables, comité con acta, logística
 de kit/transporte/box lunch, QR por club, eventos con escaneo, registro general con elección de rol y CP del Edomex).
 Requerimientos, decisiones y fases: **`docs/APOYO_EN_ESPECIE.md`** — leerlo antes de tocar programas, convocatorias o
@@ -41,6 +42,8 @@ Convocatoria → Solicitud → Revisión documental → Evaluación técnica
 | Solicitante | 4 | Institución que solicita financiamiento |
 | Admin de convocatoria | 5 | Opera el flujo completo **solo** de sus convocatorias asignadas (∩ sus periodos); no crea ni borra convocatorias, ni toca usuarios/programas/configuración (E45) |
 | Consulta | 6 | Solo lectura: dashboard, solicitudes, fichas, folios, reportes — de sus periodos; **sin periodos no ve nada** (E45) |
+| Líder de club | 7 | Registra su club escolar de Apoyo en especie (E52) |
+| Operador de evento | 8 | Solo `/operador/escanear`: lee el QR de los clubes y registra asistencia, box lunch y kit en sus convocatorias asignadas (E52 · F4) |
 
 Alcance (E45): revisor/evaluador sin periodos ven todo; con periodos, solo esos. Regla única en `App\Support\Alcance`.
 
@@ -720,6 +723,8 @@ DELETE /admin/asistente-convocatoria/borradores/{id}
 | `X-XSS-Protection` retirada | ✅ | Retirada a propósito el 13/08/2026 (`SecurityHeadersMiddleware.php`). Cabecera obsoleta: Chrome eliminó el XSS Auditor, Firefox nunca la implementó, y OWASP recomienda no enviarla —`1; mode=block` habilitó fugas entre orígenes (XS-Leaks). La protección real la da la CSP. **No volver a agregarla**, aunque un escáner la pida: ver `Desktop\ADEM\_v3_agosto20\LEEME.md` §25/08/2026 |
 | Encuadre de `/storage/*` | ✅ | Excepción `CspStorage` + `XfoStorage` en `public/web.config`: los adjuntos salen con `X-Frame-Options: SAMEORIGIN` y `frame-ancestors 'self'` para que funcione la vista previa en iframe; el resto del sitio sigue con `DENY` / `'none'`. **Las `outboundRules` alcanzan también a los archivos estáticos** — tenerlo presente al agregar cualquier cabecera nueva |
 | `Cross-Origin-Resource-Policy` | ✅ | `same-origin` en tres capas: `SecurityHeadersMiddleware` (API), `next.config.ts` (front) y regla `CorpSiFalta` en `public/web.config` (respuestas que genera IIS). **Incluye `/storage/*`** desde el 23/09/2026 (antes excluido hasta poder probar con un archivo real; verificado con las imágenes reales del carrusel). Observación de ADEM del 25/08/2026, fuera de la matriz |
+| Cámara solo para el propio sitio | ✅ | `Permissions-Policy: camera=(self)` en el front (`next.config.ts`), **aprobado por el usuario el 29/09/2026** para leer el QR de los clubes en los eventos (E52 · F4). Micrófono, ubicación, pagos y USB siguen apagados; la API (`SecurityHeadersMiddleware`) conserva `camera=()`. Ningún iframe ni otro origen puede pedir la cámara |
+| QR de clubes | ✅ | Token opaco aleatorio (sin datos del club), guardado cifrado + hash sha256, revocable; nunca en JSON; imagen PNG con sesión y `no-store`; QR ajeno/revocado → 404 genérico (E52 · F4) |
 | Rate limiting endpoints públicos | ✅ | `throttle:3,1` en `forgot-password`, `throttle:3,5` en `solicitar-acceso` |
 | Notificaciones — acceso propio | ✅ | `show()` en `NotificacionLogController` verifica `user_id === auth user id` |
 | Eliminación de usuarios | ✅ | `UserController::destroy()` bloquea auto-eliminación y eliminación del último admin |

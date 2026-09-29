@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import VersionesFirmadas from '@/components/especie/VersionesFirmadas';
+import QrLider from '@/components/especie/QrLider';
 import { mensajeError } from '@/lib/errores-formulario';
 import { descargarFirmado, descargarFormatoLogistica, descargarResguardo } from '@/lib/especie-api';
 import { ESTADO_SOLICITUD, fechaHora, leerLogistica, vigente, type LogisticaEstado, type SolicitudLogistica } from '@/lib/especie';
@@ -88,6 +89,9 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
   return (
     <section className="space-y-4" aria-labelledby="sec-logistica">
       <h2 id="sec-logistica" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><Package className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Logística</h2>
+
+      {/* F4 — QR y credencial */}
+      <QrLider clubId={clubId} folio={folio} qr={l.qr} onAviso={onAviso} />
 
       {/* Kit */}
       <div className="app-card space-y-2 p-5">

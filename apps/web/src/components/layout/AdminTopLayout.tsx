@@ -18,7 +18,7 @@ import {
   LayoutDashboard, FileText, Users, BookOpen, Building,
   Banknote, ShieldAlert, Zap, Images, UserCheck,
   BarChart3, KeyRound, FileSignature, ClipboardList, BellRing, Activity,
-  MessagesSquare, Award, CalendarRange, FileCog, UserCircle, Globe, Shapes, School,
+  MessagesSquare, Award, CalendarRange, FileCog, UserCircle, Globe, Shapes, School, ScanLine,
 } from 'lucide-react';
 import UserAvatar from '@/components/ui/user-avatar';
 import { useMiPerfil } from '@/hooks/useMiPerfil';
@@ -80,6 +80,7 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'admin_nav.items.solicitudes.name', href: '/admin/solicitudes', icon: FileText, description: 'admin_nav.items.solicitudes.desc' },
       { name: 'admin_nav.items.folios.name', href: '/admin/folios', icon: Award, description: 'admin_nav.items.folios.desc' },
       { name: 'admin_nav.items.clubes.name', href: '/admin/clubes', icon: Shapes, description: 'admin_nav.items.clubes.desc' },
+      { name: 'admin_nav.items.escanear.name', href: '/admin/escanear', icon: ScanLine, description: 'admin_nav.items.escanear.desc' },
     ],
   },
   {

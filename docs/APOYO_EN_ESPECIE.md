@@ -346,6 +346,57 @@ Clubes aceptados · asistencia por evento · box lunch y transporte (solicitado 
 - **Verificado:** e2e backend **57/57** (`e2e_especie_f3.php`), navegador real **19/19** (admin de convocatoria, líder
   estatal y federal, 390 y 1440 px), vitest **162/162**, regresión F2 57/57, F1 53/53, registro 46/46, errores 13/13.
 
+## 14. Fase 4 — QR, eventos y reportes: decisiones adicionales del usuario (29/09/2026)
+| Tema | Decisión |
+|---|---|
+| Quién escanea | **Admin, admin de convocatoria y un rol nuevo «Operador de evento»** (lo da de alta un admin, con convocatorias asignadas; solo ve escaneo y captura manual de sus convocatorias) |
+| Requisito del QR | La carta de resguardo **aprobada** por el admin |
+| Modo de escaneo | **El operador elige evento y modo**: Asistencia, Box lunch o Kit |
+| Sin conexión | **Respaldo con internet**: si la cámara falla o el QR no se lee, búsqueda por nombre o folio y registro manual |
+| Asistencia | **Cuántas personas llegaron** (propone el número de integrantes; se ajusta); un registro por club y evento, corregible |
+| Box lunch | **Lo aprobado, ajustable hacia abajo**; sin solicitud aprobada no se entrega (en modo "convocatoria" el aprobado es el máximo por evento) |
+| Habilitar QR | **Por club y a varios a la vez**, revocable; cada líder recibe su correo |
+| Cámara | **Permitida solo para el propio sitio** (política de permisos) + librería **jsQR** para iPhone; el navegador siempre pide permiso |
+| Kit por escaneo | Registra la entrega con fecha y hora actuales, **quién entregó = el operador** y **quién recibió** (se escribe) |
+
+### 14.1 Implementación ✅ PUBLICADA (29/09/2026)
+- **BD** (`2026_09_29_000005_apoyo_especie_f4`): rol **`operador_evento` (id 8)**; `clubes.qr_token` (token cifrado),
+  `qr_hash` (sha256, único), `qr_habilitado_at/por`; `club_registros_evento` (club, evento, tipo asistencia|lunch,
+  cantidad, método qr|manual, quién; **único por club + evento + tipo**: volver a registrar corrige y queda en bitácora).
+- **QR** (`App\Support\QrClub`): el código lleva `SIDECYT-CLUB:` + 40 caracteres aleatorios; **nada del club viaja en
+  él**. Se guarda cifrado (para volver a pintarlo al líder) y como hash (para encontrarlo al escanear). Solo se habilita
+  con el club aceptado y la carta de resguardo aprobada; revocar lo invalida al instante y rehabilitar genera otro. El
+  token y el hash nunca salen en JSON (`$hidden`). La imagen se sirve **PNG** (no SVG) con sesión y `no-store`.
+- **Escaneo** (`App\Support\EventoClub`, `Club\EscaneoController`, `/api/escaneo/*`): eventos de las convocatorias del
+  alcance, lectura del QR, búsqueda manual (folio, nombre, escuela o CCT; solo aceptados), ficha y registro. QR ajeno,
+  revocado o de otra convocatoria → **404 genérico**; el `club_id` del cuerpo se revisa a mano contra el alcance. El
+  operador ve lo mínimo (sin correos ni teléfonos); admin y admin de convocatoria, todo y enlace a la ficha. Box lunch ≤
+  lo aprobado de ese evento (modo evento) o de la convocatoria; sin aprobado → 422. Kit: reutiliza
+  `LogisticaClub::entregarKit` (entregó = operador; lugar = sede del evento).
+- **Alcance del operador:** solo sus convocatorias asignadas (`Alcance`, igual que el admin de convocatoria, sin
+  periodos). Se asignan al darlo de alta en Usuarios. Rutas: `rol:admin,admin_convocatoria,operador_evento`.
+- **Líder:** `GET /club/clubes/{club}/qr` (PNG) y `/credencial` (PDF `pdfs/credencial_club`: franja, QR, datos y fotos de
+  los integrantes convertidas de WebP a PNG). Sin QR habilitado → 404; en su panel ve qué le falta.
+- **Personal:** `POST /revision/qr/habilitar` (varios; responde habilitados y omitidos con el motivo),
+  `POST /revision/clubes/{club}/qr/revocar`, `GET /revision/convocatorias/{c}/reporte` (Excel de 5 hojas: clubes
+  aceptados con contacto, integrantes con todos sus datos, asistencia por evento, transporte y box lunch solicitado /
+  entregado / cupo, kits entregados; texto saneado contra inyección de fórmulas; queda en bitácora). Solo admin y admin
+  de convocatoria.
+- **Avisos:** correo + campana al líder al habilitar (`qr_habilitado`); campana al revocar (`qr_revocado`).
+- **Seguridad (cambio aprobado por el usuario):** `Permissions-Policy: camera=(self)` **solo en el front**
+  (`next.config.ts`); la API conserva `camera=()`. Throttles con prefijo propio en cada ruta nueva.
+- **Front:** `/operador/escanear` (panel propio del operador, con Mi cuenta y Configuración) y `/admin/escanear` (menú
+  «Escanear en eventos», también para admin de convocatoria); `EscanerEventos` (evento + modo, cámara con
+  `BarcodeDetector` o **jsqr** bajo demanda, búsqueda manual, ficha con fotos para identificar al club, confirmación,
+  «Siguiente club» que vuelve a la cámara e ignora 4 s el mismo QR), hook `useLectorQr`, `lib/escaneo.ts` (validación de
+  respuestas). `QrLider` en el panel del líder; QR por club en `LogisticaPersonal` (habilitar / revocar con
+  confirmación); en `LogisticaConvocatoria`, selección única para kit y QR masivos y botón «Reporte en Excel». El escaneo
+  no enciende la pantalla de carga global (`lib/api.ts`).
+- **Verificado:** e2e backend **84/84** (`e2e_especie_f4.php`: permisos por rol, alcance, QR falso / revocado / ajeno /
+  largo, token cifrado, límites, correcciones, kit, revocar y rehabilitar, Excel con fórmula saneada, cabeceras),
+  navegador real **25/25** con **cámara que lee un QR real** (video falso de Edge) a 390 y 1440 px, sin errores de
+  consola; vitest **170/170**; regresión F1 53/53, F2 57/57, F3 57/57, registro 46/46, errores 13/13.
+
 ## 8. Modelo de datos (borrador técnico, a validar en F1)
 
 - `escuelas` (cct único, nombre, municipio, nivel, sistema `estatal|federal`, activo).

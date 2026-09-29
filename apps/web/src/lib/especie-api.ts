@@ -37,6 +37,24 @@ export async function descargarResguardo(clubId: number, folio: string) {
   guardarBlob(r.data, `carta-resguardo-${folio}.pdf`);
 }
 
+/** E52 · F4: credencial del club con su QR (solo el líder, con el QR habilitado). */
+export async function descargarCredencial(clubId: number, folio: string) {
+  const r = await api.get(`/club/clubes/${clubId}/credencial`, { responseType: 'blob' });
+  guardarBlob(r.data, `credencial-${folio}.pdf`);
+}
+
+/** E52 · F4: imagen del QR como URL de objeto (el llamador la revoca al desmontar). */
+export async function urlImagenQr(clubId: number): Promise<string> {
+  const r = await api.get(`/club/clubes/${clubId}/qr`, { responseType: 'blob' });
+  return URL.createObjectURL(new Blob([r.data], { type: 'image/png' }));
+}
+
+/** E52 · F4: Excel de la convocatoria (admin y admin de convocatoria). */
+export async function descargarReporteClubes(convocatoriaId: number) {
+  const r = await api.get(`/revision/convocatorias/${convocatoriaId}/reporte`, { responseType: 'blob' });
+  guardarBlob(r.data, `reporte-clubes-${convocatoriaId}-${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
 /** Carta de consentimiento generada para que la escuela la firme y selle (solo el líder del club). */
 export async function descargarCartaEscuela(clubId: number, folio: string) {
   const r = await api.get(`/club/clubes/${clubId}/carta-escuela`, { responseType: 'blob' });

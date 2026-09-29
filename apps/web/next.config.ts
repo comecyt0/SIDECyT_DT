@@ -54,9 +54,12 @@ const nextConfig: NextConfig = {
           // desde su propio origen, así que 'same-origin' no rompe nada: las imágenes externas
           // declaradas en IMG_ORIGINS entran hacia acá, que es la dirección contraria.
           { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+          // E52 · F4 (29/09/2026, aprobado por el usuario): cámara solo para el propio origen, para leer los QR de los
+          // clubes en los eventos. Ningún otro origen ni iframe puede pedirla; micrófono, ubicación, pagos y USB siguen
+          // apagados. La API (SecurityHeadersMiddleware) conserva camera=().
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+            value: "camera=(self), microphone=(), geolocation=(), payment=(), usb=()",
           },
           {
             key: "Strict-Transport-Security",

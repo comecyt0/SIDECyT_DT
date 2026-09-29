@@ -127,7 +127,8 @@ export default function UsuariosClient({ users, pagination }: Props) {
     });
   }, []);
   const rolSlug = catalogs.roles.find((r) => String(r.id) === formData.rol_id)?.slug ?? '';
-  const pideConvocatorias = rolSlug === 'admin_convocatoria';
+  // E52 · F4: el operador de evento también trabaja solo en sus convocatorias asignadas (sin periodos).
+  const pideConvocatorias = rolSlug === 'admin_convocatoria' || rolSlug === 'operador_evento';
   const pidePeriodos = ['admin_convocatoria', 'revisor', 'evaluador', 'consulta'].includes(rolSlug);
   const alternarId = (campo: 'convocatoria_ids' | 'periodo_ids', id: number) =>
     setFormData((f) => ({ ...f, [campo]: f[campo].includes(id) ? f[campo].filter((x) => x !== id) : [...f[campo], id] }));
@@ -322,6 +323,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
           if (slug === 'evaluador') return 'amber';
           if (slug === 'admin_convocatoria') return 'purple';
           if (slug === 'consulta') return 'teal';
+          if (slug === 'operador_evento') return 'amber';
           return 'sky'; // solicitante
         }}
         emptyState={
@@ -472,14 +474,18 @@ export default function UsuariosClient({ users, pagination }: Props) {
           ...((pideConvocatorias || pidePeriodos) ? [{
             key: 'alcance',
             label: 'Alcance',
-            question: pideConvocatorias ? '¿Qué convocatorias opera y de qué periodos?' : '¿Qué periodos puede ver?',
+            question: rolSlug === 'operador_evento' ? '¿En los eventos de qué convocatorias escanea?' : pideConvocatorias ? '¿Qué convocatorias opera y de qué periodos?' : '¿Qué periodos puede ver?',
             validate: () => (pideConvocatorias && formData.convocatoria_ids.length === 0 ? 'Elige al menos una convocatoria.' : null),
             content: (
               <div className="space-y-5">
                 {pideConvocatorias && (
                   <fieldset>
                     <legend className="mb-2 text-sm font-semibold text-[var(--app-ink)]">Convocatorias a su cargo</legend>
-                    <p className="mb-3 text-xs text-[var(--app-ink-2)]">Solo verá y operará estas convocatorias.</p>
+                    <p className="mb-3 text-xs text-[var(--app-ink-2)]">
+                      {rolSlug === 'operador_evento'
+                        ? 'Solo podrá escanear y registrar asistencia, box lunch y kits de los clubes de estas convocatorias.'
+                        : 'Solo verá y operará estas convocatorias.'}
+                    </p>
                     <div className="max-h-56 space-y-1.5 overflow-y-auto">
                       {convocatoriasOp.length === 0 && <p className="text-xs text-[var(--app-ink-2)]">No hay convocatorias.</p>}
                       {convocatoriasOp.map((c) => (

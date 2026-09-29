@@ -185,7 +185,8 @@ class UserController extends Controller
 
     private function sincronizarAlcance(User $user, array $validated): void
     {
-        $esDelegado = $user->tieneRol('admin_convocatoria');
+        // Convocatorias asignadas: admin de convocatoria (E45) y operador de evento (E52 · F4).
+        $esDelegado = $user->tieneRol('admin_convocatoria', 'operador_evento');
         $conPeriodo = $user->tieneRol(...self::ROLES_CON_PERIODO);
 
         if (! $esDelegado) {

@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Loader2, Save, Plus, Trash2, CalendarClock, Bus, Sandwich, Settings2, Users, AlertTriangle } from 'lucide-react';
+import { Loader2, Save, Plus, Trash2, CalendarClock, Bus, Sandwich, Settings2, Users, AlertTriangle, QrCode, FileSpreadsheet } from 'lucide-react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import StepFrame from '@/components/ui/step-frame';
 import AvisoErrores from '@/components/ui/aviso-errores';
-import { erroresFormulario, type ErroresFormulario } from '@/lib/errores-formulario';
+import { erroresFormulario, mensajeError, type ErroresFormulario } from '@/lib/errores-formulario';
+import { descargarReporteClubes } from '@/lib/especie-api';
 import { ESTADO_CLUB, ESTADO_FIRMADO, ESTADO_SOLICITUD, fechaHora, type Cupo } from '@/lib/especie';
 
 interface Evento { id?: number; nombre: string; fecha: string; sede: string; cupo_transporte: string; cupo_lunch: string; con_solicitudes?: boolean }
@@ -19,6 +20,7 @@ interface ClubFila {
   id: number; folio: string; nombre: string; estado: string; estatal: boolean; escuela: { nombre: string; municipio: string } | null;
   kit: { fecha: string | null; lugar: string | null; entregado_at: string | null }; resguardo: string | null;
   solicitudes: { id: number; evento: string | null; transporte: number; lunch: number; estado: string; documento: string | null }[]; pendientes_validar: number;
+  qr?: boolean;
 }
 interface Tablero { config: Record<string, unknown>; eventos: Record<string, unknown>[]; uso: { evento_id: number | null; nombre: string; transporte: Cupo; lunch: Cupo }[]; hay_solicitudes: boolean; clubes: ClubFila[] }
 
@@ -54,6 +56,11 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
   const [asignar, setAsignar] = useState(false);
   const [kit, setKit] = useState({ fecha: '', lugar: '' });
   const [errKit, setErrKit] = useState<ErroresFormulario | null>(null);
+  const [qrOcupado, setQrOcupado] = useState(false);
+  const [bajando, setBajando] = useState(false);
+  // Una sola selección para dos acciones masivas: el kit solo aplica a los aceptados sin entrega; el QR, a los que no lo tienen.
+  const selKit = t ? sel.filter((id) => t.clubes.find((c) => c.id === id)?.estado === 'aceptado') : [];
+  const selQr = t ? sel.filter((id) => t.clubes.find((c) => c.id === id)?.qr === false) : [];
 
   const aplicar = (d: Tablero) => { setT(d); setForm(aForm(d.config)); setEventos(aEventos(d.eventos)); };
   const cargar = useCallback(async () => {
@@ -90,10 +97,34 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
     }
   };
 
+  const habilitarQr = async () => {
+    const ids = selQr;
+    if (ids.length === 0) return;
+    setQrOcupado(true); setAviso(null);
+    try {
+      const { data } = await api.post('/revision/qr/habilitar', { club_ids: ids });
+      const hechos = Array.isArray(data?.habilitados) ? data.habilitados.length : 0;
+      const omitidos: { nombre?: string; motivo?: string }[] = Array.isArray(data?.omitidos) ? data.omitidos : [];
+      const detalle = omitidos.slice(0, 5).map((o) => `${String(o.nombre ?? '')} (${String(o.motivo ?? '')})`).join('; ');
+      setAviso({ ok: hechos > 0, texto: `QR habilitado a ${hechos} club(es); cada líder recibió un correo.${omitidos.length ? ` Sin habilitar ${omitidos.length}: ${detalle}${omitidos.length > 5 ? '…' : ''}.` : ''}` });
+      setSel([]);
+      void cargar();
+    } catch (e) {
+      setAviso({ ok: false, texto: mensajeError(e, 'No se pudo habilitar el QR.') });
+    } finally {
+      setQrOcupado(false);
+    }
+  };
+
+  const reporte = async () => {
+    setBajando(true);
+    try { await descargarReporteClubes(convocatoriaId); } catch { setAviso({ ok: false, texto: 'No se pudo descargar el reporte.' }); } finally { setBajando(false); }
+  };
+
   const asignarKit = async () => {
     setErrKit(null);
     try {
-      const { data } = await api.post('/revision/kit/asignar', { club_ids: sel, fecha: kit.fecha, lugar: kit.lugar.trim() });
+      const { data } = await api.post('/revision/kit/asignar', { club_ids: selKit, fecha: kit.fecha, lugar: kit.lugar.trim() });
       setAsignar(false); setSel([]);
       setAviso({ ok: true, texto: `Fecha y lugar asignados a ${data?.asignados ?? 0} club(es)${data?.omitidos ? `; ${data.omitidos} omitido(s) (kit ya entregado)` : ''}. Cada líder recibió un correo.` });
       void cargar();
@@ -201,8 +232,15 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="log-clubes" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><Users className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Clubes aceptados ({t.clubes.length})</h2>
           <div className="flex flex-wrap gap-2">
-            {pendientesKit.length > 0 && <Button size="sm" variant="outline" onClick={() => setSel(sel.length === pendientesKit.length ? [] : pendientesKit.map((c) => c.id))}>{sel.length === pendientesKit.length ? 'Quitar selección' : 'Seleccionar pendientes de kit'}</Button>}
-            <Button size="sm" disabled={sel.length === 0} onClick={() => { setErrKit(null); setKit({ fecha: '', lugar: '' }); setAsignar(true); }}><CalendarClock className="h-4 w-4" aria-hidden="true" />Asignar fecha y lugar ({sel.length})</Button>
+            <Button size="sm" variant="soft" disabled={bajando} onClick={() => void reporte()}>
+              {bajando ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />}Reporte en Excel
+            </Button>
+            {t.clubes.length > 0 && <Button size="sm" variant="outline" onClick={() => setSel(sel.length === t.clubes.length ? [] : t.clubes.map((c) => c.id))}>{sel.length === t.clubes.length ? 'Quitar selección' : 'Seleccionar todos'}</Button>}
+            {pendientesKit.length > 0 && <Button size="sm" variant="outline" onClick={() => setSel(pendientesKit.map((c) => c.id))}>Pendientes de kit</Button>}
+            <Button size="sm" disabled={selKit.length === 0} onClick={() => { setErrKit(null); setKit({ fecha: '', lugar: '' }); setAsignar(true); }}><CalendarClock className="h-4 w-4" aria-hidden="true" />Asignar fecha y lugar ({selKit.length})</Button>
+            <Button size="sm" disabled={selQr.length === 0 || qrOcupado} onClick={() => void habilitarQr()}>
+              {qrOcupado ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <QrCode className="h-4 w-4" aria-hidden="true" />}Habilitar QR ({selQr.length})
+            </Button>
           </div>
         </div>
         {t.clubes.length === 0 ? <p className="text-sm text-[var(--app-ink-2)]">Todavía no hay clubes aceptados.</p> : (
@@ -212,7 +250,7 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
               const res = c.resguardo ? ESTADO_FIRMADO[c.resguardo] : null;
               return (
                 <li key={c.id} className="app-card flex gap-3 p-4">
-                  <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--auth-vino)]" aria-label={`Seleccionar ${c.nombre}`} disabled={c.estado !== 'aceptado'}
+                  <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--auth-vino)]" aria-label={`Seleccionar ${c.nombre}`}
                     checked={sel.includes(c.id)} onChange={(e) => setSel(e.target.checked ? [...sel, c.id] : sel.filter((x) => x !== c.id))} />
                   <div className="min-w-0 flex-1 space-y-1 text-sm">
                     <p className="flex flex-wrap items-center gap-2">
@@ -222,7 +260,7 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
                     </p>
                     <p className="text-xs text-[var(--app-ink-2)]"><span className="font-mono">{c.folio}</span>{c.escuela ? ` · ${c.escuela.nombre}` : ''} · {c.estatal ? 'Estatal' : 'Federal (solo kit)'}</p>
                     <p className="text-xs text-[var(--app-ink)]">Kit: {c.kit.entregado_at ? `entregado ${fechaHora(c.kit.entregado_at)}` : c.kit.fecha ? `${fechaHora(c.kit.fecha)} · ${c.kit.lugar ?? ''}` : 'sin fecha asignada'}</p>
-                    <p className="text-xs text-[var(--app-ink)]">Resguardo: {res ? res.etiqueta : 'sin subir'}</p>
+                    <p className="text-xs text-[var(--app-ink)]">Resguardo: {res ? res.etiqueta : 'sin subir'} · QR: {c.qr ? 'habilitado' : c.resguardo === 'aprobado' ? 'listo para habilitar' : 'falta resguardo aprobado'}</p>
                     {c.estatal && c.solicitudes.map((x) => (
                       <p key={x.id} className="text-xs text-[var(--app-ink)]">{x.evento ? `${x.evento}: ` : ''}transporte {x.transporte} · lunch {x.lunch} · {ESTADO_SOLICITUD[x.estado]?.etiqueta ?? x.estado}</p>
                     ))}
@@ -239,7 +277,7 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
         size="md"
         title="Fecha y lugar de entrega del kit"
         icon={<CalendarClock className="h-5 w-5" />}
-        intro={<>Se asigna a <strong>{sel.length} club(es)</strong>; cada líder recibirá un correo.</>}
+        intro={<>Se asigna a <strong>{selKit.length} club(es)</strong>; cada líder recibirá un correo.</>}
         onClose={() => setAsignar(false)}
         onSubmit={asignarKit}
         submitLabel="Asignar"

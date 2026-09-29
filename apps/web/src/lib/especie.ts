@@ -281,6 +281,8 @@ export interface LogisticaEstado {
   resguardo: VersionFirmada[];
   kit: { nombre: string | null; fecha: string | null; lugar: string | null; asignado_at: string | null; entregado_at: string | null;
     entregado_lugar: string | null; entrego: string | null; recibio: string | null };
+  /** F4 — QR del club: habilitado o qué le falta (el token nunca llega al front en JSON). */
+  qr: { habilitado: boolean; habilitado_at: string | null; falta: string | null };
 }
 
 /** Respuesta de la API → estado de logística (o null si no aplica / forma inesperada). */
@@ -295,6 +297,11 @@ export function leerLogistica(v: unknown): LogisticaEstado | null {
     solicitudes: Array.isArray(d.solicitudes) ? d.solicitudes : [],
     resguardo: Array.isArray(d.resguardo) ? d.resguardo : [],
     kit: d.kit ?? { nombre: null, fecha: null, lugar: null, asignado_at: null, entregado_at: null, entregado_lugar: null, entrego: null, recibio: null },
+    qr: {
+      habilitado: d.qr?.habilitado === true,
+      habilitado_at: typeof d.qr?.habilitado_at === 'string' ? d.qr.habilitado_at : null,
+      falta: typeof d.qr?.falta === 'string' ? d.qr.falta.slice(0, 200) : null,
+    },
   };
 }
 

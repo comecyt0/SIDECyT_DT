@@ -143,6 +143,16 @@ class LogisticaAdminController extends Controller
         return response()->json(RevisionClubController::detallePersonal($club->fresh(), $request->user()));
     }
 
+    /** F4 — Excel de la convocatoria: clubes, integrantes, asistencia, transporte y box lunch, kits. */
+    public function reporte(Request $request, Convocatoria $convocatoria)
+    {
+        $this->exigir($request, $convocatoria);
+        Audit::log('especie.reporte_descargado', $convocatoria, []);
+        $nombre = 'reporte-clubes-'.$convocatoria->id.'-'.now('America/Mexico_City')->format('Y-m-d').'.xlsx';
+
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\ClubesEspecieExport($convocatoria), $nombre);
+    }
+
     // ─────────── Apoyos ───────────
 
     private function exigir(Request $request, Convocatoria $c): void
@@ -186,6 +196,7 @@ class LogisticaAdminController extends Controller
                     'solicitudes' => $x->logisticas->where('estado', '!=', 'cancelada')->map(fn ($l) => ['id' => $l->id, 'evento' => $l->evento?->nombre,
                         'transporte' => $l->transporte, 'lunch' => $l->lunch, 'estado' => $l->estado, 'documento' => $vig('solicitud', $l->id)?->estado])->values(),
                     'pendientes_validar' => $x->firmados->where('estado', 'pendiente')->count(),
+                    'qr' => \App\Support\QrClub::habilitado($x),
                 ];
             })->values(),
         ];

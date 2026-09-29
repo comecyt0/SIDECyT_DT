@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ROLES, type RoleId } from './roles';
+import { PANEL_POR_ROL, ROLES, subrutaPermitida, type RoleId } from './roles';
 
 describe('ROLES', () => {
   it('mapea los cuatro roles del sistema con los IDs esperados', () => {
@@ -9,11 +9,18 @@ describe('ROLES', () => {
     expect(ROLES.SOLICITANTE).toBe(4);
   });
 
-  it('incluye los roles de E45 y el líder de club de E52 (siete en total)', () => {
+  it('incluye los roles de E45, el líder de club y el operador de evento de E52 (ocho en total)', () => {
     expect(ROLES.ADMIN_CONVOCATORIA).toBe(5);
     expect(ROLES.CONSULTA).toBe(6);
     expect(ROLES.LIDER_CLUB).toBe(7);
-    expect(Object.keys(ROLES)).toHaveLength(7);
+    expect(ROLES.OPERADOR_EVENTO).toBe(8);
+    expect(Object.keys(ROLES)).toHaveLength(8);
+  });
+
+  it('el operador de evento entra a su panel de escaneo; consulta no ve el escaneo del admin', () => {
+    expect(PANEL_POR_ROL.operador_evento).toBe('/operador/escanear');
+    expect(subrutaPermitida('admin_convocatoria', '/admin/escanear')).toBe(true);
+    expect(subrutaPermitida('consulta', '/admin/escanear')).toBe(false);
   });
 
   it('produce IDs únicos para cada rol', () => {

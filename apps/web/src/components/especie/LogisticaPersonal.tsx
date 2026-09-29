@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Package, FileSignature, Bus, CalendarClock, MapPin, CheckCircle2, Truck } from 'lucide-react';
+import { Package, FileSignature, Bus, CalendarClock, MapPin, CheckCircle2, Truck, QrCode } from 'lucide-react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { mensajeError } from '@/lib/errores-formulario';
 import StepFrame from '@/components/ui/step-frame';
 import AvisoErrores from '@/components/ui/aviso-errores';
 import VersionesFirmadas from '@/components/especie/VersionesFirmadas';
@@ -32,6 +34,7 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
   const [form, setForm] = useState({ fecha: '', lugar: '', entrego: '', recibio: '', motivo: '' });
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<ErroresFormulario | null>(null);
+  const [revocar, setRevocar] = useState(false);
   const l = logistica;
 
   const abrir = (d: Dialogo) => {
@@ -77,6 +80,32 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
     }
   };
 
+  const habilitarQr = async () => {
+    setEnviando(true);
+    try {
+      const { data } = await api.post('/revision/qr/habilitar', { club_ids: [clubId] });
+      const omitido = Array.isArray(data?.omitidos) ? data.omitidos[0] : null;
+      onHecho({ detalle: null }, omitido ? `No se habilitó: ${String(omitido.motivo ?? '')}.` : 'QR habilitado; el líder recibió un correo para descargar su credencial.', !omitido);
+    } catch (e) {
+      onHecho({}, mensajeError(e, 'No se pudo habilitar el QR.'), false);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const revocarQr = async () => {
+    setRevocar(false);
+    setEnviando(true);
+    try {
+      const { data } = await api.post(`/revision/clubes/${clubId}/qr/revocar`);
+      onHecho({ detalle: data }, 'QR revocado: el anterior ya no sirve. Si lo vuelves a habilitar, será uno nuevo.');
+    } catch (e) {
+      onHecho({}, mensajeError(e, 'No se pudo revocar el QR.'), false);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   const descargar = (v: VersionFirmada) => { void descargarFirmado(clubId, v.id, v.nombre_original).catch(() => onHecho({}, 'No se pudo abrir el documento.', false)); };
   const revisarProp = puede ? (v: VersionFirmada, r: 'aprobar' | 'rechazar') => (r === 'aprobar' ? void revisar(v, 'aprobar') : abrir({ tipo: 'rechazar', version: v })) : undefined;
 
@@ -100,6 +129,24 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => abrir({ tipo: 'asignar' })}><CalendarClock className="h-4 w-4" aria-hidden="true" />{l.kit.fecha ? 'Cambiar fecha y lugar' : 'Asignar fecha y lugar'}</Button>
             <Button size="sm" onClick={() => abrir({ tipo: 'entregar' })}><Truck className="h-4 w-4" aria-hidden="true" />Registrar entrega</Button>
+          </div>
+        )}
+      </div>
+
+      {/* F4 — QR del club */}
+      <div className="app-card space-y-3 p-5">
+        <h3 className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><QrCode className="h-4 w-4" aria-hidden="true" />QR del club</h3>
+        {l.qr.habilitado ? (
+          <p className="flex flex-wrap items-center gap-1.5 text-sm text-[var(--app-ink)]"><CheckCircle2 className="h-4 w-4" style={{ color: 'var(--tile-emerald-fg)' }} aria-hidden="true" />
+            Habilitado{l.qr.habilitado_at ? ` el ${fechaHora(l.qr.habilitado_at)}` : ''}. El líder ya puede descargar su credencial.</p>
+        ) : (
+          <p className="text-sm text-[var(--app-ink-2)]">Sin habilitar{l.qr.falta ? `: ${l.qr.falta}.` : '. Cumple los requisitos.'}</p>
+        )}
+        {puede && (
+          <div className="flex flex-wrap gap-2">
+            {l.qr.habilitado
+              ? <Button size="sm" variant="destructive" disabled={enviando} onClick={() => setRevocar(true)}><QrCode className="h-4 w-4" aria-hidden="true" />Revocar QR</Button>
+              : <Button size="sm" disabled={enviando || l.qr.falta !== null} onClick={() => void habilitarQr()}><QrCode className="h-4 w-4" aria-hidden="true" />Habilitar QR</Button>}
           </div>
         )}
       </div>
@@ -183,6 +230,9 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
           ),
         }] : []}
       />
+      <ConfirmDialog open={revocar} variant="destructive" title="Revocar el QR del club" confirmLabel="Revocar"
+        description="El QR actual dejará de funcionar de inmediato en los eventos y el líder recibirá un aviso. Si lo vuelves a habilitar, se genera uno nuevo."
+        onCancel={() => setRevocar(false)} onConfirm={() => void revocarQr()} />
     </section>
   );
 }

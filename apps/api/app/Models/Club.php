@@ -21,18 +21,31 @@ class Club extends Model
         'etapa_actual_id', 'ronda', 'vence_at', 'visto_bueno_at', 'visto_bueno_por', 'comite_resultado', 'comite_at',
         'comite_por', 'aceptado_at', 'rechazo_origen', 'rechazo_motivo', 'aviso_privacidad_at',
         'kit_fecha', 'kit_lugar', 'kit_asignado_at', 'kit_entregado_at', 'kit_entregado_lugar', 'kit_entrego', 'kit_recibio', 'kit_registrado_por',
+        'qr_token', 'qr_hash', 'qr_habilitado_at', 'qr_habilitado_por',
     ];
 
     /** Estados de un club ya aceptado (F3: logística; `kit_entregado` detiene el confeti del líder). */
     public const ACEPTADOS = ['aceptado', 'kit_entregado'];
 
-    protected $hidden = ['logo_path'];
+    /** El token del QR nunca sale en JSON (ni cifrado ni su hash): solo se pinta como imagen para su líder. */
+    protected $hidden = ['logo_path', 'qr_token', 'qr_hash'];
 
     protected $casts = [
         'datos' => 'array', 'enviado_at' => 'datetime', 'vence_at' => 'datetime', 'visto_bueno_at' => 'datetime',
         'comite_at' => 'datetime', 'aceptado_at' => 'datetime', 'aviso_privacidad_at' => 'datetime', 'ronda' => 'integer',
         'kit_fecha' => 'datetime', 'kit_asignado_at' => 'datetime', 'kit_entregado_at' => 'datetime',
+        'qr_habilitado_at' => 'datetime',
     ];
+
+    public function registrosEvento()
+    {
+        return $this->hasMany(ClubRegistroEvento::class);
+    }
+
+    public function kitRegistrador()
+    {
+        return $this->belongsTo(User::class, 'kit_registrado_por');
+    }
 
     protected $appends = ['logo_url'];
 

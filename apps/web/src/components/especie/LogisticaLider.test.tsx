@@ -6,6 +6,12 @@ import type { LogisticaEstado } from '@/lib/especie';
 
 const post = vi.fn();
 vi.mock('@/lib/api', () => ({ default: { post: (...a: unknown[]) => post(...a), get: vi.fn(), delete: vi.fn() } }));
+const urlImagenQr = vi.fn(async () => 'blob:qr-prueba');
+const descargarCredencial = vi.fn(async () => undefined);
+vi.mock('@/lib/especie-api', () => ({
+  urlImagenQr: (...a: unknown[]) => urlImagenQr(...(a as [])), descargarCredencial: (...a: unknown[]) => descargarCredencial(...(a as [])),
+  descargarFirmado: vi.fn(), descargarFormatoLogistica: vi.fn(), descargarResguardo: vi.fn(),
+}));
 
 const base: LogisticaEstado = {
   aplica: true, estatal: true, modo: 'convocatoria', abierta: true, fecha_limite: '2026-10-15',
@@ -13,10 +19,14 @@ const base: LogisticaEstado = {
   solicitudes: [{ evento: null, solicitud: null, versiones: [], cupo: { transporte: { total: 10, usado: 2, disponible: 8 }, lunch: { total: null, usado: 0, disponible: null } } }],
   resguardo: [],
   kit: { nombre: 'Kit de robótica', fecha: null, lugar: null, asignado_at: null, entregado_at: null, entregado_lugar: null, entrego: null, recibio: null },
+  qr: { habilitado: false, habilitado_at: null, falta: 'su carta de resguardo no está aprobada' },
 };
 
 describe('LogisticaLider (E52 · F3)', () => {
-  beforeEach(() => post.mockReset());
+  beforeEach(() => {
+    post.mockReset(); urlImagenQr.mockClear(); descargarCredencial.mockClear();
+    URL.revokeObjectURL = vi.fn(); // jsdom no lo implementa
+  });
 
   it('escuela federal: solo kit, sin transporte ni box lunch', async () => {
     const { container } = render(<LogisticaLider clubId={1} folio="CLUB-X" logistica={{ ...base, estatal: false }} onCambio={vi.fn()} onAviso={vi.fn()} />);
@@ -44,6 +54,22 @@ describe('LogisticaLider (E52 · F3)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Enviar solicitud/ }));
     expect(onAviso).toHaveBeenCalledWith(false, 'El máximo de transporte para tu club es 3.');
     expect(post).not.toHaveBeenCalled();
+  });
+
+  it('F4: sin QR habilitado dice qué falta y no ofrece credencial', () => {
+    render(<LogisticaLider clubId={1} folio="CLUB-X" logistica={base} onCambio={vi.fn()} onAviso={vi.fn()} />);
+    expect(screen.getByText(/Por ahora: su carta de resguardo no está aprobada/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Descargar credencial/ })).toBeNull();
+    expect(urlImagenQr).not.toHaveBeenCalled();
+  });
+
+  it('F4: con QR habilitado muestra la imagen (pedida con sesión) y la credencial', async () => {
+    const { container } = render(<LogisticaLider clubId={1} folio="CLUB-X" logistica={{ ...base, qr: { habilitado: true, habilitado_at: '2026-09-29T18:00:00Z', falta: null } }} onCambio={vi.fn()} onAviso={vi.fn()} />);
+    expect(await screen.findByRole('img', { name: /Código QR del club CLUB-X/ })).toHaveAttribute('src', 'blob:qr-prueba');
+    expect(urlImagenQr).toHaveBeenCalledWith(1);
+    fireEvent.click(screen.getByRole('button', { name: /Descargar credencial/ }));
+    await waitFor(() => expect(descargarCredencial).toHaveBeenCalledWith(1, 'CLUB-X'));
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   it('pasada la fecha límite no deja pedir ni cambiar', () => {
