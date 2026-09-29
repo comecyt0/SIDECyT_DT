@@ -266,9 +266,16 @@ Clubes aceptados · asistencia por evento · box lunch y transporte (solicitado 
   ficha y aviso en la campana; el único fallo fue de sincronía de la propia prueba, la imagen sí se ve), vitest
   **145/145**, sin errores de JavaScript.
 
-### 11.3 Pendiente de definir con el usuario
-- **Aviso de privacidad del club** (datos y fotos de menores): el plan de F1 lo menciona; hoy el consentimiento es la carta
-  de la escuela. Falta decidir si el líder acepta un aviso específico al enviar y con qué texto.
+### 11.3 Aviso de privacidad del club (decidido 29/09/2026)
+- **Sí:** casilla obligatoria al enviar el club, con enlace al aviso de privacidad del sistema ("Confirmo que tengo el
+  consentimiento…"); queda registrado con fecha. Se implementa junto con F2.
+
+## 12. Fase 2 — Decisiones adicionales del usuario (29/09/2026)
+| Tema | Decisión |
+|---|---|
+| Etapas de revisión | **Configurables por convocatoria**: 1, 2 o más en orden, cada una con quién revisa (revisor, admin de convocatoria o ambos), plazo en horas naturales y número de subsanaciones (§6) |
+| Resultado de una etapa | **Aprobar, observar (pedir correcciones) o rechazar**; rechazar exige motivo, avisa al líder y el club termina ahí |
+| Comité | **Un acta por convocatoria** (la sesión) y **sí/no por club** entre los aprobados en revisión |
 
 ## 8. Modelo de datos (borrador técnico, a validar en F1)
 
