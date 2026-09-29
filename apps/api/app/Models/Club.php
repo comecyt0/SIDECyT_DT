@@ -20,13 +20,18 @@ class Club extends Model
         'id', 'folio', 'estado', 'lider_id', 'convocatoria_id', 'enviado_at', 'logo_path', 'created_at', 'updated_at',
         'etapa_actual_id', 'ronda', 'vence_at', 'visto_bueno_at', 'visto_bueno_por', 'comite_resultado', 'comite_at',
         'comite_por', 'aceptado_at', 'rechazo_origen', 'rechazo_motivo', 'aviso_privacidad_at',
+        'kit_fecha', 'kit_lugar', 'kit_asignado_at', 'kit_entregado_at', 'kit_entregado_lugar', 'kit_entrego', 'kit_recibio', 'kit_registrado_por',
     ];
+
+    /** Estados de un club ya aceptado (F3: logística; `kit_entregado` detiene el confeti del líder). */
+    public const ACEPTADOS = ['aceptado', 'kit_entregado'];
 
     protected $hidden = ['logo_path'];
 
     protected $casts = [
         'datos' => 'array', 'enviado_at' => 'datetime', 'vence_at' => 'datetime', 'visto_bueno_at' => 'datetime',
         'comite_at' => 'datetime', 'aceptado_at' => 'datetime', 'aviso_privacidad_at' => 'datetime', 'ronda' => 'integer',
+        'kit_fecha' => 'datetime', 'kit_asignado_at' => 'datetime', 'kit_entregado_at' => 'datetime',
     ];
 
     protected $appends = ['logo_url'];
@@ -67,6 +72,16 @@ class Club extends Model
     public function etapaActual()
     {
         return $this->belongsTo(EspecieEtapa::class, 'etapa_actual_id');
+    }
+
+    public function logisticas()
+    {
+        return $this->hasMany(ClubLogistica::class);
+    }
+
+    public function firmados()
+    {
+        return $this->hasMany(ClubFirmado::class)->orderByDesc('id');
     }
 
     public function revisiones()

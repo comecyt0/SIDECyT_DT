@@ -47,6 +47,9 @@ export default function AvisoEstadoClub({ estado, avance, onVence }: { estado: s
     case 'aceptado':
       return caja('emerald', <PartyPopper className="h-5 w-5" aria-hidden="true" />, '¡Tu club fue aceptado!',
         <p>Pronto recibirás la fecha y el lugar de entrega de tu kit.</p>);
+    case 'kit_entregado':
+      return caja('emerald', <PartyPopper className="h-5 w-5" aria-hidden="true" />, 'Tu club recibió su kit',
+        <p>¡Mucho éxito con el proyecto! Aquí verás los eventos y tu QR cuando estén listos.</p>);
     case 'rechazado':
       return caja('vino', <XCircle className="h-5 w-5" aria-hidden="true" />, 'Tu club no fue aceptado',
         avance.rechazo_motivo ? <p className="whitespace-pre-wrap break-words">Motivo: {avance.rechazo_motivo}</p> : undefined);

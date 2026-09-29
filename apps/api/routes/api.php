@@ -346,6 +346,13 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::delete('clubes/{club}/documentos/{clave}', [$c, 'quitarDocumento'])->where('clave', '[a-z0-9_]+');
             Route::get('clubes/{club}/carta-escuela', [$c, 'cartaEscuela'])->middleware('throttle:20,1,club-carta');
             Route::post('clubes/{club}/enviar', [$c, 'enviar'])->middleware('throttle:10,1,club-enviar');
+            // E52 · F3 — logística del club aceptado
+            $l = \App\Http\Controllers\Club\LogisticaClubController::class;
+            Route::post('clubes/{club}/logistica', [$l, 'solicitar'])->middleware('throttle:30,1,club-logistica');
+            Route::delete('clubes/{club}/logistica/{logistica}', [$l, 'cancelar'])->middleware('throttle:30,1,club-logistica');
+            Route::get('clubes/{club}/logistica/{logistica}/formato', [$l, 'formato'])->middleware('throttle:20,1,club-carta');
+            Route::get('clubes/{club}/resguardo', [$l, 'resguardo'])->middleware('throttle:20,1,club-carta');
+            Route::post('clubes/{club}/firmados', [$l, 'subirFirmado'])->middleware('throttle:30,1,club-subidas');
         });
         // ═══ E52 · F2 — REVISIÓN DE CLUBES (admin, admin de convocatoria, revisor; alcance revisado en el controlador). ═══
         Route::group(['prefix' => 'revision', 'middleware' => 'rol:admin,admin_convocatoria,revisor'], function () {
@@ -357,6 +364,13 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::post('clubes/{club}/visto-bueno', [$r, 'vistoBueno'])->middleware('throttle:60,1,club-revision');
             Route::post('clubes/{club}/comite', [$r, 'comite'])->middleware('throttle:60,1,club-revision');
             Route::post('convocatorias/{convocatoria}/acta', [$r, 'subirActa'])->middleware('throttle:10,1,club-acta');
+            // E52 · F3 — logística (admin y admin de convocatoria; el controlador lo exige)
+            $g = \App\Http\Controllers\Club\LogisticaAdminController::class;
+            Route::get('convocatorias/{convocatoria}/logistica', [$g, 'show']);
+            Route::put('convocatorias/{convocatoria}/logistica', [$g, 'update'])->middleware('throttle:30,1,club-logistica-cfg');
+            Route::post('firmados/{firmado}/revisar', [$g, 'revisarFirmado'])->middleware('throttle:60,1,club-revision');
+            Route::post('kit/asignar', [$g, 'asignarKit'])->middleware('throttle:20,1,club-kit');
+            Route::post('clubes/{club}/kit-entregado', [$g, 'entregarKit'])->middleware('throttle:60,1,club-kit');
         });
         // Acta del comité: la descargan también los de consulta con alcance.
         Route::get('revision/convocatorias/{convocatoria}/acta', [\App\Http\Controllers\Club\RevisionClubController::class, 'descargarActa'])
@@ -364,6 +378,8 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
         // Archivos de clubes: líder dueño o personal con alcance (404 a los demás).
         Route::get('media/club/{archivo}', [\App\Http\Controllers\Club\ClubArchivoController::class, 'media'])
             ->where('archivo', '[A-Za-z0-9]{40}\.webp')->middleware('throttle:600,1,club-media');
+        Route::get('clubes/{club}/firmados/{firmado}', [\App\Http\Controllers\Club\ClubArchivoController::class, 'firmado'])
+            ->whereNumber('firmado')->middleware('throttle:120,1,club-docs');
         Route::get('clubes/{club}/documentos/{clave}', [\App\Http\Controllers\Club\ClubArchivoController::class, 'documento'])
             ->where('clave', '[a-z0-9_]+')->middleware('throttle:120,1,club-docs');
 

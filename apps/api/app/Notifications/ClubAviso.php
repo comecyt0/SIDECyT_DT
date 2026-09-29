@@ -48,8 +48,17 @@ class ClubAviso extends Notification implements ShouldQueue
             'rechazado' => ['Tu club no fue aceptado', "El registro de «{$c->nombre}» no fue aceptado.".(isset($x['motivo']) ? ' Motivo: '.$x['motivo'] : '')],
             'qr_habilitado' => ['Tu QR del club ya está disponible', "Descarga la credencial con el QR de «{$c->nombre}» desde tu panel."],
             'kit_asignado' => ['Fecha y lugar de entrega de tu kit', "Tu kit se entrega el ".($x['fecha'] ?? '—').' en '.($x['lugar'] ?? '—').'.'],
+            'kit_entregado' => ['Kit entregado', "Registramos la entrega del kit de «{$c->nombre}». ¡Mucho éxito!"],
+            'firmado_subido' => ['Documento firmado por revisar', "El club «{$c->nombre}» ({$c->folio}) subió ".self::doc($x['tipo'] ?? '').' firmado.'],
+            'firmado_aprobado' => ['Documento aprobado', 'Se aprobó '.self::doc($x['tipo'] ?? '')." de «{$c->nombre}»."],
+            'firmado_rechazado' => ['Documento por corregir', 'Se rechazó '.self::doc($x['tipo'] ?? '')." de «{$c->nombre}»".(! empty($x['motivo']) ? ': '.$x['motivo'] : '').'. Sube una versión nueva.'],
             default => ['Aviso de tu club', "Hay novedades en «{$c->nombre}»."],
         };
+    }
+
+    private static function doc(string $tipo): string
+    {
+        return $tipo === 'resguardo' ? 'la carta de resguardo' : 'el formato de transporte y box lunch';
     }
 
     public function toCampana(object $notifiable): array

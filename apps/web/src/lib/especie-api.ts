@@ -19,6 +19,24 @@ export async function descargarDocumentoClub(clubId: number, clave: string, nomb
   guardarBlob(r.data, nombre);
 }
 
+/** E52 · F3: versión de un documento firmado (carta de resguardo o formato), para el líder dueño o el personal. */
+export async function descargarFirmado(clubId: number, firmadoId: number, nombre: string) {
+  const r = await api.get(`/clubes/${clubId}/firmados/${firmadoId}`, { responseType: 'blob' });
+  guardarBlob(r.data, nombre);
+}
+
+/** E52 · F3: formato de solicitud de transporte y box lunch para firmar (solo el líder). */
+export async function descargarFormatoLogistica(clubId: number, logisticaId: number, folio: string) {
+  const r = await api.get(`/club/clubes/${clubId}/logistica/${logisticaId}/formato`, { responseType: 'blob' });
+  guardarBlob(r.data, `solicitud-transporte-lunch-${folio}.pdf`);
+}
+
+/** E52 · F3: carta de resguardo del kit para firmar (solo el líder de un club aceptado). */
+export async function descargarResguardo(clubId: number, folio: string) {
+  const r = await api.get(`/club/clubes/${clubId}/resguardo`, { responseType: 'blob' });
+  guardarBlob(r.data, `carta-resguardo-${folio}.pdf`);
+}
+
 /** Carta de consentimiento generada para que la escuela la firme y selle (solo el líder del club). */
 export async function descargarCartaEscuela(clubId: number, folio: string) {
   const r = await api.get(`/club/clubes/${clubId}/carta-escuela`, { responseType: 'blob' });

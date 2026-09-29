@@ -179,7 +179,7 @@ Clubes aceptados · asistencia por evento · box lunch y transporte (solicitado 
 | **Pendiente** | Pase a nacional / internacional (subconvocatorias) | Definición del usuario |
 
 > **Orden real de implementación (decisión del usuario, 29/09/2026): F5 primero**, luego F1 → F2 → F3 → F4.
-> Estado: **F5 ✅ (§10) · F1 ✅ (§11) · F2 ✅ (§12)** · F3, F4 pendientes.
+> Estado: **F5 ✅ (§10) · F1 ✅ (§11) · F2 ✅ (§12) · F3 ✅ (§13)** · F4 pendiente.
 
 ## 10. Fase 5 — Registro general con elección de rol ✅ PUBLICADA (29/09/2026)
 
@@ -308,6 +308,43 @@ Clubes aceptados · asistencia por evento · box lunch y transporte (solicitado 
   correcciones, vencido/prórroga/rechazo, visto bueno, acta falsa, comité, etapas fijas, avisos), navegador real
   **23/23** (flujo completo líder → revisora → líder → revisora → admin de convocatoria → líder, 390 y 1440 px),
   vitest **158/158**, regresión F1 53/53, registro 46/46, errores 13/13.
+
+## 13. Fase 3 — Logística: decisiones adicionales del usuario (29/09/2026)
+| Tema | Decisión |
+|---|---|
+| Cupos totales (transporte y box lunch) | El admin o admin de convocatoria **elige por convocatoria si el cupo es de la convocatoria o de cada evento**, y en cada uno escribe el tope; **vacío = sin tope** |
+| Límites por club (configurables) | **Máximo de transporte por club, máximo de box lunch por club, "no pasar del número de integrantes" y acompañantes permitidos** (se suman a los integrantes) |
+| Cambios del líder | **Sí, hasta la fecha límite**; al cambiar debe volver a descargar, firmar y subir el formato (la versión anterior queda en el historial) |
+| Formato con cupos por evento | **Uno por evento**: cada evento tiene su solicitud, su PDF, su firma y su validación |
+| Apartado del cupo | **Al enviar la solicitud** (orden de llegada); si el admin la rechaza o el líder la baja, se libera; sin cupo, el sistema lo dice antes de enviar |
+| Validación de documentos firmados | **El admin o admin de convocatoria aprueba o rechaza** (con motivo) la carta de resguardo y cada formato de solicitud; con historial de versiones |
+| Fecha y lugar del kit | **Por club y a varios a la vez**; cada líder recibe su correo |
+| Kit entregado | Lo marca **admin o admin de convocatoria**: fecha, lugar, quién entregó y quién recibió; al marcarlo se detiene el confeti del líder |
+| Eventos | Como los cupos pueden ser por evento, **F3 crea el catálogo básico de eventos** (nombre, fecha, sede, cupos); F4 agrega el escaneo |
+
+### 13.1 Implementación ✅ PUBLICADA (29/09/2026)
+- **BD** (`2026_09_29_000004_apoyo_especie_f3`): `especie_config` + modo de cupos, cupos totales, máximos por club, tope
+  por integrantes + acompañantes y fecha límite; `especie_eventos`; `club_logistica` (una por club o por club y evento;
+  estados enviada → firmada → aprobada | rechazada | cancelada; aparta cupo en enviada/firmada/aprobada);
+  `club_firmados` (versiones de la carta de resguardo y de cada formato: pendiente / aprobado / rechazado /
+  reemplazado); `clubes` + fecha y lugar del kit y datos de la entrega. Estado nuevo del club: `kit_entregado`.
+- **Reglas:** `App\Support\LogisticaClub`. El cupo se revisa **bajo bloqueo de la configuración** (dos líderes no
+  pueden pasarse del tope al mismo tiempo); federales → 422; transporte en 0 exige `confirmo_sin_transporte`; cambiar
+  una solicitud reemplaza su formato firmado (hay que firmar el nuevo); rechazar un formato rechaza la solicitud y
+  libera el cupo; no se cambia de modo con solicitudes activas ni se quita un evento con solicitudes.
+- **PDF generados:** `pdfs/carta_resguardo_club` y `pdfs/solicitud_logistica_club` (tipo: transporte y box lunch /
+  solo transporte / solo box lunch), con la franja institucional.
+- **API:** líder `/club/clubes/{club}/logistica` (pedir, bajar, formato), `/resguardo`, `/firmados`; personal
+  `/revision/convocatorias/{c}/logistica` (tablero y configuración), `/revision/firmados/{f}/revisar`,
+  `/revision/kit/asignar` (varios clubes), `/revision/clubes/{club}/kit-entregado`; descarga de versiones
+  `/clubes/{club}/firmados/{f}` (dueño o personal con alcance). Solo admin y admin de convocatoria operan la logística.
+- **Avisos:** correo al líder con la fecha y el lugar del kit; campana para documentos subidos (personal), aprobados o
+  rechazados (líder) y kit entregado.
+- **Front:** pestaña **Logística** en `/admin/clubes` (`LogisticaConvocatoria`: configuración, eventos, uso de cupos,
+  clubes aceptados y asignación masiva), `LogisticaPersonal` en la ficha del club, `LogisticaLider` en el panel del líder
+  (kit, carta de resguardo y transporte/box lunch con "¿Estás seguro que no quieres transporte?") y `VersionesFirmadas`.
+- **Verificado:** e2e backend **57/57** (`e2e_especie_f3.php`), navegador real **19/19** (admin de convocatoria, líder
+  estatal y federal, 390 y 1440 px), vitest **162/162**, regresión F2 57/57, F1 53/53, registro 46/46, errores 13/13.
 
 ## 8. Modelo de datos (borrador técnico, a validar en F1)
 

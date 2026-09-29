@@ -119,7 +119,7 @@ export default function RevisionClubPanel({ clubId, estado, avance, permisos, ha
         <p className="text-sm text-[var(--app-ink)]">Para registrar la decisión del comité, primero <Link className="font-semibold underline" href={`/admin/clubes?convocatoria=${convocatoriaId}`}>sube el acta de la convocatoria</Link>.</p>
       )}
       {nada && !['observado', 'vencido', 'aprobado_revision'].includes(estado) && (
-        <p className="text-sm text-[var(--app-ink-2)]">{estado === 'aceptado' ? 'Club aceptado.' : estado === 'rechazado' ? 'Club no aceptado.' : estado === 'borrador' ? 'El líder aún no envía el club.' : 'Esta etapa la resuelve otro rol.'}</p>
+        <p className="text-sm text-[var(--app-ink-2)]">{estado === 'aceptado' ? 'Club aceptado.' : estado === 'kit_entregado' ? 'Club aceptado; kit entregado.' : estado === 'rechazado' ? 'Club no aceptado.' : estado === 'borrador' ? 'El líder aún no envía el club.' : 'Esta etapa la resuelve otro rol.'}</p>
       )}
 
       <StepFrame

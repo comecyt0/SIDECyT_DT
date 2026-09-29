@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Shapes, Loader2, Search, Users, School, ChevronRight, Inbox, Gavel } from 'lucide-react';
+import { Shapes, Loader2, Search, Users, School, ChevronRight, Inbox, Gavel, Truck } from 'lucide-react';
+import LogisticaConvocatoria from '@/components/especie/LogisticaConvocatoria';
 import { useRol } from '@/hooks/useRol';
 import BandejaClubes from '@/components/especie/BandejaClubes';
 import ActaComite from '@/components/especie/ActaComite';
@@ -25,7 +26,7 @@ function err(e: unknown, def: string) {
   return d?.message || def;
 }
 
-type Pestana = 'pendientes' | 'comite' | 'todos';
+type Pestana = 'pendientes' | 'comite' | 'logistica' | 'todos';
 
 /**
  * E52 · F1/F2 — Clubes de las convocatorias de Apoyo en especie (admin, admin de convocatoria y consulta, cada quien con
@@ -111,7 +112,7 @@ export default function ClubesAdminPage() {
         <>
           {opera && (
             <div className="seg-tabs" role="tablist" aria-label="Vista de clubes">
-              {([['pendientes', 'Por revisar', Inbox], ['comite', 'Comité', Gavel], ['todos', 'Todos', Shapes]] as const).map(([k, l, Icono]) => (
+              {([['pendientes', 'Por revisar', Inbox], ['comite', 'Comité', Gavel], ['logistica', 'Logística', Truck], ['todos', 'Todos', Shapes]] as const).map(([k, l, Icono]) => (
                 <button key={k} type="button" role="tab" aria-selected={pestana === k} onClick={() => setPestana(k)}
                   className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold">
                   <Icono className="h-3.5 w-3.5" aria-hidden="true" />{l}
@@ -135,6 +136,18 @@ export default function ClubesAdminPage() {
               {convId && <ActaComite key={convId} convocatoriaId={convId} puedeSubir />}
               {convId && <BandejaClubes key={`c-${convId}`} vista="comite" convocatoriaId={convId} hrefFicha={(id) => `/admin/clubes/${id}`}
                 vacio="Todavía no hay clubes aprobados en revisión" />}
+            </div>
+          )}
+
+          {opera && pestana === 'logistica' && (
+            <div className="space-y-4">
+              <label className="block max-w-xl">
+                <span className="sr-only">Convocatoria</span>
+                <select className="h-11 w-full" value={convId ?? ''} onChange={(e) => elegir(Number(e.target.value))}>
+                  {convs.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+              </label>
+              {convId && <LogisticaConvocatoria key={`l-${convId}`} convocatoriaId={convId} />}
             </div>
           )}
 

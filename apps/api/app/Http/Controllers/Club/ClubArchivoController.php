@@ -49,6 +49,25 @@ class ClubArchivoController extends Controller
         ]);
     }
 
+    /** GET /api/clubes/{club}/firmados/{firmado}: una versión de un documento firmado (carta de resguardo o formato). */
+    public function firmado(Request $request, Club $club, \App\Models\ClubFirmado $firmado)
+    {
+        abort_unless((int) $firmado->club_id === (int) $club->id && self::puedeVer($request->user(), $club), 404);
+        $ruta = \App\Support\LogisticaClub::DIR.'/'.$club->id.'/'.$firmado->archivo;
+        abort_unless(preg_match('/^[A-Za-z0-9]{40}\.(pdf|jpg|png|webp)$/', $firmado->archivo) && Storage::disk('local')->exists($ruta), 404);
+        if ((int) $club->lider_id !== (int) $request->user()->id) {
+            Audit::log('club.firmado_descargado', $club, ['firmado_id' => $firmado->id]);
+        }
+        $ext = pathinfo($firmado->archivo, PATHINFO_EXTENSION);
+
+        return response()->file(Storage::disk('local')->path($ruta), [
+            'Content-Type' => ['pdf' => 'application/pdf', 'jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'][$ext],
+            'Content-Disposition' => 'inline; filename="'.$firmado->tipo.'-'.$firmado->id.'.'.$ext.'"',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
     /** GET /api/clubes/{club}/documentos/{clave}: descarga de un documento del club. */
     public function documento(Request $request, Club $club, string $clave)
     {

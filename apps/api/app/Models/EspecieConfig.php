@@ -22,7 +22,15 @@ class EspecieConfig extends Model
         'max_integrantes' => 'integer',
         'clubes_por_escuela' => 'integer',
         'acta_comite_at' => 'datetime',
+        // F3 · logística (solo los escribe su endpoint con forceFill)
+        'cupo_transporte' => 'integer', 'cupo_lunch' => 'integer', 'max_transporte_club' => 'integer', 'max_lunch_club' => 'integer',
+        'tope_integrantes' => 'boolean', 'acompanantes' => 'integer', 'fecha_limite_logistica' => 'date:Y-m-d',
     ];
+
+    public function eventos()
+    {
+        return $this->hasMany(EspecieEvento::class, 'convocatoria_id', 'convocatoria_id')->orderBy('orden')->orderBy('fecha');
+    }
 
     /** El acta del comité solo la escribe su endpoint (nunca el PUT de configuración). */
     protected $hidden = ['acta_comite'];

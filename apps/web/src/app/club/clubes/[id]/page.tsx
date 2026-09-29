@@ -19,10 +19,12 @@ import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
 import ClubResumen from '@/components/especie/ClubResumen';
 import AvisoEstadoClub from '@/components/especie/AvisoEstadoClub';
 import HistorialClub from '@/components/especie/HistorialClub';
+import LogisticaLider from '@/components/especie/LogisticaLider';
 import { descargarCartaEscuela, descargarDocumentoClub } from '@/lib/especie-api';
 import {
   ACCEPT_FORMATO, ACCEPT_IMAGEN, CAMPOS_INTEGRANTE, CARTA_ESCUELA, ESTADO_CLUB, ETIQUETA_FORMATO, IMAGEN_MAX_MB, SEXO,
   leerCamposApi, normalizarPredef, CAMPOS_CLUB, valorCampo,
+  leerLogistica, type LogisticaEstado,
   type CampoApi, type ClubApi, type DocumentoClub, type EntradaHistorial, type EscuelaApi, type IntegranteApi, type Predef,
 } from '@/lib/especie';
 import { PATRON_CURP, PATRON_TELEFONO, PATRON_CORREO } from '@/lib/registro';
@@ -39,6 +41,7 @@ interface Detalle {
   convocatoria: { id: number; nombre: string; acepta: boolean; fecha_limite: string | null };
   faltantes: string[];
   historial: EntradaHistorial[];
+  logistica: LogisticaEstado | null;
 }
 
 type FormIntegrante = { nombre: string; fecha_nacimiento: string; sexo: string; curp: string; grado_grupo: string; correo: string; telefono: string; datos: Record<string, string> };
@@ -77,6 +80,7 @@ function leerDetalle(data: unknown): Detalle | null {
     convocatoria: d.convocatoria ?? { id: 0, nombre: '', acepta: false, fecha_limite: null },
     faltantes: Array.isArray(d.faltantes) ? d.faltantes.filter((x): x is string => typeof x === 'string') : [],
     historial: Array.isArray(d.historial) ? d.historial : [],
+    logistica: leerLogistica(d.logistica),
   };
 }
 
@@ -318,6 +322,11 @@ export default function MiClubPage() {
           <LineaAvanceClub estado={club.estado} avance={club} />
         </section>
         <AvisoEstadoClub estado={club.estado} avance={club} onVence={() => void cargar()} />
+        {d.logistica && (
+          <LogisticaLider clubId={club.id} folio={club.folio} logistica={d.logistica}
+            onCambio={(logistica) => setD((x) => (x ? { ...x, logistica } : x))}
+            onAviso={(ok, texto) => { setAviso({ tipo: ok ? 'success' : 'error', texto }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+        )}
         <ClubResumen club={club} integrantes={d.integrantes} documentos={d.documentos} campos={config.campos} camposIntegrante={pi}
           kit={config.kit_nombre} onDescargar={descargarDoc} descargando={ocupado?.startsWith('dl-') ? ocupado.slice(3) : null} />
         <HistorialClub entradas={d.historial} />

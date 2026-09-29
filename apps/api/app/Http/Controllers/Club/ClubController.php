@@ -447,6 +447,8 @@ class ClubController extends Controller
                 'fecha_limite' => $club->convocatoria->fecha_cierre_efectiva ? substr((string) $club->convocatoria->fecha_cierre_efectiva, 0, 10) : null,
             ],
             'faltantes' => $club->editable() ? $this->faltantes($club) : [],
+            // E52 · F3: logística (solo clubes aceptados; se manda siempre para que el panel sepa si aplica).
+            'logistica' => \App\Support\LogisticaClub::aplica($club) ? \App\Support\LogisticaClub::estado($club) : null,
             // Historial para el líder: qué pasó y el comentario general; sin datos de quién revisó (lista blanca).
             'historial' => $club->revisiones()->with('etapa:id,nombre')->get()
                 ->filter(fn ($r) => in_array($r->resultado, ['enviado', 'aprobado', 'observado', 'rechazado', 'prorroga', 'subsanado', 'comite_aceptado', 'comite_no_aceptado'], true))

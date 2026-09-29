@@ -244,8 +244,64 @@ export const ESTADO_CLUB: Record<string, { etiqueta: string; tono: string }> = {
   subsanado: { etiqueta: 'Corregido, en revisión', tono: 'violet' },
   aprobado_revision: { etiqueta: 'Aprobado en revisión', tono: 'teal' },
   aceptado: { etiqueta: 'Aceptado', tono: 'emerald' },
+  kit_entregado: { etiqueta: 'Kit entregado', tono: 'emerald' },
   rechazado: { etiqueta: 'No aceptado', tono: 'red' },
 };
+
+// ───────────────────────── E52 · F3 — Logística ─────────────────────────
+
+export const ESTADO_SOLICITUD: Record<string, { etiqueta: string; tono: string }> = {
+  enviada: { etiqueta: 'Enviada · falta el formato firmado', tono: 'gold' },
+  firmada: { etiqueta: 'Formato en revisión', tono: 'violet' },
+  aprobada: { etiqueta: 'Aprobada', tono: 'emerald' },
+  rechazada: { etiqueta: 'Rechazada · vuelve a enviarla', tono: 'red' },
+  cancelada: { etiqueta: 'Cancelada', tono: 'neutral' },
+};
+export const ESTADO_FIRMADO: Record<string, { etiqueta: string; tono: string }> = {
+  pendiente: { etiqueta: 'En revisión', tono: 'violet' },
+  aprobado: { etiqueta: 'Aprobado', tono: 'emerald' },
+  rechazado: { etiqueta: 'Rechazado', tono: 'red' },
+  reemplazado: { etiqueta: 'Reemplazado', tono: 'neutral' },
+};
+
+export interface VersionFirmada {
+  id: number; nombre_original: string; estado: string; motivo: string | null; subido_at: string; revisado_at: string | null; revisor: string | null;
+}
+export interface Cupo { total: number | null; usado: number; disponible: number | null }
+export interface SolicitudLogistica {
+  evento: { id: number; nombre: string; fecha: string | null; sede: string | null } | null;
+  solicitud: { id: number; transporte: number; lunch: number; estado: string; enviada_at: string | null } | null;
+  versiones: VersionFirmada[];
+  cupo: { transporte: Cupo; lunch: Cupo };
+}
+export interface LogisticaEstado {
+  aplica: boolean; estatal: boolean; modo: 'convocatoria' | 'evento'; abierta: boolean; fecha_limite: string | null;
+  limites: { transporte: number | null; lunch: number | null }; tope_integrantes: boolean; acompanantes: number;
+  solicitudes: SolicitudLogistica[];
+  resguardo: VersionFirmada[];
+  kit: { nombre: string | null; fecha: string | null; lugar: string | null; asignado_at: string | null; entregado_at: string | null;
+    entregado_lugar: string | null; entrego: string | null; recibio: string | null };
+}
+
+/** Respuesta de la API → estado de logística (o null si no aplica / forma inesperada). */
+export function leerLogistica(v: unknown): LogisticaEstado | null {
+  const d = v as Partial<LogisticaEstado> | null;
+  if (!d || typeof d !== 'object' || d.aplica !== true) return null;
+  return {
+    aplica: true, estatal: d.estatal === true, modo: d.modo === 'evento' ? 'evento' : 'convocatoria', abierta: d.abierta === true,
+    fecha_limite: typeof d.fecha_limite === 'string' ? d.fecha_limite : null,
+    limites: { transporte: typeof d.limites?.transporte === 'number' ? d.limites.transporte : null, lunch: typeof d.limites?.lunch === 'number' ? d.limites.lunch : null },
+    tope_integrantes: d.tope_integrantes === true, acompanantes: Number(d.acompanantes) || 0,
+    solicitudes: Array.isArray(d.solicitudes) ? d.solicitudes : [],
+    resguardo: Array.isArray(d.resguardo) ? d.resguardo : [],
+    kit: d.kit ?? { nombre: null, fecha: null, lugar: null, asignado_at: null, entregado_at: null, entregado_lugar: null, entrego: null, recibio: null },
+  };
+}
+
+/** La versión vigente (la más reciente que no fue reemplazada). */
+export function vigente(versiones: VersionFirmada[]): VersionFirmada | null {
+  return versiones.find((v) => v.estado !== 'reemplazado') ?? null;
+}
 
 /** Historial: texto de cada resultado (el del líder no incluye quién resolvió). */
 export const RESULTADO_HISTORIAL: Record<string, string> = {

@@ -9,9 +9,10 @@ import ClubResumen from '@/components/especie/ClubResumen';
 import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
 import HistorialClub from '@/components/especie/HistorialClub';
 import RevisionClubPanel, { type PermisosRevision } from '@/components/especie/RevisionClubPanel';
+import LogisticaPersonal from '@/components/especie/LogisticaPersonal';
 import { descargarDocumentoClub } from '@/lib/especie-api';
 import {
-  CARTA_ESCUELA, leerCamposApi, normalizarPredef, CAMPOS_INTEGRANTE,
+  CARTA_ESCUELA, leerCamposApi, normalizarPredef, CAMPOS_INTEGRANTE, leerLogistica, type LogisticaEstado,
   type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi,
 } from '@/lib/especie';
 
@@ -23,10 +24,11 @@ interface Detalle {
     convocatoria?: { id: number; nombre: string }; acta_comite?: { nombre: string; subida_at: string } | null };
   faltantes: string[];
   historial: EntradaHistorial[];
-  permisos: PermisosRevision;
+  permisos: PermisosRevision & { logistica?: boolean };
+  logistica: LogisticaEstado | null;
 }
 
-const SIN_PERMISOS: PermisosRevision = { resolver: false, observar: false, rechazar: false, prorroga: false, visto_bueno: false, comite: false, acta: false };
+const SIN_PERMISOS: PermisosRevision & { logistica?: boolean } = { resolver: false, observar: false, rechazar: false, prorroga: false, visto_bueno: false, comite: false, acta: false, logistica: false };
 
 function leer(data: unknown): Detalle | null {
   const d = data as Partial<Detalle> | null;
@@ -39,6 +41,7 @@ function leer(data: unknown): Detalle | null {
     faltantes: Array.isArray(d.faltantes) ? d.faltantes.filter((x): x is string => typeof x === 'string') : [],
     historial: Array.isArray(d.historial) ? d.historial : [],
     permisos: { ...SIN_PERMISOS, ...(d.permisos ?? {}) },
+    logistica: leerLogistica(d.logistica),
   };
 }
 
@@ -109,6 +112,18 @@ export default function FichaClubPersonal({ endpoint, volverHref }: { endpoint: 
             const x = nuevo ? leer(nuevo) : null;
             if (x) { setD(x); setAviso(mensaje); setError(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }
             else { setError(mensaje); void cargar(); }
+          }} />
+      )}
+      {d.logistica && (
+        <LogisticaPersonal clubId={d.club.id} estadoClub={d.club.estado} logistica={d.logistica} puede={Boolean(d.permisos.logistica)}
+          onHecho={(nuevo, mensaje, ok = true) => {
+            if (!ok) { setError(mensaje); return; }
+            setAviso(mensaje); setError(null);
+            const det = nuevo.detalle ? leer(nuevo.detalle) : null;
+            const log = nuevo.logistica ? leerLogistica(nuevo.logistica) : null;
+            if (det) setD(det);
+            else if (log) setD((x) => (x ? { ...x, logistica: log } : x));
+            else void cargar();
           }} />
       )}
       <ClubResumen club={d.club} integrantes={d.integrantes} documentos={documentos} campos={leerCamposApi(d.config.campos)}

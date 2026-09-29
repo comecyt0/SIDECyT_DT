@@ -51,7 +51,7 @@ class RevisionClubController extends Controller
             $q->whereIn('estado', ['enviado', 'subsanado', 'observado'])->whereHas('etapaActual', fn ($e) => $e->whereIn('revisa', $revisa));
         } elseif ($vista === 'comite') {
             abort_unless($rol === 'admin' || $rol === 'admin_convocatoria', 403);
-            $q->whereIn('estado', ['aprobado_revision', 'aceptado']);
+            $q->whereIn('estado', ['aprobado_revision', 'aceptado', 'kit_entregado']);
         }
         $clubes = $q->orderByRaw("CASE estado WHEN 'subsanado' THEN 0 WHEN 'enviado' THEN 1 WHEN 'observado' THEN 2 ELSE 3 END")
             ->orderBy('enviado_at')->limit(500)->get();
@@ -184,7 +184,9 @@ class RevisionClubController extends Controller
                 'resultado' => $r->resultado, 'etapa' => $r->etapa?->nombre, 'ronda' => $r->ronda, 'comentario' => $r->comentario,
                 'horas' => $r->horas, 'vence_at' => $r->vence_at, 'fecha' => $r->created_at, 'rol' => $r->rol, 'quien' => $r->usuario?->name,
             ])->values(),
+            'logistica' => \App\Support\LogisticaClub::aplica($club) ? \App\Support\LogisticaClub::estado($club) : null,
             'permisos' => [
+                'logistica' => $puedeAceptar && \App\Support\LogisticaClub::aplica($club),
                 'resolver' => RevisionClub::puedeResolver($u, $club) && ! $club->vencido(),
                 'observar' => RevisionClub::puedeResolver($u, $club) && ! $club->vencido() && $club->etapaActual && $club->ronda < $club->etapaActual->max_subsanaciones,
                 'rechazar' => RevisionClub::puedeResolver($u, $club),
