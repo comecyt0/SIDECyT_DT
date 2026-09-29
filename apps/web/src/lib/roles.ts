@@ -11,11 +11,13 @@ export const ROLES = {
   // E45 (24/09/2026)
   ADMIN_CONVOCATORIA: 5,
   CONSULTA: 6,
+  // E52 (29/09/2026): líder de un club escolar (Apoyo en especie).
+  LIDER_CLUB: 7,
 } as const;
 
 export type RoleId = (typeof ROLES)[keyof typeof ROLES];
 
-export type RolSlug = 'admin' | 'revisor' | 'evaluador' | 'solicitante' | 'admin_convocatoria' | 'consulta';
+export type RolSlug = 'admin' | 'revisor' | 'evaluador' | 'solicitante' | 'admin_convocatoria' | 'consulta' | 'lider_club';
 
 export const ROL_ETIQUETA: Record<RolSlug, string> = {
   admin: 'Administrador',
@@ -23,7 +25,23 @@ export const ROL_ETIQUETA: Record<RolSlug, string> = {
   consulta: 'Consulta',
   revisor: 'Revisor documental',
   evaluador: 'Evaluador técnico',
-  solicitante: 'Solicitante',
+  solicitante: 'Participante',
+  lider_club: 'Líder de club',
+};
+
+/** E52: roles que una persona puede pedir por su cuenta (registro general y "Mis roles"). Igual que el backend. */
+export const ROLES_AUTOSERVICIO = ['solicitante', 'lider_club', 'evaluador'] as const;
+export type RolAutoservicio = (typeof ROLES_AUTOSERVICIO)[number];
+
+/** Panel de inicio de cada rol (lo comparten el login, "Mis roles" y proxy.ts). */
+export const PANEL_POR_ROL: Record<RolSlug, string> = {
+  admin: '/admin/dashboard',
+  admin_convocatoria: '/admin/dashboard',
+  consulta: '/admin/dashboard',
+  revisor: '/revisor/solicitudes',
+  evaluador: '/evaluador/evaluaciones',
+  solicitante: '/solicitante/dashboard',
+  lider_club: '/club/dashboard',
 };
 
 /** Roles que usan el panel /admin (E45). */

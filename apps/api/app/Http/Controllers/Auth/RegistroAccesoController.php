@@ -118,7 +118,37 @@ class RegistroAccesoController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // E52: nombre del área de conocimiento del evaluador y si trae CV (el archivo solo se descarga por cv()).
+        $areas = DB::table('areas_conocimiento')->pluck('nombre', 'id');
+        $solicitudes->each(function ($s) use ($areas) {
+            $d = (array) ($s->datos_rol ?? []);
+            $s->setAttribute('area_nombre', isset($d['area_conocimiento_id']) ? ($areas[$d['area_conocimiento_id']] ?? null) : null);
+            $s->setAttribute('tiene_cv', \App\Support\RegistroRoles::cvValido($d['cv'] ?? null));
+            if (isset($d['cv'])) {
+                unset($d['cv']);
+                $s->setAttribute('datos_rol', $d);
+            }
+        });
+
         return response()->json($solicitudes);
+    }
+
+    /** E52 — Admin: descarga el CV (PDF) que adjuntó un evaluador en su registro. Disco privado; 404 si no hay. */
+    public function cv(SolicitudAcceso $solicitudAcceso)
+    {
+        $nombre = ((array) ($solicitudAcceso->datos_rol ?? []))['cv'] ?? null;
+        $ruta = \App\Support\RegistroRoles::DIR_CV.'/'.$nombre;
+        if (! \App\Support\RegistroRoles::cvValido($nombre) || ! \Illuminate\Support\Facades\Storage::disk('local')->exists($ruta)) {
+            abort(404);
+        }
+        \App\Support\Audit::log('acceso.cv_descargado', $solicitudAcceso);
+
+        return response()->file(\Illuminate\Support\Facades\Storage::disk('local')->path($ruta), [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="cv-'.$solicitudAcceso->id.'.pdf"',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     /**
@@ -135,9 +165,21 @@ class RegistroAccesoController extends Controller
         }
 
         $cuentaYaExistiaResp = false;
+        // E52: el rol lo eligió la persona al registrarse (registro general). Las solicitudes anteriores eran todas de
+        // solicitante (columna con valor por defecto).
+        $rol = $solicitudAcceso->rol_solicitado ?: 'solicitante';
+        if (! in_array($rol, \App\Support\RegistroRoles::rolesAutoservicio(), true)) {
+            return response()->json(['message' => 'El rol solicitado no es válido.'], 422);
+        }
+        if ($solicitudAcceso->curp
+            && User::where('curp', $solicitudAcceso->curp)->where('email', '!=', $solicitudAcceso->email)->exists()) {
+            return response()->json(['message' => 'Ya existe otra cuenta con esa CURP. Revisa con la persona antes de aprobar.'], 422);
+        }
 
-        DB::transaction(function () use ($solicitudAcceso, &$cuentaYaExistiaResp) {
+        DB::transaction(function () use ($solicitudAcceso, &$cuentaYaExistiaResp, $rol) {
             $empresaDatos = (array) ($solicitudAcceso->empresa_datos ?? []);
+            $empresa = null;
+            if ($rol === 'solicitante' && $solicitudAcceso->empresa_nombre) {
 
             // Find or create empresa con los datos extendidos
             $empresa = Empresa::firstOrCreate(
@@ -158,6 +200,7 @@ class RegistroAccesoController extends Controller
                     'rol_supervision' => $empresa->rol_supervision ?: ($empresaDatos['rol_supervision'] ?? null),
                 ]))->save();
             }
+            }
 
             // La cuenta puede existir ya (p. ej. un admin la dio de alta a mano en /admin/usuarios
             // antes de que alguien aprobara esta misma solicitud). Sin este chequeo, User::create()
@@ -167,19 +210,27 @@ class RegistroAccesoController extends Controller
             $cuentaYaExistia = $user !== null;
             $cuentaYaExistiaResp = $cuentaYaExistia;
 
+            $rolId = (int) config("comecyt.roles.{$rol}");
             if (! $user) {
-                // Create the user account (rol_id=4 = solicitante)
+                // E52: la cuenta nace con el rol que eligió al registrarse y sus datos personales.
                 $user = User::create([
                     'name' => $solicitudAcceso->nombre,
                     'email' => $solicitudAcceso->email,
                     'password' => $solicitudAcceso->password, // already hashed
-                    'rol_id' => config('comecyt.roles.solicitante'),
-                    'empresa_id' => $empresa->id,
+                    'rol_id' => $rolId,
+                    'empresa_id' => $empresa?->id,
                     'activo' => true,
                     'cargo' => $solicitudAcceso->cargo,
                     'telefono' => $solicitudAcceso->telefono,
                     'terminos_aceptados_at' => $solicitudAcceso->terminos_aceptados ? now() : null,
                 ]);
+                $user->forceFill([
+                    'curp' => $solicitudAcceso->curp,
+                    'codigo_postal' => $solicitudAcceso->codigo_postal,
+                    'municipio' => $solicitudAcceso->municipio,
+                    'colonia' => $solicitudAcceso->colonia,
+                    'datos_registro' => $rol === 'evaluador' ? $solicitudAcceso->datos_rol : null,
+                ])->save();
             } else {
                 Log::warning('RegistroAccesoController::aprobar — cuenta ya existía, se cierra la solicitud sin duplicarla', [
                     'solicitud_id' => $solicitudAcceso->id,
@@ -187,6 +238,9 @@ class RegistroAccesoController extends Controller
                     'user_id' => $user->id,
                 ]);
             }
+            // E52: el rol queda entre los roles otorgados de la persona (puede tener varios y cambiar entre ellos).
+            \App\Models\UsuarioRol::otorgar($user->id, $rolId, auth()->id());
+            \App\Support\Audit::log('acceso.aprobado', $user, ['rol' => $rol, 'solicitud_acceso_id' => $solicitudAcceso->id]);
 
             // Mark request as approved.
             // forceFill(), NO update(): 'estado'/'revisado_por'/'revisado_at' están en $guarded a

@@ -1638,5 +1638,29 @@ html.sg-scroll-bloqueado, html.sg-scroll-bloqueado body { overflow: hidden; over
 :is(.panel-root, html.sg-panel) .encuadre-previas figure { margin: 0; display: grid; gap: 6px; min-width: 0; }
 :is(.panel-root, html.sg-panel) .encuadre-previas figcaption { font-size: 12px; color: var(--sg-ink-2); text-align: center; }
 
+/* E52 — "Mis roles" (Mi cuenta): lista de roles, el activo en menta; botones de cambiar y pedir. */
+:is(.panel-root, html.sg-panel) .mis-roles-lista { display: grid; gap: 8px; margin-top: 14px; }
+:is(.panel-root, html.sg-panel) .mis-roles-item {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--sg-canvas, #fafafa);
+  box-shadow: var(--sg-shadow-hair);
+}
+:is(.panel-root, html.sg-panel) .mis-roles-item[data-activo] { box-shadow: 0 0 0 1.5px var(--sg-mint-ink, #0b5a2a) inset; background: var(--sg-mint, #d7ffe2); }
+:is(.panel-root, html.sg-panel) .mis-roles-icono { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 12px; background: var(--app-card-bg, #fff); color: var(--sg-vino); }
+:is(.panel-root, html.sg-panel) .mis-roles-cambiar {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 14px; border: 0; border-radius: 9999px;
+  background: var(--sg-vino); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: transform 160ms var(--sg-ease-out), opacity 160ms ease;
+}
+:is(.panel-root, html.sg-panel) .mis-roles-cambiar:active { transform: scale(0.97); }
+:is(.panel-root, html.sg-panel) .mis-roles-cambiar:disabled { opacity: 0.6; cursor: wait; }
+:is(.panel-root, html.sg-panel) .mis-roles-pedir {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 14px; border-radius: 9999px; cursor: pointer;
+  background: var(--app-card-bg, #fff); color: var(--sg-ink); font-size: 13px; font-weight: 600; border: 1.5px dashed var(--sg-fog, #c7c7c7);
+  transition: border-color 160ms ease, color 160ms ease, transform 160ms var(--sg-ease-out);
+}
+:is(.panel-root, html.sg-panel) .mis-roles-pedir:hover { border-color: var(--sg-vino); color: var(--sg-vino); }
+:is(.panel-root, html.sg-panel) .mis-roles-pedir:active { transform: scale(0.97); }
+:is(.panel-root, html.sg-panel) .mis-roles-form { display: grid; gap: 14px; margin-top: 14px; padding: 16px; border-radius: 18px; background: var(--pastel-vino, #f8f1f3); }
+@media (max-width: 480px) { :is(.panel-root, html.sg-panel) .mis-roles-item { flex-wrap: wrap; } }
+
 /* E50 — La franja institucional NO va en los paneles (regla del usuario, 28/09/2026): solo en el encabezado de las
    páginas públicas y de acceso (`BandaInstitucional`). */

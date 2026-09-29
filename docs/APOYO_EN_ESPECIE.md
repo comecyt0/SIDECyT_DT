@@ -178,6 +178,47 @@ Clubes aceptados · asistencia por evento · box lunch y transporte (solicitado 
 | **F5 — Registro general y CP** | Registro único con elección y cambio de rol (aprobación de admin), campo "Dirección por código postal" (catálogo Edomex) | Independiente; puede ir antes si se prioriza |
 | **Pendiente** | Pase a nacional / internacional (subconvocatorias) | Definición del usuario |
 
+> **Orden real de implementación (decisión del usuario, 29/09/2026): F5 primero**, luego F1 → F2 → F3 → F4.
+
+## 10. Fase 5 — Registro general con elección de rol ✅ PUBLICADA (29/09/2026)
+
+### 10.1 Decisiones adicionales del usuario (29/09/2026)
+| Tema | Decisión |
+|---|---|
+| Aprobación | **Solo la cuenta, con el rol elegido** al registrarse; pedir otro rol después = nueva aprobación |
+| Roles que se pueden pedir | **Participante (SIGAE), Líder de club, Evaluador** (revisor, admin, admin de convocatoria y consulta solo los otorga un admin) |
+| Datos de empresa | Solo al elegir **Participante** (como el formulario anterior, Responsable del proyecto obligatorio) |
+| Datos personales | Nombre, correo, contraseña, teléfono (10 dígitos), **CURP única y obligatoria**, CP + colonia, cargo/ocupación |
+| CP fuera del Edomex | **Se rechaza**: registro solo para el Estado de México |
+| Evaluador | Área de conocimiento, institución, **CV en PDF** (≤ 5 MB) y grado académico |
+| Ruta | **`/registro`**; `/solicitar-acceso` redirige (308) |
+| Líder de club (para F1) | **Un club por convocatoria**; consentimiento de menores = **una carta por club (de la escuela)**; campos del club/integrantes **configurables incluida su obligatoriedad** |
+
+### 10.2 Implementación
+- **BD** (`2026_09_29_000001_registro_general`): rol `lider_club` (id 7); `codigos_postales` (SEPOMEX Edomex); `users` +
+  `curp` (única, oculta en JSON), `codigo_postal`, `municipio`, `colonia`, `datos_registro` (oculto); `usuario_roles`
+  (roles otorgados; backfill con el rol de cada cuenta); `solicitudes_acceso` + rol solicitado y datos personales;
+  `solicitudes_rol` (pedir otro rol con cuenta).
+- **Catálogo de CP:** `php artisan sidecyt:cargar-cp <TXT>` carga el archivo oficial de Correos de México (estado 15,
+  TXT). Cargado: 2 284 CP, 8 360 asentamientos, 125 municipios. **El archivo NO se versiona** (licencia: prohibida su
+  distribución; repositorio público): copia en `backups/sepomex/Mexico_20260929.txt` (fuera de git).
+- **API pública:** `POST /auth/registro` (throttle 10 cada 10 min por IP; escuelas e instituciones comparten IP),
+  `GET /codigos-postales/{cp}` (throttle 60/min, una consulta por código), `GET /registro/opciones` (áreas y grados).
+  Municipio y colonia los resuelve el servidor contra el catálogo; CURP con patrón RENAPO; CV verificado por contenido y
+  guardado en disco privado `registro/`; correo o CURP ya registrados reciben la misma respuesta (sin enumeración).
+- **Roles múltiples:** `users.rol_id` = rol ACTIVO (el resto del sistema no cambió). `GET/POST /mis-roles`,
+  `/mis-roles/solicitar`, `/mis-roles/cambiar` (reemite el JWT con el nuevo rol; el anterior queda invalidado).
+  **Anti-escalada:** al cambiar el rol de una cuenta en Usuarios se retiran los roles de personal que no sean el nuevo
+  (`UserController::sincronizarRoles`), y el admin puede retirar un rol otorgado (`DELETE /admin/usuarios/{u}/roles/{r}`).
+- **Admin:** aprobar la cuenta crea el usuario con su rol (participante con empresa; evaluador con `datos_registro`);
+  pestaña **"Solicitudes de rol"** en `/admin/solicitudes-acceso`; CV con descarga autenticada (`/cv`). Avisos por
+  campana + correo (`RolSolicitudAviso`).
+- **Front:** `/registro` (pasos: rol → datos → domicilio → datos del rol → contraseña → confirmar), "Mis roles" en Mi
+  cuenta de todos los paneles, panel `/club` (inicio, Mi cuenta, Configuración) para el líder de club.
+- **Verificado:** e2e backend **46/46** (`e2e_registro.php`: CP, validaciones, duplicados, CV falso, aprobación por rol,
+  mis-roles, token anterior invalidado, escalada bloqueada, throttle), navegador real 11/11 (registro completo por UI a
+  390 px, pedir rol, cambiar de rol → /club), vitest 133/133, sin errores de JavaScript.
+
 ## 8. Modelo de datos (borrador técnico, a validar en F1)
 
 - `escuelas` (cct único, nombre, municipio, nivel, sistema `estatal|federal`, activo).

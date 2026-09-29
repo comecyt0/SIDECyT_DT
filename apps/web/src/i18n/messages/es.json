@@ -29,9 +29,9 @@
     "show_password": "Mostrar contraseña",
     "hide_password": "Ocultar contraseña",
     "forgot": "¿Olvidaste tu clave?",
-    "request_access": "Solicitar acceso",
-    "request_access_question": "¿Tu institución no está registrada?",
-    "request_access_link": "Solicitar Acceso",
+    "request_access": "Crear cuenta",
+    "request_access_question": "¿Aún no tienes cuenta?",
+    "request_access_link": "Crear cuenta",
     "first_time": "¿Primera vez?",
     "submit": "Ingresar al sistema",
     "submit_button": "Ingresar al Sistema",
@@ -83,7 +83,8 @@
       "completadas": "Solicitudes aprobadas y enviadas a evaluación",
       "informes_finales": "Revisión de informes de proyectos",
       "buzon_solicitante": "Sugerencias y chat con el equipo de tu convocatoria",
-      "cuenta": "Foto, portada y datos de tu perfil"
+      "cuenta": "Foto, portada y datos de tu perfil",
+      "mi_club": "Registro de tu club, integrantes y avance"
     },
     "dashboard": "Dashboard",
     "mi_panel": "Mi Panel",
@@ -118,7 +119,10 @@
     "brand_sub": "Gestión de Apoyo Empresarial",
     "buzon": "Buzón",
     "menu_open": "Abrir menú",
-    "menu_close": "Cerrar menú"
+    "menu_close": "Cerrar menú",
+    "workspace_club": "Mi club",
+    "mi_club": "Mi club",
+    "mis_roles": "Mis roles"
   },
   "notifications": {
     "title": "Notificaciones",
@@ -148,9 +152,10 @@
     "admin": "Administrador",
     "revisor": "Revisor Documental",
     "evaluador": "Evaluador Técnico",
-    "solicitante": "Solicitante",
+    "solicitante": "Participante",
     "admin_convocatoria": "Administrador de convocatoria",
-    "consulta": "Consulta"
+    "consulta": "Consulta",
+    "lider_club": "Líder de club"
   },
   "request_access": {
     "title": "Solicitar Acceso al Sistema",

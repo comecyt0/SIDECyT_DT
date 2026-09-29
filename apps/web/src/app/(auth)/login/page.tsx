@@ -14,6 +14,7 @@ import { INSTITUTION } from '@/lib/institution';
 import PieAuth from '@/components/branding/PieAuth';
 import { BandaInstitucional } from '@/components/branding/Logos';
 import { useGlobalLoader } from '@/components/ui/GlobalLoader';
+import { PANEL_POR_ROL } from '@/lib/roles';
 
 /** Estilos: clases .auth-* en globals.css. Diseño documentado en docs/DISENO_UI.md. */
 export default function LoginPage() {
@@ -54,15 +55,8 @@ export default function LoginPage() {
     const opts = { expires: 1, path: '/', sameSite: 'strict' as const, secure: window.location.protocol === 'https:' };
     Cookies.set('userRole', roleSlug, opts);
     Cookies.set('userName', user.name ?? '', opts);
-    const dashboardMap: Record<string, string> = {
-      admin: '/admin/dashboard',
-      // E45: roles delegados usan el panel de admin con alcance.
-      admin_convocatoria: '/admin/dashboard',
-      consulta: '/admin/dashboard',
-      revisor: '/revisor/solicitudes',
-      evaluador: '/evaluador/evaluaciones',
-      solicitante: '/solicitante/dashboard',
-    };
+    // Panel de inicio por rol: una sola tabla para login, "Mis roles" y proxy.ts (E52 suma lider_club → /club).
+    const dashboardMap: Record<string, string> = PANEL_POR_ROL;
     // El botón pasa a "Acceso concedido" y, medio segundo después, entra la pantalla de carga
     // del sistema — cubre el hueco de la recarga completa (window.location.href) con la misma
     // marca en vez de dejar la pantalla en blanco. Ver docs/DISENO_UI.md §Pantalla de carga.
@@ -335,7 +329,7 @@ export default function LoginPage() {
                   style={{ '--i': 5 } as React.CSSProperties}
                 >
                   {t('auth.request_access_question')}{' '}
-                  <Link href="/solicitar-acceso" className="auth-link">
+                  <Link href="/registro" className="auth-link">
                     {t('auth.request_access')}
                   </Link>
                 </p>

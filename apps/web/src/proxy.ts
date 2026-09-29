@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { construirCsp, generarNonce } from '@/lib/csp';
-import { subrutaPermitida } from '@/lib/roles';
+import { PANEL_POR_ROL, subrutaPermitida } from '@/lib/roles';
 
 // Next.js 16: este archivo reemplaza a `middleware.ts` (deprecated).
 // El comportamiento es idéntico — la convención cambió de nombre, no de API.
@@ -9,9 +9,10 @@ import { subrutaPermitida } from '@/lib/roles';
 // `/sigae` es la landing pública (23/09/2026). `/privacidad` y `/terminos` se abren a quien no tiene
 // sesión porque la landing los enlaza desde el pie: antes redirigían al login.
 // 25/09/2026: `/` es el portal de los sistemas del COMECYT (SIGAE y SICEI) y `/sicei` la página del nuevo sistema.
+// 29/09/2026 (E52): `/registro` es el registro general (elige rol); `/solicitar-acceso` redirige ahí (308).
 const PUBLIC_PATHS = [
   '/', '/sicei',
-  '/sigae', '/login', '/forgot-password', '/reset-password', '/solicitar-acceso', '/privacidad', '/terminos',
+  '/sigae', '/login', '/forgot-password', '/reset-password', '/registro', '/privacidad', '/terminos',
 ];
 
 /** Prefijo de ruta → roles autorizados a entrar.
@@ -23,16 +24,11 @@ const ROLE_PREFIXES: Record<string, string[]> = {
   '/revisor':     ['revisor'],
   '/evaluador':   ['evaluador'],
   '/solicitante': ['solicitante'],
+  // E52: panel del líder de club (Apoyo en especie).
+  '/club':        ['lider_club'],
 };
 
-const DASHBOARD_BY_ROLE: Record<string, string> = {
-  admin: '/admin/dashboard',
-  admin_convocatoria: '/admin/dashboard',
-  consulta: '/admin/dashboard',
-  revisor: '/revisor/solicitudes',
-  evaluador: '/evaluador/evaluaciones',
-  solicitante: '/solicitante/dashboard',
-};
+const DASHBOARD_BY_ROLE: Record<string, string> = PANEL_POR_ROL;
 
 /** Parsea el payload del JWT sin verificar firma. Si está corrupto devuelve null. */
 function parseJwtPayload(token: string): Record<string, unknown> | null {
@@ -61,6 +57,7 @@ function roleSlugFromPayload(payload: Record<string, unknown> | null): string | 
     case 4: return 'solicitante';
     case 5: return 'admin_convocatoria';
     case 6: return 'consulta';
+    case 7: return 'lider_club';
     default: return null;
   }
 }
@@ -106,12 +103,19 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(destino, 308);
   }
 
+  // 29/09/2026 (E52): "Solicitar acceso" se reemplazó por el registro general. Los enlaces viejos siguen funcionando.
+  if (path === '/solicitar-acceso') {
+    const destino = new URL(request.url);
+    destino.pathname = '/registro';
+    return NextResponse.redirect(destino, 308);
+  }
+
   // La raíz ya no redirige (25/09/2026): muestra el portal con los accesos a SIGAE y SICEI a todos. Quien tiene
   // sesión entra a su panel desde el botón de SIGAE (/login lo manda a su panel).
 
   if (esPublica) {
     // Con sesión válida, las pantallas de acceso llevan a su panel (la landing y las legales no).
-    if (sesion && rol && ['/login', '/forgot-password', '/reset-password', '/solicitar-acceso'].includes(path)) {
+    if (sesion && rol && ['/login', '/forgot-password', '/reset-password', '/registro'].includes(path)) {
       return NextResponse.redirect(new URL(DASHBOARD_BY_ROLE[rol], request.url));
     }
     return seguir(request);

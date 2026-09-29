@@ -9,6 +9,7 @@ import PerfilHero from '@/components/perfil/PerfilHero';
 import { avisarPerfilActualizado, useMiPerfil } from '@/hooks/useMiPerfil';
 import { formatDate } from '@/lib/format';
 import { ROL_ETIQUETA, type RolSlug } from '@/lib/roles';
+import MisRoles from '@/components/perfil/MisRoles';
 
 const MAX_MB = 5;
 const TIPOS = ['image/jpeg', 'image/png', 'image/webp'];
@@ -186,6 +187,9 @@ export default function MiCuenta({ seguridadHref }: { seguridadHref?: string }) 
           </ul>
         </section>
       </div>
+
+      {/* E52: varios roles por persona — cambiar de rol activo y pedir otro (con aprobación de admin). */}
+      <MisRoles />
     </div>
   );
 }

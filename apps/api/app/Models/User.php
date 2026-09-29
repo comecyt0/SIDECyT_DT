@@ -34,7 +34,17 @@ class User extends Authenticatable implements JWTSubject
         // E45: el nombre interno del archivo no sale; se expone la URL autenticada (avatar_url / banner_url).
         'avatar_path',
         'banner_path',
+        // E52: datos personales del registro general. No viajan en listados ni en /auth/me; los expone a mano solo
+        // quien los necesita (admin en la revisión, la propia persona en "Mi cuenta").
+        'curp',
+        'datos_registro',
     ];
+
+    /** E52: roles otorgados (el activo es rol_id). */
+    public function usuarioRoles()
+    {
+        return $this->hasMany(UsuarioRol::class);
+    }
 
     /** E45: toda serialización de un usuario lleva su foto y portada, para identificarlo en cualquier vista. */
     protected $appends = ['avatar_url', 'banner_url'];
@@ -84,6 +94,7 @@ class User extends Authenticatable implements JWTSubject
             // Secret y recovery codes se guardan encriptados en DB
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
+            'datos_registro' => 'array',
         ];
     }
 

@@ -58,6 +58,7 @@ class UserController extends Controller
             $datos['password'] = Hash::make($datos['password']);
             $user = User::create($datos);
             $this->sincronizarAlcance($user, $validated);
+            $this->sincronizarRoles($user, (int) $user->rol_id);
 
             return $user;
         });
@@ -113,6 +114,9 @@ class UserController extends Controller
             }
             $user->update($datos);
             $this->sincronizarAlcance($user->fresh(), $validated);
+            if (isset($validated['rol_id'])) {
+                $this->sincronizarRoles($user, (int) $validated['rol_id']);
+            }
         });
         Alcance::olvidar($user->id);
 
@@ -163,6 +167,22 @@ class UserController extends Controller
     }
 
     /** Aplica el alcance según el rol; lo que no corresponde al rol se limpia (un revisor no conserva convocatorias). */
+    /**
+     * E52 — Roles otorgados cuando el admin fija el rol de una cuenta: el nuevo rol queda otorgado y se RETIRAN los roles
+     * de personal (admin, revisor, admin de convocatoria, consulta) que no sean el nuevo. Sin esto, alguien degradado de
+     * admin a solicitante podría volver a "cambiar de rol" a admin desde Mis roles (escalada de privilegios).
+     * Los roles de autoservicio (participante, líder de club, evaluador) se conservan: los aprobó un admin.
+     */
+    private function sincronizarRoles(User $user, int $rolId): void
+    {
+        $autoservicio = array_map(fn ($s) => (int) config("comecyt.roles.{$s}"), \App\Support\RegistroRoles::rolesAutoservicio());
+        \App\Models\UsuarioRol::where('user_id', $user->id)
+            ->where('rol_id', '!=', $rolId)
+            ->whereNotIn('rol_id', $autoservicio)
+            ->delete();
+        \App\Models\UsuarioRol::otorgar($user->id, $rolId, auth()->id());
+    }
+
     private function sincronizarAlcance(User $user, array $validated): void
     {
         $esDelegado = $user->tieneRol('admin_convocatoria');

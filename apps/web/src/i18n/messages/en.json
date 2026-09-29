@@ -29,9 +29,9 @@
     "show_password": "Show password",
     "hide_password": "Hide password",
     "forgot": "Forgot your password?",
-    "request_access": "Request access",
-    "request_access_question": "Institution not registered yet?",
-    "request_access_link": "Request Access",
+    "request_access": "Create account",
+    "request_access_question": "Don't have an account yet?",
+    "request_access_link": "Create account",
     "first_time": "First time?",
     "submit": "Sign in",
     "submit_button": "Sign In",
@@ -83,7 +83,8 @@
       "completadas": "Approved applications sent for evaluation",
       "informes_finales": "Review of project reports",
       "buzon_solicitante": "Suggestions and chat with your call team",
-      "cuenta": "Photo, cover and profile details"
+      "cuenta": "Photo, cover and profile details",
+      "mi_club": "Your club registration, members and progress"
     },
     "dashboard": "Dashboard",
     "mi_panel": "My Dashboard",
@@ -118,7 +119,10 @@
     "brand_sub": "Business Support Management",
     "buzon": "Inbox",
     "menu_open": "Open menu",
-    "menu_close": "Close menu"
+    "menu_close": "Close menu",
+    "workspace_club": "My club",
+    "mi_club": "My club",
+    "mis_roles": "My roles"
   },
   "notifications": {
     "title": "Notifications",
@@ -148,9 +152,10 @@
     "admin": "Administrator",
     "revisor": "Document Reviewer",
     "evaluador": "Technical Evaluator",
-    "solicitante": "Applicant",
+    "solicitante": "Participant",
     "admin_convocatoria": "Call administrator",
-    "consulta": "Read-only"
+    "consulta": "Read-only",
+    "lider_club": "Club leader"
   },
   "request_access": {
     "title": "Request System Access",

@@ -87,6 +87,13 @@ Route::middleware([
 
     // === REGISTRO / SOLICITUD DE ACCESO (public) ===
     Route::post('auth/solicitar-acceso', [RegistroAccesoController::class, 'store'])->middleware('throttle:3,5');
+// E52 · Registro general (elige rol: participante, líder de club o evaluador). Público: throttle con prefijo propio,
+// lista blanca de campos, CV verificado por contenido, duplicados con respuesta idéntica (sin enumeración).
+Route::post('auth/registro', [\App\Http\Controllers\Auth\RegistroGeneralController::class, 'registrar'])->middleware('throttle:10,10,registro'); // 10 cada 10 min por IP: escuelas e instituciones salen por una sola IP
+Route::get('registro/opciones', [\App\Http\Controllers\Auth\RegistroGeneralController::class, 'opciones'])->middleware('throttle:30,1,registro-opciones');
+// E52 · Autollenado por código postal (solo Estado de México). Una consulta por código; nunca el catálogo completo.
+Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalController::class, 'show'])
+    ->where('cp', '[0-9]{5}')->middleware('throttle:60,1,cp');
 
     // === PUBLIC CATALOGS (No authentication required) ===
     // throttle propio (24/09/2026): endpoints públicos sin límite de ruta; el global de 300/min era el único freno.
@@ -273,6 +280,14 @@ Route::middleware([
             Route::get('solicitudes-acceso', [RegistroAccesoController::class, 'index']);
             Route::post('solicitudes-acceso/{solicitudAcceso}/aprobar', [RegistroAccesoController::class, 'aprobar']);
             Route::post('solicitudes-acceso/{solicitudAcceso}/rechazar', [RegistroAccesoController::class, 'rechazar']);
+        // E52: CV del registro de evaluador, solicitudes de rol de cuentas existentes y roles otorgados por cuenta.
+        Route::get('solicitudes-acceso/{solicitudAcceso}/cv', [RegistroAccesoController::class, 'cv'])->middleware('throttle:60,1,cv');
+        Route::get('solicitudes-rol', [\App\Http\Controllers\Admin\SolicitudRolController::class, 'index']);
+        Route::post('solicitudes-rol/{solicitudRol}/aprobar', [\App\Http\Controllers\Admin\SolicitudRolController::class, 'aprobar']);
+        Route::post('solicitudes-rol/{solicitudRol}/rechazar', [\App\Http\Controllers\Admin\SolicitudRolController::class, 'rechazar']);
+        Route::get('solicitudes-rol/{solicitudRol}/cv', [\App\Http\Controllers\Admin\SolicitudRolController::class, 'cv'])->middleware('throttle:60,1,cv');
+        Route::get('usuarios/{user}/roles', [\App\Http\Controllers\Admin\SolicitudRolController::class, 'rolesDeUsuario']);
+        Route::delete('usuarios/{user}/roles/{rol}', [\App\Http\Controllers\Admin\SolicitudRolController::class, 'revocar']);
 
             // Solicitudes de Recuperación de Contraseña
             Route::get('reset-requests', [PasswordResetController::class, 'adminIndex']);
@@ -299,6 +314,10 @@ Route::middleware([
         });
 
         // ═══ PERFIL (E45): todos los roles. ═══
+        // E52: mis roles (ver, cambiar de rol activo, pedir otro rol con aprobación de admin).
+        Route::get('mis-roles', [\App\Http\Controllers\MisRolesController::class, 'index']);
+        Route::post('mis-roles/solicitar', [\App\Http\Controllers\MisRolesController::class, 'solicitar'])->middleware('throttle:5,10,rol-solicitar');
+        Route::post('mis-roles/cambiar', [\App\Http\Controllers\MisRolesController::class, 'cambiar'])->middleware('throttle:20,1,rol-cambiar');
         Route::get('mi-perfil', [PerfilController::class, 'show']);
         Route::put('mi-perfil', [PerfilController::class, 'update']);
         Route::post('mi-perfil/avatar', [PerfilController::class, 'subirAvatar'])->middleware('throttle:10,1');

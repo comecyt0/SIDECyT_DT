@@ -129,10 +129,25 @@
                     <td>Correo electrónico</td>
                     <td>{{ $solicitud->email }}</td>
                 </tr>
+                @php
+                    $rolesRegistro = ['solicitante' => 'Participante (SIGAE)', 'lider_club' => 'Líder de club (Apoyo en especie)', 'evaluador' => 'Evaluador'];
+                @endphp
                 <tr>
-                    <td>Institución</td>
+                    <td>Rol solicitado</td>
+                    <td>{{ $rolesRegistro[$solicitud->rol_solicitado ?? 'solicitante'] ?? 'Participante (SIGAE)' }}</td>
+                </tr>
+                @if ($solicitud->empresa_nombre)
+                <tr>
+                    <td>Empresa</td>
                     <td>{{ $solicitud->empresa_nombre }}</td>
                 </tr>
+                @endif
+                @if ($solicitud->municipio)
+                <tr>
+                    <td>Municipio</td>
+                    <td>{{ $solicitud->municipio }}</td>
+                </tr>
+                @endif
                 @if ($solicitud->cargo)
                 <tr>
                     <td>Cargo</td>

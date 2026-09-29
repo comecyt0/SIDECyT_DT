@@ -161,5 +161,19 @@ return [
         // E45 (24/09/2026): opera solo sus convocatorias asignadas / solo lectura por periodos.
         'admin_convocatoria' => 5,
         'consulta' => 6,
+        // E52 (29/09/2026): líder de un club escolar (Apoyo en especie).
+        'lider_club' => 7,
+    ],
+
+    /*
+    | E52 · Registro general (docs/APOYO_EN_ESPECIE.md §10). Roles que una persona puede pedir por su cuenta desde el
+    | registro o desde "Mis roles". Los demás (admin, revisor, admin de convocatoria, consulta) solo los otorga un admin.
+    */
+    'registro' => [
+        'roles_autoservicio' => ['solicitante', 'lider_club', 'evaluador'],
+        'grados_academicos' => ['licenciatura', 'especialidad', 'maestria', 'doctorado', 'posdoctorado'],
+        'cv_max_mb' => 5,
+        // Solo códigos postales del Estado de México (decisión del usuario, 29/09/2026).
+        'estado_cp' => 'México',
     ],
 ];

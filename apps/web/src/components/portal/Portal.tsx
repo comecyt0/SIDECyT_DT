@@ -74,7 +74,7 @@ const PERFILES: { id: string; etiqueta: string; icono: ReactNode; sistema: Siste
 const ACCESOS: { href: string; etiqueta: string; detalle: string; icono: ReactNode }[] = [
   { href: '/sigae#convocatorias', etiqueta: 'Convocatorias abiertas', detalle: 'Qué puedes postular hoy en SIGAE', icono: <Megaphone aria-hidden="true" /> },
   { href: '/login', etiqueta: 'Iniciar sesión', detalle: 'Si ya tienes cuenta en SIGAE', icono: <LogIn aria-hidden="true" /> },
-  { href: '/solicitar-acceso', etiqueta: 'Solicitar acceso', detalle: 'Pide tu cuenta para postular', icono: <UserPlus aria-hidden="true" /> },
+  { href: '/registro', etiqueta: 'Crear cuenta', detalle: 'Participante, líder de club o evaluador', icono: <UserPlus aria-hidden="true" /> },
 ];
 
 /** Nodos de la órbita del héroe (posiciones calculadas sobre sus anillos; ver OrbitaSistemas). */
@@ -86,7 +86,7 @@ const NODOS = [
 /** "Cómo funciona": secuencia real del sistema (por eso va numerada). Sin datos inventados. */
 const PASOS: { titulo: string; texto: string; icono: ReactNode }[] = [
   { titulo: 'Elige tu sistema', texto: 'SIGAE si tienes una empresa o emprendes; SICEI si estudias, investigas o das clases.', icono: <Sparkles aria-hidden="true" /> },
-  { titulo: 'Pide tu cuenta', texto: 'Llena la solicitud de acceso. Un administrador del COMECYT la revisa y te avisa por correo.', icono: <UserPlus aria-hidden="true" /> },
+  { titulo: 'Crea tu cuenta', texto: 'Registra tus datos y elige tu rol: participante, líder de club o evaluador. Un administrador la aprueba y te avisa por correo.', icono: <UserPlus aria-hidden="true" /> },
   { titulo: 'Postula y da seguimiento', texto: 'Registra tu proyecto, adjunta tus documentos y mira en qué etapa va, hasta el convenio.', icono: <Megaphone aria-hidden="true" /> },
 ];
 

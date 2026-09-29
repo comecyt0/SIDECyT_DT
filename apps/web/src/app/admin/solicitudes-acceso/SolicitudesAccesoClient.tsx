@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,15 +12,16 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   UserCheck, Clock, CheckCircle2, XCircle, Search, Loader2,
   Mail, Building2, Briefcase, Phone, FileText, User, Calendar,
-  Eye
+  Eye, MapPin, ShieldCheck, IdCard, FlaskConical, GraduationCap, ArrowRightLeft,
 } from 'lucide-react';
 import api from '@/lib/api';
+import { GRADO_ETIQUETA } from '@/lib/registro';
 
 export interface SolicitudAcceso {
   id: number;
   nombre: string;
   email: string;
-  empresa_nombre: string;
+  empresa_nombre: string | null;
   cargo?: string;
   telefono?: string;
   motivo?: string;
@@ -29,6 +30,33 @@ export interface SolicitudAcceso {
   revisado_at?: string;
   revisado_por?: { id: number; name: string };
   created_at: string;
+  // E52 · registro general
+  rol_solicitado?: string;
+  curp?: string | null;
+  codigo_postal?: string | null;
+  municipio?: string | null;
+  colonia?: string | null;
+  datos_rol?: { area_conocimiento_id?: number; institucion?: string; grado_academico?: string } | null;
+  area_nombre?: string | null;
+  tiene_cv?: boolean;
+}
+
+const ROL_SOLICITADO: Record<string, { label: string; tone: string }> = {
+  solicitante: { label: 'Participante', tone: 'sky' },
+  lider_club: { label: 'Líder de club', tone: 'mint' },
+  evaluador: { label: 'Evaluador', tone: 'violet' },
+};
+
+/** Abre un PDF protegido (el CV) sin exponer la URL de la API: se descarga con la sesión y se muestra como blob. */
+async function abrirPdf(url: string, onError: (m: string) => void) {
+  try {
+    const r = await api.get(url, { responseType: 'blob' });
+    const objeto = URL.createObjectURL(new Blob([r.data], { type: 'application/pdf' }));
+    window.open(objeto, '_blank', 'noopener,noreferrer');
+    setTimeout(() => URL.revokeObjectURL(objeto), 60_000);
+  } catch {
+    onError('No se pudo abrir el CV.');
+  }
 }
 
 const ESTADO_CONFIG = {
@@ -54,6 +82,7 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [processing, setProcessing] = useState(false);
   const [confirmApprove, setConfirmApprove] = useState<SolicitudAcceso | null>(null);
+  const [pestana, setPestana] = useState<'cuentas' | 'roles'>('cuentas');
 
   const handleAprobar = async (sol: SolicitudAcceso) => {
     setProcessing(true);
@@ -94,7 +123,7 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
   const filtered = solicitudes.filter((s) => {
     const matchesFilter = filter === 'all' || s.estado === filter;
     const q = search.toLowerCase();
-    const matchesSearch = !q || s.nombre.toLowerCase().includes(q) || s.email.toLowerCase().includes(q) || s.empresa_nombre.toLowerCase().includes(q);
+    const matchesSearch = !q || s.nombre.toLowerCase().includes(q) || s.email.toLowerCase().includes(q) || (s.empresa_nombre ?? '').toLowerCase().includes(q) || (s.municipio ?? '').toLowerCase().includes(q);
     return matchesFilter && matchesSearch;
   });
 
@@ -108,10 +137,20 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
     <div className="space-y-6 animate-in fade-in duration-500">
       <PageHeader
         title="Solicitudes de acceso"
-        description="Personas que pidieron una cuenta para entrar al sistema. Revisa cada solicitud y apruébala o recházala."
+        description="Cuentas nuevas del registro general (con el rol que eligieron) y solicitudes de otro rol de personas que ya tienen cuenta."
         icon={<UserCheck className="h-5 w-5" />}
       />
 
+      <div className="seg-tabs" role="tablist" aria-label="Tipo de solicitud">
+        <button type="button" role="tab" aria-selected={pestana === 'cuentas'} onClick={() => setPestana('cuentas')} className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold">
+          <UserCheck className="h-3.5 w-3.5" aria-hidden="true" /> Cuentas nuevas <span className="text-xs opacity-70">{counts.pendiente}</span>
+        </button>
+        <button type="button" role="tab" aria-selected={pestana === 'roles'} onClick={() => setPestana('roles')} className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold">
+          <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden="true" /> Solicitudes de rol
+        </button>
+      </div>
+
+      {pestana === 'roles' ? <SolicitudesRol /> : (<>
       {error && <AlertBox type="error" message={error} onClose={() => setError('')} />}
       {success && <AlertBox type="success" message={success} onClose={() => setSuccess('')} />}
 
@@ -198,10 +237,14 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
                             <Icon aria-hidden="true" />
                             {cfg.label}
                           </span>
+                          <span className="pill" data-tone={ROL_SOLICITADO[sol.rol_solicitado ?? 'solicitante']?.tone ?? 'mist'}>
+                            {ROL_SOLICITADO[sol.rol_solicitado ?? 'solicitante']?.label ?? sol.rol_solicitado}
+                          </span>
                         </div>
                         <p className="text-xs text-[var(--app-ink-2)] flex items-center gap-3 flex-wrap">
                           <span className="flex items-center gap-1 truncate"><Mail className="w-3 h-3 shrink-0" />{sol.email}</span>
-                          <span className="flex items-center gap-1 truncate"><Building2 className="w-3 h-3 shrink-0" />{sol.empresa_nombre}</span>
+                          {sol.empresa_nombre && <span className="flex items-center gap-1 truncate"><Building2 className="w-3 h-3 shrink-0" />{sol.empresa_nombre}</span>}
+                          {sol.municipio && <span className="flex items-center gap-1 truncate"><MapPin className="w-3 h-3 shrink-0" />{sol.municipio}</span>}
                         </p>
                       </div>
                     </div>
@@ -251,13 +294,30 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <DetailItem icon={ShieldCheck} label="Rol solicitado" value={ROL_SOLICITADO[viewingSolicitud.rol_solicitado ?? 'solicitante']?.label ?? String(viewingSolicitud.rol_solicitado)} />
                 <DetailItem icon={User} label="Nombre" value={viewingSolicitud.nombre} />
                 <DetailItem icon={Mail} label="Correo" value={viewingSolicitud.email} />
-                <DetailItem icon={Building2} label="Institución" value={viewingSolicitud.empresa_nombre} />
+                {viewingSolicitud.curp && <DetailItem icon={IdCard} label="CURP" value={viewingSolicitud.curp} />}
+                {viewingSolicitud.empresa_nombre && <DetailItem icon={Building2} label="Empresa" value={viewingSolicitud.empresa_nombre} />}
                 {viewingSolicitud.cargo && <DetailItem icon={Briefcase} label="Cargo" value={viewingSolicitud.cargo} />}
                 {viewingSolicitud.telefono && <DetailItem icon={Phone} label="Teléfono" value={viewingSolicitud.telefono} />}
+                {viewingSolicitud.municipio && (
+                  <DetailItem icon={MapPin} label="Domicilio" value={`${viewingSolicitud.colonia ?? ''}, ${viewingSolicitud.municipio}, C.P. ${viewingSolicitud.codigo_postal ?? ''}`} />
+                )}
                 <DetailItem icon={Calendar} label="Fecha" value={new Date(viewingSolicitud.created_at).toLocaleDateString('es-MX')} />
+                {viewingSolicitud.rol_solicitado === 'evaluador' && (
+                  <>
+                    <DetailItem icon={FlaskConical} label="Área de conocimiento" value={viewingSolicitud.area_nombre ?? '—'} />
+                    <DetailItem icon={Building2} label="Institución" value={viewingSolicitud.datos_rol?.institucion ?? '—'} />
+                    <DetailItem icon={GraduationCap} label="Grado académico" value={GRADO_ETIQUETA[viewingSolicitud.datos_rol?.grado_academico ?? ''] ?? '—'} />
+                  </>
+                )}
               </div>
+              {viewingSolicitud.tiene_cv && (
+                <Button variant="soft" onClick={() => abrirPdf(`/admin/solicitudes-acceso/${viewingSolicitud.id}/cv`, setError)}>
+                  <FileText className="h-4 w-4" aria-hidden="true" /> Ver CV (PDF)
+                </Button>
+              )}
 
               {viewingSolicitud.motivo && (
                 <div>
@@ -349,6 +409,136 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+      </>)}
+    </div>
+  );
+}
+
+interface SolicitudRolItem {
+  id: number;
+  rol_solicitado: string;
+  estado: 'pendiente' | 'aprobada' | 'rechazada';
+  motivo_rechazo: string | null;
+  datos_rol: { empresa_nombre?: string; institucion?: string; grado_academico?: string } | null;
+  area_nombre: string | null;
+  tiene_cv: boolean;
+  created_at: string;
+  revisado_por: string | null;
+  user: { id: number; name: string; email: string; telefono?: string | null; cargo?: string | null; municipio?: string | null; empresa?: string | null } | null;
+}
+
+/** E52 — Personas con cuenta que piden otro rol desde "Mis roles". Se carga en el cliente al abrir la pestaña. */
+function SolicitudesRol() {
+  const [items, setItems] = useState<SolicitudRolItem[] | null>(null);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [procesando, setProcesando] = useState<number | null>(null);
+  const [rechazo, setRechazo] = useState<SolicitudRolItem | null>(null);
+  const [motivo, setMotivo] = useState('');
+
+  const cargar = async () => {
+    try {
+      const { data } = await api.get('/admin/solicitudes-rol');
+      setItems(Array.isArray(data) ? data : []);
+    } catch {
+      setError('No se pudieron cargar las solicitudes de rol.');
+      setItems([]);
+    }
+  };
+  useEffect(() => { void cargar(); }, []);
+
+  const aprobar = async (s: SolicitudRolItem) => {
+    setProcesando(s.id); setError('');
+    try {
+      await api.post(`/admin/solicitudes-rol/${s.id}/aprobar`);
+      setOk(`Listo: ${s.user?.name ?? 'la persona'} ya puede usar el rol «${ROL_SOLICITADO[s.rol_solicitado]?.label ?? s.rol_solicitado}».`);
+      await cargar();
+    } catch (e) {
+      setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo aprobar.');
+    } finally { setProcesando(null); }
+  };
+  const rechazar = async () => {
+    if (!rechazo || !motivo.trim()) return;
+    setProcesando(rechazo.id); setError('');
+    try {
+      await api.post(`/admin/solicitudes-rol/${rechazo.id}/rechazar`, { motivo_rechazo: motivo.trim() });
+      setOk('Solicitud rechazada. Le avisamos a la persona.');
+      setRechazo(null); setMotivo('');
+      await cargar();
+    } catch (e) {
+      setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo rechazar.');
+    } finally { setProcesando(null); }
+  };
+
+  return (
+    <div className="space-y-4">
+      {error && <AlertBox type="error" message={error} onClose={() => setError('')} />}
+      {ok && <AlertBox type="success" message={ok} onClose={() => setOk('')} />}
+      <Card>
+        <CardHeader>
+          <CardTitle><ArrowRightLeft className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Solicitudes de rol <span className="text-sm font-normal text-[var(--app-ink-2)]">({items?.length ?? 0})</span></CardTitle>
+          <CardDescription>Personas que ya tienen cuenta y piden otro rol. Al aprobar, pueden cambiar a ese rol desde «Mi cuenta».</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          {items === null ? (
+            <p className="px-6 py-8 text-sm text-[var(--app-ink-2)]"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" aria-hidden="true" />Cargando…</p>
+          ) : items.length === 0 ? (
+            <div className="empty-state">
+              <span className="tone-chip" data-tone="violet"><ArrowRightLeft aria-hidden="true" /></span>
+              <p className="font-bold text-[var(--app-ink)]">Sin solicitudes de rol</p>
+              <p className="text-sm text-[var(--app-ink-2)]">Aparecen cuando alguien con cuenta pide otro rol desde «Mi cuenta → Mis roles».</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-[var(--app-rule)]">
+              {items.map((s) => {
+                const cfg = ESTADO_CONFIG[s.estado];
+                return (
+                  <li key={s.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-6">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-bold">{s.user?.name ?? '—'}</p>
+                        <span className="pill" data-tone={cfg.tone}>{cfg.label}</span>
+                        <span className="pill" data-tone={ROL_SOLICITADO[s.rol_solicitado]?.tone ?? 'mist'}>Pide: {ROL_SOLICITADO[s.rol_solicitado]?.label ?? s.rol_solicitado}</span>
+                      </div>
+                      <p className="flex flex-wrap items-center gap-3 text-xs text-[var(--app-ink-2)]">
+                        <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{s.user?.email}</span>
+                        {s.user?.municipio && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{s.user.municipio}</span>}
+                        {s.datos_rol?.empresa_nombre && <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{s.datos_rol.empresa_nombre}</span>}
+                        {s.area_nombre && <span className="flex items-center gap-1"><FlaskConical className="h-3 w-3" />{s.area_nombre}</span>}
+                        {s.datos_rol?.grado_academico && <span className="flex items-center gap-1"><GraduationCap className="h-3 w-3" />{GRADO_ETIQUETA[s.datos_rol.grado_academico] ?? s.datos_rol.grado_academico}</span>}
+                      </p>
+                      {s.estado === 'rechazada' && s.motivo_rechazo && <p className="mt-1 text-xs text-[var(--app-ink-2)]">Motivo: {s.motivo_rechazo}</p>}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {s.tiene_cv && <Button size="sm" variant="outline" onClick={() => abrirPdf(`/admin/solicitudes-rol/${s.id}/cv`, setError)}><FileText className="h-3.5 w-3.5" /> CV</Button>}
+                      {s.estado === 'pendiente' && (
+                        <>
+                          <Button size="sm" variant="soft" disabled={procesando === s.id} onClick={() => aprobar(s)}>{procesando === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Aprobar'}</Button>
+                          <Button size="sm" variant="destructive" onClick={() => { setRechazo(s); setMotivo(''); }}>Rechazar</Button>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!rechazo} onOpenChange={(o) => !o && setRechazo(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Rechazar solicitud de rol</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <label htmlFor="rol-motivo" className="block text-xs font-bold text-[var(--app-ink-2)]">Motivo (se le envía a la persona) *</label>
+            <textarea id="rol-motivo" value={motivo} maxLength={1000} onChange={(e) => setMotivo(e.target.value)} className="auth-input auth-input-static !h-auto min-h-[100px] resize-y py-3 pl-4" />
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button variant="outline" className="flex-1" onClick={() => setRechazo(null)}>Cancelar</Button>
+              <Button variant="destructive" className="flex-1" disabled={!motivo.trim() || procesando !== null} onClick={rechazar}>Confirmar rechazo</Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

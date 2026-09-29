@@ -76,8 +76,8 @@ const ROLES: { title: string; body: string; icon: ReactNode; tone: Tone | 'mist'
 ];
 
 const ACCESS: { title: string; body: string }[] = [
-  { title: 'Solicita acceso', body: 'Llena el formulario con los datos de tu empresa o institución y tu correo.' },
-  { title: 'Se valida tu solicitud', body: 'La administración del COMECYT revisa tus datos y aprueba el acceso.' },
+  { title: 'Crea tu cuenta', body: 'Registra tus datos y elige «Participante»; al final agregas los datos de tu empresa o institución.' },
+  { title: 'Se valida tu cuenta', body: 'La administración del COMECYT revisa tus datos y aprueba tu cuenta.' },
   { title: 'Entra a SIGAE', body: 'Inicia sesión con tu correo y tu contraseña, y registra tu proyecto.' },
 ];
 
@@ -280,8 +280,8 @@ function CallCard({ c, i }: { c: Call; i: number }) {
           </Link>
         )}
         {c.estado === 'proxima' && (
-          <Link href="/solicitar-acceso" className="lp-btn lp-btn-ghost lp-call-cta">
-            Prepárate: solicita acceso <ArrowRight className="lp-btn-arrow" aria-hidden="true" />
+          <Link href="/registro" className="lp-btn lp-btn-ghost lp-call-cta">
+            Prepárate: crea tu cuenta <ArrowRight className="lp-btn-arrow" aria-hidden="true" />
           </Link>
         )}
       </div>
@@ -644,7 +644,7 @@ export default function Landing() {
               <span className="lp-nav-back-largo">Regresar a SIDECyT</span>
               <span className="lp-nav-back-corto" aria-hidden="true">SIDECyT</span>
             </Link>
-            <Link href="/solicitar-acceso" className="lp-btn lp-btn-ghost lp-nav-ghost">Solicitar acceso</Link>
+            <Link href="/registro" className="lp-btn lp-btn-ghost lp-nav-ghost">Crear cuenta</Link>
             {/* En teléfonos angostos dice "Entrar" para que la barra quepa (el nombre accesible sigue completo). */}
             <Link href="/login" className="lp-btn lp-btn-rainbow lp-nav-login" aria-label="Iniciar sesión">
               <span className="lp-nav-login-largo">Iniciar sesión</span>
@@ -679,7 +679,7 @@ export default function Landing() {
               </p>
               <EmailClaim />
               <p className="lp-hero-alt lp-in" style={{ '--i': 10 } as CSSProperties}>
-                ¿Todavía no tienes cuenta? <Link href="/solicitar-acceso" className="lp-link">Solicita acceso</Link>
+                ¿Todavía no tienes cuenta? <Link href="/registro" className="lp-link">Crea tu cuenta</Link>
               </p>
             </div>
           </div>
@@ -884,7 +884,7 @@ export default function Landing() {
                 <p>Sistema de Gestión de Apoyo Empresarial. Usa el correo con el que te registraste.</p>
               </div>
               <div className="lp-final-actions">
-                <Link href="/solicitar-acceso" className="lp-btn lp-btn-ghost">Solicitar acceso</Link>
+                <Link href="/registro" className="lp-btn lp-btn-ghost">Crear cuenta</Link>
                 <Link href="/login" className="lp-btn lp-btn-rainbow">
                   Iniciar sesión <ArrowRight className="lp-btn-arrow" aria-hidden="true" />
                 </Link>

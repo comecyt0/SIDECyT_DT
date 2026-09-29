@@ -125,9 +125,10 @@ describe('Landing /sigae', () => {
     expect(await screen.findByText('No pudimos cargar las convocatorias')).toBeTruthy();
   });
 
-  it('enlaza al login y a solicitar acceso', () => {
+  it('enlaza al login y al registro general (E52)', () => {
     const { container } = render(<Landing />);
     expect(container.querySelector('a[href="/login"]')).toBeTruthy();
-    expect(container.querySelector('a[href="/solicitar-acceso"]')).toBeTruthy();
+    expect(container.querySelector('a[href="/registro"]')).toBeTruthy();
+    expect(container.querySelector('a[href="/solicitar-acceso"]')).toBeNull();
   });
 });

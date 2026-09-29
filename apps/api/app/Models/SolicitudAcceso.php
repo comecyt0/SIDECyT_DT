@@ -32,6 +32,7 @@ class SolicitudAcceso extends Model
         'password' => 'hashed',
         'empresa_datos' => 'array',
         'contactos' => 'array',
+        'datos_rol' => 'array',
         'terminos_aceptados' => 'boolean',
     ];
 

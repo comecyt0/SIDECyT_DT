@@ -1173,6 +1173,47 @@
   }
 }
 
+/* E52 · Registro general (/registro): tarjetas de rol, domicilio por CP, aviso del club y archivo. Sistema --auth-*.
+   Tarjeta de rol = radio real (accesible por teclado); la elegida en vino con check que entra con escala. */
+.registro-rol {
+  position: relative; display: flex; align-items: flex-start; gap: 14px; padding: 16px 16px 16px 14px; cursor: pointer;
+  border-radius: 18px; background: var(--auth-white); border: 1.5px solid var(--auth-rule);
+  transition: border-color 200ms ease, box-shadow 220ms var(--auth-ease-out), transform 160ms var(--auth-ease-out);
+}
+.registro-rol:has(input:focus-visible) { outline: 2px solid var(--auth-vino); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .registro-rol:hover { border-color: color-mix(in oklch, var(--auth-vino) 45%, var(--auth-rule)); } }
+.registro-rol:active { transform: scale(0.99); }
+.registro-rol[data-activo] { border-color: var(--auth-vino); box-shadow: 0 0 0 3px var(--auth-vino-soft), 0 10px 24px -16px rgba(86, 33, 47, 0.55); }
+.registro-rol-icono {
+  display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 14px;
+  background: var(--auth-vino-soft); color: var(--auth-vino);
+}
+.registro-rol-icono svg { width: 21px; height: 21px; }
+.registro-rol-titulo { display: block; font-family: var(--font-titulos); font-weight: 700; font-size: 16px; letter-spacing: -0.01em; color: var(--auth-ink); }
+.registro-rol-para { display: block; margin-top: 1px; font-size: 12.5px; font-weight: 600; color: var(--auth-vino); }
+.registro-rol-detalle { display: block; margin-top: 6px; font-size: 13px; line-height: 1.5; color: var(--auth-ink-2); }
+.registro-rol-check {
+  display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%;
+  border: 1.5px solid var(--auth-rule); color: transparent; transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+.registro-rol[data-activo] .registro-rol-check { background: var(--auth-vino); border-color: var(--auth-vino); color: #fff; }
+@media (prefers-reduced-motion: no-preference) {
+  .registro-rol[data-activo] .registro-rol-check svg { animation: registro-check 260ms var(--auth-ease-out) both; }
+}
+@keyframes registro-check { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.registro-cp { display: grid; gap: 12px; padding: 14px; border-radius: 18px; background: var(--auth-vino-soft); }
+.registro-cp-dato { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--auth-white); }
+.registro-cp-dato span { font-size: 11.5px; font-weight: 600; color: var(--auth-ink-2); }
+.registro-cp-dato strong { font-size: 14.5px; color: var(--auth-ink); }
+.registro-aviso { display: flex; gap: 12px; padding: 16px; border-radius: 18px; background: var(--auth-vino-soft); color: var(--auth-ink); }
+.registro-archivo {
+  display: block; width: 100%; padding: 12px; border-radius: var(--auth-radius-field); border: 1.5px dashed var(--auth-rule);
+  background: var(--auth-field); font-size: 13px; color: var(--auth-ink-2); cursor: pointer;
+}
+.registro-archivo::file-selector-button {
+  margin-right: 12px; padding: 8px 14px; border: 0; border-radius: 9999px; background: var(--auth-vino); color: #fff; font-weight: 700; cursor: pointer;
+}
+
 /* E50 (28/09/2026) — Login sin scroll: la página mide el alto de la ventana (banda + resto). Los espacios verticales
    del formulario se escalan con el ALTO de la pantalla para que quepa en laptops de 720-800 px. Sin @layer a propósito:
    tiene que ganarle a las utilidades de Tailwind del JSX (py-10, mb-8, mb-9, h-20/h-24). */

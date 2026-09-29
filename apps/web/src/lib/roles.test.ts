@@ -9,10 +9,11 @@ describe('ROLES', () => {
     expect(ROLES.SOLICITANTE).toBe(4);
   });
 
-  it('incluye los roles de E45 (admin de convocatoria y consulta) y en total son seis', () => {
+  it('incluye los roles de E45 y el líder de club de E52 (siete en total)', () => {
     expect(ROLES.ADMIN_CONVOCATORIA).toBe(5);
     expect(ROLES.CONSULTA).toBe(6);
-    expect(Object.keys(ROLES)).toHaveLength(6);
+    expect(ROLES.LIDER_CLUB).toBe(7);
+    expect(Object.keys(ROLES)).toHaveLength(7);
   });
 
   it('produce IDs únicos para cada rol', () => {
