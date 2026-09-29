@@ -29,6 +29,10 @@ class AppServiceProvider extends ServiceProvider
             return \Illuminate\Validation\Rules\Password::min(10)->letters()->mixedCase()->numbers();
         });
 
+        // E52: nunca entregar correo a dominios reservados (.invalid, .example, .test…): protege la reputación de la
+        // cuenta institucional de Microsoft 365 frente a pruebas o datos basura.
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Mail\Events\MessageSending::class, [\App\Listeners\BloquearCorreoDominiosReservados::class, 'handle']);
+
         // Use the COMECYT-branded password reset email template
         ResetPassword::toMailUsing(
             function (object $notifiable, string $token) {

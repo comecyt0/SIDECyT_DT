@@ -13,11 +13,12 @@ import { ESTADO_PUBLICO, estadoPublico, puedeProrrogar } from '@/lib/convocatori
 import ProrrogaDialog from '@/components/admin/ProrrogaDialog';
 import BannerManager from '@/components/admin/BannerManager';
 import { useRol } from '@/hooks/useRol';
+import EspecieConvocatoriaPanel from '@/components/admin/especie/EspecieConvocatoriaPanel';
 
 const sectionTitleCls = 'text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)] flex items-center gap-2 border-b border-[var(--app-rule)] pb-2';
 const fechaLarga = (v?: string | null) => (v ? parseDate(v).toLocaleDateString('es-MX', { dateStyle: 'long' }) : '—');
 
-type ConvocatoriaConPrograma = Convocatoria & { tipo_programa?: { id: number; nombre: string; banner_url?: string | null } };
+type ConvocatoriaConPrograma = Convocatoria & { tipo_programa?: { id: number; nombre: string; banner_url?: string | null; tipo_apoyo?: string } };
 
 export default function VerConvocatoriaPage() {
   // E45: acciones visibles según el rol (el backend las permite o rechaza de todos modos).
@@ -63,6 +64,8 @@ export default function VerConvocatoriaPage() {
   const estado = estadoPublico(convocatoria);
   const estadoCfg = ESTADO_PUBLICO[estado];
   const programa = convocatoria.tipo_programa ?? null;
+  // E52: en Apoyo en especie no hay montos; en su lugar se muestran los clubes y el kit.
+  const esEspecie = programa?.tipo_apoyo === 'especie';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-4xl mx-auto">
@@ -71,7 +74,9 @@ export default function VerConvocatoriaPage() {
         backLabel="Volver a convocatorias"
         eyebrow="Convocatoria"
         title={convocatoria.nombre}
-        description={`Ejercicio fiscal ${convocatoria.ejercicio_fiscal}. Aquí ves las fechas, los montos, el banner y la descripción que conocen los solicitantes.`}
+        description={esEspecie
+          ? `Ejercicio fiscal ${convocatoria.ejercicio_fiscal}. Apoyo en especie: fechas, clubes y kit, banner y la descripción que conocen los líderes de club.`
+          : `Ejercicio fiscal ${convocatoria.ejercicio_fiscal}. Aquí ves las fechas, los montos, el banner y la descripción que conocen los solicitantes.`}
         actions={
           <>
             {esAdmin && puedeProrrogar(convocatoria) && (
@@ -127,7 +132,7 @@ export default function VerConvocatoriaPage() {
               </div>
             </div>
 
-            <div className="space-y-4">
+            {!esEspecie && <div className="space-y-4">
               <h3 className={sectionTitleCls}>
                 <Coins className="w-4 h-4" style={{ color: 'var(--auth-vino)' }} /> Montos
               </h3>
@@ -145,7 +150,7 @@ export default function VerConvocatoriaPage() {
                   </p>
                 </div>
               </div>
-            </div>
+            </div>}
           </div>
 
           <div className="space-y-4">
@@ -158,6 +163,8 @@ export default function VerConvocatoriaPage() {
           </div>
         </CardContent>
       </Card>
+
+      {esEspecie && <EspecieConvocatoriaPanel convocatoriaId={convocatoria.id} puedeEditar={esAdmin} />}
 
       {esAdmin && <BannerManager
         endpoint={`/admin/convocatorias/${convocatoria.id}/banner`}

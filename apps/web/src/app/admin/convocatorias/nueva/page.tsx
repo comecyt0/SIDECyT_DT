@@ -28,10 +28,12 @@ import { useRouter } from 'next/navigation';
 import ConvocatoriaPreviewPanel from '@/components/admin/ConvocatoriaPreviewPanel';
 import SelectorFormatos from '@/components/admin/SelectorFormatos';
 import {
-  LIMITES, CLAVE_PROGRAMA_RE, armarPayload, erroresDelServidor, restaurarBorrador, tieneContenido,
-  type EstadoAsistente,
+  LIMITES, CLAVE_PROGRAMA_RE, armarPayload, erroresDelServidor, restaurarBorrador, tieneContenido, pasosDe,
+  type EstadoAsistente, type PasoAsistente,
 } from '@/lib/asistente-convocatoria';
-import { Save, CloudOff, Cloud } from 'lucide-react';
+import { Save, CloudOff, Cloud, Banknote, Package } from 'lucide-react';
+import ConfigEspecieForm from '@/components/admin/especie/ConfigEspecieForm';
+import { configVacia, validarConfig, CAMPOS_CLUB, CAMPOS_INTEGRANTE, TIPO_CAMPO_ETIQUETA, type ConfigEspecie } from '@/lib/especie';
 
 interface Campo {
   nombre_campo: string;
@@ -84,7 +86,7 @@ interface WizardState {
   programa: {
     clave: string;
     nombre: string;
-    tipo_apoyo: 'reembolso' | 'concurrente' | 'honorarios';
+    tipo_apoyo: 'reembolso' | 'concurrente' | 'honorarios' | 'especie';
     monto_maximo: number;
     tiene_etapas: boolean;
     num_etapas: number;
@@ -98,6 +100,8 @@ interface WizardState {
   documentos: Documento[];
   rubros: Rubro[];
   criterios: Criterio[];
+  // E52: configuración de "Apoyo en especie" (clubes y kit).
+  especie: ConfigEspecie;
 }
 
 const wizLabelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
@@ -117,17 +121,30 @@ const TIPO_APOYO_LABELS: Record<WizardState['programa']['tipo_apoyo'], string> =
   reembolso: 'Reembolso',
   concurrente: 'Concurrente',
   honorarios: 'Honorarios',
+  especie: 'En especie (kits a clubes escolares)',
 };
 
-const WIZARD_STEPS = [
-  'Convocatoria',
-  'Programa',
-  'Preguntas',
-  'Documentos',
-  'Conceptos de gasto',
-  'Criterios',
-  'Revisión',
-];
+// Pasos según la modalidad (lib/asistente-convocatoria.ts): económico = 7, en especie = 5.
+const ETIQUETA_PASO: Record<PasoAsistente, string> = {
+  convocatoria: 'Convocatoria',
+  programa: 'Programa',
+  campos: 'Preguntas',
+  documentos: 'Documentos',
+  rubros: 'Conceptos de gasto',
+  criterios: 'Criterios',
+  especie: 'Club y kit',
+  revision: 'Revisión',
+};
+const TITULO_PASO: Record<PasoAsistente, [string, string]> = {
+  convocatoria: ['Información de la convocatoria', 'Escribe los datos generales que verán los solicitantes.'],
+  programa: ['Configuración del programa', 'Define cómo se entrega el apoyo y qué reglas aplican.'],
+  campos: ['Preguntas del formulario', 'Estas son las preguntas que responderá el solicitante en su formulario.'],
+  documentos: ['Documentos que se piden', 'Indica qué archivos debe adjuntar el solicitante.'],
+  rubros: ['Conceptos de gasto', 'Define en qué se puede usar el dinero del apoyo.'],
+  criterios: ['Criterios de evaluación', 'Indica qué se califica y cuánto pesa cada aspecto.'],
+  especie: ['Clubes y kit', 'Cuántos integrantes, qué kit se entrega y qué datos se piden a cada club.'],
+  revision: ['Revisa y guarda', 'Revisa toda la información antes de crear la convocatoria.'],
+};
 
 const EmptyList = ({ text }: { text: string }) => (
   <div className="empty-state !py-10">
@@ -182,6 +199,7 @@ const emptyWizardState: WizardState = {
   documentos: [],
   rubros: [],
   criterios: [],
+  especie: configVacia(),
 };
 
 export default function ConvocatoriasNuevaPage() {
@@ -190,6 +208,12 @@ export default function ConvocatoriasNuevaPage() {
   const [state, setState] = useState<WizardState>(emptyWizardState);
   const claveTouched = useRef(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  // E52: la modalidad decide los pasos (económico 7, en especie 5).
+  const esEspecie = state.programa.tipo_apoyo === 'especie';
+  const pasos = pasosDe(state as unknown as EstadoAsistente);
+  const totalPasos = pasos.length;
+  const pasoActual: PasoAsistente = pasos[currentStep - 1] ?? 'revision';
+  const [erroresEspecie, setErroresEspecie] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saveProgress, setSaveProgress] = useState<string>('');
   const [saveError, setSaveError] = useState<string>('');
@@ -250,9 +274,10 @@ export default function ConvocatoriasNuevaPage() {
     api.get(`/admin/asistente-convocatoria/borradores/${id}`)
       .then(({ data }) => {
         saltarAutoguardado.current = true;
-        setState(restaurarBorrador(data?.datos, emptyWizardState as unknown as EstadoAsistente) as unknown as WizardState);
+        const restaurado = restaurarBorrador(data?.datos, emptyWizardState as unknown as EstadoAsistente);
+        setState(restaurado as unknown as WizardState);
         const paso = Number(data?.paso);
-        setCurrentStep(Number.isInteger(paso) && paso >= 1 && paso <= 7 ? paso : 1);
+        setCurrentStep(Number.isInteger(paso) && paso >= 1 && paso <= pasosDe(restaurado).length ? paso : 1);
         borradorIdRef.current = id;
         setBorradorId(id);
         setEstadoBorrador('guardado');
@@ -348,8 +373,10 @@ export default function ConvocatoriasNuevaPage() {
 
   const validateStep = useCallback((step: number): boolean => {
     const errors: Record<string, string> = {};
+    const especie = state.programa.tipo_apoyo === 'especie';
+    const clave = pasosDe(state as unknown as EstadoAsistente)[step - 1];
 
-    if (step === 1) {
+    if (clave === 'convocatoria') {
       if (!state.convocatoria.nombre.trim()) errors.nombre = 'Nombre requerido';
       if (!state.convocatoria.ejercicio_fiscal.trim()) errors.ejercicio_fiscal = 'Ejercicio fiscal requerido';
       if (!state.convocatoria.fecha_apertura) errors.fecha_apertura = 'Fecha de apertura requerida';
@@ -357,8 +384,8 @@ export default function ConvocatoriasNuevaPage() {
       if (state.convocatoria.fecha_apertura > state.convocatoria.fecha_cierre) {
         errors.fecha_apertura = 'Apertura no puede ser después de cierre';
       }
-      if (state.convocatoria.monto_maximo_apoyo <= 0) errors.monto_maximo_apoyo = 'Monto debe ser > 0';
-      if (state.convocatoria.porcentaje_aportacion_minima < 0 || state.convocatoria.porcentaje_aportacion_minima > 100) {
+      if (!especie && state.convocatoria.monto_maximo_apoyo <= 0) errors.monto_maximo_apoyo = 'Monto debe ser > 0';
+      if (!especie && (state.convocatoria.porcentaje_aportacion_minima < 0 || state.convocatoria.porcentaje_aportacion_minima > 100)) {
         errors.porcentaje_aportacion_minima = 'Porcentaje debe estar entre 0 y 100';
       }
       // E47: mismos límites que el servidor, para no descubrirlos hasta el final.
@@ -366,42 +393,52 @@ export default function ConvocatoriasNuevaPage() {
       if (state.convocatoria.ejercicio_fiscal.trim() && !/^\d{4}$/.test(state.convocatoria.ejercicio_fiscal.trim())) errors.ejercicio_fiscal = 'Escribe el año con 4 dígitos (p. ej. 2026).';
     }
 
-    if (step === 2) {
+    if (clave === 'programa') {
       if (!state.programa.clave.trim()) errors.clave = 'Clave requerida';
       else if (!CLAVE_PROGRAMA_RE.test(state.programa.clave.trim())) errors.clave = 'Usa solo letras, números y _ - / . (sin espacios).';
       if (!state.programa.nombre.trim()) errors.nombre = 'Nombre requerido';
       else if (state.programa.nombre.length > LIMITES.nombrePrograma) errors.nombre = `Máximo ${LIMITES.nombrePrograma} caracteres.`;
-      if (state.programa.monto_maximo < 1000) errors.monto_maximo = 'El monto máximo por proyecto debe ser de al menos $1,000.';
-      if (state.programa.tiene_equipo && state.programa.min_miembros_equipo > state.programa.max_miembros_equipo) {
-        errors.num_etapas = 'El máximo de integrantes no puede ser menor que el mínimo.';
-      }
-      if (state.programa.tiene_etapas && state.programa.num_etapas < 1) {
-        errors.num_etapas = 'Número de etapas debe ser > 0';
-      }
-      if (state.programa.puntaje_minimo_aprobatorio < 0 || state.programa.puntaje_minimo_aprobatorio > 100) {
-        errors.puntaje_minimo = 'Puntaje debe estar entre 0 y 100';
+      if (!especie) {
+        if (state.programa.monto_maximo < 1000) errors.monto_maximo = 'El monto máximo por proyecto debe ser de al menos $1,000.';
+        if (state.programa.tiene_equipo && state.programa.min_miembros_equipo > state.programa.max_miembros_equipo) {
+          errors.num_etapas = 'El máximo de integrantes no puede ser menor que el mínimo.';
+        }
+        if (state.programa.tiene_etapas && state.programa.num_etapas < 1) {
+          errors.num_etapas = 'Número de etapas debe ser > 0';
+        }
+        if (state.programa.puntaje_minimo_aprobatorio < 0 || state.programa.puntaje_minimo_aprobatorio > 100) {
+          errors.puntaje_minimo = 'Puntaje debe estar entre 0 y 100';
+        }
       }
     }
 
-    if (step === 3) {
+    if (clave === 'especie') {
+      const e = validarConfig(state.especie);
+      setErroresEspecie(e);
+      if (Object.keys(e).length) errors.especie = 'Revisa los datos marcados.';
+    }
+
+    if (clave === 'campos') {
       if (state.campos.length === 0) errors.campos = 'Agrega al menos un campo';
       const i = state.campos.findIndex((c) => c.etiqueta.length > LIMITES.etiquetaPregunta || (c.tipo_campo === 'select' && !c.opciones_json?.trim()));
       if (i >= 0) errors.campos = `Revisa la pregunta ${i + 1}: el texto admite hasta ${LIMITES.etiquetaPregunta} caracteres y las de lista necesitan opciones.`;
     }
 
-    if (step === 4) {
-      if (state.documentos.length === 0) errors.documentos = 'Agrega al menos un documento';
+    if (clave === 'documentos') {
+      // En especie los documentos del programa son opcionales: la carta de la escuela siempre se pide.
+      if (!especie && state.documentos.length === 0) errors.documentos = 'Agrega al menos un documento';
+      if (especie && state.documentos.some((d) => d.clave === 'carta_escuela')) errors.documentos = 'La carta de la escuela ya se pide siempre; cambia el nombre de ese documento.';
       const i = state.documentos.findIndex((d) => d.nombre.length > LIMITES.nombreDocumento);
       if (i >= 0) errors.documentos = `El nombre del documento ${i + 1} pasa de ${LIMITES.nombreDocumento} caracteres; lo demás va en «Qué debe contener».`;
     }
 
-    if (step === 5) {
+    if (clave === 'rubros') {
       if (state.rubros.length === 0) errors.rubros = 'Agrega al menos un rubro';
       const i = state.rubros.findIndex((r) => r.nombre.length > LIMITES.nombreRubro || r.clave.length > LIMITES.claveRubro);
       if (i >= 0) errors.rubros = `El concepto ${i + 1} tiene un nombre demasiado largo (máximo ${LIMITES.nombreRubro} caracteres).`;
     }
 
-    if (step === 6) {
+    if (clave === 'criterios') {
       if (state.criterios.length === 0) errors.criterios = 'Agrega al menos un criterio';
       const i = state.criterios.findIndex((c) => c.nombre.length > LIMITES.nombreCriterio || c.puntaje_maximo < 1 || c.puntaje_maximo > 100);
       if (i >= 0) errors.criterios = `Revisa el criterio ${i + 1}: el nombre admite hasta ${LIMITES.nombreCriterio} caracteres (el detalle va en la descripción) y la calificación máxima va de 1 a 100.`;
@@ -605,7 +642,7 @@ export default function ConvocatoriasNuevaPage() {
    * convocatoria en una transacción: si algo falla no se crea nada y se puede corregir y reintentar.
    */
   const handleSaveConvocatoria = async () => {
-    for (let paso = 1; paso <= 6; paso++) {
+    for (let paso = 1; paso < totalPasos; paso++) {
       if (!validateStep(paso)) { setCurrentStep(paso); return; }
     }
     setSaving(true);
@@ -614,7 +651,7 @@ export default function ConvocatoriasNuevaPage() {
     setSaveProgress('Creando la convocatoria…');
     try {
       // Primero asegura el borrador con lo último (si la red falla a medio camino, nada se pierde).
-      ultimo.current = { s: state, paso: 7 };
+      ultimo.current = { s: state, paso: totalPasos };
       await guardarBorrador();
       const { data } = await api.post('/admin/asistente-convocatoria', armarPayload(state as unknown as EstadoAsistente, borradorIdRef.current));
       sinGuardar.current = false;
@@ -661,12 +698,15 @@ export default function ConvocatoriasNuevaPage() {
         backLabel="Volver a convocatorias"
         eyebrow="Convocatorias"
         title="Nueva convocatoria"
-        description="En siete pasos defines la convocatoria, su programa, las preguntas y documentos que pedirás, en qué se puede gastar el apoyo y cómo se evaluará."
+        description={esEspecie
+          ? 'En cinco pasos defines la convocatoria, su programa, cómo se forman los clubes, el kit y los documentos que pedirás.'
+          : 'En siete pasos defines la convocatoria, su programa, las preguntas y documentos que pedirás, en qué se puede gastar el apoyo y cómo se evaluará.'}
         icon={<Megaphone className="h-5 w-5" />}
       />
 
-      <ol className="flex items-center justify-center gap-1" aria-label={`Paso ${currentStep} de 7: ${WIZARD_STEPS[currentStep - 1]}`}>
-        {WIZARD_STEPS.map((label, i) => {
+      <ol className="flex items-center justify-center gap-1" aria-label={`Paso ${currentStep} de ${totalPasos}: ${ETIQUETA_PASO[pasoActual]}`}>
+        {pasos.map((clavePaso, i) => {
+          const label = ETIQUETA_PASO[clavePaso];
           const step = i + 1;
           const done = currentStep > step;
           const active = currentStep === step;
@@ -687,13 +727,13 @@ export default function ConvocatoriasNuevaPage() {
                 {done ? <CheckCircle className="w-5 h-5" aria-hidden="true" /> : step}
                 <span className="sr-only">{label}</span>
               </span>
-              {step < 7 && <span className="hidden min-[380px]:block w-2 sm:w-3 h-0.5 bg-[var(--app-rule)]" aria-hidden="true" />}
+              {step < totalPasos && <span className="hidden min-[380px]:block w-2 sm:w-3 h-0.5 bg-[var(--app-rule)]" aria-hidden="true" />}
             </li>
           );
         })}
       </ol>
       <p className="text-center text-xs font-bold uppercase tracking-[0.14em] -mt-3" style={{ color: 'var(--auth-vino)' }}>
-        Paso {currentStep} de 7 · {WIZARD_STEPS[currentStep - 1]}
+        Paso {currentStep} de {totalPasos} · {ETIQUETA_PASO[pasoActual]}
       </p>
       {/* E47: estado del borrador (autoguardado en el servidor). */}
       <p className="-mt-3 flex items-center justify-center gap-1.5 text-xs text-[var(--app-ink-2)]" aria-live="polite">
@@ -707,28 +747,36 @@ export default function ConvocatoriasNuevaPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            {currentStep === 1 && 'Información de la convocatoria'}
-            {currentStep === 2 && 'Configuración del programa'}
-            {currentStep === 3 && 'Preguntas del formulario'}
-            {currentStep === 4 && 'Documentos que se piden'}
-            {currentStep === 5 && 'Conceptos de gasto'}
-            {currentStep === 6 && 'Criterios de evaluación'}
-            {currentStep === 7 && 'Revisa y guarda'}
-          </CardTitle>
+          <CardTitle>{TITULO_PASO[pasoActual][0]}</CardTitle>
           <CardDescription>
-            {currentStep === 1 && 'Escribe los datos generales que verán los solicitantes.'}
-            {currentStep === 2 && 'Define cómo se entrega el apoyo y qué reglas aplican.'}
-            {currentStep === 3 && 'Estas son las preguntas que responderá el solicitante en su formulario.'}
-            {currentStep === 4 && 'Indica qué archivos debe adjuntar el solicitante.'}
-            {currentStep === 5 && 'Define en qué se puede usar el dinero del apoyo.'}
-            {currentStep === 6 && 'Indica qué se califica y cuánto pesa cada aspecto.'}
-            {currentStep === 7 && 'Revisa toda la información antes de crear la convocatoria.'}
+            {pasoActual === 'documentos' && esEspecie
+              ? 'Documentos que cada club debe subir, además de la carta de consentimiento de la escuela (esa se pide siempre).'
+              : TITULO_PASO[pasoActual][1]}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {currentStep === 1 && (
+          {pasoActual === 'convocatoria' && (
             <div className="space-y-5">
+              {/* E52: la modalidad se elige primero; cambia los pasos y los datos que se piden. */}
+              <fieldset className="space-y-2">
+                <legend className={wizLabelCls}>¿Qué tipo de apoyo entrega esta convocatoria? *</legend>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {([
+                    { v: false, t: 'Apoyo económico', d: 'Dinero para proyectos: monto, conceptos de gasto y evaluación técnica.', icon: <Banknote className="h-5 w-5" aria-hidden="true" /> },
+                    { v: true, t: 'Apoyo en especie', d: 'Kits para clubes escolares: líder, integrantes y documentos del club.', icon: <Package className="h-5 w-5" aria-hidden="true" /> },
+                  ] as const).map((o) => (
+                    <label key={String(o.v)} className="flex cursor-pointer items-start gap-3 rounded-[16px] border-2 px-4 py-3 transition-colors"
+                      style={{ borderColor: esEspecie === o.v ? 'var(--auth-vino)' : 'var(--app-rule)', backgroundColor: esEspecie === o.v ? 'var(--auth-vino-soft)' : 'var(--auth-field)' }}>
+                      <input type="radio" name="modalidad" className="mt-1 accent-[var(--auth-vino)]" checked={esEspecie === o.v}
+                        onChange={() => setState({ ...state, programa: { ...state.programa, tipo_apoyo: o.v ? 'especie' : 'concurrente' } })} />
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]">{o.icon}{o.t}</span>
+                        <span className="block text-xs text-[var(--app-ink-2)]">{o.d}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="conv_nombre" className={wizLabelCls}>Nombre de la convocatoria *</Label>
@@ -813,6 +861,7 @@ export default function ConvocatoriasNuevaPage() {
                 </div>
               </div>
 
+              {!esEspecie && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="monto_maximo" className={wizLabelCls}>Monto máximo de apoyo (MXN) *</Label>
@@ -843,10 +892,11 @@ export default function ConvocatoriasNuevaPage() {
                   <p className="text-xs text-[var(--app-ink-2)]">Parte del proyecto que la institución cubre con recursos propios.</p>
                 </div>
               </div>
+              )}
             </div>
           )}
 
-          {currentStep === 2 && (
+          {pasoActual === 'programa' && (
             <div className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -885,6 +935,13 @@ export default function ConvocatoriasNuevaPage() {
                 </div>
               </div>
 
+              {esEspecie ? (
+                <p className="rounded-[14px] border px-4 py-3 text-sm text-[var(--app-ink)]" style={{ borderColor: 'var(--app-rule)', backgroundColor: 'var(--tile-sky-bg)' }}>
+                  <strong>Apoyo en especie.</strong> No hay montos, conceptos de gasto ni evaluación técnica: cada club recibe el kit.
+                  En el siguiente paso defines cómo se forman los clubes y qué datos se piden. Para cambiar de modalidad, vuelve al paso 1.
+                </p>
+              ) : (
+              <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="tipo_apoyo" className={wizLabelCls}>Forma del apoyo *</Label>
@@ -964,10 +1021,20 @@ export default function ConvocatoriasNuevaPage() {
                 </label>
                 {validationErrors.puntaje_minimo && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.puntaje_minimo}</p>}
               </div>
+              </>
+              )}
             </div>
           )}
 
-          {currentStep === 3 && (
+          {pasoActual === 'especie' && (
+            <div className="space-y-4">
+              {validationErrors.especie && <AlertBox type="error" message={validationErrors.especie} />}
+              <ConfigEspecieForm idBase="wiz-esp" value={state.especie} errores={erroresEspecie}
+                onChange={(especie) => setState({ ...state, especie })} />
+            </div>
+          )}
+
+          {pasoActual === 'campos' && (
             <div className="space-y-4">
               {validationErrors.campos && (
                 <AlertBox type="error" message={validationErrors.campos} />
@@ -1105,7 +1172,7 @@ export default function ConvocatoriasNuevaPage() {
             </div>
           )}
 
-          {currentStep === 4 && (
+          {pasoActual === 'documentos' && (
             <div className="space-y-4">
               {validationErrors.documentos && (
                 <AlertBox type="error" message={validationErrors.documentos} />
@@ -1228,7 +1295,7 @@ export default function ConvocatoriasNuevaPage() {
             </div>
           )}
 
-          {currentStep === 5 && (
+          {pasoActual === 'rubros' && (
             <div className="space-y-4">
               {validationErrors.rubros && (
                 <AlertBox type="error" message={validationErrors.rubros} />
@@ -1341,7 +1408,7 @@ export default function ConvocatoriasNuevaPage() {
             </div>
           )}
 
-          {currentStep === 6 && (
+          {pasoActual === 'criterios' && (
             <div className="space-y-4">
               {validationErrors.criterios && (
                 <AlertBox type="error" message={validationErrors.criterios} />
@@ -1502,7 +1569,7 @@ export default function ConvocatoriasNuevaPage() {
             </div>
           )}
 
-          {currentStep === 7 && (
+          {pasoActual === 'revision' && (
             <div className="space-y-6">
               {saveError && (
                 <div role="alert" className="rounded-[18px] border px-5 py-4" style={{ borderColor: 'var(--auth-danger)', backgroundColor: 'var(--tile-red-bg, #fff1f2)' }}>
@@ -1533,8 +1600,8 @@ export default function ConvocatoriasNuevaPage() {
                     <p><strong>Ejercicio fiscal:</strong> {state.convocatoria.ejercicio_fiscal}</p>
                     <p><strong>Apertura:</strong> {state.convocatoria.fecha_apertura}</p>
                     <p><strong>Cierre:</strong> {state.convocatoria.fecha_cierre}</p>
-                    <p><strong>Apoyo máximo:</strong> ${state.convocatoria.monto_maximo_apoyo.toLocaleString()}</p>
-                    <p><strong>Aportación concurrente:</strong> {state.convocatoria.porcentaje_aportacion_minima}%</p>
+                    {!esEspecie && <p><strong>Apoyo máximo:</strong> ${state.convocatoria.monto_maximo_apoyo.toLocaleString()}</p>}
+                    {!esEspecie && <p><strong>Aportación concurrente:</strong> {state.convocatoria.porcentaje_aportacion_minima}%</p>}
                   </CardContent>
                 </Card>
 
@@ -1546,13 +1613,43 @@ export default function ConvocatoriasNuevaPage() {
                     <p><strong>Clave:</strong> {state.programa.clave}</p>
                     <p><strong>Nombre:</strong> {state.programa.nombre}</p>
                     <p><strong>Forma del apoyo:</strong> {TIPO_APOYO_LABELS[state.programa.tipo_apoyo] ?? state.programa.tipo_apoyo}</p>
+                    {!esEspecie && (<>
                     <p><strong>Monto máximo:</strong> ${state.programa.monto_maximo.toLocaleString()}</p>
                     <p><strong>Etapas:</strong> {state.programa.tiene_etapas ? `Sí (${state.programa.num_etapas})` : 'No'}</p>
                     <p><strong>Equipo:</strong> {state.programa.tiene_equipo ? `Sí (de ${state.programa.min_miembros_equipo} a ${state.programa.max_miembros_equipo} personas)` : 'No'}</p>
                     <p><strong>Calificación mínima para aprobar:</strong> {state.programa.puntaje_minimo_aprobatorio}</p>
+                    </>)}
                   </CardContent>
                 </Card>
 
+                {esEspecie && (<>
+                <Card size="sm">
+                  <CardHeader>
+                    <CardTitle>Clubes y kit</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm space-y-2">
+                    <p><strong>Kit:</strong> {state.especie.kit_nombre}</p>
+                    <p><strong>Integrantes por club:</strong> de {state.especie.min_integrantes} a {state.especie.max_integrantes} (incluye al líder)</p>
+                    <p><strong>Clubes por escuela:</strong> {state.especie.clubes_por_escuela === '' ? 'Sin límite' : state.especie.clubes_por_escuela}</p>
+                    <p><strong>Menores de edad:</strong> {state.especie.participan_menores ? 'Sí participan' : 'No participan'}</p>
+                  </CardContent>
+                </Card>
+
+                <Card size="sm">
+                  <CardHeader>
+                    <CardTitle>Datos que se piden</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm space-y-1.5">
+                    <p className="text-[var(--app-ink)]"><strong>Club:</strong> nombre, escuela, carta de la escuela{Object.entries(CAMPOS_CLUB).filter(([k]) => state.especie.campos_club[k]?.pedir).map(([k, t]) => `, ${t.toLowerCase()}${state.especie.campos_club[k].obligatorio ? '' : ' (opcional)'}`).join('')}</p>
+                    <p className="text-[var(--app-ink)]"><strong>Integrante:</strong> nombre{Object.entries(CAMPOS_INTEGRANTE).filter(([k]) => state.especie.campos_integrante[k]?.pedir).map(([k, t]) => `, ${t.toLowerCase()}${state.especie.campos_integrante[k].obligatorio ? '' : ' (opcional)'}`).join('')}</p>
+                    {state.especie.campos.map((c, i) => (
+                      <p key={i} className="text-[var(--app-ink)] flex items-center gap-2 flex-wrap">{c.etiqueta} <Badge variant="outline">{c.ambito === 'club' ? 'Club' : 'Integrante'} · {TIPO_CAMPO_ETIQUETA[c.tipo_campo]}</Badge></p>
+                    ))}
+                  </CardContent>
+                </Card>
+                </>)}
+
+                {!esEspecie && (
                 <Card size="sm">
                   <CardHeader>
                     <CardTitle>Preguntas ({state.campos.length})</CardTitle>
@@ -1563,18 +1660,21 @@ export default function ConvocatoriasNuevaPage() {
                     ))}
                   </CardContent>
                 </Card>
+                )}
 
                 <Card size="sm">
                   <CardHeader>
-                    <CardTitle>Documentos ({state.documentos.length})</CardTitle>
+                    <CardTitle>Documentos ({state.documentos.length + (esEspecie ? 1 : 0)})</CardTitle>
                   </CardHeader>
                   <CardContent className="text-sm space-y-1.5">
+                    {esEspecie && <p className="text-[var(--app-ink)] flex items-center gap-2 flex-wrap">Carta de consentimiento de la escuela <Badge>Obligatorio</Badge></p>}
                     {state.documentos.map((d, i) => (
                       <p key={i} className="text-[var(--app-ink)] flex items-center gap-2 flex-wrap">{d.nombre} {d.obligatorio && <Badge>Obligatorio</Badge>}</p>
                     ))}
                   </CardContent>
                 </Card>
 
+                {!esEspecie && (<>
                 <Card size="sm">
                   <CardHeader>
                     <CardTitle>Conceptos de gasto ({state.rubros.length})</CardTitle>
@@ -1597,6 +1697,7 @@ export default function ConvocatoriasNuevaPage() {
                     <p className="text-xs text-[var(--app-ink-2)] mt-2 border-t border-[var(--app-rule)] pt-2">Peso total: {totalPonderacion}%</p>
                   </CardContent>
                 </Card>
+                </>)}
               </div>
             </div>
           )}
@@ -1616,7 +1717,7 @@ export default function ConvocatoriasNuevaPage() {
             </Button>
           </div>
 
-          {currentStep < 7 ? (
+          {currentStep < totalPasos ? (
             <Button
               onClick={handleNext}
               disabled={saving}
@@ -1651,8 +1752,9 @@ export default function ConvocatoriasNuevaPage() {
           programa={state.programa}
           campos={state.campos}
           documentos={state.documentos}
-          rubros={state.rubros}
-          criterios={state.criterios}
+          rubros={esEspecie ? [] : state.rubros}
+          criterios={esEspecie ? [] : state.criterios}
+          especie={esEspecie ? state.especie : null}
         />
       </div>
     </div>

@@ -53,6 +53,18 @@ class Convocatoria extends Model
         return $this->hasMany(Solicitud::class);
     }
 
+    /** E52: configuración de Apoyo en especie (solo si el programa es tipo_apoyo = especie). */
+    public function especieConfig(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(EspecieConfig::class);
+    }
+
+    /** E52: clubes registrados (Apoyo en especie). */
+    public function clubes(): HasMany
+    {
+        return $this->hasMany(Club::class);
+    }
+
     /** E45: periodo de la convocatoria (alcance de visión por periodo). */
     public function periodo(): BelongsTo
     {

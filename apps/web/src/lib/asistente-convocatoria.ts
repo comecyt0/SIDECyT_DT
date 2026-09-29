@@ -3,6 +3,8 @@
  * envío atómico, traducción de errores del servidor a "paso + texto entendible" y restauración segura de borradores.
  */
 
+import { TIPO_ESPECIE, configVacia, leerConfig, payloadCampos, payloadConfig, type ConfigEspecie } from '@/lib/especie';
+
 /** Mismos topes que `AsistenteConvocatoriaController::reglas()` (y que las columnas de la base). */
 export const LIMITES = {
   nombreConvocatoria: 255,
@@ -36,10 +38,38 @@ export interface EstadoAsistente {
   documentos: DocumentoA[];
   rubros: RubroA[];
   criterios: CriterioA[];
+  /** E52: configuración de "Apoyo en especie" (solo se envía si `programa.tipo_apoyo === 'especie'`). */
+  especie: ConfigEspecie;
 }
+
+export const esEspecie = (s: Pick<EstadoAsistente, 'programa'>) => s.programa.tipo_apoyo === TIPO_ESPECIE;
+
+/**
+ * Pasos del asistente según la modalidad. Apoyo en especie no maneja dinero: sin conceptos de gasto ni criterios, y
+ * las preguntas (del club o del integrante) van en el paso "Club y kit" (decisión del usuario, E52).
+ */
+export type PasoAsistente = 'convocatoria' | 'programa' | 'campos' | 'documentos' | 'rubros' | 'criterios' | 'especie' | 'revision';
+export const PASOS_ECONOMICO: PasoAsistente[] = ['convocatoria', 'programa', 'campos', 'documentos', 'rubros', 'criterios', 'revision'];
+export const PASOS_ESPECIE: PasoAsistente[] = ['convocatoria', 'programa', 'especie', 'documentos', 'revision'];
+export const pasosDe = (s: Pick<EstadoAsistente, 'programa'>) => (esEspecie(s) ? PASOS_ESPECIE : PASOS_ECONOMICO);
 
 /** Cuerpo de POST /admin/asistente-convocatoria. */
 export function armarPayload(s: EstadoAsistente, borradorId: number | null) {
+  if (esEspecie(s)) {
+    return {
+      borrador_id: borradorId,
+      convocatoria: {
+        ...s.convocatoria,
+        periodo_id: s.convocatoria.periodo_id ? Number(s.convocatoria.periodo_id) : null,
+        monto_maximo_apoyo: null,
+        porcentaje_aportacion_minima: null,
+      },
+      programa: { ...s.programa, monto_maximo: null, tiene_equipo: false, requiere_evaluacion_tecnica: false, puntaje_minimo_aprobatorio: null },
+      campos: payloadCampos(s.especie),
+      documentos: s.documentos,
+      especie: payloadConfig(s.especie),
+    };
+  }
   return {
     borrador_id: borradorId,
     convocatoria: {
@@ -54,11 +84,13 @@ export function armarPayload(s: EstadoAsistente, borradorId: number | null) {
   };
 }
 
-const SECCION_PASO: Record<string, number> = { convocatoria: 1, programa: 2, campos: 3, documentos: 4, rubros: 5, criterios: 6 };
-
-/** "criterios.0.nombre" → 6. Desconocido → 7 (revisión). */
-export function pasoDeError(clave: string): number {
-  return SECCION_PASO[clave.split('.')[0]] ?? 7;
+/** "criterios.0.nombre" → 6 (económico). En especie, "campos.*" y "especie.*" → paso "Club y kit". Desconocido → revisión. */
+export function pasoDeError(clave: string, especie = false): number {
+  const pasos = especie ? PASOS_ESPECIE : PASOS_ECONOMICO;
+  let seccion = clave.split('.')[0] as PasoAsistente;
+  if (especie && seccion === 'campos') seccion = 'especie';
+  const i = pasos.indexOf(seccion);
+  return i >= 0 ? i + 1 : pasos.length;
 }
 
 const CAMPO_LEGIBLE: Record<string, string> = {
@@ -68,6 +100,8 @@ const CAMPO_LEGIBLE: Record<string, string> = {
   monto_maximo_apoyo: 'apoyo máximo', porcentaje_aportacion_minima: 'aportación mínima', ejercicio_fiscal: 'ejercicio fiscal',
   periodo_id: 'periodo', monto_maximo: 'monto máximo', num_etapas: 'número de etapas', min_miembros_equipo: 'mínimo de integrantes',
   max_miembros_equipo: 'máximo de integrantes', puntaje_minimo_aprobatorio: 'calificación mínima', tipo_apoyo: 'forma del apoyo',
+  min_integrantes: 'mínimo de integrantes', max_integrantes: 'máximo de integrantes', clubes_por_escuela: 'clubes por escuela',
+  participan_menores: 'participación de menores', kit_nombre: 'nombre del kit', kit_descripcion: 'descripción del kit', ambito: 'a quién se pregunta',
 };
 
 const ELEMENTO: Record<string, [string, (x: Record<string, unknown>) => unknown]> = {
@@ -86,9 +120,14 @@ function recorte(t: unknown, n = 40): string {
 export function describirError(clave: string, mensaje: string, s: EstadoAsistente): string {
   const partes = clave.split('.');
   const [seccion, idx, campo] = partes;
+  if (seccion === 'especie') {
+    return `Club y kit — ${CAMPO_LEGIBLE[idx ?? ''] ?? idx ?? ''}: ${mensaje}`;
+  }
   if (ELEMENTO[seccion] && idx !== undefined && /^\d+$/.test(idx)) {
     const [etq, nombreDe] = ELEMENTO[seccion];
-    const lista = (s as unknown as Record<string, Record<string, unknown>[]>)[seccion] ?? [];
+    const lista = seccion === 'campos' && esEspecie(s)
+      ? (s.especie.campos as unknown as Record<string, unknown>[])
+      : ((s as unknown as Record<string, Record<string, unknown>[]>)[seccion] ?? []);
     const nombre = recorte(nombreDe(lista[Number(idx)] ?? {}));
     return `${etq} ${Number(idx) + 1}${nombre ? ` «${nombre}»` : ''}${campo ? ` — ${CAMPO_LEGIBLE[campo] ?? campo}` : ''}: ${mensaje}`;
   }
@@ -104,12 +143,13 @@ export function describirError(clave: string, mensaje: string, s: EstadoAsistent
 /** Errores 422 de Laravel → líneas legibles ordenadas por paso + primer paso con error. */
 export function erroresDelServidor(errors: unknown, s: EstadoAsistente): { lineas: string[]; paso: number } | null {
   if (!errors || typeof errors !== 'object') return null;
+  const esp = esEspecie(s);
   const pares = Object.entries(errors as Record<string, unknown>)
     .map(([k, v]) => [k, Array.isArray(v) ? String(v[0] ?? '') : String(v ?? '')] as const)
     .filter(([, m]) => m)
-    .sort((a, b) => pasoDeError(a[0]) - pasoDeError(b[0]));
+    .sort((a, b) => pasoDeError(a[0], esp) - pasoDeError(b[0], esp));
   if (pares.length === 0) return null;
-  return { lineas: pares.map(([k, m]) => describirError(k, m, s)), paso: pasoDeError(pares[0][0]) };
+  return { lineas: pares.map(([k, m]) => describirError(k, m, s)), paso: pasoDeError(pares[0][0], esp) };
 }
 
 function obj(v: unknown): Record<string, unknown> {
@@ -140,7 +180,7 @@ export function restaurarBorrador(datos: unknown, vacio: EstadoAsistente): Estad
       porcentaje_aportacion_minima: num(c.porcentaje_aportacion_minima, v.convocatoria.porcentaje_aportacion_minima),
     },
     programa: {
-      clave: txt(p.clave), nombre: txt(p.nombre), tipo_apoyo: ['reembolso', 'concurrente', 'honorarios'].includes(txt(p.tipo_apoyo)) ? txt(p.tipo_apoyo) : v.programa.tipo_apoyo,
+      clave: txt(p.clave), nombre: txt(p.nombre), tipo_apoyo: ['reembolso', 'concurrente', 'honorarios', TIPO_ESPECIE].includes(txt(p.tipo_apoyo)) ? txt(p.tipo_apoyo) : v.programa.tipo_apoyo,
       monto_maximo: num(p.monto_maximo, v.programa.monto_maximo), tiene_etapas: bool(p.tiene_etapas, v.programa.tiene_etapas),
       num_etapas: num(p.num_etapas, v.programa.num_etapas), tiene_equipo: bool(p.tiene_equipo, v.programa.tiene_equipo),
       min_miembros_equipo: num(p.min_miembros_equipo, v.programa.min_miembros_equipo), max_miembros_equipo: num(p.max_miembros_equipo, v.programa.max_miembros_equipo),
@@ -164,6 +204,7 @@ export function restaurarBorrador(datos: unknown, vacio: EstadoAsistente): Estad
       nombre: txt(x.nombre), descripcion: txt(x.descripcion), ponderacion: num(x.ponderacion, 0),
       puntaje_maximo: num(x.puntaje_maximo, 100), orden: num(x.orden, i + 1),
     })),
+    especie: d.especie ? leerConfig(d.especie) : configVacia(),
   };
 }
 
@@ -172,6 +213,7 @@ export function tieneContenido(s: EstadoAsistente): boolean {
   return Boolean(
     s.convocatoria.nombre.trim() || s.convocatoria.descripcion.trim() || s.convocatoria.fecha_apertura || s.convocatoria.fecha_cierre
     || s.programa.nombre.trim() || s.programa.clave.trim()
-    || s.campos.length || s.documentos.length || s.rubros.length || s.criterios.length,
+    || s.campos.length || s.documentos.length || s.rubros.length || s.criterios.length
+    || (esEspecie(s) && (s.especie.kit_nombre.trim() || s.especie.campos.length)),
   );
 }

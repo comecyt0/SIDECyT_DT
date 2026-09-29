@@ -61,7 +61,7 @@ class ConvocatoriaController extends Controller
 
         // tipoPrograma: la ficha muestra el banner del programa como respaldo si la convocatoria no tiene.
         return response()->json($convocatoria->load([
-            'tipoPrograma:id,nombre,banner_url', 'periodo:id,nombre', 'administradores:id,name,email,avatar_path',
+            'tipoPrograma:id,nombre,banner_url,tipo_apoyo', 'periodo:id,nombre', 'administradores:id,name,email,avatar_path',
         ]));
     }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Eye, Calendar, DollarSign, FileText, ListChecks, Award, Layers, Tag } from 'lucide-react';
+import { Eye, Calendar, DollarSign, FileText, ListChecks, Award, Layers, Tag, Package } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/format';
 
 interface PreviewCampo {
@@ -46,6 +46,8 @@ interface Props {
   documentos?: PreviewDocumento[];
   rubros?: PreviewRubro[];
   criterios?: PreviewCriterio[];
+  /** E52: en "Apoyo en especie" se muestra el kit en lugar del monto. */
+  especie?: { kit_nombre: string; min_integrantes: number; max_integrantes: number } | null;
 }
 
 /**
@@ -61,6 +63,7 @@ export default function ConvocatoriaPreviewPanel({
   documentos = [],
   rubros = [],
   criterios = [],
+  especie = null,
 }: Props) {
   return (
     <motion.aside
@@ -115,7 +118,8 @@ export default function ConvocatoriaPreviewPanel({
                 <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200">
                   {programa.tipo_apoyo === 'reembolso' ? 'Reembolso' :
                    programa.tipo_apoyo === 'concurrente' ? 'Concurrente' :
-                   programa.tipo_apoyo === 'honorarios' ? 'Honorarios' : programa.tipo_apoyo}
+                   programa.tipo_apoyo === 'honorarios' ? 'Honorarios' :
+                   programa.tipo_apoyo === 'especie' ? 'En especie' : programa.tipo_apoyo}
                 </span>
               )}
               {programa.tiene_etapas && (
@@ -159,6 +163,18 @@ export default function ConvocatoriaPreviewPanel({
               {formatDate(convocatoria.fecha_cierre) || '—'}
             </p>
           </div>
+          {especie ? (
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 col-span-2">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Package className="h-3 w-3 text-emerald-700" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">Kit para cada club</span>
+              </div>
+              <p className="text-sm font-extrabold text-emerald-800 dark:text-emerald-300 break-words">{especie.kit_nombre || '—'}</p>
+              <p className="text-[10px] text-emerald-700/70 dark:text-emerald-400/80 mt-0.5">
+                Clubes de {especie.min_integrantes} a {especie.max_integrantes} integrantes (incluye al líder)
+              </p>
+            </div>
+          ) : (
           <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 col-span-2">
             <div className="flex items-center gap-1.5 mb-1">
               <DollarSign className="h-3 w-3 text-emerald-700" />
@@ -173,6 +189,7 @@ export default function ConvocatoriaPreviewPanel({
               </p>
             ) : null}
           </div>
+          )}
         </div>
 
         {/* Campos del formulario */}

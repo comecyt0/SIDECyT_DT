@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   armarPayload, describirError, erroresDelServidor, pasoDeError, restaurarBorrador, tieneContenido, CLAVE_PROGRAMA_RE,
-  type EstadoAsistente,
+  pasosDe, type EstadoAsistente,
 } from './asistente-convocatoria';
+import { configVacia, leerConfig, validarConfig } from './especie';
 
 const vacio: EstadoAsistente = {
   convocatoria: { nombre: '', ejercicio_fiscal: '2026', periodo_id: '', estado: 'borrador', descripcion: '', fecha_apertura: '', fecha_cierre: '', monto_maximo_apoyo: 0, porcentaje_aportacion_minima: 20 },
   programa: { clave: '', nombre: '', tipo_apoyo: 'concurrente', monto_maximo: 50000, tiene_etapas: false, num_etapas: 1, tiene_equipo: false, min_miembros_equipo: 1, max_miembros_equipo: 5, requiere_evaluacion_tecnica: true, puntaje_minimo_aprobatorio: 80 },
   campos: [], documentos: [], rubros: [], criterios: [],
+  especie: configVacia(),
 };
 
 const lleno: EstadoAsistente = {
@@ -85,5 +87,60 @@ describe('asistente de convocatorias (E47)', () => {
     expect(CLAVE_PROGRAMA_RE.test('PROT-2026.1')).toBe(true);
     expect(CLAVE_PROGRAMA_RE.test('MI CLAVE')).toBe(false);
     expect(CLAVE_PROGRAMA_RE.test('<b>')).toBe(false);
+  });
+});
+
+describe('asistente · Apoyo en especie (E52)', () => {
+  const especie: EstadoAsistente = {
+    ...vacio,
+    convocatoria: { ...vacio.convocatoria, nombre: 'Clubes de ciencia', monto_maximo_apoyo: 50000 },
+    programa: { ...vacio.programa, clave: 'CLUB', nombre: 'Clubes', tipo_apoyo: 'especie' },
+    rubros: [{ clave: 'X', nombre: 'no debe viajar', descripcion: '', porcentaje_maximo: 10 }],
+    especie: {
+      ...configVacia(), kit_nombre: 'Kit de robótica', clubes_por_escuela: '',
+      campos: [{ ambito: 'integrante', nombre_campo: 'talla', etiqueta: 'Talla', tipo_campo: 'select', requerido: true, opciones: 'CH\nM' }],
+    },
+  };
+
+  it('cinco pasos, con "Club y kit" y sin conceptos de gasto ni criterios', () => {
+    expect(pasosDe(especie)).toEqual(['convocatoria', 'programa', 'especie', 'documentos', 'revision']);
+    expect(pasosDe(vacio)).toHaveLength(7);
+  });
+
+  it('el envío no lleva dinero, conceptos ni criterios y sí la configuración y las preguntas con ámbito', () => {
+    const p = armarPayload(especie, null) as Record<string, unknown> & { convocatoria: Record<string, unknown>; programa: Record<string, unknown>; campos: Record<string, unknown>[]; especie: Record<string, unknown> };
+    expect(p.convocatoria.monto_maximo_apoyo).toBeNull();
+    expect(p.programa.monto_maximo).toBeNull();
+    expect(p).not.toHaveProperty('rubros');
+    expect(p).not.toHaveProperty('criterios');
+    expect(p.especie).toMatchObject({ kit_nombre: 'Kit de robótica', clubes_por_escuela: null, min_integrantes: 3 });
+    expect(p.campos[0]).toMatchObject({ ambito: 'integrante', nombre_campo: 'talla', opciones: 'CH\nM', orden: 1 });
+  });
+
+  it('errores de especie llevan al paso "Club y kit"', () => {
+    expect(pasoDeError('especie.kit_nombre', true)).toBe(3);
+    expect(pasoDeError('campos.0.nombre_campo', true)).toBe(3);
+    expect(pasoDeError('documentos.0.clave', true)).toBe(4);
+    expect(describirError('especie.kit_nombre', 'Obligatorio.', especie)).toBe('Club y kit — nombre del kit: Obligatorio.');
+    expect(describirError('campos.0.opciones', 'Falta.', especie)).toBe('Pregunta 1 «Talla» — opciones: Falta.');
+  });
+
+  it('el borrador conserva la modalidad y la configuración, sin confiar en tipos', () => {
+    const s = restaurarBorrador({ state: { programa: { tipo_apoyo: 'especie' }, especie: { kit_nombre: 'K', min_integrantes: '9', clubes_por_escuela: -1, campos_club: { logo: { obligatorio: true }, hack: {} }, campos: [{ ambito: 'otro', tipo_campo: 'file', opciones_json: [{ id: 1, label: 'A' }] }] } } }, vacio);
+    expect(s.programa.tipo_apoyo).toBe('especie');
+    expect(s.especie.kit_nombre).toBe('K');
+    expect(s.especie.min_integrantes).toBe(3);
+    expect(s.especie.clubes_por_escuela).toBe('');
+    expect(s.especie.campos_club.logo).toEqual({ pedir: true, obligatorio: true });
+    expect(s.especie.campos_club).not.toHaveProperty('hack');
+    expect(s.especie.campos[0]).toMatchObject({ ambito: 'club', tipo_campo: 'text', opciones: 'A' });
+  });
+
+  it('valida la configuración como el servidor', () => {
+    expect(validarConfig(especie.especie)).toEqual({});
+    const e = validarConfig({ ...especie.especie, min_integrantes: 5, max_integrantes: 2, kit_nombre: ' ', clubes_por_escuela: 0,
+      campos: [...especie.especie.campos, { ...especie.especie.campos[0] }] });
+    expect(Object.keys(e).sort()).toEqual(['campos', 'clubes_por_escuela', 'kit_nombre', 'max_integrantes']);
+    expect(leerConfig(null)).toEqual(configVacia());
   });
 });

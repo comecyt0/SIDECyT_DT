@@ -18,7 +18,7 @@ import {
   LayoutDashboard, FileText, Users, BookOpen, Building,
   Banknote, ShieldAlert, Zap, Images, UserCheck,
   BarChart3, KeyRound, FileSignature, ClipboardList, BellRing, Activity,
-  MessagesSquare, Award, CalendarRange, FileCog, UserCircle, Globe,
+  MessagesSquare, Award, CalendarRange, FileCog, UserCircle, Globe, Shapes, School,
 } from 'lucide-react';
 import UserAvatar from '@/components/ui/user-avatar';
 import { useMiPerfil } from '@/hooks/useMiPerfil';
@@ -79,6 +79,7 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'admin_nav.items.convocatorias.name', href: '/admin/convocatorias', icon: BookOpen, description: 'admin_nav.items.convocatorias.desc' },
       { name: 'admin_nav.items.solicitudes.name', href: '/admin/solicitudes', icon: FileText, description: 'admin_nav.items.solicitudes.desc' },
       { name: 'admin_nav.items.folios.name', href: '/admin/folios', icon: Award, description: 'admin_nav.items.folios.desc' },
+      { name: 'admin_nav.items.clubes.name', href: '/admin/clubes', icon: Shapes, description: 'admin_nav.items.clubes.desc' },
     ],
   },
   {
@@ -109,6 +110,7 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'admin_nav.items.sitio.name', href: '/admin/sitio', icon: Globe, description: 'admin_nav.items.sitio.desc' },
       { name: 'admin_nav.items.carrusel.name', href: '/admin/carrusel', icon: Images, description: 'admin_nav.items.carrusel.desc' },
       { name: 'admin_nav.items.periodos.name', href: '/admin/periodos', icon: CalendarRange, description: 'admin_nav.items.periodos.desc' },
+      { name: 'admin_nav.items.escuelas.name', href: '/admin/escuelas', icon: School, description: 'admin_nav.items.escuelas.desc' },
       { name: 'admin_nav.items.documentos_fijos.name', href: '/admin/documentos-fijos', icon: FileCog, description: 'admin_nav.items.documentos_fijos.desc' },
       { name: 'admin_nav.items.cuenta.name', href: '/admin/cuenta', icon: UserCircle, description: 'admin_nav.items.cuenta.desc' },
     ],

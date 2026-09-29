@@ -280,6 +280,14 @@
         "name": "Periodos",
         "desc": "Periodos de las convocatorias y alcance"
       },
+      "escuelas": {
+        "name": "Escuelas",
+        "desc": "Catálogo de escuelas para los clubes (Apoyo en especie)"
+      },
+      "clubes": {
+        "name": "Clubes",
+        "desc": "Clubes registrados en convocatorias de Apoyo en especie"
+      },
       "documentos_fijos": {
         "name": "Límites de archivos",
         "desc": "Tipos y tamaño de los documentos fijos"

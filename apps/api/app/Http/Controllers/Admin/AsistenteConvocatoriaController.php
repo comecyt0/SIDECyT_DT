@@ -103,32 +103,35 @@ class AsistenteConvocatoriaController extends Controller
     public function crear(Request $request)
     {
         // Reglas por campo + reglas entre campos en UNA pasada: el admin ve todos los errores juntos.
-        $validator = Validator::make($request->all(), $this->reglas(), [], $this->atributos());
-        $validator->after(function ($validator) use ($request) {
-            foreach ($this->erroresDeCoherencia($request->all()) as $campo => $mensaje) {
+        // E52: "Apoyo en especie" (kits a clubes escolares) no maneja dinero: sin monto, conceptos de gasto ni criterios;
+        // sus preguntas son del club o del integrante y trae su propia configuración (límites, menores, kit, campos).
+        $esEspecie = $request->input('programa.tipo_apoyo') === \App\Support\Especie::TIPO_APOYO;
+        $validator = Validator::make($request->all(), $this->reglas($esEspecie), [], $this->atributos());
+        $validator->after(function ($validator) use ($request, $esEspecie) {
+            foreach ($this->erroresDeCoherencia($request->all(), $esEspecie) as $campo => $mensaje) {
                 $validator->errors()->add($campo, $mensaje);
             }
         });
         $v = $validator->validate();
 
-        $resultado = DB::transaction(function () use ($v) {
+        $resultado = DB::transaction(function () use ($v, $esEspecie) {
             $p = $v['programa'];
             $programa = TipoPrograma::create([
                 'clave' => $p['clave'],
                 'nombre' => $p['nombre'],
                 'tipo_apoyo' => $p['tipo_apoyo'],
-                'monto_maximo' => $p['monto_maximo'],
+                'monto_maximo' => $esEspecie ? null : $p['monto_maximo'],
                 'tiene_etapas' => (bool) ($p['tiene_etapas'] ?? false),
                 'num_etapas' => ($p['tiene_etapas'] ?? false) ? (int) $p['num_etapas'] : 1,
-                'tiene_equipo' => (bool) ($p['tiene_equipo'] ?? false),
-                'min_miembros_equipo' => ($p['tiene_equipo'] ?? false) ? (int) $p['min_miembros_equipo'] : null,
-                'max_miembros_equipo' => ($p['tiene_equipo'] ?? false) ? (int) $p['max_miembros_equipo'] : null,
-                'requiere_evaluacion_tecnica' => (bool) ($p['requiere_evaluacion_tecnica'] ?? true),
-                'puntaje_minimo_aprobatorio' => $p['puntaje_minimo_aprobatorio'],
+                'tiene_equipo' => $esEspecie ? true : (bool) ($p['tiene_equipo'] ?? false),
+                'min_miembros_equipo' => $esEspecie ? (int) $v['especie']['min_integrantes'] : (($p['tiene_equipo'] ?? false) ? (int) $p['min_miembros_equipo'] : null),
+                'max_miembros_equipo' => $esEspecie ? (int) $v['especie']['max_integrantes'] : (($p['tiene_equipo'] ?? false) ? (int) $p['max_miembros_equipo'] : null),
+                'requiere_evaluacion_tecnica' => $esEspecie ? false : (bool) ($p['requiere_evaluacion_tecnica'] ?? true),
+                'puntaje_minimo_aprobatorio' => $esEspecie ? 0 : $p['puntaje_minimo_aprobatorio'],
                 'activo' => true,
             ]);
 
-            foreach ($v['campos'] as $i => $c) {
+            foreach (($esEspecie ? [] : $v['campos']) as $i => $c) {
                 ProgramaCampo::create([
                     'tipo_programa_id' => $programa->id,
                     'nombre_campo' => $c['nombre_campo'],
@@ -142,7 +145,7 @@ class AsistenteConvocatoriaController extends Controller
                 ]);
             }
 
-            foreach ($v['documentos'] as $i => $d) {
+            foreach (($v['documentos'] ?? []) as $i => $d) {
                 ProgramaDocumento::create([
                     'tipo_programa_id' => $programa->id,
                     'clave' => $d['clave'],
@@ -156,7 +159,7 @@ class AsistenteConvocatoriaController extends Controller
                 ]);
             }
 
-            foreach ($v['rubros'] as $r) {
+            foreach (($esEspecie ? [] : $v['rubros']) as $r) {
                 ProgramaRubro::create([
                     'tipo_programa_id' => $programa->id,
                     'clave' => $r['clave'],
@@ -167,7 +170,7 @@ class AsistenteConvocatoriaController extends Controller
                 ]);
             }
 
-            foreach ($v['criterios'] as $i => $c) {
+            foreach (($esEspecie ? [] : $v['criterios']) as $i => $c) {
                 ProgramaCriterioEvaluacion::create([
                     'tipo_programa_id' => $programa->id,
                     'nombre' => $c['nombre'],
@@ -188,11 +191,40 @@ class AsistenteConvocatoriaController extends Controller
                 'descripcion' => $cv['descripcion'] ?? null,
                 'fecha_apertura' => $cv['fecha_apertura'],
                 'fecha_cierre' => $cv['fecha_cierre'],
-                'monto_maximo_apoyo' => $cv['monto_maximo_apoyo'],
-                'porcentaje_aportacion_minima' => $cv['porcentaje_aportacion_minima'],
+                'monto_maximo_apoyo' => $esEspecie ? 0 : $cv['monto_maximo_apoyo'],
+                'porcentaje_aportacion_minima' => $esEspecie ? 0 : $cv['porcentaje_aportacion_minima'],
                 'estado' => 'activa',
                 'tipo_programa_id' => $programa->id,
             ]);
+
+            if ($esEspecie) {
+                $e = $v['especie'];
+                $cfg = new \App\Models\EspecieConfig([
+                    'min_integrantes' => (int) $e['min_integrantes'],
+                    'max_integrantes' => (int) $e['max_integrantes'],
+                    'clubes_por_escuela' => isset($e['clubes_por_escuela']) && $e['clubes_por_escuela'] !== '' ? (int) $e['clubes_por_escuela'] : null,
+                    'participan_menores' => (bool) ($e['participan_menores'] ?? true),
+                    'kit_nombre' => trim(strip_tags($e['kit_nombre'])),
+                    'kit_descripcion' => isset($e['kit_descripcion']) ? trim(strip_tags($e['kit_descripcion'])) : null,
+                    'campos_club' => \App\Support\Especie::normalizarPredefinidos($e['campos_club'] ?? null, \App\Support\Especie::CAMPOS_CLUB, \App\Support\Especie::DEFAULT_CLUB),
+                    'campos_integrante' => \App\Support\Especie::normalizarPredefinidos($e['campos_integrante'] ?? null, \App\Support\Especie::CAMPOS_INTEGRANTE, \App\Support\Especie::DEFAULT_INTEGRANTE),
+                ]);
+                $cfg->convocatoria_id = $convocatoria->id;
+                $cfg->save();
+                foreach (($v['campos'] ?? []) as $i => $c) {
+                    $campo = new \App\Models\EspecieCampo([
+                        'ambito' => $c['ambito'] ?? 'club',
+                        'nombre_campo' => $c['nombre_campo'],
+                        'etiqueta' => $c['etiqueta'],
+                        'tipo_campo' => $c['tipo_campo'],
+                        'opciones_json' => $c['tipo_campo'] === 'select' ? self::opciones($c['opciones'] ?? '') : null,
+                        'requerido' => (bool) ($c['requerido'] ?? false),
+                        'orden' => (int) ($c['orden'] ?? $i + 1),
+                    ]);
+                    $campo->convocatoria_id = $convocatoria->id;
+                    $campo->save();
+                }
+            }
 
             return [$convocatoria, $programa];
         });
@@ -233,10 +265,39 @@ class AsistenteConvocatoriaController extends Controller
         return $out;
     }
 
-    private function reglas(): array
+    private function reglas(bool $esEspecie = false): array
     {
         $slug = 'regex:/^[a-z0-9_]+$/';
+        $r = $this->reglasBase($slug);
+        if (! $esEspecie) {
+            return $r;
+        }
+        // E52 · Apoyo en especie: sin dinero, sin conceptos de gasto ni criterios; preguntas del club o del integrante.
+        $r['convocatoria.monto_maximo_apoyo'] = 'nullable|numeric|min:0|max:9999999999';
+        $r['convocatoria.porcentaje_aportacion_minima'] = 'nullable|numeric|min:0|max:100';
+        $r['programa.monto_maximo'] = 'nullable|numeric|min:0|max:9999999999';
+        $r['programa.puntaje_minimo_aprobatorio'] = 'nullable|numeric|min:0|max:100';
+        $r['campos'] = 'present|array|max:100';
+        $r['campos.*.ambito'] = 'required|in:club,integrante';
+        $r['campos.*.nombre_campo'] = ['required', 'string', 'max:60', $slug];
+        $r['documentos'] = 'present|array|max:50';
+        unset($r['rubros'], $r['rubros.*.clave'], $r['rubros.*.nombre'], $r['rubros.*.descripcion'], $r['rubros.*.porcentaje_maximo']);
+        unset($r['criterios'], $r['criterios.*.nombre'], $r['criterios.*.descripcion'], $r['criterios.*.ponderacion'], $r['criterios.*.puntaje_maximo'], $r['criterios.*.orden']);
+        $r['especie'] = 'required|array';
+        $r['especie.min_integrantes'] = 'required|integer|min:1|max:200';
+        $r['especie.max_integrantes'] = 'required|integer|min:1|max:200';
+        $r['especie.clubes_por_escuela'] = 'nullable|integer|min:1|max:1000';
+        $r['especie.participan_menores'] = 'boolean';
+        $r['especie.kit_nombre'] = 'required|string|max:255';
+        $r['especie.kit_descripcion'] = 'nullable|string|max:5000';
+        $r['especie.campos_club'] = 'nullable|array';
+        $r['especie.campos_integrante'] = 'nullable|array';
 
+        return $r;
+    }
+
+    private function reglasBase(string $slug): array
+    {
         return [
             'borrador_id' => 'nullable|integer',
 
@@ -253,7 +314,7 @@ class AsistenteConvocatoriaController extends Controller
             'programa' => 'required|array',
             'programa.clave' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9_\-\/.]+$/', Rule::unique('tipo_programas', 'clave')],
             'programa.nombre' => 'required|string|max:255',
-            'programa.tipo_apoyo' => 'required|in:reembolso,concurrente,honorarios',
+            'programa.tipo_apoyo' => 'required|in:reembolso,concurrente,honorarios,especie',
             'programa.monto_maximo' => 'required|numeric|min:1000|max:9999999999',
             'programa.tiene_etapas' => 'boolean',
             'programa.num_etapas' => 'required_if:programa.tiene_etapas,true|nullable|integer|min:1|max:10',
@@ -300,9 +361,33 @@ class AsistenteConvocatoriaController extends Controller
      * Reglas entre campos que la validación por regla no cubre. Recibe la entrada cruda (puede venir incompleta o con
      * tipos raros): todo se lee con comprobaciones de tipo.
      */
-    private function erroresDeCoherencia(array $in): array
+    private function erroresDeCoherencia(array $in, bool $esEspecie = false): array
     {
         $errores = [];
+        if ($esEspecie) {
+            $e = is_array($in['especie'] ?? null) ? $in['especie'] : [];
+            if (is_numeric($e['min_integrantes'] ?? null) && is_numeric($e['max_integrantes'] ?? null) && (int) $e['min_integrantes'] > (int) $e['max_integrantes']) {
+                $errores['especie.max_integrantes'] = 'El máximo de integrantes no puede ser menor que el mínimo.';
+            }
+            // Nombres de campo únicos por ámbito.
+            $vistos = [];
+            foreach ((is_array($in['campos'] ?? null) ? $in['campos'] : []) as $i => $c) {
+                if (! is_array($c)) continue;
+                $k = ($c['ambito'] ?? '').'|'.($c['nombre_campo'] ?? '');
+                if (isset($vistos[$k])) $errores["campos.$i.nombre_campo"] = 'Ese nombre de pregunta ya se usa en el mismo ámbito.';
+                $vistos[$k] = true;
+                if (($c['tipo_campo'] ?? null) === 'select' && is_string($c['opciones'] ?? null) && count(self::opciones($c['opciones'])) === 0) {
+                    $errores["campos.$i.opciones"] = 'La pregunta de lista necesita al menos una opción.';
+                }
+            }
+            foreach ((is_array($in['documentos'] ?? null) ? $in['documentos'] : []) as $i => $d) {
+                if (is_array($d) && ($d['clave'] ?? null) === \App\Support\Especie::CARTA_ESCUELA) {
+                    $errores["documentos.$i.clave"] = 'La carta de la escuela ya se pide siempre; usa otra clave.';
+                }
+            }
+
+            return $errores;
+        }
         $criterios = is_array($in['criterios'] ?? null) ? $in['criterios'] : [];
         if ($criterios) {
             $suma = 0.0;

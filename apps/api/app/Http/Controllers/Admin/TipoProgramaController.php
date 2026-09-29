@@ -38,7 +38,7 @@ class TipoProgramaController extends Controller
             'clave' => 'required|string|unique:tipo_programas|max:20',
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
-            'tipo_apoyo' => 'required|in:reembolso,concurrente,honorarios',
+            'tipo_apoyo' => 'required|in:reembolso,concurrente,honorarios,especie', // E52: especie = kits (sin dinero)
             'tiene_etapas' => 'boolean',
             'num_etapas' => 'nullable|integer|min:1|max:10',
             'requiere_evaluacion_tecnica' => 'boolean',
@@ -49,7 +49,7 @@ class TipoProgramaController extends Controller
             'max_miembros_equipo' => 'nullable|integer|min:1',
             'rango_edad_min' => 'nullable|integer|min:1|max:120',
             'rango_edad_max' => 'nullable|integer|min:1|max:120',
-            'monto_maximo' => 'required|numeric|min:1000',
+            'monto_maximo' => 'required_unless:tipo_apoyo,especie|nullable|numeric|min:0',
             'porcentaje_aportacion_solicitante' => 'nullable|numeric|min:0|max:100',
             'puntaje_minimo_aprobatorio' => 'nullable|numeric|min:0|max:100',
             'activo' => 'boolean',
@@ -63,8 +63,15 @@ class TipoProgramaController extends Controller
         }
 
         // Validate num_etapas matches tiene_etapas
-        if ($validated['tiene_etapas'] && ! ($validated['num_etapas'] ?? null)) {
+        if (($validated['tiene_etapas'] ?? false) && ! ($validated['num_etapas'] ?? null)) {
             return response()->json(['message' => 'num_etapas requerido cuando tiene_etapas es true'], 422);
+        }
+        // E52: el mínimo de $1,000 sigue para los apoyos con dinero; "especie" (kits) no lleva monto.
+        if ($validated['tipo_apoyo'] !== 'especie' && (float) ($validated['monto_maximo'] ?? 0) < 1000) {
+            return response()->json(['message' => 'El monto máximo debe ser de al menos $1,000.', 'errors' => ['monto_maximo' => ['El monto máximo debe ser de al menos $1,000.']]], 422);
+        }
+        if ($validated['tipo_apoyo'] === 'especie') {
+            $validated['monto_maximo'] = null;
         }
 
         $programa = TipoPrograma::create($validated);
@@ -84,7 +91,7 @@ class TipoProgramaController extends Controller
             'clave' => 'string|unique:tipo_programas,clave,'.$tipoPrograma->id.'|max:20',
             'nombre' => 'string|max:255',
             'descripcion' => 'nullable|string',
-            'tipo_apoyo' => 'in:reembolso,concurrente,honorarios',
+            'tipo_apoyo' => 'in:reembolso,concurrente,honorarios,especie',
             'tiene_etapas' => 'boolean',
             'num_etapas' => 'nullable|integer|min:1|max:10',
             'requiere_evaluacion_tecnica' => 'boolean',
@@ -95,7 +102,7 @@ class TipoProgramaController extends Controller
             'max_miembros_equipo' => 'nullable|integer|min:1',
             'rango_edad_min' => 'nullable|integer|min:1|max:120',
             'rango_edad_max' => 'nullable|integer|min:1|max:120',
-            'monto_maximo' => 'numeric|min:1000',
+            'monto_maximo' => 'nullable|numeric|min:0',
             'porcentaje_aportacion_solicitante' => 'nullable|numeric|min:0|max:100',
             'puntaje_minimo_aprobatorio' => 'nullable|numeric|min:0|max:100',
             'activo' => 'boolean',
@@ -111,6 +118,17 @@ class TipoProgramaController extends Controller
         // Validate num_etapas matches tiene_etapas
         if (($validated['tiene_etapas'] ?? false) && ! ($validated['num_etapas'] ?? null)) {
             return response()->json(['message' => 'num_etapas requerido cuando tiene_etapas es true'], 422);
+        }
+        // E52: el mínimo de $1,000 sigue para los apoyos con dinero; "especie" (kits) no lleva monto. Cambiar de/hacia
+        // "especie" con clubes o solicitudes registradas rompería su flujo: no se permite.
+        $tipoFinal = $validated['tipo_apoyo'] ?? $tipoPrograma->tipo_apoyo;
+        if (isset($validated['tipo_apoyo']) && $validated['tipo_apoyo'] !== $tipoPrograma->tipo_apoyo
+            && ($validated['tipo_apoyo'] === 'especie' || $tipoPrograma->tipo_apoyo === 'especie')
+            && \App\Models\Convocatoria::where('tipo_programa_id', $tipoPrograma->id)->where(fn ($q) => $q->whereHas('clubes')->orWhereHas('solicitudes'))->exists()) {
+            return response()->json(['message' => 'No se puede cambiar a o desde «Apoyo en especie»: ya hay registros en sus convocatorias.'], 422);
+        }
+        if ($tipoFinal !== 'especie' && array_key_exists('monto_maximo', $validated) && (float) ($validated['monto_maximo'] ?? 0) < 1000) {
+            return response()->json(['message' => 'El monto máximo debe ser de al menos $1,000.', 'errors' => ['monto_maximo' => ['El monto máximo debe ser de al menos $1,000.']]], 422);
         }
 
         $tipoPrograma->update($validated);

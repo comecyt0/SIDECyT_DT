@@ -17,6 +17,9 @@ class RolSolicitudAviso extends Notification implements ShouldQueue
 {
     use Queueable;
 
+    /** Si el registro se borró antes de enviarse (p. ej. datos de prueba), el aviso se descarta sin fallar. */
+    public bool $deleteWhenMissingModels = true;
+
     public const ETIQUETAS = ['solicitante' => 'Participante (SIGAE)', 'lider_club' => 'Líder de club', 'evaluador' => 'Evaluador'];
 
     public function __construct(public readonly SolicitudRol $solicitud, public readonly string $evento) {}

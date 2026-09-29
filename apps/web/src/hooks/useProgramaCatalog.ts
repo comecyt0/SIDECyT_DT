@@ -10,7 +10,7 @@ export interface TipoPrograma {
   id: number;
   clave: string;
   nombre: string;
-  tipo_apoyo: 'reembolso' | 'concurrente' | 'honorarios';
+  tipo_apoyo: 'reembolso' | 'concurrente' | 'honorarios' | 'especie';
   tiene_etapas: boolean;
   num_etapas: number;
   tiene_equipo: boolean;

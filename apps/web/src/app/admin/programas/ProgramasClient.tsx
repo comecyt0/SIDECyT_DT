@@ -29,7 +29,7 @@ export interface TipoPrograma {
   clave: string;
   nombre: string;
   descripcion?: string;
-  tipo_apoyo: 'reembolso' | 'concurrente' | 'honorarios';
+  tipo_apoyo: 'reembolso' | 'concurrente' | 'honorarios' | 'especie';
   tiene_etapas: boolean;
   tiene_equipo: boolean;
   monto_maximo: number;
@@ -40,7 +40,7 @@ interface FormData {
   clave: string;
   nombre: string;
   descripcion: string;
-  tipo_apoyo: 'reembolso' | 'concurrente' | 'honorarios';
+  tipo_apoyo: 'reembolso' | 'concurrente' | 'honorarios' | 'especie';
   tiene_etapas: boolean;
   num_etapas: number;
   tiene_equipo: boolean;
@@ -151,6 +151,7 @@ export default function ProgramasClient({ programas }: Props) {
       reembolso: 'Reembolso',
       concurrente: 'Concurrente',
       honorarios: 'Honorarios',
+      especie: 'En especie',
     };
     return map[tipo] || tipo;
   };
@@ -205,7 +206,7 @@ export default function ProgramasClient({ programas }: Props) {
                     <TableCell>
                       <Badge variant="outline">{tipoApoyoLabel(prog.tipo_apoyo)}</Badge>
                     </TableCell>
-                    <TableCell>{formatCurrency(prog.monto_maximo || 0)}</TableCell>
+                    <TableCell>{prog.tipo_apoyo === 'especie' ? 'Kit (sin monto)' : formatCurrency(prog.monto_maximo || 0)}</TableCell>
                     <TableCell>
                       <Badge variant={prog.tiene_etapas ? 'default' : 'secondary'}>
                         {prog.tiene_etapas ? 'Sí' : 'No'}
@@ -258,7 +259,7 @@ export default function ProgramasClient({ programas }: Props) {
         open={showModal}
         title={editId ? 'Editar programa' : 'Nuevo programa'}
         icon={<Zap className="h-5 w-5" />}
-        intro={<>Un programa es <strong>el tipo de apoyo que se ofrece</strong> (reembolso, concurrente u honorarios). Cada convocatoria se basa en uno. Los campos, documentos y criterios de evaluación se ajustan después, desde su ficha.</>}
+        intro={<>Un programa es <strong>el tipo de apoyo que se ofrece</strong> (reembolso, concurrente, honorarios o en especie). Cada convocatoria se basa en uno. Los campos, documentos y criterios de evaluación se ajustan después, desde su ficha.</>}
         submitting={saving}
         submitLabel={editId ? 'Guardar cambios' : 'Crear programa'}
         onClose={() => setShowModal(false)}
@@ -305,12 +306,13 @@ export default function ProgramasClient({ programas }: Props) {
             key: 'apoyo',
             label: 'El apoyo',
             question: '¿Cómo se entrega el apoyo y hasta cuánto?',
-            validate: () => (!form.monto_maximo || form.monto_maximo <= 0 ? 'Indica el monto máximo por proyecto.' : null),
+            // E52: "En especie" entrega kits, sin monto (el backend lo exige solo para las demás formas).
+            validate: () => (form.tipo_apoyo !== 'especie' && (!form.monto_maximo || form.monto_maximo < 1000) ? 'Indica el monto máximo por proyecto (al menos $1,000).' : null),
             content: (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="tipo_apoyo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Forma del apoyo *</Label>
-                  <Select value={form.tipo_apoyo} onValueChange={(v: 'reembolso' | 'concurrente' | 'honorarios' | null) => v && setForm({ ...form, tipo_apoyo: v })}>
+                  <Select value={form.tipo_apoyo} onValueChange={(v: 'reembolso' | 'concurrente' | 'honorarios' | 'especie' | null) => v && setForm({ ...form, tipo_apoyo: v })}>
                     <SelectTrigger id="tipo_apoyo" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
@@ -318,9 +320,15 @@ export default function ProgramasClient({ programas }: Props) {
                       <SelectItem value="reembolso">Reembolso (se paga después de comprobar)</SelectItem>
                       <SelectItem value="concurrente">Concurrente (aportan ambas partes)</SelectItem>
                       <SelectItem value="honorarios">Honorarios (pago a personas)</SelectItem>
+                      <SelectItem value="especie">En especie (kits a clubes escolares)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                {form.tipo_apoyo === 'especie' ? (
+                  <p className="text-sm text-[var(--app-ink-2)] self-end">
+                    Sin monto: cada club recibe un kit. Los clubes, el kit y los datos que se piden se configuran en cada convocatoria.
+                  </p>
+                ) : (
                 <div className="space-y-1.5">
                   <Label htmlFor="monto_maximo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Monto máximo por proyecto (MXN) *</Label>
                   <input
@@ -332,6 +340,7 @@ export default function ProgramasClient({ programas }: Props) {
                     className="auth-input auth-input-static pl-4"
                   />
                 </div>
+                )}
               </div>
             ),
           },

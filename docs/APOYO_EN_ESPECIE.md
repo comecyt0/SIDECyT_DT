@@ -179,6 +179,7 @@ Clubes aceptados · asistencia por evento · box lunch y transporte (solicitado 
 | **Pendiente** | Pase a nacional / internacional (subconvocatorias) | Definición del usuario |
 
 > **Orden real de implementación (decisión del usuario, 29/09/2026): F5 primero**, luego F1 → F2 → F3 → F4.
+> Estado: **F5 ✅ (§10) · F1 ✅ (§11)** · F2, F3, F4 pendientes.
 
 ## 10. Fase 5 — Registro general con elección de rol ✅ PUBLICADA (29/09/2026)
 
@@ -218,6 +219,56 @@ Clubes aceptados · asistencia por evento · box lunch y transporte (solicitado 
 - **Verificado:** e2e backend **46/46** (`e2e_registro.php`: CP, validaciones, duplicados, CV falso, aprobación por rol,
   mis-roles, token anterior invalidado, escalada bloqueada, throttle), navegador real 11/11 (registro completo por UI a
   390 px, pedir rol, cambiar de rol → /club), vitest 133/133, sin errores de JavaScript.
+
+## 11. Fase 1 — Base de la modalidad ✅ PUBLICADA (29/09/2026)
+
+### 11.1 Decisiones del usuario (29/09/2026)
+| Tema | Decisión |
+|---|---|
+| Asistente | En especie **no** pide monto, conceptos de gasto ni criterios; pide **kit y configuración del club** (5 pasos en lugar de 7) |
+| Escuelas | Catálogo cargado por **Excel desde el panel**; nivel primaria/secundaria/media superior/superior; sistema estatal/federal |
+| Clubes | **Uno por líder por convocatoria**; en captura hasta "Enviar a revisión"; **después no se edita** (la subsanación es F2) |
+| Carta de consentimiento | **Una por club, de la escuela**: el sistema genera el PDF, la escuela firma y sella, el líder lo sube |
+| Siempre obligatorio | Nombre del club, escuela y nombre de cada integrante; lo demás es configurable (no pedir / opcional / obligatorio) |
+| Predefinidos | Integrante: foto, fecha de nacimiento, sexo, CURP, grado y grupo, correo, teléfono. Club: logo, descripción |
+| Líder | **Cuenta como integrante**: se agrega solo como el primero y entra al mínimo y máximo |
+| Documentos | Los del programa (configurables por convocatoria) **más** la carta de la escuela, siempre obligatoria |
+
+### 11.2 Implementación
+- **BD** (`2026_09_29_000002_apoyo_especie_f1`): `escuelas`, `especie_config` (1 por convocatoria), `especie_campos`
+  (preguntas del club o del integrante), `clubes` (folio `CLUB-AAAA-XXXXXX`, único por convocatoria + líder),
+  `club_integrantes`, `club_documentos`.
+- **Reglas en un solo lugar:** `App\Support\Especie` (predefinidos, validación de respuestas personalizadas, folio) y
+  `App\Support\ImagenSegura` (logo y fotos: MIME real, ≤ 5 MB, ≤ 40 MP, re-codificadas a WebP cuadrado, disco privado).
+- **API admin:** `/admin/escuelas` (CRUD, `importar` .xlsx sin evaluar fórmulas y con informe por fila, `plantilla`);
+  `GET /admin/convocatorias/{c}/especie` (admin, admin de convocatoria y consulta, con alcance) y `PUT` (solo admin);
+  `/admin/especie/convocatorias`, `/admin/convocatorias/{c}/clubes`, `/admin/clubes/{club}` (lectura con alcance).
+  El asistente (`POST /admin/asistente-convocatoria`) acepta `tipo_apoyo=especie` con el bloque `especie` y preguntas
+  con `ambito`; `TipoProgramaController` permite "En especie" sin monto y no deja cambiar de/a especie con registros.
+- **API líder** (`/club/*`, rol `lider_club`, propiedad revisada en cada acción → 404 si no es suyo): convocatorias,
+  buscador de escuelas (≥ 3 letras, 20 resultados), club (crear, editar solo en captura, logo), integrantes (+ foto),
+  documentos (carta: PDF o imagen ≤ 10 MB; los demás con los límites del programa), carta generada
+  (`pdfs/carta_escuela_club`), enviar (lista de faltantes legible; aviso por campana a admins y admins de la
+  convocatoria). Descargas: `/api/media/club/{40}.webp` y `/api/clubes/{club}/documentos/{clave}`, con sesión y permiso.
+- **Front:** asistente con elección de modalidad en el paso 1 (`lib/asistente-convocatoria.ts` `pasosDe`), paso
+  "Club y kit" con `components/admin/especie/ConfigEspecieForm.tsx` (también en la ficha de la convocatoria:
+  `EspecieConvocatoriaPanel`), programas con la opción "En especie", `/admin/escuelas` y `/admin/clubes` (+ ficha) en el
+  menú, panel del líder `/club/dashboard` y `/club/clubes/[id]` con línea de avance (`LineaAvanceClub`), buscador de
+  escuelas accesible (`EscuelaPicker`), preguntas dinámicas (`CampoDinamico`) y vista de solo lectura común
+  (`ClubResumen`). Lógica y validación en `lib/especie.ts` (mismos límites que el backend).
+- **Correo a dominios reservados bloqueado** (`BloquearCorreoDominiosReservados`): las pruebas usan `.invalid`; antes
+  llegaban a Microsoft 365 (rechazos 501/421). Avisos en cola con `deleteWhenMissingModels` (no fallan si el registro se
+  borró antes de enviarse).
+- **Verificado:** e2e backend **53/53** (`e2e_especie_f1.php`: escuelas y Excel malicioso, asistente, límites, un club por
+  líder, cupo por escuela, IDOR entre líderes, archivos disfrazados, faltantes, envío y bloqueo de edición, vista del
+  personal con alcance), navegador real **39/40** (importar escuelas, crear la convocatoria con el asistente, editar su
+  configuración, líder en 390 px: registrar, completar, fotos, carta, HTML disfrazado rechazado, enviar; admin: lista,
+  ficha y aviso en la campana; el único fallo fue de sincronía de la propia prueba, la imagen sí se ve), vitest
+  **145/145**, sin errores de JavaScript.
+
+### 11.3 Pendiente de definir con el usuario
+- **Aviso de privacidad del club** (datos y fotos de menores): el plan de F1 lo menciona; hoy el consentimiento es la carta
+  de la escuela. Falta decidir si el líder acepta un aviso específico al enviar y con qué texto.
 
 ## 8. Modelo de datos (borrador técnico, a validar en F1)
 

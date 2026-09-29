@@ -169,6 +169,12 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::get('folios', [FolioController::class, 'index']);
             Route::get('reportes/excel', [DocumentoController::class, 'exportExcel']);
             Route::get('periodos', [PeriodoController::class, 'index']);
+            // E52 · Apoyo en especie: clubes registrados (lectura con alcance; la revisión llega en F2).
+            Route::get('especie/convocatorias', [\App\Http\Controllers\Admin\ClubAdminController::class, 'convocatorias']);
+            Route::get('convocatorias/{convocatoria}/clubes', [\App\Http\Controllers\Admin\ClubAdminController::class, 'index']);
+            Route::get('clubes/{club}', [\App\Http\Controllers\Admin\ClubAdminController::class, 'show']);
+            // Configuración (clubes y kit): la ven los tres roles dentro de su alcance; solo el admin la cambia (abajo).
+            Route::get('convocatorias/{convocatoria}/especie', [\App\Http\Controllers\Admin\EspecieConfigController::class, 'show']);
         });
 
         // (b) OPERACIÓN con alcance: admin y admin de convocatoria.
@@ -193,6 +199,14 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
         // (c) SOLO ADMIN GENERAL.
         Route::group(['prefix' => 'admin', 'middleware' => 'admin'], function () {
             Route::get('activity', [DashboardController::class, 'adminActivity']);
+
+            // E52 · F1: catálogo de escuelas y configuración de Apoyo en especie por convocatoria.
+            Route::get('escuelas/plantilla', [\App\Http\Controllers\Admin\EscuelaController::class, 'plantilla']);
+            Route::post('escuelas/importar', [\App\Http\Controllers\Admin\EscuelaController::class, 'importar'])->middleware('throttle:10,1,escuelas-importar');
+            Route::get('escuelas', [\App\Http\Controllers\Admin\EscuelaController::class, 'index']);
+            Route::post('escuelas', [\App\Http\Controllers\Admin\EscuelaController::class, 'store']);
+            Route::put('escuelas/{escuela}', [\App\Http\Controllers\Admin\EscuelaController::class, 'update']);
+            Route::put('convocatorias/{convocatoria}/especie', [\App\Http\Controllers\Admin\EspecieConfigController::class, 'update']);
 
             // PROGRAMAS DINÁMICOS CRUD
             Route::get('programas', [TipoProgramaController::class, 'index']);
@@ -312,6 +326,32 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::post('{conversacion}/resolver', [BuzonController::class, 'resolver']);
             Route::post('{conversacion}/reabrir', [BuzonController::class, 'reabrir']);
         });
+
+        // ═══ E52 · F1 — PANEL DEL LÍDER DE CLUB (Apoyo en especie). Propiedad del club revisada en el controlador. ═══
+        Route::group(['prefix' => 'club', 'middleware' => 'rol:lider_club'], function () {
+            $c = \App\Http\Controllers\Club\ClubController::class;
+            Route::get('convocatorias', [$c, 'convocatorias']);
+            Route::get('escuelas', [$c, 'escuelas'])->middleware('throttle:60,1,escuelas-buscar');
+            Route::post('clubes', [$c, 'store'])->middleware('throttle:10,1,club-crear');
+            Route::get('clubes/{club}', [$c, 'show']);
+            Route::put('clubes/{club}', [$c, 'update']);
+            Route::post('clubes/{club}/logo', [$c, 'subirLogo'])->middleware('throttle:30,1,club-subidas');
+            Route::delete('clubes/{club}/logo', [$c, 'quitarLogo']);
+            Route::post('clubes/{club}/integrantes', [$c, 'agregarIntegrante']);
+            Route::put('clubes/{club}/integrantes/{integrante}', [$c, 'actualizarIntegrante']);
+            Route::delete('clubes/{club}/integrantes/{integrante}', [$c, 'quitarIntegrante']);
+            Route::post('clubes/{club}/integrantes/{integrante}/foto', [$c, 'subirFoto'])->middleware('throttle:30,1,club-subidas');
+            Route::delete('clubes/{club}/integrantes/{integrante}/foto', [$c, 'quitarFoto']);
+            Route::post('clubes/{club}/documentos', [$c, 'subirDocumento'])->middleware('throttle:30,1,club-subidas');
+            Route::delete('clubes/{club}/documentos/{clave}', [$c, 'quitarDocumento'])->where('clave', '[a-z0-9_]+');
+            Route::get('clubes/{club}/carta-escuela', [$c, 'cartaEscuela'])->middleware('throttle:20,1,club-carta');
+            Route::post('clubes/{club}/enviar', [$c, 'enviar'])->middleware('throttle:10,1,club-enviar');
+        });
+        // Archivos de clubes: líder dueño o personal con alcance (404 a los demás).
+        Route::get('media/club/{archivo}', [\App\Http\Controllers\Club\ClubArchivoController::class, 'media'])
+            ->where('archivo', '[A-Za-z0-9]{40}\.webp')->middleware('throttle:600,1,club-media');
+        Route::get('clubes/{club}/documentos/{clave}', [\App\Http\Controllers\Club\ClubArchivoController::class, 'documento'])
+            ->where('clave', '[a-z0-9_]+')->middleware('throttle:120,1,club-docs');
 
         // ═══ PERFIL (E45): todos los roles. ═══
         // E52: mis roles (ver, cambiar de rol activo, pedir otro rol con aprobación de admin).

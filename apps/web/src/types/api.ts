@@ -37,7 +37,7 @@ export interface TipoPrograma {
   descripcion?: string;
   /** E40: banner del programa (respaldo de las convocatorias que no tienen el suyo). */
   banner_url?: string | null;
-  tipo_apoyo: 'reembolso' | 'concurrente' | 'honorarios';
+  tipo_apoyo: 'reembolso' | 'concurrente' | 'honorarios' | 'especie';
   tiene_etapas: boolean;
   tiene_equipo: boolean;
   monto_maximo: number;

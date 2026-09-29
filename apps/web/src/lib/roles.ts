@@ -52,8 +52,9 @@ export const SUBRUTAS_POR_ROL: Record<string, string[]> = {
   admin_convocatoria: [
     '/admin/dashboard', '/admin/solicitudes', '/admin/convocatorias', '/admin/folios', '/admin/convenios',
     '/admin/ministraciones', '/admin/informes', '/admin/evaluadores', '/admin/buzon', '/admin/cuenta', '/admin/perfiles',
+    '/admin/clubes',
   ],
-  consulta: ['/admin/dashboard', '/admin/solicitudes', '/admin/folios', '/admin/cuenta', '/admin/perfiles'],
+  consulta: ['/admin/dashboard', '/admin/solicitudes', '/admin/folios', '/admin/cuenta', '/admin/perfiles', '/admin/clubes'],
 };
 
 export function subrutaPermitida(rol: string, path: string): boolean {

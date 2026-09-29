@@ -280,6 +280,14 @@
         "name": "Periods",
         "desc": "Call periods and access scope"
       },
+      "escuelas": {
+        "name": "Schools",
+        "desc": "School catalog for clubs (in-kind support)"
+      },
+      "clubes": {
+        "name": "Clubs",
+        "desc": "Clubs registered in in-kind support calls"
+      },
       "documentos_fijos": {
         "name": "File limits",
         "desc": "Types and size of fixed documents"

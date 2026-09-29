@@ -13,6 +13,9 @@ class NotificacionCreada implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    /** Si el aviso se borró antes de transmitirse (p. ej. al quitar datos de prueba), se descarta sin fallar. */
+    public bool $deleteWhenMissingModels = true;
+
     public function __construct(public NotificacionLog $notificacion) {}
 
     public function broadcastOn(): array
