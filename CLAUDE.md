@@ -15,6 +15,12 @@ Tecnología). **Documento guía: `docs/SIDECYT.md`** (definido por el usuario el
 | **SIGAE — Sistema de Gestión de Apoyo Empresarial** (antes SIGAC) | Ciclo completo de las convocatorias de Apoyo Empresarial (este código) | `/sigae` + paneles | En operación |
 | **SICEI — Sistema de Impulso a la Ciencia, Educación e Innovación** | Becas a estudiantes e impulso a la investigación | `/sicei` | **Pendiente** ("Próximamente") |
 
+**PRÓXIMO GRAN DESARROLLO (definido 28/09/2026, sin implementar): modalidad "Apoyo en especie"** (kits para clubes de
+escuelas estatales/federales: líder de club, integrantes con foto, revisiones configurables, comité con acta, logística
+de kit/transporte/box lunch, QR por club, eventos con escaneo, registro general con elección de rol y CP del Edomex).
+Requerimientos, decisiones y fases: **`docs/APOYO_EN_ESPECIE.md`** — leerlo antes de tocar programas, convocatorias o
+registro.
+
 **Programas y convocatorias nunca se escriben en el código** (regla del usuario, E49): se administran en el panel
 (`/admin/convocatorias`, `/admin/folios`, `/admin/sitio`) y las páginas los leen de la API.
 
