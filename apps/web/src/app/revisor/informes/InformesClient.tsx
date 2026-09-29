@@ -11,6 +11,7 @@ import { FileText, Eye, Search } from 'lucide-react';
 import api from '@/lib/api';
 import { parseDate } from '@/lib/format';
 import { safeUrl } from '@/lib/safe-url';
+import { mensajeError } from '@/lib/errores-formulario';
 
 const INFORME_ESTADO: Record<string, { label: string; tone: string }> = {
   pendiente: { label: 'Pendiente de entrega', tone: 'amber' },
@@ -107,7 +108,7 @@ export default function InformesClient({ informes }: Props) {
         }, 1500);
       }
     } catch (error: any) {
-      const errorMsg = error.response?.data?.error || error.message || 'Error al actualizar informe';
+      const errorMsg = mensajeError(error, 'Error al actualizar informe');
       setUpdateError(errorMsg);
     } finally {
       setUpdateLoading(false);

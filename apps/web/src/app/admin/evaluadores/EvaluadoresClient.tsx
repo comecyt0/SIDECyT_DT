@@ -12,6 +12,8 @@ import StepFrame from '@/components/ui/step-frame';
 import api from '@/lib/api';
 import type { User, Solicitud } from '@/types/api';
 import { AlertBox } from '@/components/ui/alert-box';
+import AvisoErrores from '@/components/ui/aviso-errores';
+import { erroresFormulario, type ErroresFormulario } from '@/lib/errores-formulario';
 
 export type Evaluador = Pick<User, 'id' | 'name' | 'email' | 'rol_id'>;
 
@@ -29,13 +31,17 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [feedback, setFeedback] = useState<{type: 'error'|'success'|'info'|'warning', message: string}|null>(null);
+  // Error al guardar: dentro de la ventana y en el paso del campo (antes quedaba detrás del modal, sin verse).
+  const [errorGuardar, setErrorGuardar] = useState<ErroresFormulario | null>(null);
+  const abrir = (f: typeof emptyForm) => { setForm(f); setErrorGuardar(null); setShowModal(true); };
 
   const handleAsignar = async () => {
     if (!form.solicitud_id || !form.evaluador_id || !form.fecha_limite) {
-      setFeedback({ type: 'error', message: 'Elige la solicitud, el evaluador y la fecha límite.' });
+      setErrorGuardar({ titulo: 'Elige la solicitud, el evaluador y la fecha límite.', lineas: [], campos: {}, paso: !form.solicitud_id ? 'solicitud' : !form.evaluador_id ? 'evaluador' : 'fecha' });
       return;
     }
     setSaving(true);
+    setErrorGuardar(null);
     try {
       await api.post('/admin/asignaciones-evaluador', {
         solicitud_id: Number(form.solicitud_id),
@@ -44,10 +50,12 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
       });
       setShowModal(false);
       setForm(emptyForm);
+      setFeedback({ type: 'success', message: 'Evaluador asignado. Ya ve la solicitud en su bandeja.' });
       router.refresh();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo asignar al evaluador. Inténtalo de nuevo.';
-      setFeedback({ type: 'error', message: msg });
+      setErrorGuardar(erroresFormulario(err,
+        { solicitud_id: 'Solicitud', evaluador_id: 'Evaluador', fecha_limite: 'Fecha límite' },
+        { solicitud_id: 'solicitud', evaluador_id: 'evaluador', fecha_limite: 'fecha' }));
     } finally {
       setSaving(false);
     }
@@ -61,7 +69,7 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
         description="Quién revisa los documentos y quién dictamina cada proyecto. Desde aquí asignas un evaluador a una solicitud."
         icon={<Users className="h-5 w-5" />}
         actions={
-          <Button onClick={() => { setForm(emptyForm); setShowModal(true); }}>
+          <Button onClick={() => abrir(emptyForm)}>
             <UserPlus className="h-4 w-4" /> Asignar evaluador
           </Button>
         }
@@ -102,7 +110,7 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
                   <TableCell><span className="pill" data-tone="sky">Evaluador</span></TableCell>
                   <TableCell className="text-right">
                     <Button variant="soft" size="sm"
-                      onClick={() => { setForm({...emptyForm, evaluador_id: String(ev.id)}); setShowModal(true); }}>
+                      onClick={() => abrir({ ...emptyForm, evaluador_id: String(ev.id) })}>
                       <Link2 /> Asignar
                     </Button>
                   </TableCell>
@@ -218,6 +226,8 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
         ]}
         onClose={() => setShowModal(false)}
         onSubmit={handleAsignar}
+        error={errorGuardar ? <AvisoErrores errores={errorGuardar} /> : null}
+        errorStep={errorGuardar?.paso ?? null}
         submitting={saving}
         submitLabel="Asignar"
       />

@@ -19,9 +19,16 @@ class ListaNegra extends Model
         'updated_at',
     ];
 
+    /** 29/09/2026: faltaba; el listado la carga con with('empresa') y con la primera sanción daba 500. */
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class, 'empresa_id');
+    }
+
+    /** Nombre anterior (E25): sin la llave explícita buscaba la columna `institucion_id`, que ya no existe. */
     public function institucion()
     {
-        return $this->belongsTo(Empresa::class);
+        return $this->belongsTo(Empresa::class, 'empresa_id');
     }
 
     public function solicitud()

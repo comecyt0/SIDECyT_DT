@@ -17,6 +17,21 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import PaginationControls from '@/components/ui/pagination-controls';
 import { DataCardGrid } from '@/components/ui/DataCardGrid';
 import UserAvatar from '@/components/ui/user-avatar';
+import AvisoErrores from '@/components/ui/aviso-errores';
+import { erroresFormulario, type ErroresFormulario } from '@/lib/errores-formulario';
+import { PASSWORD_HINT, validarPassword } from '@/lib/password-policy';
+import { PATRON_CORREO } from '@/lib/registro';
+
+/** Nombre visible y paso de cada campo: los errores del servidor se muestran así y regresan al paso correcto. */
+const ETIQUETA_CAMPO: Record<string, string> = {
+  name: 'Nombre completo', email: 'Correo electrónico', password: 'Contraseña', rol_id: 'Papel en el sistema',
+  empresa_id: 'Institución', cargo: 'Cargo', telefono: 'Teléfono', activo: 'Puede entrar al sistema',
+  convocatoria_ids: 'Convocatorias a su cargo', periodo_ids: 'Periodos visibles',
+};
+const PASO_CAMPO: Record<string, string> = {
+  name: 'cuenta', email: 'cuenta', password: 'cuenta', rol_id: 'papel', empresa_id: 'papel', cargo: 'papel',
+  telefono: 'papel', activo: 'papel', convocatoria_ids: 'alcance', periodo_ids: 'alcance',
+};
 
 interface PaginationMeta {
   current_page: number;
@@ -82,6 +97,8 @@ export default function UsuariosClient({ users, pagination }: Props) {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Error al guardar: se muestra DENTRO de la ventana y regresa al paso del campo (antes quedaba detrás del modal).
+  const [errorGuardar, setErrorGuardar] = useState<ErroresFormulario | null>(null);
   const [feedback, setFeedback] = useState<{type: 'error'|'success'|'info'|'warning', message: string}|null>(null);
   const [confirmState, setConfirmState] = useState<{open: boolean, action: () => void, title: string, description: string}>({open: false, action: () => {}, title: '', description: ''});
 
@@ -141,6 +158,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
 
   const handleOpenModal = (user: User | null = null) => {
     setErrors({});
+    setErrorGuardar(null);
     if (user) {
       setEditingUser(user);
       setFormData({
@@ -173,23 +191,43 @@ export default function UsuariosClient({ users, pagination }: Props) {
     setShowModal(true);
   };
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.name.trim()) newErrors.name = 'Nombre requerido';
-    if (!formData.email.trim()) newErrors.email = 'Email requerido';
-    if (!formData.rol_id) newErrors.rol_id = 'Rol requerido';
-    if (!editingUser && !formData.password) newErrors.password = 'Contraseña requerida';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  /** Mismas reglas que el servidor (UserController + Password::defaults), para avisar antes de enviar. */
+  const erroresCuenta = (): Record<string, string> => {
+    const e: Record<string, string> = {};
+    if (!formData.name.trim()) e.name = 'Escribe el nombre completo.';
+    else if (formData.name.length > 255) e.name = 'Máximo 255 caracteres.';
+    if (!formData.email.trim()) e.email = 'Escribe el correo electrónico.';
+    else if (!PATRON_CORREO.test(formData.email.trim())) e.email = 'Revisa el correo: debe verse como nombre@dominio.mx.';
+    if (!editingUser && !formData.password) e.password = 'Define una contraseña inicial.';
+    else if (formData.password) { const p = validarPassword(formData.password); if (p) e.password = p; }
+    return e;
+  };
+  const erroresPapel = (): Record<string, string> => {
+    const e: Record<string, string> = {};
+    if (!formData.rol_id) e.rol_id = 'Elige el papel que tendrá.';
+    if (formData.telefono.length > 20) e.telefono = 'Máximo 20 caracteres.';
+    if (formData.cargo.length > 255) e.cargo = 'Máximo 255 caracteres.';
+    return e;
+  };
+  /** Valida un paso: marca los campos y devuelve el primer mensaje (StepFrame no deja avanzar). */
+  const validarPaso = (e: Record<string, string>, claves: string[]) => {
+    setErrors((prev) => {
+      const limpio = { ...prev };
+      for (const k of claves) delete limpio[k];
+      return { ...limpio, ...e };
+    });
+    return Object.values(e)[0] ?? null;
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    setErrorGuardar(null);
 
-    if (!validateForm()) {
-      setFeedback({ type: 'error', message: 'Por favor completa todos los campos requeridos' });
+    const locales = { ...erroresCuenta(), ...erroresPapel() };
+    if (Object.keys(locales).length) {
+      setErrors(locales);
+      const primero = Object.keys(locales)[0];
+      setErrorGuardar({ titulo: 'Hay datos por corregir.', lineas: Object.entries(locales).map(([k, m]) => `${ETIQUETA_CAMPO[k] ?? k}: ${m}`), campos: locales, paso: PASO_CAMPO[primero] ?? null });
       return;
     }
 
@@ -225,20 +263,15 @@ export default function UsuariosClient({ users, pagination }: Props) {
       }
       setShowModal(false);
       setErrors({});
+      setFeedback({
+        type: 'success',
+        message: editingUser ? `Se guardaron los cambios de ${formData.name.trim()}.` : `Usuario ${formData.name.trim()} creado. Ya puede entrar con ${formData.email.trim()}.`,
+      });
       router.refresh();
     } catch (error: unknown) {
-      const errResp = (error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } })?.response?.data;
-      if (errResp?.errors) {
-        const flat: Record<string, string> = {};
-        for (const [key, val] of Object.entries(errResp.errors)) {
-          flat[key] = Array.isArray(val) ? val.join(', ') : String(val);
-        }
-        setErrors(flat);
-      }
-      const errorMsg = errResp?.errors
-        ? Object.entries(errResp.errors).map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`).join('\n')
-        : errResp?.message || 'Error al procesar la solicitud';
-      setFeedback({ type: 'error', message: errorMsg });
+      const r = erroresFormulario(error, ETIQUETA_CAMPO, PASO_CAMPO);
+      setErrors(r.campos);
+      setErrorGuardar(r);
     } finally {
       setSubmitting(false);
     }
@@ -248,7 +281,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
     setConfirmState({
       open: true,
       title: 'Eliminar usuario',
-      description: 'El usuario dejará de aparecer y no podrá iniciar sesión. Si hace falta, un administrador puede restaurarlo después.',
+      description: 'La cuenta se elimina de forma definitiva y ya no podrá iniciar sesión. Si solo quieres impedir el acceso, edítala y apaga «Puede entrar al sistema».',
       action: async () => {
         try {
           await api.delete(`/admin/usuarios/${id}`);
@@ -366,12 +399,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
             key: 'cuenta',
             label: 'La cuenta',
             question: '¿Quién es y cómo entra?',
-            validate: () => {
-              if (!formData.name.trim()) return 'Escribe el nombre completo.';
-              if (!formData.email.trim()) return 'Escribe el correo electrónico.';
-              if (!editingUser && !formData.password) return 'Define una contraseña inicial.';
-              return null;
-            },
+            validate: () => validarPaso(erroresCuenta(), ['name', 'email', 'password']),
             content: (
               <>
                 <FField id="usr-name" icon={UserCircle} label="Nombre completo *" error={errors.name}>
@@ -381,8 +409,9 @@ export default function UsuariosClient({ users, pagination }: Props) {
                   <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="email" placeholder="nombre@institucion.mx" />
                 </FField>
                 <FField id="usr-password" icon={Lock} label={editingUser ? 'Nueva contraseña (opcional)' : 'Contraseña inicial *'} error={errors.password}>
-                  <input type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="new-password" placeholder={editingUser ? 'Déjala vacía para no cambiarla' : 'Mínimo 8 caracteres'} />
+                  <input type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="new-password" placeholder={editingUser ? 'Déjala vacía para no cambiarla' : 'Crea una contraseña segura'} />
                 </FField>
+                <p className="-mt-2 text-xs text-[var(--app-ink-2)]">{PASSWORD_HINT}</p>
               </>
             ),
           },
@@ -390,7 +419,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
             key: 'papel',
             label: 'Su papel',
             question: '¿Qué hará en el sistema?',
-            validate: () => (!formData.rol_id ? 'Elige el papel que tendrá.' : null),
+            validate: () => validarPaso(erroresPapel(), ['rol_id', 'telefono', 'cargo']),
             content: (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -402,7 +431,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
                       ))}
                     </select>
                   </FField>
-                  <FField id="usr-empresa" icon={Building2} label="Institución">
+                  <FField id="usr-empresa" icon={Building2} label="Institución" error={errors.empresa_id}>
                     <select value={formData.empresa_id} onChange={e => setFormData({ ...formData, empresa_id: e.target.value })} className="auth-input auth-input-static pl-10 cursor-pointer">
                       <option value="">Ninguna (oficina central)</option>
                       {catalogs.instituciones.map((i) => (
@@ -412,11 +441,11 @@ export default function UsuariosClient({ users, pagination }: Props) {
                   </FField>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FField id="usr-cargo" icon={Briefcase} label="Cargo">
-                    <input value={formData.cargo} onChange={e => setFormData({ ...formData, cargo: e.target.value })} className="auth-input auth-input-static pl-10" placeholder="Ej. Coordinadora de proyectos" />
+                  <FField id="usr-cargo" icon={Briefcase} label="Cargo" error={errors.cargo}>
+                    <input maxLength={255} value={formData.cargo} onChange={e => setFormData({ ...formData, cargo: e.target.value })} className="auth-input auth-input-static pl-10" placeholder="Ej. Coordinadora de proyectos" />
                   </FField>
-                  <FField id="usr-telefono" icon={Phone} label="Teléfono">
-                    <input value={formData.telefono} onChange={e => setFormData({ ...formData, telefono: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="tel" placeholder="Ej. 722 123 4567" />
+                  <FField id="usr-telefono" icon={Phone} label="Teléfono" error={errors.telefono}>
+                    <input maxLength={20} value={formData.telefono} onChange={e => setFormData({ ...formData, telefono: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="tel" placeholder="Ej. 722 123 4567" />
                   </FField>
                 </div>
                 <label className="flex items-center justify-between gap-4 rounded-[var(--auth-radius-field)] border px-4 py-3 cursor-pointer" style={{ borderColor: 'var(--app-rule)', backgroundColor: formData.activo ? 'var(--tile-emerald-bg)' : 'var(--app-hover-bg)' }}>
@@ -485,8 +514,10 @@ export default function UsuariosClient({ users, pagination }: Props) {
             ),
           }] : []),
         ]}
-        onClose={() => { setShowModal(false); setErrors({}); }}
+        onClose={() => { setShowModal(false); setErrors({}); setErrorGuardar(null); }}
         onSubmit={() => handleSubmit()}
+        error={errorGuardar ? <AvisoErrores errores={errorGuardar} /> : null}
+        errorStep={errorGuardar?.paso ?? null}
         submitting={submitting}
         submitLabel={editingUser ? 'Guardar cambios' : 'Crear usuario'}
       />

@@ -22,6 +22,7 @@ import { parseDate } from '@/lib/format';
 import { safeUrl } from '@/lib/safe-url';
 import Seguimiento, { type PasoHistorial } from '@/components/perfil/Seguimiento';
 import { UserChip } from '@/components/ui/user-avatar';
+import { mensajeError } from '@/lib/errores-formulario';
 
 interface ProgramaCampo {
   id: string;
@@ -141,9 +142,7 @@ export default function RevisorDetalleSolicitudPage() {
           setFeedback({ type: 'success', message: 'La solicitud ya está en evaluación técnica.' });
           setTimeout(() => router.push('/revisor/solicitudes'), 1500);
         } catch (error) {
-          const errorMsg = error instanceof Error
-            ? (error as any).response?.data?.error || error.message
-            : 'No se pudo aprobar la solicitud.';
+          const errorMsg = mensajeError(error, 'No se pudo aprobar la solicitud.');
           setFeedback({ type: 'error', message: errorMsg });
         } finally {
           setSubmitting(null);
@@ -168,9 +167,7 @@ export default function RevisorDetalleSolicitudPage() {
           setFeedback({ type: 'success', message: 'Las observaciones se enviaron. El solicitante recibirá un aviso.' });
           setTimeout(() => router.push('/revisor/solicitudes'), 1500);
         } catch (error) {
-          const errorMsg = error instanceof Error
-            ? (error as any).response?.data?.error || error.message
-            : 'No se pudieron enviar las observaciones.';
+          const errorMsg = mensajeError(error, 'No se pudieron enviar las observaciones.');
           setFeedback({ type: 'error', message: errorMsg });
         } finally {
           setSubmitting(null);
@@ -191,9 +188,7 @@ export default function RevisorDetalleSolicitudPage() {
           setFeedback({ type: 'success', message: 'El informe final quedó aprobado y el proyecto cerrado.' });
           setTimeout(() => router.push('/revisor/solicitudes'), 1500);
         } catch (error) {
-          const errorMsg = error instanceof Error
-            ? (error as any).response?.data?.error || error.message
-            : 'No se pudo aprobar el informe.';
+          const errorMsg = mensajeError(error, 'No se pudo aprobar el informe.');
           setFeedback({ type: 'error', message: errorMsg });
         } finally {
           setSubmitting(null);

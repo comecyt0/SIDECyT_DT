@@ -29,6 +29,8 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { DocumentosAdjuntos } from '@/components/solicitante/DocumentosAdjuntos';
 import { AlertBox } from '@/components/ui/alert-box';
+import AvisoErrores from '@/components/ui/aviso-errores';
+import { erroresFormulario, type ErroresFormulario, mensajeError } from '@/lib/errores-formulario';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import StepFrame from '@/components/ui/step-frame';
 import PageHeader from '@/components/ui/page-header';
@@ -133,6 +135,7 @@ export default function DetalleSolicitudPage() {
   const [informeError, setInformeError] = useState<string | null>(null);
   const [informeSuccess, setInformeSuccess] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{type: 'error'|'success'|'info'|'warning', message: string}|null>(null);
+  const [errorBeneficiario, setErrorBeneficiario] = useState<ErroresFormulario | null>(null);
   const [confirmState, setConfirmState] = useState<{open: boolean; title: string; description: string; onConfirm: () => void}>({
     open: false, title: '', description: '', onConfirm: () => {}
   });
@@ -212,9 +215,7 @@ export default function DetalleSolicitudPage() {
           router.refresh();
           setSolicitud((prev) => (prev ? { ...prev, estado: 'enviada', etapa_actual: 'revision' } : null));
         } catch (error) {
-          const errorMsg = error instanceof Error
-            ? (error as any).response?.data?.error || error.message
-            : 'Error al enviar la solicitud';
+          const errorMsg = mensajeError(error, 'Error al enviar la solicitud');
           setEnviarError(errorMsg);
           setFeedback({ type: 'error', message: errorMsg });
         } finally {
@@ -250,9 +251,7 @@ export default function DetalleSolicitudPage() {
       setSolicitud(data);
       setFeedback({ type: 'success', message: 'Documento subido exitosamente.' });
     } catch (error) {
-      const errorMsg = error instanceof Error
-        ? (error as any).response?.data?.error || error.message
-        : 'Error al subir el documento';
+      const errorMsg = mensajeError(error, 'Error al subir el documento');
       setFeedback({ type: 'error', message: errorMsg });
     } finally {
       setUploadingDoc(null);
@@ -263,6 +262,7 @@ export default function DetalleSolicitudPage() {
   const handleUpdateBeneficiario = async () => {
     if (!solicitud) return;
     setSavingBeneficiario(true);
+    setErrorBeneficiario(null);
     try {
       const { data } = await api.put(`/solicitudes/${id}/beneficiario`, beneficiarioForm);
       setFeedback({ type: 'success', message: data.message || 'Datos bancarios guardados correctamente.' });
@@ -270,8 +270,11 @@ export default function DetalleSolicitudPage() {
       // Reload to show updated CLABE
       const { data: updated } = await api.get(`/solicitudes/${id}`);
       setSolicitud(updated);
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: err.response?.data?.error || 'Error al guardar los datos bancarios.' });
+    } catch (err: unknown) {
+      // Dentro de la ventana (antes se mostraba detrás del modal) y en el paso del campo.
+      setErrorBeneficiario(erroresFormulario(err,
+        { banco_id: 'Banco', cuenta_clabe: 'CLABE', numero_cuenta: 'Número de cuenta', titular_cuenta: 'Titular' },
+        { banco_id: 'clabe', cuenta_clabe: 'clabe', numero_cuenta: 'clabe', titular_cuenta: 'titular' }));
     } finally {
       setSavingBeneficiario(false);
     }
@@ -324,9 +327,7 @@ export default function DetalleSolicitudPage() {
         setSolicitud(data);
       }, 1500);
     } catch (error) {
-      const errorMsg = error instanceof Error
-        ? (error as any).response?.data?.error || error.message
-        : 'Error al entregar el informe';
+      const errorMsg = mensajeError(error, 'Error al entregar el informe');
       setInformeError(errorMsg);
     } finally {
       setSubmittingInforme(false);
@@ -704,8 +705,10 @@ export default function DetalleSolicitudPage() {
                     title="Datos bancarios para el pago"
                     icon={<ShieldCheck className="h-5 w-5" />}
                     intro={<>Aquí se depositará el apoyo. La cuenta debe estar <strong>a nombre de la institución</strong> que presenta el proyecto; revisa cada dígito antes de guardar.</>}
-                    onClose={() => setShowBeneficiarioForm(false)}
+                    onClose={() => { setShowBeneficiarioForm(false); setErrorBeneficiario(null); }}
                     onSubmit={handleUpdateBeneficiario}
+                    error={errorBeneficiario ? <AvisoErrores errores={errorBeneficiario} /> : null}
+                    errorStep={errorBeneficiario?.paso ?? null}
                     submitting={savingBeneficiario}
                     submitLabel="Guardar datos"
                     steps={[

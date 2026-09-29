@@ -73,7 +73,7 @@ class PagoLiberado extends Notification implements ShouldQueue
             'tipo' => 'pago_liberado',
             'monto' => $this->ministracion->monto_aprobado,
             'mensaje' => "Se ha liberado un pago de \${$this->ministracion->monto_aprobado}.",
-            'url' => '/solicitante/ministeraciones',
+            'url' => '/solicitante/ministraciones',
         ];
     }
 }

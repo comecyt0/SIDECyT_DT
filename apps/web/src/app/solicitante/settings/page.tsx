@@ -12,6 +12,7 @@ import TwoFactorSetup from '@/components/auth/TwoFactorSetup';
 import PushNotificationsCard from '@/components/pwa/PushNotificationsCard';
 import { INSTITUTION } from '@/lib/institution';
 import StepFrame from '@/components/ui/step-frame';
+import { mensajeError } from '@/lib/errores-formulario';
 
 const pwLabelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
 const pwInputCls = 'auth-input auth-input-static pl-4';
@@ -88,12 +89,8 @@ export default function SolicitanteSettingsPage() {
       setPwForm({ current_password: '', new_password: '', new_password_confirmation: '' });
       setPwFrameKey((k) => k + 1);
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { error?: string; message?: string } } };
-      setPwError(
-        error.response?.data?.error ||
-        error.response?.data?.message ||
-        'Ocurrió un error al cambiar la contraseña.'
-      );
+      // Muestra qué regla no cumple (errores de validación en español), no solo un texto genérico.
+      setPwError(mensajeError(err, 'Ocurrió un error al cambiar la contraseña.'));
     } finally {
       setPwLoading(false);
     }

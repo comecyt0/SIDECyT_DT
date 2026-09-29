@@ -23,6 +23,8 @@ import Link from 'next/link';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { formatCurrency } from '@/lib/format';
+import AvisoErrores from '@/components/ui/aviso-errores';
+import { erroresFormulario, type ErroresFormulario } from '@/lib/errores-formulario';
 
 export interface TipoPrograma {
   id: number;
@@ -76,10 +78,13 @@ export default function ProgramasClient({ programas }: Props) {
   const [form, setForm] = useState(emptyForm);
   const [feedback, setFeedback] = useState<{type: 'error'|'success'|'info'|'warning', message: string}|null>(null);
   const [confirmState, setConfirmState] = useState<{open: boolean, action: () => void, title: string, description: string}>({open: false, action: () => {}, title: '', description: ''});
+  // Error al guardar: dentro de la ventana y en el paso del campo (antes quedaba detrás del modal, sin verse).
+  const [errorGuardar, setErrorGuardar] = useState<ErroresFormulario | null>(null);
 
   const openCreate = () => {
     setEditId(null);
     setForm(emptyForm);
+    setErrorGuardar(null);
     setShowModal(true);
   };
 
@@ -98,21 +103,23 @@ export default function ProgramasClient({ programas }: Props) {
       monto_maximo: prog.monto_maximo,
       activo: prog.activo,
     });
+    setErrorGuardar(null);
     setShowModal(true);
   };
 
   const handleSave = async () => {
     if (!form.clave.trim() || !form.nombre.trim()) {
-      setFeedback({ type: 'error', message: 'Escribe la clave y el nombre del programa.' });
+      setErrorGuardar({ titulo: 'Escribe la clave y el nombre del programa.', lineas: [], campos: {}, paso: 'basico' });
       return;
     }
 
     if (form.tiene_etapas && form.num_etapas < 1) {
-      setFeedback({ type: 'error', message: 'El número de etapas debe ser al menos 1.' });
+      setErrorGuardar({ titulo: 'El número de etapas debe ser al menos 1.', lineas: [], campos: {}, paso: 'reglas' });
       return;
     }
 
     setSaving(true);
+    setErrorGuardar(null);
     try {
       if (editId) {
         await api.put(`/admin/programas/${editId}`, form);
@@ -120,10 +127,14 @@ export default function ProgramasClient({ programas }: Props) {
         await api.post('/admin/programas', form);
       }
       setShowModal(false);
+      setFeedback({ type: 'success', message: editId ? 'Programa actualizado.' : `Programa «${form.nombre.trim()}» creado.` });
       router.refresh();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo guardar el programa. Inténtalo de nuevo.';
-      setFeedback({ type: 'error', message: msg });
+      setErrorGuardar(erroresFormulario(err,
+        { clave: 'Clave corta', nombre: 'Nombre', descripcion: 'Descripción', tipo_apoyo: 'Forma del apoyo', monto_maximo: 'Monto máximo',
+          num_etapas: 'Número de etapas', min_miembros_equipo: 'Mínimo de integrantes', max_miembros_equipo: 'Máximo de integrantes' },
+        { clave: 'basico', nombre: 'basico', descripcion: 'basico', tipo_apoyo: 'apoyo', monto_maximo: 'apoyo',
+          tiene_etapas: 'reglas', num_etapas: 'reglas', tiene_equipo: 'reglas', min_miembros_equipo: 'reglas', max_miembros_equipo: 'reglas' }));
     } finally {
       setSaving(false);
     }
@@ -264,6 +275,8 @@ export default function ProgramasClient({ programas }: Props) {
         submitLabel={editId ? 'Guardar cambios' : 'Crear programa'}
         onClose={() => setShowModal(false)}
         onSubmit={handleSave}
+        error={errorGuardar ? <AvisoErrores errores={errorGuardar} /> : null}
+        errorStep={errorGuardar?.paso ?? null}
         steps={[
           {
             key: 'basico',

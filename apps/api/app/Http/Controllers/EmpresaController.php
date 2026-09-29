@@ -17,7 +17,6 @@ class EmpresaController extends Controller
         $validated = $request->validate([
             'nombre' => 'required|string|max:255|unique:empresas,nombre',
             'acronimo' => 'nullable|string|max:20',
-            'municipio_id' => 'nullable|exists:municipios,id',
             'activo' => 'boolean',
             'activa' => 'boolean', // Accept both activo and activa
         ]);
@@ -33,17 +32,16 @@ class EmpresaController extends Controller
         return response()->json(['message' => 'Institución creada', 'empresa' => $inst], 201);
     }
 
-    public function show(Institucion $empresa)
+    public function show(Empresa $empresa)
     {
         return response()->json($empresa->load('municipio'));
     }
 
-    public function update(Request $request, Institucion $empresa)
+    public function update(Request $request, Empresa $empresa)
     {
         $validated = $request->validate([
             'nombre' => 'sometimes|string|max:255|unique:empresas,nombre,'.$empresa->id,
             'acronimo' => 'nullable|string|max:20',
-            'municipio_id' => 'nullable|exists:municipios,id',
             'activo' => 'boolean',
             'activa' => 'boolean', // Accept both activo and activa
         ]);
@@ -59,7 +57,7 @@ class EmpresaController extends Controller
         return response()->json(['message' => 'Institución actualizada', 'empresa' => $empresa]);
     }
 
-    public function destroy(Institucion $empresa)
+    public function destroy(Empresa $empresa)
     {
         $empresa->delete();
 

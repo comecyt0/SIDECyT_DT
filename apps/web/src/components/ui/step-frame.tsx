@@ -38,6 +38,11 @@ interface StepFrameProps {
   submitLabel?: string;
   /** Error global (del servidor) — se muestra encima del paso. */
   error?: ReactNode;
+  /**
+   * Clave del paso donde se corrige el error del servidor. Cuando cambia (con un `error`), el marco regresa a ese paso
+   * para que la persona vea el campo marcado en lugar de quedarse en el último paso sin saber qué pasó.
+   */
+  errorStep?: string | null;
   /** Mensaje de éxito: reemplaza el formulario. */
   success?: string | null;
   /** md 576 px · lg 768 px (por defecto) · xl 1024 px (herramientas con vista previa, E50). */
@@ -84,12 +89,28 @@ function StepFrameBody({
   submitting = false,
   submitLabel = 'Guardar',
   error,
+  errorStep,
   success,
   inline = false,
   hideCancel = false,
 }: StepFrameProps) {
   const [index, setIndex] = useState(0);
   const [stepError, setStepError] = useState<string | null>(null);
+
+  // Error del servidor en un paso anterior → volver a ese paso (patrón "ajustar estado al cambiar una prop").
+  // Se compara SOLO `errorStep`: `error` suele ser un elemento nuevo en cada render y compararlo regresaría al paso
+  // en cada tecla. Quien usa el marco limpia el error al reintentar, así que un error nuevo siempre cambia `errorStep`.
+  const [pasoVisto, setPasoVisto] = useState<string | null | undefined>(null);
+  // Tras corregir y avanzar desde el paso del error, el aviso del servidor ya no aplica: se oculta hasta el siguiente.
+  const [errorCorregido, setErrorCorregido] = useState(false);
+  if (errorStep !== pasoVisto) {
+    setPasoVisto(errorStep);
+    setErrorCorregido(false);
+    if (error && errorStep) {
+      const i = steps.findIndex((s) => s.key === errorStep);
+      if (i >= 0 && i !== index) setIndex(i);
+    }
+  }
 
   const current = steps[Math.min(index, steps.length - 1)];
   const isLast = index >= steps.length - 1;
@@ -101,6 +122,7 @@ function StepFrameBody({
       return;
     }
     setStepError(null);
+    if (error && errorStep && current.key === errorStep) setErrorCorregido(true);
     if (isLast) {
       void onSubmit();
     } else {
@@ -209,7 +231,7 @@ function StepFrameBody({
                   Paso {index + 1} de {steps.length}
                 </p>
                 <h3 className="step-question mt-1 mb-4 text-lg font-bold text-[var(--app-ink)]">{current.question}</h3>
-                {(stepError || error) && (
+                {(stepError || (error && !errorCorregido)) && (
                   <div role="alert" className="mb-4 rounded-[14px] px-4 py-3 text-sm" style={{ backgroundColor: 'var(--tile-vino-bg)', color: 'var(--auth-danger)' }}>
                     {stepError || error}
                   </div>

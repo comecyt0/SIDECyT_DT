@@ -14,6 +14,7 @@ import { estadoBadgeClass, estadoLabel } from '@/lib/solicitud-estados';
 import type { Solicitud } from '@/types/api';
 import SavedFiltersBar from '@/components/filters/SavedFiltersBar';
 import UserAvatar from '@/components/ui/user-avatar';
+import { mensajeError } from '@/lib/errores-formulario';
 
 export default function RevisorSolicitudesPage() {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
@@ -55,7 +56,7 @@ export default function RevisorSolicitudesPage() {
           setFeedback({ type: 'success', message: 'La solicitud se aprobó y ya está en evaluación técnica.' });
           window.location.reload();
         } catch (err: any) {
-          setFeedback({ type: 'error', message: err.response?.data?.error || 'No se pudo aprobar la solicitud. Intenta de nuevo.' });
+          setFeedback({ type: 'error', message: mensajeError(err, 'No se pudo aprobar la solicitud. Intenta de nuevo.') });
         }
       },
     });

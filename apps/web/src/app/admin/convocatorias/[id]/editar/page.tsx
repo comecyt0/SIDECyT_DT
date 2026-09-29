@@ -9,6 +9,8 @@ import PageHeader from '@/components/ui/page-header';
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
 import StepFrame from '@/components/ui/step-frame';
+import AvisoErrores from '@/components/ui/aviso-errores';
+import { erroresFormulario, type ErroresFormulario } from '@/lib/errores-formulario';
 
 const labelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
 const inputCls = 'auth-input auth-input-static pl-4';
@@ -32,6 +34,11 @@ export default function EditarConvocatoriaPage() {
     periodo_id: '',
   });
   const [periodos, setPeriodos] = useState<{ id: number; nombre: string; activo: boolean }[]>([]);
+  // Error al guardar, dentro del formulario y en el paso del campo. Antes se leía `data.error` (Laravel manda
+  // `message`/`errors`), así que siempre salía un texto genérico sin decir qué corregir.
+  const [errorGuardar, setErrorGuardar] = useState<ErroresFormulario | null>(null);
+  // E52: en Apoyo en especie no hay montos (los clubes y el kit se editan en la ficha).
+  const [esEspecie, setEsEspecie] = useState(false);
   useEffect(() => {
     api.get('/admin/periodos').then(({ data }) => setPeriodos(Array.isArray(data) ? data : [])).catch(() => setPeriodos([]));
   }, []);
@@ -47,13 +54,14 @@ export default function EditarConvocatoriaPage() {
         nombre: data.nombre,
         ejercicio_fiscal: data.ejercicio_fiscal,
         descripcion: data.descripcion || '',
-        fecha_apertura: data.fecha_apertura,
-        fecha_cierre: data.fecha_cierre,
-        monto_maximo_apoyo: data.monto_maximo_apoyo.toString(),
-        porcentaje_aportacion_minima: data.porcentaje_aportacion_minima.toString(),
+        fecha_apertura: String(data.fecha_apertura ?? '').slice(0, 10),
+        fecha_cierre: String(data.fecha_cierre ?? '').slice(0, 10),
+        monto_maximo_apoyo: data.monto_maximo_apoyo != null ? String(data.monto_maximo_apoyo) : '',
+        porcentaje_aportacion_minima: data.porcentaje_aportacion_minima != null ? String(data.porcentaje_aportacion_minima) : '',
         estado: data.estado,
         periodo_id: data.periodo_id ? String(data.periodo_id) : '',
       });
+      setEsEspecie(data?.tipo_programa?.tipo_apoyo === 'especie');
     } catch {
       setFeedback({ type: 'error', message: 'No se pudo abrir la convocatoria.' });
       router.push('/admin/convocatorias');
@@ -64,12 +72,19 @@ export default function EditarConvocatoriaPage() {
 
   const handleSubmit = async () => {
     setSaving(true);
+    setErrorGuardar(null);
     try {
-      await api.put(`/admin/convocatorias/${id}`, { ...formData, periodo_id: formData.periodo_id ? Number(formData.periodo_id) : null });
+      const cuerpo: Record<string, unknown> = { ...formData, periodo_id: formData.periodo_id ? Number(formData.periodo_id) : null };
+      if (esEspecie) { delete cuerpo.monto_maximo_apoyo; delete cuerpo.porcentaje_aportacion_minima; }
+      await api.put(`/admin/convocatorias/${id}`, cuerpo);
       setFeedback({ type: 'success', message: 'Convocatoria actualizada.' });
-      router.push('/admin/convocatorias');
-    } catch (error: any) {
-      setFeedback({ type: 'error', message: error.response?.data?.error || 'No se pudieron guardar los cambios.' });
+      router.push(`/admin/convocatorias/${id}`);
+    } catch (error: unknown) {
+      setErrorGuardar(erroresFormulario(error,
+        { nombre: 'Nombre', ejercicio_fiscal: 'Ejercicio fiscal', periodo_id: 'Periodo', descripcion: 'Descripción', fecha_apertura: 'Abre el',
+          fecha_cierre: 'Cierra el', monto_maximo_apoyo: 'Monto máximo', porcentaje_aportacion_minima: 'Aportación mínima', estado: 'Estado' },
+        { nombre: 'nombre', ejercicio_fiscal: 'nombre', periodo_id: 'nombre', descripcion: 'nombre', fecha_apertura: 'fechas', fecha_cierre: 'fechas',
+          monto_maximo_apoyo: 'montos', porcentaje_aportacion_minima: 'montos', estado: 'montos' }));
     } finally {
       setSaving(false);
     }
@@ -101,6 +116,8 @@ export default function EditarConvocatoriaPage() {
         intro={<>Aquí cambias <strong>nombre, fechas, montos y estado</strong>. Los campos del formulario, documentos y criterios de evaluación se editan desde la ficha del programa.</>}
         onClose={() => router.push('/admin/convocatorias')}
         onSubmit={handleSubmit}
+        error={errorGuardar ? <AvisoErrores errores={errorGuardar} /> : null}
+        errorStep={errorGuardar?.paso ?? null}
         submitting={saving}
         submitLabel="Guardar cambios"
         steps={[
@@ -164,11 +181,11 @@ export default function EditarConvocatoriaPage() {
           },
           {
             key: 'montos',
-            label: 'Montos y estado',
-            question: '¿Cuánto se apoya y está abierta?',
+            label: esEspecie ? 'Estado' : 'Montos y estado',
+            question: esEspecie ? '¿Está abierta?' : '¿Cuánto se apoya y está abierta?',
             content: (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {!esEspecie && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="monto_maximo" className={labelCls}>Monto máximo por proyecto (MXN)</Label>
                     <input id="monto_maximo" type="number" min={0} value={formData.monto_maximo_apoyo} onChange={(e) => setFormData({ ...formData, monto_maximo_apoyo: e.target.value })} className={inputCls} />
@@ -177,7 +194,7 @@ export default function EditarConvocatoriaPage() {
                     <Label htmlFor="porcentaje_minimo" className={labelCls}>Aportación mínima del solicitante (%)</Label>
                     <input id="porcentaje_minimo" type="number" min={0} max={100} value={formData.porcentaje_aportacion_minima} onChange={(e) => setFormData({ ...formData, porcentaje_aportacion_minima: e.target.value })} className={inputCls} />
                   </div>
-                </div>
+                </div>}
                 <div className="space-y-1.5">
                   <Label htmlFor="estado" className={labelCls}>Estado</Label>
                   <select id="estado" value={formData.estado} onChange={(e) => setFormData({ ...formData, estado: e.target.value })} className={inputCls}>

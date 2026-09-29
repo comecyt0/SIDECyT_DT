@@ -17,6 +17,8 @@ import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataCardGrid } from '@/components/ui/DataCardGrid';
 import { parseDate } from '@/lib/format';
+import AvisoErrores from '@/components/ui/aviso-errores';
+import { erroresFormulario, type ErroresFormulario } from '@/lib/errores-formulario';
 
 const emptyForm = {
   empresa_id: '',
@@ -62,20 +64,26 @@ export default function ListaNegraClient({ sanciones, empresas }: Props) {
     });
   };
 
+  // Error al guardar: dentro de la ventana y en el paso del campo (antes quedaba detrás del modal, sin verse).
+  const [errorGuardar, setErrorGuardar] = useState<ErroresFormulario | null>(null);
+
   const handleSave = async () => {
     if (!form.empresa_id || !form.motivo || !form.fecha_inicio_sancion) {
-      setFeedback({ type: 'error', message: 'Elige la empresa, escribe el motivo e indica desde qué día aplica.' });
+      setErrorGuardar({ titulo: 'Elige la empresa, escribe el motivo e indica desde qué día aplica.', lineas: [], campos: {}, paso: !form.empresa_id || !form.motivo ? 'quien' : 'cuando' });
       return;
     }
     setSaving(true);
+    setErrorGuardar(null);
     try {
       await api.post('/admin/lista-negra', { ...form, activa: true });
       setShowModal(false);
       setForm(emptyForm);
+      setFeedback({ type: 'success', message: 'Sanción registrada. La empresa ya no puede presentar solicitudes.' });
       router.refresh();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo registrar la sanción. Inténtalo de nuevo.';
-      setFeedback({ type: 'error', message: msg });
+      setErrorGuardar(erroresFormulario(err,
+        { empresa_id: 'Empresa', motivo: 'Motivo', fecha_inicio_sancion: 'Desde', fecha_fin_sancion: 'Hasta', solicitud_id: 'Solicitud' },
+        { empresa_id: 'quien', motivo: 'quien', solicitud_id: 'quien', fecha_inicio_sancion: 'cuando', fecha_fin_sancion: 'cuando' }));
     } finally {
       setSaving(false);
     }
@@ -89,7 +97,7 @@ export default function ListaNegraClient({ sanciones, empresas }: Props) {
         description="Empresas que no pueden presentar solicitudes por un incumplimiento. Registra una sanción o levántala cuando corresponda."
         icon={<ShieldAlert className="h-5 w-5" />}
         actions={
-          <Button variant="destructive" onClick={() => setShowModal(true)}>
+          <Button variant="destructive" onClick={() => { setErrorGuardar(null); setShowModal(true); }}>
             <Ban className="h-4 w-4" /> Registrar sanción
           </Button>
         }
@@ -223,6 +231,8 @@ export default function ListaNegraClient({ sanciones, empresas }: Props) {
         ]}
         onClose={() => setShowModal(false)}
         onSubmit={handleSave}
+        error={errorGuardar ? <AvisoErrores errores={errorGuardar} /> : null}
+        errorStep={errorGuardar?.paso ?? null}
         submitting={saving}
         submitLabel="Registrar sanción"
       />

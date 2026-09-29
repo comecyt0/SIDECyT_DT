@@ -12,6 +12,8 @@ import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { AlertBox } from '@/components/ui/alert-box';
 import { DataCardGrid } from '@/components/ui/DataCardGrid';
+import AvisoErrores from '@/components/ui/aviso-errores';
+import { erroresFormulario, type ErroresFormulario } from '@/lib/errores-formulario';
 
 export interface EmpresaRow {
   id: number;
@@ -36,16 +38,20 @@ export default function EmpresasClient({ empresas }: Props) {
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success' | 'info' | 'warning'; message: string } | null>(null);
+  // Error al guardar: dentro de la ventana y en el paso del campo (antes quedaba detrás del modal, sin verse).
+  const [errorGuardar, setErrorGuardar] = useState<ErroresFormulario | null>(null);
 
   const openCreate = () => {
     setEditId(null);
     setForm(emptyForm);
+    setErrorGuardar(null);
     setShowModal(true);
   };
   const openEdit = (inst: EmpresaRow) => {
     setEditId(inst.id);
     setForm({ nombre: inst.nombre, acronimo: inst.acronimo || '', activa: inst.activa ?? true });
     setShowPreview(false);
+    setErrorGuardar(null);
     setShowModal(true);
   };
   const openPreview = (inst: EmpresaRow) => {
@@ -55,10 +61,11 @@ export default function EmpresasClient({ empresas }: Props) {
 
   const handleSave = async () => {
     if (!form.nombre.trim()) {
-      setFeedback({ type: 'error', message: 'Escribe el nombre de la empresa.' });
+      setErrorGuardar({ titulo: 'Escribe el nombre de la empresa.', lineas: [], campos: {}, paso: 'nombre' });
       return;
     }
     setSaving(true);
+    setErrorGuardar(null);
     try {
       if (editId) {
         await api.put(`/admin/empresas/${editId}`, form);
@@ -66,11 +73,13 @@ export default function EmpresasClient({ empresas }: Props) {
         await api.post('/admin/empresas', form);
       }
       setShowModal(false);
+      setFeedback({ type: 'success', message: editId ? 'Empresa actualizada.' : `Empresa «${form.nombre.trim()}» creada.` });
       // Invalida el cache del Server Component padre y vuelve a renderizar
       router.refresh();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo guardar la empresa. Inténtalo de nuevo.';
-      setFeedback({ type: 'error', message: msg });
+      setErrorGuardar(erroresFormulario(err,
+        { nombre: 'Nombre oficial', acronimo: 'Siglas', activa: 'Empresa activa', activo: 'Empresa activa' },
+        { nombre: 'nombre', acronimo: 'nombre', activa: 'estado', activo: 'estado' }));
     } finally {
       setSaving(false);
     }
@@ -198,11 +207,11 @@ export default function EmpresasClient({ empresas }: Props) {
               <>
                 <div className="space-y-1.5">
                   <Label htmlFor="inst-nombre" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Nombre oficial *</Label>
-                  <input id="inst-nombre" placeholder="Ej. Universidad Autónoma del Estado de México" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className="auth-input auth-input-static pl-4" />
+                  <input id="inst-nombre" maxLength={255} placeholder="Ej. Universidad Autónoma del Estado de México" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className="auth-input auth-input-static pl-4" />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="inst-acronimo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Siglas (opcional)</Label>
-                  <input id="inst-acronimo" placeholder="Ej. UAEM" value={form.acronimo} onChange={(e) => setForm({ ...form, acronimo: e.target.value })} className="auth-input auth-input-static pl-4" />
+                  <input id="inst-acronimo" maxLength={20} placeholder="Ej. UAEM" value={form.acronimo} onChange={(e) => setForm({ ...form, acronimo: e.target.value })} className="auth-input auth-input-static pl-4" />
                   <p className="text-xs text-[var(--app-ink-2)]">Se muestran en listas y tarjetas para reconocerla rápido.</p>
                 </div>
               </>
@@ -225,6 +234,8 @@ export default function EmpresasClient({ empresas }: Props) {
         ]}
         onClose={() => setShowModal(false)}
         onSubmit={handleSave}
+        error={errorGuardar ? <AvisoErrores errores={errorGuardar} /> : null}
+        errorStep={errorGuardar?.paso ?? null}
         submitting={saving}
         submitLabel={editId ? 'Guardar cambios' : 'Crear empresa'}
       />

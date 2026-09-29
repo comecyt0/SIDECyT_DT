@@ -119,7 +119,7 @@
             @endif
 
             <div style="text-align: center; margin: 30px 0;">
-                <a href="{{ $app_url }}/solicitante/ministeraciones" class="button">
+                <a href="{{ $app_url }}/solicitante/ministraciones" class="button">
                     Ver Mis Ministraciones
                 </a>
             </div>

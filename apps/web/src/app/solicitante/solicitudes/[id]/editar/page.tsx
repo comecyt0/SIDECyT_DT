@@ -16,6 +16,7 @@ import { INSTITUTION } from '@/lib/institution';
 import { formatCurrency } from '@/lib/format';
 import PageHeader from '@/components/ui/page-header';
 import { estadoBadgeClass, estadoLabel } from '@/lib/solicitud-estados';
+import { mensajeError } from '@/lib/errores-formulario';
 
 export default function EditarSolicitudPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,7 +50,7 @@ export default function EditarSolicitudPage() {
           setFeedback({ type: 'success', message: 'Tu solicitud se reenvió y volverá a revisarse.' });
           setTimeout(() => router.push('/solicitante/solicitudes'), 1500);
         } catch (error: any) {
-          setFeedback({ type: 'error', message: error.response?.data?.error || 'No pudimos reenviar la solicitud. Inténtalo de nuevo.' });
+          setFeedback({ type: 'error', message: mensajeError(error, 'No pudimos reenviar la solicitud. Inténtalo de nuevo.') });
         } finally {
           setSending(false);
         }

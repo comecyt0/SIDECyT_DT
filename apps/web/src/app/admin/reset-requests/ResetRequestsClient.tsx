@@ -13,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import PageHeader from '@/components/ui/page-header';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { mensajeError } from '@/lib/errores-formulario';
 
 export interface ResetRequest {
   id: number;
@@ -62,7 +63,7 @@ export default function ResetRequestsClient({ requests }: Props) {
           router.refresh();
         } catch (err: unknown) {
           const e = err as { response?: { data?: { error?: string } } };
-          setFeedback({ type: 'error', message: e.response?.data?.error || 'No se pudo aprobar la solicitud. Inténtalo de nuevo.' });
+          setFeedback({ type: 'error', message: mensajeError(e, 'No se pudo aprobar la solicitud. Inténtalo de nuevo.') });
         }
       },
     });
@@ -81,7 +82,7 @@ export default function ResetRequestsClient({ requests }: Props) {
           router.refresh();
         } catch (err: unknown) {
           const e = err as { response?: { data?: { error?: string } } };
-          setFeedback({ type: 'error', message: e.response?.data?.error || 'No se pudo rechazar la solicitud. Inténtalo de nuevo.' });
+          setFeedback({ type: 'error', message: mensajeError(e, 'No se pudo rechazar la solicitud. Inténtalo de nuevo.') });
         }
       },
     });

@@ -40,10 +40,17 @@ class Convenio extends Model
     }
 
     /**
-     * Relationship: A convenio has many ministeraciones (tranches)
+     * Ministraciones (tranches) del convenio. 29/09/2026: no existe `ministraciones.convenio_id`; convenio y
+     * ministraciones se ligan por la solicitud. Antes, abrir un convenio daba 500 (auditoría de relaciones).
      */
+    public function ministraciones()
+    {
+        return $this->hasMany(Ministracion::class, 'solicitud_id', 'solicitud_id')->orderBy('numero_tranche');
+    }
+
+    /** Nombre anterior (con errata); se conserva por compatibilidad. */
     public function ministeraciones()
     {
-        return $this->hasMany(Ministracion::class);
+        return $this->ministraciones();
     }
 }

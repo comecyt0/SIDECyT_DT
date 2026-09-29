@@ -10,6 +10,7 @@ import { Upload, Check, Loader2, Download, Trash2, Eye, X, FileText, HardDrive, 
 import api from '@/lib/api';
 import { safeUrl } from '@/lib/safe-url';
 import { acceptDe, describirLimites, formatosDe, validarArchivo } from '@/lib/archivos';
+import { mensajeError } from '@/lib/errores-formulario';
 
 export interface Documento {
   id: number;
@@ -128,7 +129,7 @@ export function DocumentosAdjuntos({
       }
     } catch (error: any) {
       console.error('Error al subir documento:', error);
-      setFeedback({ type: 'error', message: error.response?.data?.error || 'Error al subir el documento' });
+      setFeedback({ type: 'error', message: mensajeError(error, 'Error al subir el documento') });
       event.target.value = '';
     } finally {
       setUploading(null);
@@ -151,7 +152,7 @@ export function DocumentosAdjuntos({
           }
         } catch (error: any) {
           console.error('Error al eliminar:', error);
-          setFeedback({ type: 'error', message: error.response?.data?.error || 'Error al eliminar documento' });
+          setFeedback({ type: 'error', message: mensajeError(error, 'Error al eliminar documento') });
         } finally {
           setDeleteLoading(null);
         }

@@ -1792,3 +1792,36 @@ Referencia: **`docs/IDENTIDAD.md`** (logos, colores, tipografía, favicons) y `d
   sistemas** (`components/portal/OrbitaSistemas.tsx`, motivo de los arcos del logo: se dibuja al cargar, puntos que
   orbitan, nodos SIGAE/SICEI que resaltan su tarjeta y viceversa); pie en vino con el logo negativo. Trampa: la regla
   `.pt-root svg { width: 1.1em }` (íconos) encogía el SVG de la órbita → especificidad `.pt-root .pt-orbita-svg`.
+
+### E53 — "Crear usuario" se quedaba en el paso 3 con un 422 y sin decir qué corregir [resuelto 29-09-2026]
+**Síntoma (reporte del usuario):** al dar de alta un usuario, tras el paso 3 no pasaba nada; en consola, dos 422.
+**Causa:** (1) el error se escribía en el aviso de la PÁGINA, que queda detrás del modal, y en los campos del paso 1
+mientras la persona estaba en el paso 3; `StepFrame` nunca recibía `error`. (2) El formulario decía "Mínimo 8
+caracteres" y el servidor exige 10 + mayúsculas + minúsculas + número (E44). (3) De 109 reglas de validación solo 9
+estaban en español: `exists`, `in`, `integer`, `date`… llegaban en inglés.
+**Fix:**
+- `StepFrame` acepta **`errorStep`** (clave del paso): con un error del servidor regresa a ese paso y, al corregir y
+  avanzar, oculta el aviso viejo. Compara solo `errorStep` (el `error` es un elemento nuevo en cada render; compararlo
+  regresaba al paso en cada tecla — se detectó en la verificación en navegador).
+- `lib/errores-formulario.ts`: `erroresFormulario(err, etiquetas, pasoDeCampo)` → título, una línea por problema con el
+  nombre visible del campo, errores por campo y paso; `mensajeError(err, porDefecto)` para avisos de una línea (lee
+  `errors`, `message` y el `error` de controladores antiguos). `components/ui/aviso-errores.tsx` lo pinta.
+- **Regla:** todo formulario en modal muestra el error del servidor con `error` + `errorStep` de `StepFrame`, nunca
+  en el aviso de la página; toda lectura de error usa estas funciones (nunca `response.data.error` a secas: Laravel
+  manda `message`/`errors`).
+- `lang/es/validation.php` completo (109/109) + mensaje propio para correo repetido.
+**Mismo error en otros formularios (revisión pedida por el usuario), corregido:** Empresas, Asignar evaluador, Lista
+negra, Programas, Editar convocatoria (leía `data.error`: siempre texto genérico; ahora oculta montos en especie) y
+Datos bancarios del solicitante; 15 lecturas de `data.error` en 9 pantallas pasaron a `mensajeError`.
+**Bugs de fondo encontrados al revisar (auditoría de relaciones, `auditar_relaciones.php`, 108 relaciones):**
+- `EmpresaController::show/update/destroy` tipaban `Institucion` (clase inexistente desde E25): **ver, editar o
+  borrar una empresa daba 500**. Ahora `Empresa`. `municipio_id` fuera de la validación (la columna no existe).
+- `ListaNegra`: el listado cargaba `empresa` (relación inexistente) → 500 con la primera sanción; `institucion()`
+  buscaba `institucion_id`. Ambas con `empresa_id`.
+- `Convenio::ministeraciones()` buscaba `ministraciones.convenio_id` (no existe) → abrir un convenio daba 500. Ahora
+  `ministraciones()` por `solicitud_id` (el nombre con errata queda como alias).
+- `PagoLiberado` (aviso y correo) enlazaba a `/solicitante/ministeraciones` (404) → `/solicitante/ministraciones`.
+- El aviso "Eliminar usuario" prometía que se podía restaurar; el borrado es definitivo. Texto corregido.
+**Verificado:** backend 13/13 (`e2e_errores.php`), navegador 10/10 en 1440 y 390 px (contraseña débil avisada, paso 3,
+error dentro de la ventana, regreso al paso 1 con el campo marcado, crear tras corregir), vitest 152/152, regresión
+E52 46/46 y 53/53. Pendiente menor: `Empresa::municipio()` sin columna (inofensiva: nunca consulta).

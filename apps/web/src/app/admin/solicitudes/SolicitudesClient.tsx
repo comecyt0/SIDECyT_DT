@@ -18,6 +18,7 @@ import { DataCardGrid } from '@/components/ui/DataCardGrid';
 import { formatCurrency } from '@/lib/format';
 import { UserChip } from '@/components/ui/user-avatar';
 import { useRol } from '@/hooks/useRol';
+import { mensajeError } from '@/lib/errores-formulario';
 
 interface PaginationMeta {
   current_page: number;
@@ -141,7 +142,7 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
         }, 2000);
       }
     } catch (error: any) {
-      const errorMsg = error.response?.data?.error || error.message || 'No se pudo generar el convenio. Inténtalo de nuevo.';
+      const errorMsg = mensajeError(error, 'No se pudo generar el convenio. Inténtalo de nuevo.');
       setConvenioError(errorMsg);
     } finally {
       setConvenioLoading(false);

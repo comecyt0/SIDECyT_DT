@@ -19,6 +19,7 @@ import type { AsignacionEvaluador } from '@/types/api';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { INSTITUTION } from '@/lib/institution';
+import { mensajeError } from '@/lib/errores-formulario';
 
 const LEGACY_CRITERIOS = [
   {
@@ -305,9 +306,7 @@ export default function RubricaEvaluacionPage() {
           setFeedback({ type: 'success', message: `Dictamen emitido exitosamente. Puntaje: ${total}/${maxTotal} — ${aprobado ? 'Aprobado' : 'Rechazado'}` });
           setTimeout(() => router.push('/evaluador/evaluaciones'), 1500);
         } catch (error) {
-          const errorMsg = error instanceof Error
-            ? (error as any).response?.data?.error || error.message
-            : 'Error al emitir el dictamen';
+          const errorMsg = mensajeError(error, 'Error al emitir el dictamen');
           setFeedback({ type: 'error', message: errorMsg });
         } finally {
           setSubmitting(false);
