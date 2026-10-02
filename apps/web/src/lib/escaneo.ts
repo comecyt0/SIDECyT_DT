@@ -4,10 +4,15 @@
  */
 import { mediaClubSegura } from '@/lib/especie';
 
-export type ModoEscaneo = 'asistencia' | 'lunch' | 'kit';
+// 02/10/2026: la «entrada» es la asistencia de siempre (tipo `asistencia`); se agregan salida y transporte (llegada y regreso).
+export type ModoEscaneo = 'asistencia' | 'salida' | 'tr_llegada' | 'tr_regreso' | 'lunch' | 'kit';
+export const esModo = (v: unknown): v is ModoEscaneo => typeof v === 'string' && ['asistencia', 'salida', 'tr_llegada', 'tr_regreso', 'lunch', 'kit'].includes(v);
 
 export const MODOS: { valor: ModoEscaneo; etiqueta: string; ayuda: string }[] = [
-  { valor: 'asistencia', etiqueta: 'Asistencia', ayuda: 'Cuántas personas del club llegaron' },
+  { valor: 'asistencia', etiqueta: 'Entrada', ayuda: 'Cuántas personas del club entran al evento' },
+  { valor: 'salida', etiqueta: 'Salida', ayuda: 'Cuántas personas del club salen del evento' },
+  { valor: 'tr_llegada', etiqueta: 'Transporte: llegada', ayuda: 'Cuántas personas llegan en el transporte' },
+  { valor: 'tr_regreso', etiqueta: 'Transporte: regreso', ayuda: 'Cuántas personas suben al transporte de regreso' },
   { valor: 'lunch', etiqueta: 'Box lunch', ayuda: 'Cuántos box lunch se entregan (hasta lo aprobado)' },
   { valor: 'kit', etiqueta: 'Kit', ayuda: 'Entrega del kit y quién lo recibe' },
 ];
@@ -26,8 +31,12 @@ export interface FichaEscaneo {
   sugerido_asistencia: number;
   evento: EventoEscaneo | null;
   asistencia: Registro | null;
+  salida: Registro | null;
   lunch: Registro | null;
   lunch_aprobado: number | null;
+  tr_llegada: Registro | null;
+  tr_regreso: Registro | null;
+  transporte_aprobado: number | null;
   kit: { nombre: string | null; entregado_at: string | null; recibio: string | null; entrego: string | null; lugar: string | null };
   ficha_completa: string | null;
 }
@@ -78,12 +87,50 @@ export function leerFicha(v: unknown): FichaEscaneo | null {
     sugerido_asistencia: num(d.sugerido_asistencia) ?? 1,
     evento: evento(d.evento),
     asistencia: registro(d.asistencia),
+    salida: registro(d.salida),
     lunch: registro(d.lunch),
     lunch_aprobado: num(d.lunch_aprobado),
+    tr_llegada: registro(d.tr_llegada),
+    tr_regreso: registro(d.tr_regreso),
+    transporte_aprobado: num(d.transporte_aprobado),
     kit: { nombre: txtN(kit.nombre), entregado_at: txtN(kit.entregado_at, 40), recibio: txtN(kit.recibio, 150), entrego: txtN(kit.entrego, 150), lugar: txtN(kit.lugar) },
     // Solo rutas internas de la ficha del club (nunca una URL arbitraria).
     ficha_completa: typeof d.ficha_completa === 'string' && /^\/admin\/clubes\/\d+$/.test(d.ficha_completa) ? d.ficha_completa : null,
   };
+}
+
+/** Registro ya hecho para el modo (null si no hay, o si es el kit). */
+export function registroDe(f: FichaEscaneo, modo: ModoEscaneo): Registro | null {
+  return modo === 'kit' ? null : f[modo];
+}
+
+/** Cantidad que se propone: lo ya registrado o, si no hay, integrantes, la entrada o lo aprobado. */
+export function cantidadSugerida(f: FichaEscaneo, modo: ModoEscaneo): string {
+  const r = registroDe(f, modo);
+  if (r) return String(r.cantidad);
+  if (modo === 'lunch') return f.lunch_aprobado ? String(f.lunch_aprobado) : '';
+  if (modo === 'tr_llegada' || modo === 'tr_regreso') return f.transporte_aprobado ? String(f.transporte_aprobado) : '';
+  if (modo === 'salida') return String(f.asistencia?.cantidad ?? f.sugerido_asistencia);
+  return modo === 'kit' ? '' : String(f.sugerido_asistencia);
+}
+
+/** Texto del campo de cantidad según el modo. */
+export function etiquetaCantidad(f: FichaEscaneo, modo: ModoEscaneo): string {
+  switch (modo) {
+    case 'asistencia': return `Personas que entran (integrantes: ${f.sugerido_asistencia})`;
+    case 'salida': return `Personas que salen${f.asistencia ? ` (entraron: ${f.asistencia.cantidad})` : ''}`;
+    case 'lunch': return `Box lunch que se entregan (aprobados: ${f.lunch_aprobado ?? 0})`;
+    case 'tr_llegada': return `Personas que llegan en el transporte (aprobados: ${f.transporte_aprobado ?? 0})`;
+    case 'tr_regreso': return `Personas que suben al regreso (aprobados: ${f.transporte_aprobado ?? 0})`;
+    default: return '';
+  }
+}
+
+/** Si el modo necesita algo aprobado que este club no tiene, el aviso (no se registra); si no, null. */
+export function bloqueoModo(f: FichaEscaneo, modo: ModoEscaneo): string | null {
+  if (modo === 'lunch' && !f.lunch_aprobado) return 'Este club no tiene box lunch aprobado para este evento.';
+  if ((modo === 'tr_llegada' || modo === 'tr_regreso') && !f.transporte_aprobado) return 'Este club no tiene transporte aprobado para este evento.';
+  return null;
 }
 
 export function leerBusqueda(v: unknown): ResultadoBusqueda[] {

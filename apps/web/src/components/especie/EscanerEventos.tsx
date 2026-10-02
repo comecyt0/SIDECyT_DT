@@ -2,32 +2,35 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Camera, CameraOff, Search, Loader2, CheckCircle2, ScanLine, Users, Sandwich, Package, RotateCcw, ExternalLink, AlertTriangle, CalendarDays } from 'lucide-react';
+import { Camera, CameraOff, Search, Loader2, CheckCircle2, ScanLine, Users, Sandwich, Package, RotateCcw, ExternalLink, AlertTriangle, CalendarDays, LogIn, LogOut, Bus, BusFront } from 'lucide-react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { mensajeError } from '@/lib/errores-formulario';
 import { fechaHora } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
 import { useLectorQr } from '@/hooks/useLectorQr';
-import { MODOS, leerBusqueda, leerConvocatorias, leerFicha, type ConvocatoriaEscaneo, type FichaEscaneo, type ModoEscaneo, type ResultadoBusqueda } from '@/lib/escaneo';
+import {
+  MODOS, bloqueoModo, cantidadSugerida, esModo, etiquetaCantidad, leerBusqueda, leerConvocatorias, leerFicha, registroDe,
+  type ConvocatoriaEscaneo, type FichaEscaneo, type ModoEscaneo, type ResultadoBusqueda,
+} from '@/lib/escaneo';
 
 const labelCls = 'text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]';
 const inputCls = 'auth-input auth-input-static pl-4';
 const CLAVE = 'sidecyt:escaneo';
-const ICONO: Record<ModoEscaneo, typeof Users> = { asistencia: Users, lunch: Sandwich, kit: Package };
+const ICONO: Record<ModoEscaneo, typeof Users> = { asistencia: LogIn, salida: LogOut, tr_llegada: Bus, tr_regreso: BusFront, lunch: Sandwich, kit: Package };
 
 /** Preferencia del operador (evento y modo) solo en su navegador; si el almacenamiento falla, se empieza de cero. */
 function leerPreferencia(): { evento: string; modo: ModoEscaneo } | null {
   try {
     const p = JSON.parse(localStorage.getItem(CLAVE) ?? 'null') as { evento?: unknown; modo?: unknown } | null;
-    if (p && typeof p.evento === 'string' && (p.modo === 'asistencia' || p.modo === 'lunch' || p.modo === 'kit')) return { evento: p.evento, modo: p.modo };
+    if (p && typeof p.evento === 'string' && esModo(p.modo)) return { evento: p.evento, modo: p.modo };
   } catch { /* sin almacenamiento */ }
   return null;
 }
 
 /**
  * E52 · F4 — Escaneo en eventos (operador de evento, admin y admin de convocatoria). El operador elige el evento y el modo
- * (asistencia, box lunch o kit), lee el QR del club con la cámara —o lo busca a mano si la cámara falla—, confirma con la
+ * (entrada, salida, transporte —llegada y regreso—, box lunch o kit; 02/10/2026), lee el QR del club con la cámara —o lo busca a mano si la cámara falla—, confirma con la
  * ficha del club a la vista (fotos de los integrantes para identificarlo) y registra. Todo lo decide el servidor: alcance,
  * límites (box lunch hasta lo aprobado) y un registro por club, evento y tipo (volver a registrar corrige).
  */
@@ -79,7 +82,7 @@ export default function EscanerEventos() {
     setMetodo(m);
     setExito(null);
     setRecibio('');
-    setCantidad(String(modo === 'lunch' ? (f.lunch?.cantidad ?? f.lunch_aprobado ?? '') : (f.asistencia?.cantidad ?? f.sugerido_asistencia)));
+    setCantidad(cantidadSugerida(f, modo));
   }, [modo]);
 
   const alLeer = useCallback(async (texto: string) => {
@@ -148,6 +151,8 @@ export default function EscanerEventos() {
       n = Math.trunc(Number(cantidad));
       if (!Number.isInteger(n) || n < 1 || n > 500) { setError('Escribe una cantidad de 1 a 500.'); return; }
       if (modo === 'lunch' && ficha.lunch_aprobado !== null && n > ficha.lunch_aprobado) { setError(`El máximo aprobado para este club es ${ficha.lunch_aprobado}.`); return; }
+      const bloqueo = bloqueoModo(ficha, modo);
+      if (bloqueo) { setError(bloqueo); return; }
     } else if (!recibio.trim()) { setError('Escribe quién recibe el kit.'); return; }
     setOcupado(true);
     try {
@@ -177,7 +182,8 @@ export default function EscanerEventos() {
   }
 
   const IconoModo = ICONO[modo];
-  const registroActual = ficha ? (modo === 'asistencia' ? ficha.asistencia : modo === 'lunch' ? ficha.lunch : null) : null;
+  const registroActual = ficha ? registroDe(ficha, modo) : null;
+  const bloqueo = ficha ? bloqueoModo(ficha, modo) : null;
   const eventoAjeno = ficha && necesitaEvento && eventoSel && !ficha.evento;
 
   return (
@@ -195,13 +201,13 @@ export default function EscanerEventos() {
             ))}
           </select>
         </label>
-        <div role="radiogroup" aria-label="Qué registras" className="grid grid-cols-3 gap-2">
+        <div role="radiogroup" aria-label="Qué registras" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {MODOS.map((m) => {
             const Icono = ICONO[m.valor];
             const activo = modo === m.valor;
             return (
               <button key={m.valor} type="button" role="radio" aria-checked={activo} title={m.ayuda}
-                onClick={() => { setModo(m.valor); setExito(null); if (ficha) setCantidad(String(m.valor === 'lunch' ? (ficha.lunch?.cantidad ?? ficha.lunch_aprobado ?? '') : (ficha.asistencia?.cantidad ?? ficha.sugerido_asistencia))); }}
+                onClick={() => { setModo(m.valor); setExito(null); if (ficha) setCantidad(cantidadSugerida(ficha, m.valor)); }}
                 className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-[14px] border-2 px-2 py-2 text-sm font-semibold transition-colors duration-150 active:scale-[0.97]"
                 style={{ borderColor: activo ? 'var(--auth-vino)' : 'var(--app-rule)', backgroundColor: activo ? 'var(--tile-vino-bg)' : 'transparent', color: 'var(--app-ink)' }}>
                 <Icono className="h-5 w-5" aria-hidden="true" />{m.etiqueta}
@@ -312,11 +318,13 @@ export default function EscanerEventos() {
                     <input className={inputCls} maxLength={150} value={recibio} onChange={(e) => setRecibio(e.target.value)} placeholder="Nombre de quien lo recibe" autoComplete="off" />
                   </label>
                 )
-              ) : modo === 'lunch' && !ficha.lunch_aprobado ? (
-                <p className="text-sm text-[var(--app-ink)]">Este club no tiene box lunch aprobado para este evento.</p>
+              ) : bloqueo ? (
+                <p className="flex items-start gap-2 rounded-[12px] px-3 py-2 text-sm font-semibold" style={{ backgroundColor: 'var(--tile-gold-bg)', color: 'var(--app-ink)' }}>
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />{bloqueo}
+                </p>
               ) : (
                 <label className="block space-y-1.5">
-                  <span className={labelCls}>{modo === 'asistencia' ? `Personas que llegaron (integrantes: ${ficha.sugerido_asistencia})` : `Box lunch que se entregan (aprobados: ${ficha.lunch_aprobado})`}</span>
+                  <span className={labelCls}>{etiquetaCantidad(ficha, modo)}</span>
                   <input type="number" inputMode="numeric" min={1} max={modo === 'lunch' ? (ficha.lunch_aprobado ?? 500) : 500} className={`${inputCls} text-lg font-bold`}
                     value={cantidad} onChange={(e) => setCantidad(e.target.value)} />
                 </label>
@@ -327,7 +335,7 @@ export default function EscanerEventos() {
               )}
 
               <div className="flex flex-wrap gap-2">
-                {!(modo === 'kit' && ficha.kit.entregado_at) && !(modo === 'lunch' && !ficha.lunch_aprobado) && (
+                {!(modo === 'kit' && ficha.kit.entregado_at) && !bloqueo && (
                   <Button className="min-h-12 flex-1" disabled={ocupado || Boolean(eventoAjeno)} onClick={() => void registrar()}>
                     {ocupado ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
                     {registroActual ? 'Corregir registro' : modo === 'kit' ? 'Registrar entrega' : 'Registrar'}

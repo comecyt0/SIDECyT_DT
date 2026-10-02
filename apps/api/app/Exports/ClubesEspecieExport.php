@@ -52,11 +52,21 @@ class ClubesEspecieExport implements WithMultipleSheets
 
         $regs = ClubRegistroEvento::whereIn('club_id', $ids)->with(['evento:id,nombre,fecha', 'registrador:id,name'])->get();
         $porClub = $clubes->keyBy('id');
-        $hAsis = ['Evento', 'Fecha del evento', 'Folio', 'Club', 'Integrantes registrados', 'Asistentes', 'Método', 'Registró', 'Última actualización'];
-        $rAsis = $regs->where('tipo', 'asistencia')->sortBy(fn ($r) => [$r->evento?->fecha, $r->evento_id])->map(fn ($r) => [
-            $s($r->evento?->nombre), $r->evento?->fecha?->format('d/m/Y') ?? '', $s($porClub[$r->club_id]->folio), $s($porClub[$r->club_id]->nombre),
-            $porClub[$r->club_id]->integrantes->count(), $r->cantidad, $r->metodo === 'qr' ? 'QR' : 'Manual', $s($r->registrador?->name), $f($r->updated_at),
-        ])->values()->all();
+        // 02/10/2026: entrada (antes «asistencia»), salida y transporte (llegada al evento y regreso), por club y evento.
+        $hAsis = ['Evento', 'Fecha del evento', 'Folio', 'Club', 'Integrantes registrados', 'Entrada (personas)', 'Hora de entrada', 'Salida (personas)', 'Hora de salida',
+            'Transporte: llegada (personas)', 'Hora de llegada', 'Transporte: regreso (personas)', 'Hora de regreso', 'Último registro por'];
+        $rAsis = $regs->whereIn('tipo', ['asistencia', 'salida', 'tr_llegada', 'tr_regreso'])->groupBy(fn ($r) => $r->club_id.'|'.$r->evento_id)
+            ->sortBy(fn ($g) => [$g->first()->evento?->fecha, $g->first()->evento_id])->map(function ($g) use ($s, $f, $porClub) {
+                $r0 = $g->first();
+                $t = fn (string $tipo) => $g->firstWhere('tipo', $tipo);
+                $ultimo = $g->sortByDesc('updated_at')->first();
+
+                return [$s($r0->evento?->nombre), $r0->evento?->fecha?->format('d/m/Y') ?? '', $s($porClub[$r0->club_id]->folio), $s($porClub[$r0->club_id]->nombre),
+                    $porClub[$r0->club_id]->integrantes->count(),
+                    $t('asistencia')?->cantidad ?? '', $f($t('asistencia')?->updated_at), $t('salida')?->cantidad ?? '', $f($t('salida')?->updated_at),
+                    $t('tr_llegada')?->cantidad ?? '', $f($t('tr_llegada')?->updated_at), $t('tr_regreso')?->cantidad ?? '', $f($t('tr_regreso')?->updated_at),
+                    $s($ultimo->registrador?->name)];
+            })->values()->all();
 
         $modo = LogisticaClub::modo($cfg);
         $cupos = [];
@@ -83,7 +93,7 @@ class ClubesEspecieExport implements WithMultipleSheets
         return [
             new HojaReporte('Clubes aceptados', $hClubes, $rClubes),
             new HojaReporte('Integrantes', $hInt, $rInt),
-            new HojaReporte('Asistencia por evento', $hAsis, $rAsis),
+            new HojaReporte('Entrada, salida y transporte', $hAsis, $rAsis),
             new HojaReporte('Transporte y box lunch', $hLog, $rLog),
             new HojaReporte('Kits entregados', $hKit, $rKit),
         ];

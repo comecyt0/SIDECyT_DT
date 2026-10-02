@@ -69,7 +69,7 @@ class EscaneoController extends Controller
     {
         $v = $request->validate([
             'club_id' => 'required|integer',
-            'tipo' => 'required|in:asistencia,lunch,kit',
+            'tipo' => 'required|in:'.implode(',', EventoClub::TIPOS),
             'evento_id' => 'nullable|integer|required_unless:tipo,kit',
             'cantidad' => 'nullable|integer|min:1|max:500|required_unless:tipo,kit',
             'recibio' => 'nullable|string|max:150|required_if:tipo,kit',

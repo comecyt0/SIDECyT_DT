@@ -37,15 +37,40 @@ class EventoClub
         return $eventoId ? EspecieEvento::where('convocatoria_id', $club->convocatoria_id)->find($eventoId) : null;
     }
 
-    /** Box lunch aprobado para este club en el evento (modo evento: su solicitud del evento; modo convocatoria: la única). */
-    public static function lunchAprobado(Club $club, ?EspecieEvento $evento): ?int
+    /**
+     * Tipos de registro. 02/10/2026 (decisiones del usuario): la «entrada» es la asistencia de siempre (tipo
+     * `asistencia`, se conserva para no tocar lo ya registrado) y se agregan la salida del evento y el transporte
+     * (solo llegada al evento y regreso), todos con número de personas.
+     */
+    public const TIPOS = ['asistencia', 'salida', 'lunch', 'tr_llegada', 'tr_regreso', 'kit'];
+
+    public const ETIQUETAS = ['asistencia' => 'Entrada', 'salida' => 'Salida', 'lunch' => 'Box lunch entregados',
+        'tr_llegada' => 'Transporte: llegada al evento', 'tr_regreso' => 'Transporte: regreso'];
+
+    /** Solicitud aprobada del club para el evento (modo evento: su solicitud del evento; modo convocatoria: la única). */
+    private static function aprobada(Club $club, ?EspecieEvento $evento): ?ClubLogistica
     {
         $cfg = LogisticaClub::config($club);
         $q = ClubLogistica::where('club_id', $club->id)->where('estado', 'aprobada');
         $q = LogisticaClub::modo($cfg) === 'evento' ? $q->where('evento_id', $evento?->id) : $q->whereNull('evento_id');
-        $l = $q->first();
+
+        return $q->first();
+    }
+
+    /** Box lunch aprobado para este club en el evento. */
+    public static function lunchAprobado(Club $club, ?EspecieEvento $evento): ?int
+    {
+        $l = self::aprobada($club, $evento);
 
         return $l ? (int) $l->lunch : null;
+    }
+
+    /** Lugares de transporte aprobados para este club en el evento (null = sin solicitud aprobada). */
+    public static function transporteAprobado(Club $club, ?EspecieEvento $evento): ?int
+    {
+        $l = self::aprobada($club, $evento);
+
+        return $l ? (int) $l->transporte : null;
     }
 
     public static function registrar(Club $club, User $u, string $tipo, ?int $eventoId, ?int $cantidad, string $metodo, ?string $recibio): array
@@ -61,12 +86,17 @@ class EventoClub
         }
         $evento = self::evento($club, $eventoId) ?? self::falla('Elige un evento de esta convocatoria.', 'evento_id');
         if ($cantidad === null || $cantidad < 1) self::falla('Escribe una cantidad de 1 o más.', 'cantidad');
-        if ($tipo === 'asistencia') {
-            if ($cantidad > 500) self::falla('La cantidad no puede pasar de 500.', 'cantidad');
-        } else {
+        if ($cantidad > 500) self::falla('La cantidad no puede pasar de 500.', 'cantidad');
+        $aviso = null;
+        if ($tipo === 'lunch') {
             $max = self::lunchAprobado($club, $evento);
             if ($max === null || $max === 0) self::falla('Este club no tiene box lunch aprobado para este evento.');
             if ($cantidad > $max) self::falla("El máximo aprobado para este club es {$max}.", 'cantidad');
+        } elseif ($tipo === 'tr_llegada' || $tipo === 'tr_regreso') {
+            // Decisión del usuario: sin transporte aprobado, se avisa y no se registra; si no coincide, se avisa.
+            $aprob = self::transporteAprobado($club, $evento);
+            if ($aprob === null || $aprob === 0) self::falla('Este club no tiene transporte aprobado para este evento.');
+            if ($cantidad !== $aprob) $aviso = "Ojo: le aprobaron {$aprob} lugar".($aprob === 1 ? '' : 'es')." y registraste {$cantidad}.";
         }
         $previo = null;
         $r = DB::transaction(function () use ($club, $evento, $tipo, $cantidad, $metodo, $u, &$previo) {
@@ -78,9 +108,11 @@ class EventoClub
             return $r;
         });
         Audit::log('club.evento_'.$tipo, $club, ['evento_id' => $evento->id, 'cantidad' => $cantidad, 'anterior' => $previo, 'metodo' => $metodo]);
-        $que = $tipo === 'asistencia' ? "Asistencia: {$cantidad} persona".($cantidad === 1 ? '' : 's') : "Box lunch entregados: {$cantidad}";
+        $personas = fn (int $n) => $n.' persona'.($n === 1 ? '' : 's');
+        $que = $tipo === 'lunch' ? "Box lunch entregados: {$cantidad}" : self::ETIQUETAS[$tipo].': '.$personas($cantidad);
 
-        return ['tipo' => $tipo, 'cantidad' => $r->cantidad, 'corregido' => $previo !== null, 'mensaje' => $que.($previo !== null ? " (antes {$previo})" : '').'.'];
+        return ['tipo' => $tipo, 'cantidad' => $r->cantidad, 'corregido' => $previo !== null, 'aviso' => $aviso,
+            'mensaje' => $que.($previo !== null ? " (antes {$previo})" : '').'.'.($aviso ? ' '.$aviso : '')];
     }
 
     /** Lo que ve el operador al escanear: datos para identificar al club y el estado del evento. */
@@ -105,8 +137,12 @@ class EventoClub
             'sugerido_asistencia' => $club->integrantes->count(),
             'evento' => $evento ? ['id' => $evento->id, 'nombre' => $evento->nombre, 'fecha' => $evento->fecha?->format('Y-m-d'), 'sede' => $evento->sede] : null,
             'asistencia' => $reg('asistencia'),
+            'salida' => $reg('salida'),
             'lunch' => $reg('lunch'),
             'lunch_aprobado' => $evento ? self::lunchAprobado($club, $evento) : null,
+            'tr_llegada' => $reg('tr_llegada'),
+            'tr_regreso' => $reg('tr_regreso'),
+            'transporte_aprobado' => $evento ? self::transporteAprobado($club, $evento) : null,
             'kit' => ['nombre' => $cfg->kit_nombre, 'entregado_at' => $club->kit_entregado_at, 'recibio' => $club->kit_recibio, 'entrego' => $club->kit_entrego, 'lugar' => $club->kit_entregado_lugar ?: $club->kit_lugar],
             'ficha_completa' => $todo ? '/admin/clubes/'.$club->id : null,
         ];

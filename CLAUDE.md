@@ -1962,6 +1962,20 @@ línea de tiempo, `ClubResumen` con descarga de documentos, historial y «Abrir 
 `leer()` y `documentosDe()` para no duplicar. Botón de cerrar propio (el header fijo tapaba el ✕ del diálogo).
 **Verificado:** navegador 13/13 (`verif_previa.mjs`, 1440 y 390 px).
 
+### E63 — Escaneo: entrada, salida y transporte (llegada y regreso) con el QR del club [publicado 02-10-2026]
+**Pedido:** «en escanear eventos también deben escanear el transporte desde el QR del club, así como la entrada y salida
+y la llegada y regreso del transporte». **Decisiones del usuario:** transporte = solo **llegada** al evento y **regreso**;
+la **entrada** es la asistencia de siempre y se agrega la **salida**, ambas con número de personas; en el transporte se
+cuentan personas y se comparan con lo aprobado (avisa si no coincide); sin transporte aprobado, **avisa y no registra**.
+- `EventoClub::TIPOS` = `asistencia` (se muestra «Entrada»; se conserva el tipo para no tocar lo registrado), `salida`,
+  `lunch`, `tr_llegada`, `tr_regreso`, `kit`; `transporteAprobado()`; la respuesta trae `aviso` cuando no coincide; la
+  ficha trae `salida`, `tr_llegada`, `tr_regreso` y `transporte_aprobado`. Sin migración (el tipo ya era texto y el único
+  por club+evento+tipo sirve igual: volver a escanear corrige). Bitácora `club.evento_<tipo>`.
+- Reporte Excel: la hoja «Entrada, salida y transporte» (por club y evento, con personas y hora de cada registro).
+- Front: `lib/escaneo.ts` (`MODOS` con 6 modos, `registroDe`, `cantidadSugerida`, `etiquetaCantidad`, `bloqueoModo`) y
+  `EscanerEventos` (iconos entrar/salir/autobús, rejilla 2×3 en teléfono, aviso en vez del botón si falta aprobación).
+**Verificado:** backend 11/11 (`e2e_escaneo_transporte.php`), F4 84/84, navegador F4 26/26 (con los modos nuevos).
+
 ### E62 — Vista previa de archivos (antes de subir y en «Ver») y comité con verificación [publicado 02-10-2026]
 **Pedidos del usuario:** «no hay vista previa de PDF, los descargan; los botones de ver no sirven; debe haber vista previa
 de los archivos que suben antes de mandarlos» (dentro de la página; en solicitudes, clubes, firmados/logística, informes)
