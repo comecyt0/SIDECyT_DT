@@ -229,7 +229,7 @@ export default function AdminTopLayout({
 
           {/* Logo (recortado, mismo que la landing) + marca SIGAE */}
           <Link href="/admin/dashboard" className="panel-brand flex items-center gap-3 shrink-0" title={`SIGAE — ${t('footer.system_name')}`}>
-            <Image src={LOGO_COMECYT.color.src} alt={LOGO_COMECYT.color.alt} width={LOGO_COMECYT.color.ancho} height={LOGO_COMECYT.color.alto} priority className="h-10 w-auto object-contain" />
+            <Image src={LOGO_COMECYT.color.src} alt={LOGO_COMECYT.color.alt} width={LOGO_COMECYT.color.ancho} height={LOGO_COMECYT.color.alto} priority className="logo-tema-claro h-10 w-auto object-contain" /><Image src={LOGO_COMECYT.negativo.src} alt={LOGO_COMECYT.negativo.alt} width={LOGO_COMECYT.negativo.ancho} height={LOGO_COMECYT.negativo.alto} priority className="logo-tema-oscuro h-10 w-auto object-contain" />
             <div className="hidden lg:block">
               <span className="panel-brand-name">SIGAE<span className="panel-swatch" aria-hidden="true" /></span>
               <span className="panel-brand-sub">{t('nav.brand_sub')}</span>
@@ -292,7 +292,7 @@ export default function AdminTopLayout({
                       <p className="panel-menu-title">{t('nav.control_panel')}</p>
                       <p className="panel-menu-hint">{t('nav.control_panel_hint')}</p>
                     </div>
-                    <Image src={LOGO_COMECYT.color.src} alt="" width={LOGO_COMECYT.color.ancho} height={LOGO_COMECYT.color.alto} className="hidden sm:block h-12 w-auto" />
+                    <Image src={LOGO_COMECYT.color.src} alt="" width={LOGO_COMECYT.color.ancho} height={LOGO_COMECYT.color.alto} className="logo-tema-claro hidden sm:block h-12 w-auto" /><Image src={LOGO_COMECYT.negativo.src} alt="" width={LOGO_COMECYT.negativo.ancho} height={LOGO_COMECYT.negativo.alto} className="logo-tema-oscuro hidden sm:block h-12 w-auto" />
                   </div>
 
                   <div className="panel-menu-body">

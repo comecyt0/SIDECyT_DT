@@ -1266,6 +1266,13 @@
 .vp-cerrar:focus-visible, .vp-boton:focus-visible, .vp-enlace:focus-visible { outline: 2px solid var(--auth-vino); outline-offset: 2px; }
 @media (max-width: 640px) { .vp-fondo { padding: 0; } .vp-dialogo { width: 100%; height: 100dvh; border-radius: 0; } }
 
+/* 02/10/2026 — Logo del encabezado según el tema: en oscuro, la versión NEGATIVA oficial (manual de identidad, sin
+   filtros CSS). `!important` porque las utilidades `hidden sm:block` del JSX ganarían a esta capa. */
+.logo-tema-oscuro { display: none !important; }
+.dark .logo-tema-claro { display: none !important; }
+.dark .logo-tema-oscuro { display: block !important; }
+@media (max-width: 639px) { .dark .logo-tema-oscuro.hidden { display: none !important; } }
+
 /* 02/10/2026 — Interruptor de modo claro / oscuro (ThemeSwitch) en el encabezado de los paneles. */
 .tema-switch {
   position: relative; display: inline-flex; align-items: center; justify-content: space-between; flex: none;
