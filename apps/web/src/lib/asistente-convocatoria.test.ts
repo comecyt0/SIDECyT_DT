@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   armarPayload, describirError, erroresDelServidor, pasoDeError, restaurarBorrador, tieneContenido, CLAVE_PROGRAMA_RE,
-  pasosDe, type EstadoAsistente,
+  pasosDe, leerCatalogo, normalizarNombre, programaRepetido, type EstadoAsistente,
 } from './asistente-convocatoria';
 import { configVacia, leerConfig, validarConfig } from './especie';
 
 const vacio: EstadoAsistente = {
   convocatoria: { nombre: '', ejercicio_fiscal: '2026', periodo_id: '', estado: 'borrador', descripcion: '', fecha_apertura: '', fecha_cierre: '', monto_maximo_apoyo: 0, porcentaje_aportacion_minima: 20 },
-  programa: { clave: '', nombre: '', tipo_apoyo: 'concurrente', monto_maximo: 50000, tiene_etapas: false, num_etapas: 1, tiene_equipo: false, min_miembros_equipo: 1, max_miembros_equipo: 5, requiere_evaluacion_tecnica: true, puntaje_minimo_aprobatorio: 80 },
+  programa: { clave: '', nombre: '', tipo_apoyo: 'concurrente', monto_maximo: 50000, tiene_etapas: false, num_etapas: 1, tiene_equipo: false, min_miembros_equipo: 1, max_miembros_equipo: 5, requiere_evaluacion_tecnica: true, puntaje_minimo_aprobatorio: 80, programa_publico_id: null, programa_nuevo: false, sistema: 'sigae' },
   campos: [], documentos: [], rubros: [], criterios: [],
   especie: configVacia(),
 };
@@ -19,6 +19,44 @@ const lleno: EstadoAsistente = {
     { nombre_campo: 'rfc', etiqueta: 'RFC', tipo_campo: 'text', requerido: true, orden: 2, opciones_json: 'basura' }],
   criterios: [{ nombre: 'I. Aeronáutica. II. Agroindustria. III. Agrotecnología y muchos más sectores', descripcion: '', ponderacion: 100, puntaje_maximo: 100, orden: 1 }],
 };
+
+describe('programa ↔ convocatoria (E54)', () => {
+  const catalogo = leerCatalogo([
+    { id: 1, nombre: 'STEAM EDOMEX PROGRAMA ESTATAL DE ROBÓTICA', sistema: 'sigae', activo: false, convocatorias_count: 1 },
+    { id: 2, nombre: 'Programa LEGO', sistema: 'sicei', activo: true, convocatorias_count: 0 },
+    { id: 'x', nombre: 'inválido' }, { id: 3, nombre: 'Sin sistema', sistema: 'otro' },
+  ]);
+
+  it('lee el catálogo validando tipos y descarta lo inválido', () => {
+    expect(catalogo).toEqual([
+      { id: 1, nombre: 'STEAM EDOMEX PROGRAMA ESTATAL DE ROBÓTICA', sistema: 'sigae', activo: false, convocatorias: 1 },
+      { id: 2, nombre: 'Programa LEGO', sistema: 'sicei', activo: true, convocatorias: 0 },
+    ]);
+    expect(leerCatalogo(null)).toEqual([]);
+  });
+
+  it('detecta un programa repetido ignorando mayúsculas, acentos y espacios, solo en el mismo sistema', () => {
+    expect(programaRepetido(catalogo, 'sigae', '  steam edomex programa estatal de robotica ')?.id).toBe(1);
+    expect(programaRepetido(catalogo, 'sicei', 'STEAM EDOMEX PROGRAMA ESTATAL DE ROBÓTICA')).toBeNull();
+    expect(programaRepetido(catalogo, 'sicei', 'programa  lego')?.id).toBe(2);
+    expect(normalizarNombre('ROBÓTICA  Ñandú')).toBe('robotica nandu');
+  });
+
+  it('el envío lleva el programa existente o el nuevo, nunca ambos', () => {
+    const existente = armarPayload({ ...vacio, programa: { ...vacio.programa, programa_publico_id: 2, nombre: 'Programa LEGO' } }, null);
+    expect(existente.programa).toMatchObject({ programa_publico_id: 2, programa_nuevo: false });
+    const nuevo = armarPayload({ ...vacio, programa: { ...vacio.programa, programa_publico_id: 2, programa_nuevo: true, sistema: 'sicei', nombre: 'Robótica 2' } }, null);
+    expect(nuevo.programa).toMatchObject({ programa_publico_id: null, programa_nuevo: true, sistema: 'sicei' });
+  });
+
+  it('el borrador recupera el programa elegido y descarta valores raros', () => {
+    const r = restaurarBorrador({ state: { programa: { programa_publico_id: 7, programa_nuevo: false, sistema: 'sicei' } } }, vacio);
+    expect(r.programa).toMatchObject({ programa_publico_id: 7, programa_nuevo: false, sistema: 'sicei' });
+    const raro = restaurarBorrador({ state: { programa: { programa_publico_id: '7; DROP', sistema: 'x' } } }, vacio);
+    expect(raro.programa).toMatchObject({ programa_publico_id: null, sistema: 'sigae' });
+    expect(tieneContenido({ ...vacio, programa: { ...vacio.programa, programa_publico_id: 3 } })).toBe(true);
+  });
+});
 
 describe('asistente de convocatorias (E47)', () => {
   it('arma un solo envío: periodo numérico y opciones solo en preguntas de lista', () => {

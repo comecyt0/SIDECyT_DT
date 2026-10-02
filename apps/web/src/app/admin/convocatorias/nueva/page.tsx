@@ -29,8 +29,10 @@ import ConvocatoriaPreviewPanel from '@/components/admin/ConvocatoriaPreviewPane
 import SelectorFormatos from '@/components/admin/SelectorFormatos';
 import {
   LIMITES, CLAVE_PROGRAMA_RE, armarPayload, erroresDelServidor, restaurarBorrador, tieneContenido, pasosDe,
-  type EstadoAsistente, type PasoAsistente,
+  leerCatalogo, programaRepetido,
+  type EstadoAsistente, type PasoAsistente, type ProgramaCatalogo, type SistemaPrograma,
 } from '@/lib/asistente-convocatoria';
+import SelectorPrograma from '@/components/admin/SelectorPrograma';
 import { Save, CloudOff, Cloud, Banknote, Package } from 'lucide-react';
 import ConfigEspecieForm from '@/components/admin/especie/ConfigEspecieForm';
 import { configVacia, validarConfig, CAMPOS_CLUB, CAMPOS_INTEGRANTE, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, type ConfigEspecie } from '@/lib/especie';
@@ -95,6 +97,10 @@ interface WizardState {
     max_miembros_equipo: number;
     requiere_evaluacion_tecnica: boolean;
     puntaje_minimo_aprobatorio: number;
+    // E54: programa del catálogo público (existente) o uno nuevo que se crea oculto.
+    programa_publico_id: number | null;
+    programa_nuevo: boolean;
+    sistema: SistemaPrograma;
   };
   campos: Campo[];
   documentos: Documento[];
@@ -194,6 +200,9 @@ const emptyWizardState: WizardState = {
     max_miembros_equipo: 5,
     requiere_evaluacion_tecnica: true,
     puntaje_minimo_aprobatorio: 80,
+    programa_publico_id: null,
+    programa_nuevo: false,
+    sistema: 'sigae',
   },
   campos: [],
   documentos: [],
@@ -259,6 +268,16 @@ export default function ConvocatoriasNuevaPage() {
     formatos: ['pdf'],
     tamano_mb: 5,
   });
+  // E54: catálogo de programas (Contenido público) para el paso 2; null mientras carga.
+  const [catalogo, setCatalogo] = useState<ProgramaCatalogo[] | null>(null);
+  const [errorCatalogo, setErrorCatalogo] = useState(false);
+  const cargarCatalogo = useCallback(() => {
+    setErrorCatalogo(false);
+    api.get('/admin/programas-publicos')
+      .then(({ data }) => setCatalogo(leerCatalogo(data)))
+      .catch(() => { setCatalogo([]); setErrorCatalogo(true); });
+  }, []);
+  useEffect(() => { cargarCatalogo(); }, [cargarCatalogo]);
   // E45: periodos activos para el selector del paso 1.
   const [periodos, setPeriodos] = useState<{ id: number; nombre: string; activo: boolean }[]>([]);
   useEffect(() => {
@@ -396,8 +415,14 @@ export default function ConvocatoriasNuevaPage() {
     if (clave === 'programa') {
       if (!state.programa.clave.trim()) errors.clave = 'Clave requerida';
       else if (!CLAVE_PROGRAMA_RE.test(state.programa.clave.trim())) errors.clave = 'Usa solo letras, números y _ - / . (sin espacios).';
-      if (!state.programa.nombre.trim()) errors.nombre = 'Nombre requerido';
+      // E54: o un programa del catálogo o uno nuevo con nombre que no repita otro del mismo sistema.
+      if (!state.programa.programa_nuevo) {
+        if (!state.programa.programa_publico_id) errors.programa = 'Elige el programa al que pertenece esta convocatoria, o crea uno nuevo.';
+      } else if (!state.programa.nombre.trim()) errors.nombre = 'Escribe el nombre del programa nuevo.';
       else if (state.programa.nombre.length > LIMITES.nombrePrograma) errors.nombre = `Máximo ${LIMITES.nombrePrograma} caracteres.`;
+      else if (catalogo && programaRepetido(catalogo, state.programa.sistema, state.programa.nombre)) {
+        errors.nombre = 'Ya existe un programa con ese nombre: elígelo de la lista para asociarle esta convocatoria.';
+      }
       if (!especie) {
         if (state.programa.monto_maximo < 1000) errors.monto_maximo = 'El monto máximo por proyecto debe ser de al menos $1,000.';
         if (state.programa.tiene_equipo && state.programa.min_miembros_equipo > state.programa.max_miembros_equipo) {
@@ -655,11 +680,13 @@ export default function ConvocatoriasNuevaPage() {
       await guardarBorrador();
       const { data } = await api.post('/admin/asistente-convocatoria', armarPayload(state as unknown as EstadoAsistente, borradorIdRef.current));
       sinGuardar.current = false;
-      setSaveProgress('¡Convocatoria creada! Abriendo su ficha para que cargues el banner…');
+      setSaveProgress(data?.programa && data.programa.activo === false
+        ? `¡Convocatoria creada! El programa «${String(data.programa.nombre ?? '').slice(0, 120)}» está oculto en la página pública: complétalo y actívalo en Contenido público. Abriendo la ficha…`
+        : '¡Convocatoria creada! Abriendo su ficha para que cargues el banner…');
       const nuevaId = Number(data?.convocatoria?.id);
       setTimeout(() => {
         router.push(Number.isInteger(nuevaId) && nuevaId > 0 ? `/admin/convocatorias/${nuevaId}` : '/admin/convocatorias');
-      }, 1200);
+      }, data?.programa?.activo === false ? 4000 : 1200);
     } catch (error: unknown) {
       const res = (error as { response?: { status?: number; data?: { message?: string; errors?: unknown } } })?.response;
       const detalle = res?.status === 422 ? erroresDelServidor(res.data?.errors, state as unknown as EstadoAsistente) : null;
@@ -898,24 +925,28 @@ export default function ConvocatoriasNuevaPage() {
 
           {pasoActual === 'programa' && (
             <div className="space-y-5">
+              {/* E54: la convocatoria pertenece a un programa del catálogo (Contenido público) o a uno nuevo. */}
+              <SelectorPrograma
+                catalogo={catalogo}
+                errorCarga={errorCatalogo}
+                onReintentar={cargarCatalogo}
+                valor={{ id: state.programa.programa_publico_id, nuevo: state.programa.programa_nuevo, nombre: state.programa.nombre, sistema: state.programa.sistema }}
+                error={validationErrors.programa ?? validationErrors.nombre}
+                maxNombre={LIMITES.nombrePrograma}
+                onChange={(v) => {
+                  // La clave corta se propone sola (nombre + ejercicio) mientras el admin no la haya escrito.
+                  const propuesta = v.nombre ? `${claveDesdeNombre(v.nombre)}/${state.convocatoria.ejercicio_fiscal}`.slice(0, 20) : '';
+                  const clave = claveTouched.current ? state.programa.clave : (claveDesdeNombre(v.nombre) ? propuesta : '');
+                  setState({ ...state, programa: { ...state.programa, programa_publico_id: v.id, programa_nuevo: v.nuevo, nombre: v.nombre, sistema: v.sistema, clave } });
+                  // Al elegir o escribir, se retiran los avisos viejos de este bloque (se revalida al dar «Siguiente»).
+                  setValidationErrors((prev) => {
+                    const { programa: _p, nombre: _n, ...resto } = prev;
+                    if (clave) delete resto.clave;
+                    return resto;
+                  });
+                }}
+              />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="prog_nombre" className={wizLabelCls}>Nombre del programa *</Label>
-                  <input
-                    id="prog_nombre"
-                    maxLength={LIMITES.nombrePrograma}
-                    value={state.programa.nombre}
-                    onChange={(e) => {
-                      const nombre = e.target.value;
-                      const clave = state.programa.clave || claveTouched.current ? state.programa.clave : claveDesdeNombre(nombre);
-                      setState({ ...state, programa: { ...state.programa, nombre, clave } });
-                    }}
-                    placeholder="Ej. Prototipos de tecnología"
-                    className={wizInputCls}
-                    aria-invalid={validationErrors.nombre ? 'true' : undefined}
-                  />
-                  {validationErrors.nombre && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.nombre}</p>}
-                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="prog_clave" className={wizLabelCls}>Clave corta *</Label>
                   <input
@@ -925,13 +956,14 @@ export default function ConvocatoriasNuevaPage() {
                     onChange={(e) => {
                       claveTouched.current = true;
                       setState({ ...state, programa: { ...state.programa, clave: e.target.value.toUpperCase() } });
+                      setValidationErrors((prev) => { const { clave: _c, ...resto } = prev; return resto; });
                     }}
                     placeholder="Ej. PROT"
                     className={`${wizInputCls} uppercase`}
                     aria-invalid={validationErrors.clave ? 'true' : undefined}
                   />
                   {validationErrors.clave && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.clave}</p>}
-                  <p className="text-xs text-[var(--app-ink-2)]">Se propone sola a partir del nombre; aparece en folios y reportes.</p>
+                  <p className="text-xs text-[var(--app-ink-2)]">Identifica a esta convocatoria en folios y reportes (p. ej. LEGO/2026). Se propone sola; debe ser distinta en cada convocatoria.</p>
                 </div>
               </div>
 
@@ -1611,7 +1643,7 @@ export default function ConvocatoriasNuevaPage() {
                   </CardHeader>
                   <CardContent className="text-sm space-y-2">
                     <p><strong>Clave:</strong> {state.programa.clave}</p>
-                    <p><strong>Nombre:</strong> {state.programa.nombre}</p>
+                    <p><strong>Programa:</strong> {state.programa.nombre}{state.programa.programa_nuevo ? ` (nuevo en ${state.programa.sistema.toUpperCase()}: se crea oculto; complétalo en Contenido público)` : ''}</p>
                     <p><strong>Forma del apoyo:</strong> {TIPO_APOYO_LABELS[state.programa.tipo_apoyo] ?? state.programa.tipo_apoyo}</p>
                     {!esEspecie && (<>
                     <p><strong>Monto máximo:</strong> ${state.programa.monto_maximo.toLocaleString()}</p>

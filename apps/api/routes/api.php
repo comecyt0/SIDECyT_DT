@@ -264,6 +264,8 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::delete('asistente-convocatoria/borradores/{id}', [\App\Http\Controllers\Admin\AsistenteConvocatoriaController::class, 'eliminarBorrador'])->whereNumber('id');
             // E40 — prórroga y banner
             Route::post('convocatorias/{convocatoria}/prorroga', [ConvocatoriaController::class, 'prorroga'])->middleware('throttle:20,1');
+            // E54 — programa al que pertenece la convocatoria (solo admin)
+            Route::put('convocatorias/{convocatoria}/programa', [ConvocatoriaController::class, 'cambiarPrograma'])->middleware('throttle:30,1,convocatoria-programa');
             Route::post('convocatorias/{convocatoria}/banner', [BannerController::class, 'storeConvocatoria'])->middleware('throttle:20,1');
             Route::delete('convocatorias/{convocatoria}/banner', [BannerController::class, 'destroyConvocatoria'])->middleware('throttle:20,1');
             Route::post('programas/{tipoPrograma}/banner', [BannerController::class, 'storePrograma'])->middleware('throttle:20,1');

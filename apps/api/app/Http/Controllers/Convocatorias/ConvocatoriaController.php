@@ -19,7 +19,7 @@ class ConvocatoriaController extends Controller
         // existe, así que el filtro va explícito — igual que en el endpoint público y en los scopes.
         // E45: con alcance (admin de convocatoria / consulta / periodos) y con su periodo y administradores.
         $q = Convocatoria::whereNull('deleted_at')
-            ->with(['periodo:id,nombre', 'administradores:id,name,avatar_path'])
+            ->with(['periodo:id,nombre', 'administradores:id,name,avatar_path', 'programaPublico:id,nombre,sistema,activo'])
             ->orderBy('id', 'desc');
 
         return response()->json(Alcance::aplicar($q, $request->user(), 'id')->get());
@@ -62,7 +62,22 @@ class ConvocatoriaController extends Controller
         // tipoPrograma: la ficha muestra el banner del programa como respaldo si la convocatoria no tiene.
         return response()->json($convocatoria->load([
             'tipoPrograma:id,nombre,banner_url,tipo_apoyo', 'periodo:id,nombre', 'administradores:id,name,email,avatar_path',
+            'programaPublico:id,nombre,sistema,activo',
         ]));
+    }
+
+    /**
+     * E54 — Cambia el programa (del catálogo público) al que pertenece la convocatoria. Solo admin general (ruta del grupo
+     * admin); queda en la bitácora con el programa anterior. No toca la configuración técnica de la convocatoria.
+     */
+    public function cambiarPrograma(Request $request, Convocatoria $convocatoria)
+    {
+        $v = $request->validate(['programa_publico_id' => 'required|integer|exists:programas_publicos,id'], [], ['programa_publico_id' => 'programa']);
+        $antes = $convocatoria->programa_publico_id;
+        $convocatoria->forceFill(['programa_publico_id' => (int) $v['programa_publico_id']])->save();
+        Audit::log('convocatoria.programa_cambiado', $convocatoria, ['antes' => $antes, 'despues' => (int) $v['programa_publico_id']]);
+
+        return response()->json($convocatoria->fresh()->load('programaPublico:id,nombre,sistema,activo'));
     }
 
     /**

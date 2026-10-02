@@ -33,6 +33,8 @@ export interface EstadoAsistente {
     clave: string; nombre: string; tipo_apoyo: string; monto_maximo: number; tiene_etapas: boolean; num_etapas: number;
     tiene_equipo: boolean; min_miembros_equipo: number; max_miembros_equipo: number; requiere_evaluacion_tecnica: boolean;
     puntaje_minimo_aprobatorio: number;
+    /** E54: programa del catálogo público al que pertenece la convocatoria, o uno nuevo (se crea oculto). */
+    programa_publico_id: number | null; programa_nuevo: boolean; sistema: SistemaPrograma;
   };
   campos: CampoA[];
   documentos: DocumentoA[];
@@ -44,6 +46,33 @@ export interface EstadoAsistente {
 
 export const esEspecie = (s: Pick<EstadoAsistente, 'programa'>) => s.programa.tipo_apoyo === TIPO_ESPECIE;
 
+// ─────────── E54: programa ↔ convocatorias (catálogo de Contenido público) ───────────
+
+export type SistemaPrograma = 'sigae' | 'sicei';
+export const SISTEMA_ETIQUETA: Record<SistemaPrograma, string> = { sigae: 'SIGAE · Apoyo Empresarial', sicei: 'SICEI · Ciencia, Educación e Innovación' };
+export interface ProgramaCatalogo { id: number; nombre: string; sistema: SistemaPrograma; activo: boolean; convocatorias: number }
+
+/** Respuesta de GET /admin/programas-publicos → lista validada (tipos y longitudes). */
+export function leerCatalogo(v: unknown): ProgramaCatalogo[] {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, 500).flatMap((x) => {
+    const p = x as Record<string, unknown>;
+    if (!p || typeof p.id !== 'number' || typeof p.nombre !== 'string' || (p.sistema !== 'sigae' && p.sistema !== 'sicei')) return [];
+    return [{ id: p.id, nombre: p.nombre.slice(0, 255), sistema: p.sistema, activo: p.activo === true, convocatorias: Number(p.convocatorias_count) || 0 }];
+  });
+}
+
+/** Igual que `ProgramaPublico::normalizar()` del backend: sin mayúsculas, acentos ni espacios de más. */
+export function normalizarNombre(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/** Programa del catálogo con el mismo nombre en ese sistema (para avisar antes de crear un duplicado). */
+export function programaRepetido(catalogo: ProgramaCatalogo[], sistema: SistemaPrograma, nombre: string): ProgramaCatalogo | null {
+  const n = normalizarNombre(nombre);
+  return n ? (catalogo.find((p) => p.sistema === sistema && normalizarNombre(p.nombre) === n) ?? null) : null;
+}
+
 /**
  * Pasos del asistente según la modalidad. Apoyo en especie no maneja dinero: sin conceptos de gasto ni criterios, y
  * las preguntas (del club o del integrante) van en el paso "Club y kit" (decisión del usuario, E52).
@@ -54,7 +83,12 @@ export const PASOS_ESPECIE: PasoAsistente[] = ['convocatoria', 'programa', 'espe
 export const pasosDe = (s: Pick<EstadoAsistente, 'programa'>) => (esEspecie(s) ? PASOS_ESPECIE : PASOS_ECONOMICO);
 
 /** Cuerpo de POST /admin/asistente-convocatoria. */
-export function armarPayload(s: EstadoAsistente, borradorId: number | null) {
+export function armarPayload(s0: EstadoAsistente, borradorId: number | null) {
+  // E54: o programa existente o nuevo (nunca ambos): si es nuevo no viaja el id; si es existente no viaja el sistema.
+  const s: EstadoAsistente = {
+    ...s0,
+    programa: { ...s0.programa, programa_publico_id: s0.programa.programa_nuevo ? null : s0.programa.programa_publico_id },
+  };
   if (esEspecie(s)) {
     return {
       borrador_id: borradorId,
@@ -98,7 +132,7 @@ const CAMPO_LEGIBLE: Record<string, string> = {
   ponderacion: 'peso', puntaje_maximo: 'calificación máxima', porcentaje_maximo: 'porcentaje máximo', tamano_mb: 'tamaño máximo',
   nombre_campo: 'identificador', tipo_campo: 'tipo de respuesta', fecha_apertura: 'fecha de apertura', fecha_cierre: 'fecha de cierre',
   monto_maximo_apoyo: 'apoyo máximo', porcentaje_aportacion_minima: 'aportación mínima', ejercicio_fiscal: 'ejercicio fiscal',
-  periodo_id: 'periodo', monto_maximo: 'monto máximo', num_etapas: 'número de etapas', min_miembros_equipo: 'mínimo de integrantes',
+  periodo_id: 'periodo', monto_maximo: 'monto máximo', programa_publico_id: 'programa', sistema: 'sistema', num_etapas: 'número de etapas', min_miembros_equipo: 'mínimo de integrantes',
   max_miembros_equipo: 'máximo de integrantes', puntaje_minimo_aprobatorio: 'calificación mínima', tipo_apoyo: 'forma del apoyo',
   min_integrantes: 'mínimo de integrantes', max_integrantes: 'máximo de integrantes', clubes_por_escuela: 'clubes por escuela',
   participan_menores: 'participación de menores', kit_nombre: 'nombre del kit', kit_descripcion: 'descripción del kit', ambito: 'a quién se pregunta',
@@ -186,6 +220,9 @@ export function restaurarBorrador(datos: unknown, vacio: EstadoAsistente): Estad
       min_miembros_equipo: num(p.min_miembros_equipo, v.programa.min_miembros_equipo), max_miembros_equipo: num(p.max_miembros_equipo, v.programa.max_miembros_equipo),
       requiere_evaluacion_tecnica: bool(p.requiere_evaluacion_tecnica, v.programa.requiere_evaluacion_tecnica),
       puntaje_minimo_aprobatorio: num(p.puntaje_minimo_aprobatorio, v.programa.puntaje_minimo_aprobatorio),
+      programa_publico_id: typeof p.programa_publico_id === 'number' && p.programa_publico_id > 0 ? p.programa_publico_id : null,
+      programa_nuevo: bool(p.programa_nuevo, v.programa.programa_nuevo),
+      sistema: p.sistema === 'sicei' ? 'sicei' : 'sigae',
     },
     campos: lista(d.campos).map((x, i) => ({
       nombre_campo: txt(x.nombre_campo), etiqueta: txt(x.etiqueta),
@@ -212,7 +249,7 @@ export function restaurarBorrador(datos: unknown, vacio: EstadoAsistente): Estad
 export function tieneContenido(s: EstadoAsistente): boolean {
   return Boolean(
     s.convocatoria.nombre.trim() || s.convocatoria.descripcion.trim() || s.convocatoria.fecha_apertura || s.convocatoria.fecha_cierre
-    || s.programa.nombre.trim() || s.programa.clave.trim()
+    || s.programa.nombre.trim() || s.programa.clave.trim() || s.programa.programa_publico_id
     || s.campos.length || s.documentos.length || s.rubros.length || s.criterios.length
     || (esEspecie(s) && (s.especie.kit_nombre.trim() || s.especie.campos.length)),
   );

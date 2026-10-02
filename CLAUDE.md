@@ -180,6 +180,16 @@ límite = COALESCE(fecha_prorroga, fecha_cierre)   ← `fecha_cierre_efectiva`
 
 Cada convocatoria tiene su propio `TipoPrograma` exclusivo. Los campos dinámicos, documentos, rubros y criterios de evaluación se configuran por convocatoria vía el Wizard de 7 pasos en `/admin/convocatorias/nueva`. Las convocatorias **deben** tener `tipo_programa_id` para que aparezcan al solicitante.
 
+### Programa → Convocatorias (1:N, E54 desde 02/10/2026)
+
+El **programa** que ven las personas («Programa LEGO») es un registro del catálogo de Contenido público
+(`programas_publicos`, `/admin/sitio`) y agrupa sus convocatorias («Convocatoria 2026», «2027»…) por
+`convocatorias.programa_publico_id`. El `TipoPrograma` sigue siendo la configuración técnica de **una** convocatoria
+(empieza vacía en cada una, decisión del usuario). En el paso 2 del asistente se elige un programa del catálogo o se crea
+uno nuevo (nace **oculto**). Nombres sin duplicados por sistema con `ProgramaPublico::nombreOcupado()` (en PHP: el
+`LOWER()` de esta base no baja acentos). `programa_publico_id` está en `$guarded`; solo lo escriben el asistente y
+`PUT /admin/convocatorias/{id}/programa` (admin). Detalle: `docs/SIDECYT.md` §4.1.
+
 ---
 
 ## Reglas Críticas (errores que ya costaron tiempo)
@@ -1834,3 +1844,19 @@ Datos bancarios del solicitante; 15 lecturas de `data.error` en 9 pantallas pasa
 **Verificado:** backend 13/13 (`e2e_errores.php`), navegador 10/10 en 1440 y 390 px (contraseña débil avisada, paso 3,
 error dentro de la ventana, regreso al paso 1 con el campo marcado, crear tras corregir), vitest 152/152, regresión
 E52 46/46 y 53/53. Pendiente menor: `Empresa::municipio()` sin columna (inofensiva: nunca consulta).
+
+### E54 — El paso 2 de «Nueva convocatoria» no ofrecía los programas existentes [resuelto 02-10-2026]
+**Síntoma (reporte del usuario):** al crear una convocatoria, el nombre del programa no se asociaba a los ya creados; no
+había lista. **Causa:** no existía un "programa" que agrupara convocatorias: cada alta creaba un `TipoPrograma` nuevo
+(configuración 1:1), lo que ya había producido duplicados (STEAM ×2, Jóvenes Emprendedores ×2).
+**Fix (decisiones del usuario con cuestionario):** catálogo único = Contenido público; `convocatorias.programa_publico_id`
+(migración `2026_10_02_000001`); selector en el paso 2 (existente o nuevo, aviso de duplicado); programa nuevo oculto;
+configuración vacía por convocatoria; tarjeta «Programa» en la ficha con cambio (admin); la landing muestra en cada
+programa sus convocatorias vigentes. Datos asociados y huérfanos ocultados con un script auditado. Sección
+«Programa → Convocatorias» arriba y `docs/SIDECYT.md` §4.1.
+**Bug encontrado al hacerlo (no repetir):** comparar nombres con `LOWER(nombre) = ?` en PostgreSQL **no detecta
+duplicados con acentos** en esta base (`lower('ROBÓTICA')` = `'robÓtica'`): la primera versión del script creó un
+duplicado al correrse dos veces. Comparar en PHP (`mb_strtolower` + `Str::ascii`). **Regla:** toda comparación de texto
+sin distinguir mayúsculas/acentos se hace en PHP o con `unaccent`, nunca con `LOWER()`/`ILIKE` solos.
+**Verificado:** backend 34/34, navegador 27/27 (1440 y 390 px; se detectaron y corrigieron el nombre partido letra por
+letra en teléfono y avisos viejos que no se iban), vitest 178/178.

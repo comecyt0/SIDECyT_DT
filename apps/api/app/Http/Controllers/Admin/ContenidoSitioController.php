@@ -25,7 +25,8 @@ class ContenidoSitioController extends Controller
     public function programas(Request $request)
     {
         $sistema = $request->query('sistema');
-        $q = ProgramaPublico::query()->orderBy('sistema')->orderBy('orden')->orderBy('id');
+        // E54: cuántas convocatorias tiene cada programa (el asistente y /admin/sitio lo muestran).
+        $q = ProgramaPublico::query()->withCount('convocatorias')->orderBy('sistema')->orderBy('orden')->orderBy('id');
         if (is_string($sistema) && in_array($sistema, ProgramaPublico::SISTEMAS, true)) {
             $q->where('sistema', $sistema);
         }
@@ -62,6 +63,12 @@ class ContenidoSitioController extends Controller
         }
 
         $nuevo = ! $programa;
+        // E54: sin dos programas con el mismo nombre en un sistema (ignora mayúsculas, acentos y espacios).
+        $sistemaFinal = $v['sistema'] ?? $programa?->sistema;
+        $nombreFinal = $v['nombre'] ?? $programa?->nombre;
+        if ($sistemaFinal && $nombreFinal && ProgramaPublico::nombreOcupado($sistemaFinal, $nombreFinal, $programa?->id)) {
+            throw ValidationException::withMessages(['nombre' => 'Ya existe un programa con ese nombre en este sistema.']);
+        }
         $programa ??= new ProgramaPublico;
         if ($nuevo && ! isset($v['orden'])) {
             $v['orden'] = (int) ProgramaPublico::where('sistema', $v['sistema'])->max('orden') + 1;
@@ -76,6 +83,10 @@ class ContenidoSitioController extends Controller
 
     public function eliminarPrograma(ProgramaPublico $programa)
     {
+        // E54: un programa con convocatorias no se borra (perderían su programa); se oculta.
+        if ($programa->convocatorias()->exists()) {
+            throw ValidationException::withMessages(['programa' => 'Este programa tiene convocatorias asociadas: ocúltalo en lugar de eliminarlo.']);
+        }
         Audit::log('sitio.programa_eliminado', $programa, ['nombre' => $programa->nombre, 'sistema' => $programa->sistema]);
         $programa->delete();
 

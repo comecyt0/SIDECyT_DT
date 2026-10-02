@@ -59,6 +59,53 @@ recorrido, los roles, los pasos para obtener acceso y los textos de presentació
   `sigae.documentos_notas`), `valor` (JSON), `actualizado_por`.
 - No confundir con `tipo_programas`: esa es la configuración técnica 1:1 de cada convocatoria (campos, documentos,
   rubros, criterios del asistente).
+- **E54 (02/10/2026): `convocatorias.programa_publico_id`** (FK nullable a `programas_publicos`, `nullOnDelete`). Un
+  programa del catálogo agrupa sus convocatorias: «Programa LEGO» → «Convocatoria 2026», «Convocatoria 2027». Ver §4.1.
+
+### 4.1 Programa ↔ convocatorias (E54, 02/10/2026)
+
+**Reporte del usuario:** en el paso 2 de «Nueva convocatoria» no aparecían los programas ya creados; cada convocatoria
+creaba un programa nuevo (había duplicados: STEAM y Jóvenes Emprendedores dos veces).
+
+**Decisiones del usuario (cuestionario del 02/10/2026):**
+
+| Tema | Decisión |
+|---|---|
+| ¿De qué lista se elige? | Del **catálogo de Contenido público** (`programas_publicos`, el de `/admin/sitio`): un solo catálogo |
+| Configuración al elegir un programa que ya tiene convocatorias | **Empieza vacía**: cada convocatoria captura sus preguntas, documentos, rubros y criterios (cambiar 2027 no altera 2026) |
+| ¿Crear programa desde el paso 2? | **Sí**, opción «Programa nuevo»: se agrega al catálogo |
+| Publicación del programa nuevo | **Oculto** hasta que el admin complete su descripción y lo active en `/admin/sitio` |
+| Landing | La **tarjeta de cada programa muestra sus convocatorias** abiertas, con prórroga o próximas, y lleva a ellas |
+| STEAM EDOMEX (robótica, clubes) | En el catálogo de **SIGAE** |
+| Datos existentes | **Asociar y limpiar** (sin borrar nada) |
+
+**Cómo funciona**
+- Asistente (`/admin/convocatorias/nueva`, paso 2, `components/admin/SelectorPrograma.tsx`): «Programa existente» (lista
+  del catálogo por sistema, con buscador que ignora acentos, marca «Oculto» y número de convocatorias) o «Programa
+  nuevo» (sistema + nombre). Si el nombre ya existe en ese sistema, avisa y ofrece **«Usar el existente»**. La clave corta
+  (de la convocatoria, única) se propone como `NOMBRE/AÑO`.
+- `POST /admin/asistente-convocatoria` acepta `programa.programa_publico_id` **o** `programa.programa_nuevo` +
+  `programa.sistema` (nunca ambos). El programa nuevo se crea oculto en la misma transacción (todo o nada) y queda en la
+  bitácora (`sitio.programa_creado_asistente`). La configuración técnica toma el nombre del catálogo.
+- **Sin duplicados:** `ProgramaPublico::nombreOcupado()` compara en PHP ignorando mayúsculas, acentos y espacios — el
+  `LOWER()` de PostgreSQL con la intercalación de esta base **no convierte letras acentuadas** (`'ROBÓTICA'` →
+  `'robÓtica'`), así que una comparación en SQL dejaba pasar duplicados. Se aplica en el asistente y en `/admin/sitio`.
+- Ficha de la convocatoria: tarjeta «Programa» (`ProgramaConvocatoria.tsx`); el admin la cambia con
+  `PUT /admin/convocatorias/{id}/programa` (bitácora `convocatoria.programa_cambiado` con el anterior). El campo está en
+  `$guarded`: el PUT genérico no lo escribe. La lista de convocatorias dice el programa de cada una.
+- Un programa con convocatorias **no se borra** (422): se oculta.
+- Público: `GET /api/sitio/{sistema}` agrega a cada programa activo `convocatorias` (máx. 3; solo `nombre`, `estado`,
+  `fecha_apertura`, `fecha_limite`); la caché se invalida al guardar una convocatoria. `GET /api/convocatorias/publicas`
+  da como `programa` el nombre del catálogo.
+
+**Datos (script auditado, idempotente):** se creó «STEAM EDOMEX PROGRAMA ESTATAL DE ROBÓTICA» en SIGAE (**oculto**:
+falta su descripción), se le asoció la convocatoria viva 85, y se **ocultaron** (no borraron) las configuraciones técnicas
+huérfanas 13 (`EMPRENDEDORES/2026`) y 14 (`STEAM-EDOMEX`). Las 1–5 pertenecen a las convocatorias archivadas de carga
+inicial y no se tocaron.
+
+**Verificado:** backend 34/34 (`e2e_programas.php`: existente/nuevo, duplicados con y sin acentos, otro sistema,
+validaciones e inyección, PUT genérico protegido, permisos, bitácora, borrar con convocatorias, landing con lista blanca),
+navegador 27/27 (1440 y 390 px), vitest 178/178.
 
 ## 5. Endpoints
 
@@ -67,7 +114,8 @@ GET  /api/sitio/{sigae|sicei}                 público · throttle 30/min · cac
 GET  /api/admin/programas-publicos?sistema=   admin
 POST /api/admin/programas-publicos            admin · crear
 PUT  /api/admin/programas-publicos/{id}       admin · editar / ocultar
-DELETE /api/admin/programas-publicos/{id}     admin
+DELETE /api/admin/programas-publicos/{id}     admin · 422 si tiene convocatorias (E54)
+PUT  /api/admin/convocatorias/{id}/programa   admin · { programa_publico_id } (E54)
 POST /api/admin/programas-publicos/orden      admin · { sistema, ids[] }
 GET|PUT /api/admin/contenido-sitio/{clave}    admin · listas
 ```

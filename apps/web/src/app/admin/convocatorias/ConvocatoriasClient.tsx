@@ -19,6 +19,12 @@ interface Props {
   convocatorias: Convocatoria[];
 }
 
+/** E54: nombre del programa (catálogo público) de la convocatoria, validado como texto. */
+const programaDe = (c: Convocatoria): string | null => {
+  const p = (c as Convocatoria & { programa_publico?: { nombre?: unknown } | null }).programa_publico;
+  return p && typeof p.nombre === 'string' ? p.nombre.slice(0, 255) : null;
+};
+
 export default function ConvocatoriasClient({ convocatorias }: Props) {
   // E45: acciones visibles según el rol (el backend las permite o rechaza de todos modos).
   const { esAdmin } = useRol();
@@ -88,6 +94,10 @@ export default function ConvocatoriasClient({ convocatorias }: Props) {
                         {conv.banner_url && (
                           <ImageIcon className="ml-1.5 inline h-3.5 w-3.5 align-[-2px] text-[var(--app-ink-2)]" aria-label="Tiene banner" />
                         )}
+                        {/* E54: programa al que pertenece */}
+                        <span className="block text-xs text-[var(--app-ink-2)]">
+                          {programaDe(conv) ? `Programa: ${programaDe(conv)}` : 'Sin programa asignado'}
+                        </span>
                       </TableCell>
                       <TableCell>{conv.ejercicio_fiscal}</TableCell>
                       <TableCell>{formatDate(conv.fecha_apertura)}</TableCell>

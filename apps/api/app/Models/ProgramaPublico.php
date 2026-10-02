@@ -29,4 +29,28 @@ class ProgramaPublico extends Model
         static::saved($olvidar);
         static::deleted($olvidar);
     }
+
+    /**
+     * E54: forma comparable de un nombre (sin mayúsculas, acentos ni espacios de más). Se compara en PHP: el LOWER() de
+     * PostgreSQL con la intercalación de esta base no convierte letras acentuadas ('ROBÓTICA' → 'robÓtica').
+     */
+    public static function normalizar(string $nombre): string
+    {
+        return preg_replace('/\s+/', ' ', trim(mb_strtolower(\Illuminate\Support\Str::ascii(strip_tags($nombre)))));
+    }
+
+    /** E54: ¿ya hay un programa con ese nombre en el sistema? (para no crear duplicados). */
+    public static function nombreOcupado(string $sistema, string $nombre, ?int $exceptoId = null): ?self
+    {
+        $buscado = self::normalizar($nombre);
+
+        return self::where('sistema', $sistema)->when($exceptoId, fn ($q) => $q->where('id', '!=', $exceptoId))->get(['id', 'nombre', 'sistema', 'activo'])
+            ->first(fn (self $p) => self::normalizar($p->nombre) === $buscado);
+    }
+
+    /** E54: convocatorias asociadas a este programa (2026, 2027…). */
+    public function convocatorias()
+    {
+        return $this->hasMany(Convocatoria::class)->whereNull('deleted_at');
+    }
 }

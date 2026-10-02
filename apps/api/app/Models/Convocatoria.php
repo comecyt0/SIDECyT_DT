@@ -19,6 +19,8 @@ class Convocatoria extends Model
     protected $guarded = [
         'id', 'created_at', 'updated_at',
         'fecha_prorroga', 'motivo_prorroga', 'prorroga_at', 'prorroga_por', 'banner_url',
+        // E54: el programa se fija solo desde el asistente o el cambio de programa (validado, admin), nunca por PUT genérico.
+        'programa_publico_id',
     ];
 
     protected $table = 'convocatorias';
@@ -38,7 +40,11 @@ class Convocatoria extends Model
      */
     protected static function booted(): void
     {
-        $forget = fn () => \App\Http\Controllers\Convocatorias\ConvocatoriaPublicaController::forgetCache();
+        // E54: las tarjetas de programa de las landings muestran sus convocatorias → también se olvida esa caché.
+        $forget = function () {
+            \App\Http\Controllers\Convocatorias\ConvocatoriaPublicaController::forgetCache();
+            foreach (ProgramaPublico::SISTEMAS as $s) \Illuminate\Support\Facades\Cache::forget('public:sitio:'.$s);
+        };
         static::saved($forget);
         static::deleted($forget);
     }
@@ -46,6 +52,12 @@ class Convocatoria extends Model
     public function tipoPrograma(): BelongsTo
     {
         return $this->belongsTo(TipoPrograma::class);
+    }
+
+    /** E54: programa del catálogo público al que pertenece (p. ej. «Programa LEGO» → esta convocatoria 2026). */
+    public function programaPublico(): BelongsTo
+    {
+        return $this->belongsTo(ProgramaPublico::class);
     }
 
     public function solicitudes(): HasMany

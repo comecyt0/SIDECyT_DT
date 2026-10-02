@@ -14,11 +14,16 @@ import ProrrogaDialog from '@/components/admin/ProrrogaDialog';
 import BannerManager from '@/components/admin/BannerManager';
 import { useRol } from '@/hooks/useRol';
 import EspecieConvocatoriaPanel from '@/components/admin/especie/EspecieConvocatoriaPanel';
+import ProgramaConvocatoria, { leerProgramaConvocatoria } from '@/components/admin/ProgramaConvocatoria';
 
 const sectionTitleCls = 'text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)] flex items-center gap-2 border-b border-[var(--app-rule)] pb-2';
 const fechaLarga = (v?: string | null) => (v ? parseDate(v).toLocaleDateString('es-MX', { dateStyle: 'long' }) : '—');
 
-type ConvocatoriaConPrograma = Convocatoria & { tipo_programa?: { id: number; nombre: string; banner_url?: string | null; tipo_apoyo?: string } };
+type ConvocatoriaConPrograma = Convocatoria & {
+  tipo_programa?: { id: number; nombre: string; banner_url?: string | null; tipo_apoyo?: string };
+  // E54: programa del catálogo público al que pertenece.
+  programa_publico?: unknown;
+};
 
 export default function VerConvocatoriaPage() {
   // E45: acciones visibles según el rol (el backend las permite o rechaza de todos modos).
@@ -91,6 +96,13 @@ export default function VerConvocatoriaPage() {
             )}
           </>
         }
+      />
+
+      <ProgramaConvocatoria
+        convocatoriaId={convocatoria.id}
+        programa={leerProgramaConvocatoria(convocatoria.programa_publico)}
+        puedeCambiar={esAdmin}
+        onCambio={(p) => setConvocatoria({ ...convocatoria, programa_publico: p })}
       />
 
       <Card>

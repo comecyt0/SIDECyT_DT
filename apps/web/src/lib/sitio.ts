@@ -22,7 +22,11 @@ export interface ProgramaPublico {
   url_info: string | null;
   icono: Icono;
   tono: Tono;
+  /** E54: convocatorias vigentes del programa (abierta, prórroga o próxima), máx. 3. */
+  convocatorias: ConvocatoriaDePrograma[];
 }
+export type EstadoConvocatoriaPrograma = 'abierta' | 'prorroga' | 'proxima';
+export interface ConvocatoriaDePrograma { nombre: string; estado: EstadoConvocatoriaPrograma; fecha_apertura: string | null; fecha_limite: string | null }
 export interface DocumentoSitio { titulo: string; detalle: string }
 export interface ContenidoSitio {
   programas: ProgramaPublico[];
@@ -68,6 +72,14 @@ export function parseSitio(raw: unknown): ContenidoSitio {
       url_info: enlaceSeguro(p.url_info),
       icono: (ICONOS as readonly string[]).includes(p.icono as string) ? (p.icono as Icono) : 'lightbulb',
       tono: TONOS.includes(p.tono as Tono) ? (p.tono as Tono) : 'sky',
+      convocatorias: Array.isArray(p.convocatorias) ? p.convocatorias.slice(0, 3).flatMap((c) => {
+        const x = c as Record<string, unknown>;
+        const nombreC = x && typeof x === 'object' ? txt(x.nombre, 200) : null;
+        const estado = x?.estado;
+        if (!nombreC || (estado !== 'abierta' && estado !== 'prorroga' && estado !== 'proxima')) return [];
+        const fecha = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+        return [{ nombre: nombreC, estado: estado as EstadoConvocatoriaPrograma, fecha_apertura: fecha(x.fecha_apertura), fecha_limite: fecha(x.fecha_limite) }];
+      }) : [],
     }];
   }) : [];
   const lista = (v: unknown, max: number, largo: number) =>

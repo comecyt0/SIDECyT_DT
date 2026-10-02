@@ -8,6 +8,7 @@ use App\Models\ConvocatoriaBorrador;
 use App\Models\ProgramaCampo;
 use App\Models\ProgramaCriterioEvaluacion;
 use App\Models\ProgramaDocumento;
+use App\Models\ProgramaPublico;
 use App\Models\ProgramaRubro;
 use App\Models\TipoPrograma;
 use App\Support\Audit;
@@ -114,11 +115,28 @@ class AsistenteConvocatoriaController extends Controller
         });
         $v = $validator->validate();
 
-        $resultado = DB::transaction(function () use ($v, $esEspecie) {
+        $usuario = $request->user();
+        $resultado = DB::transaction(function () use ($v, $esEspecie, $usuario) {
             $p = $v['programa'];
+            // E54: programa del catálogo público. Uno nuevo se crea OCULTO (decisión del usuario): aparece en la landing
+            // cuando el admin completa su descripción y lo activa en /admin/sitio.
+            if (! empty($p['programa_nuevo'])) {
+                $publico = new ProgramaPublico([
+                    'sistema' => $p['sistema'],
+                    'nombre' => trim(strip_tags($p['nombre'])),
+                    'activo' => false,
+                    'orden' => (int) ProgramaPublico::where('sistema', $p['sistema'])->max('orden') + 1,
+                ]);
+                $publico->forceFill(['actualizado_por' => $usuario->id])->save();
+                Audit::log('sitio.programa_creado_asistente', $publico, ['sistema' => $publico->sistema]);
+            } else {
+                $publico = ProgramaPublico::findOrFail($p['programa_publico_id']);
+            }
+            // La configuración técnica sigue siendo una por convocatoria y empieza vacía (decisión del usuario); toma el
+            // nombre del programa para que reportes y folios digan lo mismo que el catálogo.
             $programa = TipoPrograma::create([
                 'clave' => $p['clave'],
-                'nombre' => $p['nombre'],
+                'nombre' => $publico->nombre,
                 'tipo_apoyo' => $p['tipo_apoyo'],
                 'monto_maximo' => $esEspecie ? null : $p['monto_maximo'],
                 'tiene_etapas' => (bool) ($p['tiene_etapas'] ?? false),
@@ -196,6 +214,7 @@ class AsistenteConvocatoriaController extends Controller
                 'estado' => 'activa',
                 'tipo_programa_id' => $programa->id,
             ]);
+            $convocatoria->forceFill(['programa_publico_id' => $publico->id])->save();
 
             if ($esEspecie) {
                 $e = $v['especie'];
@@ -238,11 +257,14 @@ class AsistenteConvocatoriaController extends Controller
             ConvocatoriaBorrador::where('id', $v['borrador_id'])->where('user_id', $request->user()->id)->delete();
         }
 
-        Audit::log('convocatoria.creada_asistente', $convocatoria, ['tipo_programa_id' => $programa->id]);
+        Audit::log('convocatoria.creada_asistente', $convocatoria, ['tipo_programa_id' => $programa->id, 'programa_publico_id' => $convocatoria->programa_publico_id]);
+        $publico = $convocatoria->programaPublico;
 
         return response()->json([
             'message' => 'Convocatoria creada con éxito',
             'convocatoria' => ['id' => $convocatoria->id, 'nombre' => $convocatoria->nombre],
+            // El front avisa si el programa quedó oculto (recién creado) para que el admin lo complete en Contenido público.
+            'programa' => $publico ? ['id' => $publico->id, 'nombre' => $publico->nombre, 'sistema' => $publico->sistema, 'activo' => (bool) $publico->activo] : null,
         ], 201);
     }
 
@@ -315,6 +337,10 @@ class AsistenteConvocatoriaController extends Controller
             'convocatoria.porcentaje_aportacion_minima' => 'required|numeric|min:0|max:100',
 
             'programa' => 'required|array',
+            // E54: un programa del catálogo público (existente) o uno nuevo que se crea oculto en ese catálogo.
+            'programa.programa_publico_id' => 'nullable|integer|exists:programas_publicos,id|required_unless:programa.programa_nuevo,true',
+            'programa.programa_nuevo' => 'boolean',
+            'programa.sistema' => 'required_if:programa.programa_nuevo,true|nullable|in:'.implode(',', ProgramaPublico::SISTEMAS),
             'programa.clave' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9_\-\/.]+$/', Rule::unique('tipo_programas', 'clave')],
             'programa.nombre' => 'required|string|max:255',
             'programa.tipo_apoyo' => 'required|in:reembolso,concurrente,honorarios,especie',
@@ -366,7 +392,7 @@ class AsistenteConvocatoriaController extends Controller
      */
     private function erroresDeCoherencia(array $in, bool $esEspecie = false): array
     {
-        $errores = [];
+        $errores = self::erroresPrograma(is_array($in['programa'] ?? null) ? $in['programa'] : []);
         if ($esEspecie) {
             $e = is_array($in['especie'] ?? null) ? $in['especie'] : [];
             if (is_numeric($e['min_integrantes'] ?? null) && is_numeric($e['max_integrantes'] ?? null) && (int) $e['min_integrantes'] > (int) $e['max_integrantes']) {
@@ -417,9 +443,31 @@ class AsistenteConvocatoriaController extends Controller
         return $errores;
     }
 
+    /**
+     * E54: o se elige un programa existente o se crea uno nuevo (no ambos), y uno nuevo no puede repetir el nombre de
+     * otro del mismo sistema (así se evitan los duplicados que antes creaba cada convocatoria).
+     */
+    private static function erroresPrograma(array $p): array
+    {
+        $nuevo = filter_var($p['programa_nuevo'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        if ($nuevo && ! empty($p['programa_publico_id'])) {
+            return ['programa.programa_publico_id' => 'Elige un programa de la lista o crea uno nuevo, no ambos.'];
+        }
+        $nombre = is_string($p['nombre'] ?? null) ? trim(strip_tags($p['nombre'])) : '';
+        $sistema = is_string($p['sistema'] ?? null) ? $p['sistema'] : '';
+        if ($nuevo && $nombre !== '' && in_array($sistema, ProgramaPublico::SISTEMAS, true)
+            && ProgramaPublico::nombreOcupado($sistema, $nombre)) {
+            return ['programa.nombre' => 'Ya existe un programa con ese nombre: elígelo de la lista para asociarle esta convocatoria.'];
+        }
+
+        return [];
+    }
+
     private function atributos(): array
     {
         return [
+            'programa.programa_publico_id' => 'programa',
+            'programa.sistema' => 'sistema del programa',
             'convocatoria.nombre' => 'nombre de la convocatoria',
             'convocatoria.ejercicio_fiscal' => 'ejercicio fiscal',
             'convocatoria.periodo_id' => 'periodo',

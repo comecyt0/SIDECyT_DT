@@ -38,7 +38,7 @@ class ConvocatoriaPublicaController extends Controller
             $desdeCerradas = Carbon::parse($hoy)->subDays(180)->toDateString();
 
             $items = Convocatoria::query()
-                ->with(['tipoPrograma:id,nombre,activo,banner_url'])
+                ->with(['tipoPrograma:id,nombre,activo,banner_url', 'programaPublico:id,nombre'])
                 ->whereIn('estado', ['activa', 'cerrada'])
                 ->whereNull('deleted_at')
                 ->whereNotNull('tipo_programa_id')
@@ -86,7 +86,8 @@ class ConvocatoriaPublicaController extends Controller
 
         return [
             'nombre' => $limpia($c->nombre, 200),
-            'programa' => $c->tipoPrograma ? $limpia($c->tipoPrograma->nombre, 150) : null,
+            // E54: el programa del catálogo público (el mismo nombre que su tarjeta); si no tiene, el de la configuración.
+            'programa' => $limpia($c->programaPublico?->nombre ?? $c->tipoPrograma?->nombre, 150),
             'descripcion' => $c->descripcion ? $limpia($c->descripcion, self::MAX_DESC) : null,
             'ejercicio_fiscal' => (string) $c->ejercicio_fiscal,
             'estado' => $estado,

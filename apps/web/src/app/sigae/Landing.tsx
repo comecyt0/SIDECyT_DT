@@ -729,6 +729,26 @@ export default function Landing() {
                       </div>
                       {p.dirigido_a && <p className="lp-program-audience"><strong>Para:</strong> {p.dirigido_a}</p>}
                       {p.resumen && <p className="lp-program-body">{p.resumen}</p>}
+                      {/* E54: convocatorias del programa (abierta, con prórroga o próxima) → llevan a la sección de convocatorias. */}
+                      {p.convocatorias.length > 0 && (
+                        <ul className="lp-program-calls" aria-label={`Convocatorias de ${p.nombre}`}>
+                          {p.convocatorias.map((c, k) => (
+                            <li key={`${c.nombre}-${k}`}>
+                              <a href="#convocatorias" className="lp-program-call">
+                                <span className="lp-call-status" data-tone={c.estado}><span aria-hidden="true" />
+                                  {c.estado === 'proxima' ? 'Próxima a abrir' : c.estado === 'prorroga' ? 'Con prórroga' : 'Abierta'}
+                                </span>
+                                <span className="lp-program-call-name">{c.nombre}</span>
+                                <span className="lp-program-call-date">
+                                  {c.estado === 'proxima'
+                                    ? (c.fecha_apertura ? `Abre el ${fmtDate(c.fecha_apertura)}` : '')
+                                    : (c.fecha_limite ? `Hasta el ${fmtDate(c.fecha_limite)}` : '')}
+                                </span>
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       <div className="lp-program-foot">
                         {p.correo && (
                           <a href={`mailto:${p.correo}`} className="lp-program-mail">

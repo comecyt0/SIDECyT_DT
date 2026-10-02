@@ -1071,6 +1071,27 @@
 }
 .lp-program-audience strong { font-weight: 600; color: var(--color-vino); }
 .lp-program-body { color: var(--color-graphite-body); font-size: 15px; line-height: 1.55; }
+/* E54: convocatorias del programa dentro de su tarjeta (mismas píldoras de estado que las tarjetas de convocatoria). */
+.lp-program-calls { display: grid; gap: var(--spacing-8); margin: 0; padding: 0; list-style: none; }
+.lp-program-call {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px var(--spacing-8);
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--color-white-canvas);
+  border: 1px solid var(--color-mist-hairline);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 160ms ease, transform 160ms ease-out;
+}
+.lp-program-call:hover { border-color: var(--color-vino-border); }
+.lp-program-call:active { transform: scale(0.98); }
+.lp-program-call:focus-visible { outline: 2px solid var(--color-vino); outline-offset: 2px; }
+.lp-program-call-name { font-weight: 600; font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; min-width: 0; }
+.lp-program-call-date { grid-column: 2; font-size: 13px; color: var(--color-graphite-body); }
+@media (prefers-reduced-motion: reduce) { .lp-program-call { transition: none; } .lp-program-call:active { transform: none; } }
 .lp-program-foot {
   display: flex;
   flex-wrap: wrap;
