@@ -291,7 +291,8 @@ class ClubController extends Controller
     private function limitesDocumento(Club $club, string $clave): array
     {
         if ($clave === Especie::CARTA_ESCUELA) {
-            return [['pdf', 'imagen'], 10, 'Carta de consentimiento de la escuela'];
+            // Pedido del usuario (02/10/2026): carta firmada y sellada, escaneada, solo en PDF.
+            return [['pdf'], 10, 'Carta de consentimiento de la escuela'];
         }
         $d = ProgramaDocumento::where('tipo_programa_id', $club->convocatoria->tipo_programa_id)->where('activo', true)->where('clave', $clave)->first();
         if (! $d) {
@@ -458,7 +459,7 @@ class ClubController extends Controller
         $club->loadMissing(['escuela:id,cct,nombre,municipio,nivel,sistema', 'integrantes', 'documentos', 'convocatoria.tipoPrograma']);
         $cfg = $this->config($club);
         $docs = $club->documentos->keyBy('clave');
-        $requeridos = collect([['clave' => Especie::CARTA_ESCUELA, 'nombre' => 'Carta de consentimiento de la escuela', 'descripcion' => 'Descárgala, que la firme y selle la escuela, y súbela en PDF o imagen.', 'obligatorio' => true, 'formatos' => ['pdf', 'imagen'], 'max_mb' => 10]])
+        $requeridos = collect([['clave' => Especie::CARTA_ESCUELA, 'nombre' => 'Carta de consentimiento de la escuela', 'descripcion' => 'Descárgala, que la firme y selle la escuela, y súbela escaneada en PDF.', 'obligatorio' => true, 'formatos' => ['pdf'], 'max_mb' => 10]])
             ->merge(ProgramaDocumento::where('tipo_programa_id', $club->convocatoria->tipo_programa_id)->where('activo', true)->orderBy('orden')->get()
                 ->map(fn ($d) => ['clave' => $d->clave, 'nombre' => $d->nombre, 'descripcion' => $d->descripcion, 'obligatorio' => (bool) $d->obligatorio,
                     'formatos' => TiposArchivo::normalizar($d->formato_permitido), 'max_mb' => TiposArchivo::limiteMb((int) $d->{'tamaño_maximo_mb'})]))

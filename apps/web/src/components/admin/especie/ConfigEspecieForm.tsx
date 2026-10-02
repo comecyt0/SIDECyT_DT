@@ -8,15 +8,15 @@
  */
 
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Lock, Users, Package, ListChecks, MessageSquarePlus, ClipboardCheck, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, Lock, Users, Package, ListChecks, MessageSquarePlus, ClipboardCheck, ArrowUp, ArrowDown, Globe2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertBox } from '@/components/ui/alert-box';
 import StepFrame from '@/components/ui/step-frame';
 import {
-  CAMPOS_CLUB, CAMPOS_INTEGRANTE, LIMITES_ESPECIE, MAX_ETAPAS, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, slugCampo,
-  type Ambito, type CampoEspecie, type ConfigEspecie, type EtapaEspecie, type Predef, type Revisa, type TipoCampoEspecie,
+  CAMPOS_CLUB, CAMPOS_INTEGRANTE, LIMITES_ESPECIE, MAX_ETAPAS, MODALIDADES, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, slugCampo,
+  type Ambito, type Modalidad, type CampoEspecie, type ConfigEspecie, type EtapaEspecie, type Predef, type Revisa, type TipoCampoEspecie,
 } from '@/lib/especie';
 
 const labelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
@@ -111,6 +111,20 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
 
   return (
     <div className="space-y-8">
+      <Seccion icon={<Globe2 />} titulo="Modalidad" ayuda="Para qué etapa registran sus datos los clubes. Los líderes la ven en cada apartado de su club.">
+        <div role="radiogroup" aria-label="Modalidad de la convocatoria" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {(Object.keys(MODALIDADES) as Modalidad[]).map((m) => (
+            <label key={m} className="cursor-pointer">
+              <input type="radio" name={`${idBase}-modalidad`} value={m} checked={c.modalidad === m} onChange={() => set({ modalidad: m })} className="peer sr-only" />
+              <span className="flex items-center justify-center rounded-[14px] border px-4 py-3 text-sm font-semibold text-[var(--app-ink-2)] transition-colors peer-checked:border-[var(--auth-vino)] peer-checked:bg-[var(--auth-vino)] peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--auth-vino)]"
+                style={{ borderColor: 'var(--app-rule)' }}>
+                {MODALIDADES[m]}
+              </span>
+            </label>
+          ))}
+        </div>
+      </Seccion>
+
       <Seccion icon={<Users />} titulo="Integrantes de cada club" ayuda="El líder del club cuenta como integrante: entra en el mínimo y en el máximo.">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="space-y-1.5">

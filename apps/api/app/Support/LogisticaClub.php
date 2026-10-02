@@ -60,13 +60,17 @@ class LogisticaClub
         return $f === null || Convocatoria::hoy() <= $f->format('Y-m-d');
     }
 
-    /** Máximos que aplican a este club (null = sin tope). */
+    /**
+     * Máximos que aplican a este club (null = sin tope).
+     * Transporte: lo define el personal por club (max_transporte_club).
+     * Box lunch: nunca más que el máximo de integrantes de la convocatoria (o menos, si el personal lo baja).
+     */
     public static function limitesClub(Club $club, EspecieConfig $cfg): array
     {
-        $porIntegrantes = $cfg->tope_integrantes ? $club->integrantes()->count() + (int) $cfg->acompanantes : null;
-        $min = fn (?int $a, ?int $b) => $a === null ? $b : ($b === null ? $a : min($a, $b));
+        $maxIntegrantes = (int) ($cfg->max_integrantes ?: 10);
+        $lunch = $cfg->max_lunch_club === null ? $maxIntegrantes : min((int) $cfg->max_lunch_club, $maxIntegrantes);
 
-        return ['transporte' => $min($cfg->max_transporte_club, $porIntegrantes), 'lunch' => $min($cfg->max_lunch_club, $porIntegrantes)];
+        return ['transporte' => $cfg->max_transporte_club, 'lunch' => $lunch];
     }
 
     /** Cupo total (convocatoria o evento) y lo ya apartado, excluyendo una solicitud. */
@@ -149,7 +153,8 @@ class LogisticaClub
                 self::falla($log->estado === 'aprobada' ? 'Este formato ya fue aprobado.' : 'Primero envía tu solicitud (o vuelve a enviarla si fue rechazada).');
             }
         }
-        $ext = TiposArchivo::validar($archivo, ['pdf', 'imagen'], self::MAX_MB, 'archivo');
+        // Pedido del usuario (02/10/2026): los formatos firmados y escaneados van solo en PDF (antes PDF o imagen).
+        $ext = TiposArchivo::validar($archivo, ['pdf'], self::MAX_MB, 'archivo');
         $interno = Str::random(40).'.'.$ext;
         Storage::disk('local')->put(self::DIR.'/'.$club->id.'/'.$interno, file_get_contents($archivo->getPathname()));
         $f = DB::transaction(function () use ($club, $u, $tipo, $log, $interno, $archivo) {
@@ -259,6 +264,8 @@ class LogisticaClub
             'abierta' => self::abierta($cfg),
             'fecha_limite' => $cfg->fecha_limite_logistica?->format('Y-m-d'),
             'limites' => self::limitesClub($club, $cfg),
+            'max_integrantes' => (int) ($cfg->max_integrantes ?: 10),
+            'modalidad' => $cfg->modalidad ?? 'estatal',
             'tope_integrantes' => (bool) $cfg->tope_integrantes,
             'acompanantes' => (int) $cfg->acompanantes,
             'solicitudes' => $modo === 'evento' ? $eventos->map(fn ($e) => $solicitud($e))->values() : [$solicitud(null)],

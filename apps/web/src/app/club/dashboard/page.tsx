@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import CuentaRegresiva from '@/components/especie/CuentaRegresiva';
 import { useConfetiAlVer } from '@/lib/confeti';
 import { useRouter } from 'next/navigation';
-import { School, Loader2, Package, CalendarClock, Plus, ArrowRight, Shapes } from 'lucide-react';
+import { School, Loader2, Package, CalendarClock, Plus, ArrowRight, Shapes, PartyPopper } from 'lucide-react';
 import api from '@/lib/api';
 import PageHeader from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,18 @@ import { formatDate } from '@/lib/format';
 interface ConvClub {
   id: number; nombre: string; descripcion: string | null; estado_publico: string; acepta: boolean; fecha_limite: string | null; kit: string | null;
   club: { id: number; folio: string; nombre: string; estado: string; vence_at?: string | null } | null;
+}
+
+/** Aviso de club aceptado en su tarjeta: confeti cada vez que entra en pantalla (hasta que se entregue el kit, F3). */
+function AceptadoMini() {
+  const ref = useRef<HTMLParagraphElement>(null);
+  useConfetiAlVer(ref, true, { fiesta: true });
+  return (
+    <p ref={ref} role="status" className="celebra-club-mini">
+      <PartyPopper aria-hidden="true" />
+      <span>¡Tu club fue aceptado! Entra para ver lo que sigue: kit, carta de resguardo y QR.</span>
+    </p>
+  );
 }
 
 function err(e: unknown, def: string) {
@@ -39,7 +51,6 @@ export default function ClubDashboardPage() {
   const [escuela, setEscuela] = useState<EscuelaElegida | null>(null);
   const [creando, setCreando] = useState(false);
   const [errorRegistro, setErrorRegistro] = useState<string | null>(null);
-  const misClubesRef = useRef<HTMLElement>(null);
 
   const cargar = useCallback(async () => {
     try {
@@ -75,8 +86,6 @@ export default function ClubDashboardPage() {
 
   const conClub = convs.filter((c) => c.club);
   const disponibles = convs.filter((c) => !c.club && c.acepta);
-  // Confeti mientras haya un club aceptado (decisión del usuario: hasta que se entregue el kit, F3).
-  useConfetiAlVer(misClubesRef, conClub.some((c) => c.club?.estado === 'aceptado'));
 
   return (
     <div className="space-y-8">
@@ -89,7 +98,7 @@ export default function ClubDashboardPage() {
       ) : (
         <>
           {conClub.length > 0 && (
-            <section ref={misClubesRef} className="space-y-4" aria-labelledby="mis-clubes">
+            <section className="space-y-4" aria-labelledby="mis-clubes">
               <h2 id="mis-clubes" className="text-base font-bold text-[var(--app-ink)]">Mis clubes</h2>
               <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {conClub.map((c) => {
@@ -113,7 +122,7 @@ export default function ClubDashboardPage() {
                         </div>
                       )}
                       {club.estado === 'vencido' && <p className="text-sm font-semibold" style={{ color: 'var(--auth-danger)' }}>El plazo para corregir venció; el COMECYT decidirá.</p>}
-                      {club.estado === 'aceptado' && <p className="text-sm font-semibold" style={{ color: 'var(--tile-emerald-fg)' }}>¡Tu club fue aceptado! Pronto recibirás la fecha y el lugar de entrega de tu kit.</p>}
+                      {club.estado === 'aceptado' && <AceptadoMini />}
                       {club.estado === 'borrador' && c.fecha_limite && (
                         <p className="flex items-center gap-1.5 text-sm text-[var(--app-ink-2)]">
                           <CalendarClock className="h-4 w-4" aria-hidden="true" />

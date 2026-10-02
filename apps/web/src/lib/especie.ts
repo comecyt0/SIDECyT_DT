@@ -40,6 +40,13 @@ export const ETAPAS_DEFECTO: EtapaEspecie[] = [
 ];
 export const MAX_ETAPAS = 6;
 
+export type Modalidad = 'estatal' | 'nacional' | 'internacional';
+export const MODALIDADES: Record<Modalidad, string> = { estatal: 'Estatal', nacional: 'Nacional', internacional: 'Internacional' };
+/** Valor desconocido → 'estatal' (el flujo de siempre). */
+export function leerModalidad(v: unknown): Modalidad {
+  return v === 'nacional' || v === 'internacional' ? v : 'estatal';
+}
+
 export interface ConfigEspecie {
   /** E52 · F2: etapas de revisión en orden. */
   etapas: EtapaEspecie[];
@@ -48,6 +55,8 @@ export interface ConfigEspecie {
   /** '' = sin límite por escuela. */
   clubes_por_escuela: number | '';
   participan_menores: boolean;
+  /** Modalidad de la convocatoria: estatal (flujo actual), nacional o internacional. */
+  modalidad: Modalidad;
   kit_nombre: string;
   kit_descripcion: string;
   campos_club: Record<string, Predef>;
@@ -97,6 +106,7 @@ export function configVacia(): ConfigEspecie {
     max_integrantes: 10,
     clubes_por_escuela: '',
     participan_menores: true,
+    modalidad: 'estatal',
     kit_nombre: '',
     kit_descripcion: '',
     campos_club: structuredClone(DEFAULT_CLUB),
@@ -152,6 +162,7 @@ export function leerConfig(datos: unknown): ConfigEspecie {
     max_integrantes: ent(d.max_integrantes, v.max_integrantes),
     clubes_por_escuela: typeof cpe === 'number' && Number.isInteger(cpe) && cpe > 0 ? cpe : '',
     participan_menores: typeof d.participan_menores === 'boolean' ? d.participan_menores : true,
+    modalidad: leerModalidad(d.modalidad),
     kit_nombre: txt(d.kit_nombre),
     kit_descripcion: txt(d.kit_descripcion),
     campos_club: normalizarPredef(d.campos_club, CAMPOS_CLUB, DEFAULT_CLUB),
@@ -178,6 +189,7 @@ export function payloadConfig(c: ConfigEspecie) {
     max_integrantes: c.max_integrantes,
     clubes_por_escuela: c.clubes_por_escuela === '' ? null : c.clubes_por_escuela,
     participan_menores: c.participan_menores,
+    modalidad: c.modalidad,
     kit_nombre: c.kit_nombre.trim(),
     kit_descripcion: c.kit_descripcion.trim() || null,
     campos_club: c.campos_club,
@@ -277,6 +289,7 @@ export interface SolicitudLogistica {
 export interface LogisticaEstado {
   aplica: boolean; estatal: boolean; modo: 'convocatoria' | 'evento'; abierta: boolean; fecha_limite: string | null;
   limites: { transporte: number | null; lunch: number | null }; tope_integrantes: boolean; acompanantes: number;
+  max_integrantes: number; modalidad: Modalidad;
   solicitudes: SolicitudLogistica[];
   resguardo: VersionFirmada[];
   kit: { nombre: string | null; fecha: string | null; lugar: string | null; asignado_at: string | null; entregado_at: string | null;
@@ -294,6 +307,7 @@ export function leerLogistica(v: unknown): LogisticaEstado | null {
     fecha_limite: typeof d.fecha_limite === 'string' ? d.fecha_limite : null,
     limites: { transporte: typeof d.limites?.transporte === 'number' ? d.limites.transporte : null, lunch: typeof d.limites?.lunch === 'number' ? d.limites.lunch : null },
     tope_integrantes: d.tope_integrantes === true, acompanantes: Number(d.acompanantes) || 0,
+    max_integrantes: Number(d.max_integrantes) || 10, modalidad: leerModalidad(d.modalidad),
     solicitudes: Array.isArray(d.solicitudes) ? d.solicitudes : [],
     resguardo: Array.isArray(d.resguardo) ? d.resguardo : [],
     kit: d.kit ?? { nombre: null, fecha: null, lugar: null, asignado_at: null, entregado_at: null, entregado_lugar: null, entrego: null, recibio: null },

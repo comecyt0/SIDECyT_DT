@@ -1,9 +1,9 @@
 'use client';
 
 import { useRef } from 'react';
-import { AlertTriangle, Clock, PartyPopper, XCircle, Hourglass, Send } from 'lucide-react';
+import { AlertTriangle, Clock, PartyPopper, XCircle, Hourglass, Send, Sparkles, CalendarClock, FileSignature, QrCode } from 'lucide-react';
 import CuentaRegresiva from '@/components/especie/CuentaRegresiva';
-import { useConfetiAlVer } from '@/lib/confeti';
+import { lanzarConfeti, useConfetiAlVer } from '@/lib/confeti';
 import type { AvanceClub } from '@/lib/especie';
 
 /**
@@ -11,9 +11,9 @@ import type { AvanceClub } from '@/lib/especie';
  * vencido, en revisión, esperando comité, aceptado (con confeti cada vez que la tarjeta entra en pantalla, decisión del
  * usuario: hasta que se entregue el kit) o no aceptado con el motivo.
  */
-export default function AvisoEstadoClub({ estado, avance, onVence }: { estado: string; avance: Partial<AvanceClub>; onVence?: () => void }) {
+export default function AvisoEstadoClub({ estado, avance, onVence, nombreClub }: { estado: string; avance: Partial<AvanceClub>; onVence?: () => void; nombreClub?: string }) {
   const ref = useRef<HTMLElement>(null);
-  useConfetiAlVer(ref, estado === 'aceptado');
+  useConfetiAlVer(ref, estado === 'aceptado', { fiesta: true });
 
   const caja = (tono: string, icono: React.ReactNode, titulo: string, cuerpo?: React.ReactNode) => (
     <section ref={ref} role="status" className="rounded-[18px] border-2 px-5 py-4"
@@ -45,8 +45,26 @@ export default function AvisoEstadoClub({ estado, avance, onVence }: { estado: s
       return caja('sky', <Hourglass className="h-5 w-5" aria-hidden="true" />, 'Tu club aprobó todas las revisiones',
         <p>Falta el visto bueno del admin de convocatoria y la decisión del comité. Te avisaremos del resultado.</p>);
     case 'aceptado':
-      return caja('emerald', <PartyPopper className="h-5 w-5" aria-hidden="true" />, '¡Tu club fue aceptado!',
-        <p>Pronto recibirás la fecha y el lugar de entrega de tu kit.</p>);
+      // Celebración (rediseño 02/10/2026): confeti cada vez que la tarjeta entra en pantalla y botón para repetirlo.
+      return (
+        <section ref={ref} role="status" aria-live="polite" className="celebra-club">
+          <div className="flex items-start gap-4">
+            <span className="celebra-club-icono" aria-hidden="true"><PartyPopper /></span>
+            <div className="min-w-0">
+              <p className="celebra-club-titulo">¡Tu club fue aceptado!</p>
+              <p className="celebra-club-sub">{nombreClub ? <>Felicidades, <strong>{nombreClub}</strong> ya forma parte de la convocatoria. </> : 'Felicidades, tu club ya forma parte de la convocatoria. '}Esto es lo que sigue:</p>
+            </div>
+          </div>
+          <ol className="celebra-club-pasos">
+            <li className="celebra-club-paso"><CalendarClock aria-hidden="true" /><span>Te avisaremos la <strong>fecha y el lugar</strong> de entrega de tu kit por aquí y por correo.</span></li>
+            <li className="celebra-club-paso"><FileSignature aria-hidden="true" /><span>Descarga la <strong>carta de resguardo</strong>, fírmala y súbela escaneada en PDF.</span></li>
+            <li className="celebra-club-paso"><QrCode aria-hidden="true" /><span>Cuando el COMECYT lo habilite, aquí tendrás tu <strong>QR y credencial</strong>.</span></li>
+          </ol>
+          <button type="button" className="celebra-club-boton" onClick={() => lanzarConfeti({ fiesta: true })}>
+            <Sparkles className="h-4 w-4" aria-hidden="true" />Celebrar otra vez
+          </button>
+        </section>
+      );
     case 'kit_entregado':
       return caja('emerald', <PartyPopper className="h-5 w-5" aria-hidden="true" />, 'Tu club recibió su kit',
         <p>¡Mucho éxito con el proyecto! Aquí verás los eventos y tu QR cuando estén listos.</p>);

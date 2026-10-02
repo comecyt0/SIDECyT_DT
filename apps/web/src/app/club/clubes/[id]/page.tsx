@@ -29,13 +29,14 @@ import {
 } from '@/lib/especie';
 import { PATRON_CURP, PATRON_TELEFONO, PATRON_CORREO } from '@/lib/registro';
 import { formatDate } from '@/lib/format';
+import ModalidadChip from '@/components/especie/ModalidadChip';
 
 interface Detalle {
   club: ClubApi;
   integrantes: IntegranteApi[];
   documentos: DocumentoClub[];
   config: {
-    min_integrantes: number; max_integrantes: number; participan_menores: boolean; kit_nombre: string | null; kit_descripcion: string | null;
+    min_integrantes: number; max_integrantes: number; participan_menores: boolean; kit_nombre: string | null; kit_descripcion: string | null; modalidad: string;
     campos_club: Record<string, Predef>; campos_integrante: Record<string, Predef>; campos: CampoApi[];
   };
   convocatoria: { id: number; nombre: string; acepta: boolean; fecha_limite: string | null };
@@ -71,6 +72,7 @@ function leerDetalle(data: unknown): Detalle | null {
       min_integrantes: Number(cfg.min_integrantes) || 1,
       max_integrantes: Number(cfg.max_integrantes) || 10,
       participan_menores: cfg.participan_menores !== false,
+      modalidad: typeof cfg.modalidad === 'string' ? cfg.modalidad : 'estatal',
       kit_nombre: typeof cfg.kit_nombre === 'string' ? cfg.kit_nombre : null,
       kit_descripcion: typeof cfg.kit_descripcion === 'string' ? cfg.kit_descripcion : null,
       campos_club: normalizarPredef(cfg.campos_club, CAMPOS_CLUB, {}),
@@ -322,12 +324,12 @@ export default function MiClubPage() {
         {aviso && <AlertBox type={aviso.tipo} message={aviso.texto} onClose={() => setAviso(null)} />}
         <section className="app-card space-y-3 p-5" aria-label="Avance">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-[var(--app-ink-2)]">Folio <span className="font-mono font-semibold text-[var(--app-ink)]">{club.folio}</span></p>
+            <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--app-ink-2)]">Folio <span className="font-mono font-semibold text-[var(--app-ink)]">{club.folio}</span><ModalidadChip modalidad={config.modalidad} /></p>
             <span className="pill" data-tone={est.tono} data-dot="on">{est.etiqueta}</span>
           </div>
           <LineaAvanceClub estado={club.estado} avance={club} />
         </section>
-        <AvisoEstadoClub estado={club.estado} avance={club} onVence={() => void cargar()} />
+        <AvisoEstadoClub estado={club.estado} avance={club} nombreClub={club.nombre} onVence={() => void cargar()} />
         {d.logistica && (
           <LogisticaLider clubId={club.id} folio={club.folio} logistica={d.logistica}
             onCambio={(logistica) => setD((x) => (x ? { ...x, logistica } : x))}
@@ -348,7 +350,7 @@ export default function MiClubPage() {
 
       <section className="app-card space-y-3 p-5" aria-label="Avance">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-[var(--app-ink-2)]">Folio <span className="font-mono font-semibold text-[var(--app-ink)]">{club.folio}</span></p>
+          <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--app-ink-2)]">Folio <span className="font-mono font-semibold text-[var(--app-ink)]">{club.folio}</span><ModalidadChip modalidad={config.modalidad} /></p>
           <span className="pill" data-tone={est.tono} data-dot="on">{est.etiqueta}</span>
         </div>
         <LineaAvanceClub estado={club.estado} avance={club} />
@@ -362,7 +364,7 @@ export default function MiClubPage() {
 
       {/* ── Datos del club ── */}
       <section className="app-card space-y-5 p-5" aria-labelledby="sec-datos">
-        <h2 id="sec-datos" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><Shapes className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Datos del club</h2>
+        <h2 id="sec-datos" className="flex flex-wrap items-center gap-2 text-base font-bold text-[var(--app-ink)]"><Shapes className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Datos del club<ModalidadChip modalidad={config.modalidad} className="ml-auto" /></h2>
         {pc.logo?.pedir && (
           <div className="flex flex-wrap items-center gap-4">
             <FotoClub src={club.logo_url} alt="Logo del club" className="h-20 w-20 rounded-[20px]" fallback={<Shapes className="h-8 w-8 text-[var(--app-ink-2)]" aria-hidden="true" />} />
@@ -423,7 +425,7 @@ export default function MiClubPage() {
       <section className="space-y-4" aria-labelledby="sec-int">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 id="sec-int" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><User className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Integrantes</h2>
+            <h2 id="sec-int" className="flex flex-wrap items-center gap-2 text-base font-bold text-[var(--app-ink)]"><User className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Integrantes<ModalidadChip modalidad={config.modalidad} className="ml-auto" /></h2>
             <p className="text-sm text-[var(--app-ink-2)]">
               {d.integrantes.length} de {config.max_integrantes} · se necesitan al menos {config.min_integrantes} (tú cuentas como integrante)
               {!config.participan_menores ? ' · no participan menores de edad' : ''}
@@ -478,7 +480,7 @@ export default function MiClubPage() {
 
       {/* ── Documentos ── */}
       <section className="space-y-4" aria-labelledby="sec-docs">
-        <h2 id="sec-docs" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><FileDown className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Documentos</h2>
+        <h2 id="sec-docs" className="flex flex-wrap items-center gap-2 text-base font-bold text-[var(--app-ink)]"><FileDown className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Documentos<ModalidadChip modalidad={config.modalidad} className="ml-auto" /></h2>
         <ul className="divide-y rounded-[16px] border bg-[var(--app-card-bg)]" style={{ borderColor: 'var(--app-rule)' }}>
           {d.documentos.map((doc) => {
             const formatos = Array.isArray(doc.formatos) && doc.formatos.length ? doc.formatos : ['pdf'];
@@ -540,7 +542,7 @@ export default function MiClubPage() {
 
       {/* ── Envío ── */}
       <section className="app-card space-y-4 p-5" aria-labelledby="sec-envio">
-        <h2 id="sec-envio" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><ListChecks className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />{subsanando ? 'Enviar correcciones' : 'Enviar a revisión'}</h2>
+        <h2 id="sec-envio" className="flex flex-wrap items-center gap-2 text-base font-bold text-[var(--app-ink)]"><ListChecks className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />{subsanando ? 'Enviar correcciones' : 'Enviar a revisión'}<ModalidadChip modalidad={config.modalidad} className="ml-auto" /></h2>
         {(faltantesEnvio.length ? faltantesEnvio : d.faltantes).length > 0 ? (
           <div className="rounded-[14px] border px-4 py-3" style={{ borderColor: 'var(--tile-gold-fg)', backgroundColor: 'var(--tile-gold-bg)' }}>
             <p className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><AlertTriangle className="h-4 w-4" aria-hidden="true" />Antes de enviar, falta:</p>

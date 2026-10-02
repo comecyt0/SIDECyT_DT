@@ -62,6 +62,10 @@ class LogisticaAdminController extends Controller
 
         DB::transaction(function () use ($convocatoria, $v) {
             $cfg = EspecieConfig::where('convocatoria_id', $convocatoria->id)->lockForUpdate()->firstOrFail();
+            // El box lunch nunca pasa del máximo de integrantes de la convocatoria; el transporte lo define el personal.
+            if (isset($v['max_lunch_club']) && (int) $v['max_lunch_club'] > (int) $cfg->max_integrantes) {
+                throw ValidationException::withMessages(['max_lunch_club' => "El box lunch por club no puede pasar del máximo de integrantes de la convocatoria ({$cfg->max_integrantes})."]);
+            }
             $activas = ClubLogistica::whereIn('estado', ClubLogistica::APARTAN)->whereHas('club', fn ($q) => $q->where('convocatoria_id', $convocatoria->id));
             if ($v['logistica_modo'] !== LogisticaClub::modo($cfg) && (clone $activas)->exists()) {
                 throw ValidationException::withMessages(['logistica_modo' => 'Ya hay solicitudes de transporte o box lunch: no se puede cambiar entre cupos por convocatoria y por evento.']);
@@ -179,6 +183,7 @@ class LogisticaAdminController extends Controller
                 'logistica_modo' => $modo, 'cupo_transporte' => $cfg->cupo_transporte, 'cupo_lunch' => $cfg->cupo_lunch,
                 'max_transporte_club' => $cfg->max_transporte_club, 'max_lunch_club' => $cfg->max_lunch_club,
                 'tope_integrantes' => (bool) $cfg->tope_integrantes, 'acompanantes' => (int) $cfg->acompanantes,
+                'max_integrantes' => (int) $cfg->max_integrantes, 'modalidad' => $cfg->modalidad ?? 'estatal',
                 'fecha_limite_logistica' => $cfg->fecha_limite_logistica?->format('Y-m-d'), 'kit_nombre' => $cfg->kit_nombre,
             ],
             'eventos' => $eventos->map(fn ($e) => ['id' => $e->id, 'nombre' => $e->nombre, 'fecha' => $e->fecha?->format('Y-m-d'), 'sede' => $e->sede,

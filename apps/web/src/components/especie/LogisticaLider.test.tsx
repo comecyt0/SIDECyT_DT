@@ -15,7 +15,7 @@ vi.mock('@/lib/especie-api', () => ({
 
 const base: LogisticaEstado = {
   aplica: true, estatal: true, modo: 'convocatoria', abierta: true, fecha_limite: '2026-10-15',
-  limites: { transporte: 3, lunch: 4 }, tope_integrantes: true, acompanantes: 1,
+  limites: { transporte: 3, lunch: 4 }, tope_integrantes: true, acompanantes: 1, max_integrantes: 4, modalidad: 'nacional',
   solicitudes: [{ evento: null, solicitud: null, versiones: [], cupo: { transporte: { total: 10, usado: 2, disponible: 8 }, lunch: { total: null, usado: 0, disponible: null } } }],
   resguardo: [],
   kit: { nombre: 'Kit de robótica', fecha: null, lugar: null, asignado_at: null, entregado_at: null, entregado_lugar: null, entrego: null, recibio: null },
@@ -70,6 +70,12 @@ describe('LogisticaLider (E52 · F3)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Descargar credencial/ }));
     await waitFor(() => expect(descargarCredencial).toHaveBeenCalledWith(1, 'CLUB-X'));
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('muestra la modalidad de la convocatoria y el tope de box lunch por integrantes', () => {
+    render(<LogisticaLider clubId={1} folio="CLUB-X" logistica={base} onCambio={vi.fn()} onAviso={vi.fn()} />);
+    expect(screen.getAllByText('Modalidad: Nacional').length).toBeGreaterThan(1);
+    expect(screen.getByText(/no pasa del máximo de 4 integrantes de la convocatoria/)).toBeInTheDocument();
   });
 
   it('pasada la fecha límite no deja pedir ni cambiar', () => {

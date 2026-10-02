@@ -77,7 +77,12 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
   useEffect(() => { void cargar(); }, [cargar]);
 
   const guardar = async () => {
-    if (!form) return;
+    if (!form || !t) return;
+    const tope = Number(t.config.max_integrantes) || 10;
+    if (form.max_lunch_club.trim() !== '' && Number(form.max_lunch_club) > tope) {
+      setAviso({ ok: false, texto: `El box lunch por club no puede pasar del máximo de integrantes de la convocatoria (${tope}).` });
+      return;
+    }
     setGuardando(true); setErrores(null); setAviso(null);
     try {
       const { data } = await api.put(`/revision/convocatorias/${convocatoriaId}/logistica`, {
@@ -138,6 +143,9 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
   if (!t || !form) return <p className="text-sm" style={{ color: 'var(--auth-danger)' }}>{aviso?.texto ?? 'Sin datos.'}</p>;
   const setF = (p: Partial<ConfigForm>) => setForm({ ...form, ...p });
   const pendientesKit = t.clubes.filter((c) => c.estado === 'aceptado');
+  // El box lunch nunca pasa del máximo de integrantes de la convocatoria (el servidor lo vuelve a revisar).
+  const maxIntegrantes = Number(t.config.max_integrantes) || 10;
+  const lunchExcede = form.max_lunch_club.trim() !== '' && Number(form.max_lunch_club) > maxIntegrantes;
 
   return (
     <div className="space-y-6">
@@ -169,22 +177,17 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
             <label className="space-y-1.5"><span className={labelCls}>Cupo total de box lunch</span>
               <input type="number" min={0} inputMode="numeric" className={inputCls} placeholder="Sin tope" value={form.cupo_lunch} onChange={(e) => setF({ cupo_lunch: e.target.value })} /></label>
           </>)}
-          <label className="space-y-1.5"><span className={labelCls}>Máx. transporte por club</span>
-            <input type="number" min={0} inputMode="numeric" className={inputCls} placeholder="Sin tope" value={form.max_transporte_club} onChange={(e) => setF({ max_transporte_club: e.target.value })} /></label>
+          <label className="space-y-1.5"><span className={labelCls}>Lugares de transporte por club</span>
+            <input type="number" min={0} inputMode="numeric" className={inputCls} placeholder="Sin tope" value={form.max_transporte_club} onChange={(e) => setF({ max_transporte_club: e.target.value })} />
+            <span className="block text-xs text-[var(--app-ink-2)]">Tú decides cuántos lugares puede pedir cada club.</span></label>
           <label className="space-y-1.5"><span className={labelCls}>Máx. box lunch por club</span>
-            <input type="number" min={0} inputMode="numeric" className={inputCls} placeholder="Sin tope" value={form.max_lunch_club} onChange={(e) => setF({ max_lunch_club: e.target.value })} /></label>
+            <input type="number" min={0} max={maxIntegrantes} inputMode="numeric" className={inputCls} placeholder={String(maxIntegrantes)} value={form.max_lunch_club}
+              aria-invalid={lunchExcede ? 'true' : undefined} onChange={(e) => setF({ max_lunch_club: e.target.value })} />
+            <span className="block text-xs" style={{ color: lunchExcede ? 'var(--auth-danger)' : 'var(--app-ink-2)' }}>
+              {lunchExcede ? `No puede pasar de ${maxIntegrantes}` : `Hasta ${maxIntegrantes}`} (máximo de integrantes de la convocatoria).</span></label>
           <label className="space-y-1.5"><span className={labelCls}>Fecha límite para pedir</span>
             <input type="date" className={inputCls} value={form.fecha_limite_logistica} onChange={(e) => setF({ fecha_limite_logistica: e.target.value })} /></label>
         </div>
-        <label className="flex cursor-pointer flex-wrap items-center gap-3 rounded-[14px] border px-4 py-3" style={{ borderColor: 'var(--app-rule)', backgroundColor: form.tope_integrantes ? 'var(--tile-sky-bg)' : 'var(--auth-field)' }}>
-          <input type="checkbox" className="h-4 w-4 accent-[var(--auth-vino)]" checked={form.tope_integrantes} onChange={(e) => setF({ tope_integrantes: e.target.checked })} />
-          <span className="min-w-[200px] flex-1 text-sm font-semibold text-[var(--app-ink)]">No pasar del número de integrantes del club</span>
-          {form.tope_integrantes && (
-            <span className="flex items-center gap-2 text-xs text-[var(--app-ink-2)]">+ acompañantes
-              <input type="number" min={0} max={100} aria-label="Acompañantes permitidos" className={`${inputCls} pl-3 !h-10 !min-h-10 !w-20`} value={form.acompanantes} onChange={(e) => setF({ acompanantes: e.target.value })} />
-            </span>
-          )}
-        </label>
 
         {/* Eventos */}
         <div className="space-y-3">

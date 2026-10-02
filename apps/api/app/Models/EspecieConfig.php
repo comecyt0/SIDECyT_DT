@@ -9,9 +9,12 @@ class EspecieConfig extends Model
 {
     protected $table = 'especie_config';
 
+    /** Modalidad de la convocatoria (para qué etapa registran sus datos los clubes). */
+    public const MODALIDADES = ['estatal', 'nacional', 'internacional'];
+
     protected $fillable = [
         'min_integrantes', 'max_integrantes', 'clubes_por_escuela', 'participan_menores',
-        'kit_nombre', 'kit_descripcion', 'campos_club', 'campos_integrante',
+        'kit_nombre', 'kit_descripcion', 'campos_club', 'campos_integrante', 'modalidad',
     ];
 
     protected $casts = [

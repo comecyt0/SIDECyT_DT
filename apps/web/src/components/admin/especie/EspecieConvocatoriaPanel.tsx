@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { AlertBox } from '@/components/ui/alert-box';
 import ConfigEspecieForm from '@/components/admin/especie/ConfigEspecieForm';
 import {
-  CAMPOS_CLUB, CAMPOS_INTEGRANTE, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, leerConfig, payloadCampos, payloadConfig, validarConfig,
+  CAMPOS_CLUB, CAMPOS_INTEGRANTE, MODALIDADES, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, leerConfig, payloadCampos, payloadConfig, validarConfig,
   type ConfigEspecie,
 } from '@/lib/especie';
 
@@ -95,6 +95,7 @@ export default function EspecieConvocatoriaPanel({ convocatoriaId, puedeEditar }
           <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
             <div><dt className="text-[var(--app-ink-2)]">Kit</dt><dd className="break-words font-semibold text-[var(--app-ink)]">{cfg.kit_nombre || 'Sin definir'}</dd>
               {cfg.kit_descripcion && <dd className="mt-1 whitespace-pre-wrap break-words text-[var(--app-ink)]">{cfg.kit_descripcion}</dd>}</div>
+            <div><dt className="text-[var(--app-ink-2)]">Modalidad</dt><dd className="font-semibold text-[var(--app-ink)]">{MODALIDADES[cfg.modalidad] ?? 'Estatal'}</dd></div>
             <div><dt className="text-[var(--app-ink-2)]">Integrantes por club</dt><dd className="font-semibold text-[var(--app-ink)]">De {cfg.min_integrantes} a {cfg.max_integrantes} (incluye al líder)</dd></div>
             <div><dt className="text-[var(--app-ink-2)]">Clubes por escuela</dt><dd className="font-semibold text-[var(--app-ink)]">{cfg.clubes_por_escuela === '' ? 'Sin límite' : cfg.clubes_por_escuela}</dd></div>
             <div><dt className="text-[var(--app-ink-2)]">Menores de edad</dt><dd className="font-semibold text-[var(--app-ink)]">{cfg.participan_menores ? 'Sí participan' : 'No participan'}</dd></div>

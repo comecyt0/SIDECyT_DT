@@ -1893,3 +1893,34 @@ y carta de resguardo) en 12 h: «15/10/2026 a las 3:30 p. m. (hora del centro)»
 minutos» con `now()` en pruebas.
 **Verificado:** backend 20/20 (`e2e_estructura.php`, con datos reales simulados en los cuatro tipos), navegador 17/17
 (1440 y 390 px, kit con a. m./p. m.), vitest 180/180.
+
+### E57 — Formatos escaneados solo en PDF, modalidad de la convocatoria, topes de transporte/box lunch y confeti [publicado 02-10-2026]
+**Pedidos del usuario (club/clubes):** (1) todo lo que diga «súbela escaneada» se acepta **solo en PDF**; (2) cada
+apartado del club indica la **modalidad** (estatal, nacional o internacional); (3) el transporte y el box lunch se
+limitan; (4) «¡Tu club fue aceptado!» no lanzaba confeti al refrescar ni al hacer scroll.
+- **Solo PDF:** carta de la escuela (`ClubController`, formato `['pdf']`), carta de resguardo y formatos de logística
+  (`LogisticaClub::subirFirmado` valida `['pdf']` por contenido real); en el front `accept="application/pdf,.pdf"` y aviso
+  «Sube el documento escaneado en PDF.» antes de subir.
+- **Modalidad (decisión: de la convocatoria, las tres seleccionables):** columna `especie_config.modalidad`
+  (`estatal` por defecto; migración `2026_10_02_000003`), `EspecieConfig::MODALIDADES`, validada en el asistente
+  (`especie.modalidad`) y en `PUT …/especie`; viaja en el payload de configuración y en `LogisticaClub::estado()`. Front:
+  selector en `ConfigEspecieForm`, ficha y revisión del asistente, y `components/especie/ModalidadChip.tsx` («Modalidad:
+  Nacional») en el folio y en Datos, Integrantes, Documentos, Envío, Logística, Kit y Transporte del líder.
+- **Topes (decisión del usuario):** el **transporte** lo define el personal por club (`max_transporte_club`, «Lugares de
+  transporte por club»); el **box lunch** nunca pasa del **máximo de integrantes de la convocatoria**
+  (`LogisticaClub::limitesClub`; `max_lunch_club` solo puede bajarlo y el servidor rechaza un valor mayor con 422). Se
+  retiró del panel el interruptor «No pasar del número de integrantes + acompañantes» (las columnas `tope_integrantes` y
+  `acompanantes` quedan sin uso).
+- **Confeti (causa real):** `useConfetiAlVer` arrancaba con `ultimo = 0` y una pausa de 1.2 s medida con
+  `performance.now()`, que cuenta **desde que abrió la página**: si la tarjeta aparecía antes de 1.2 s (lo normal al
+  refrescar), el primer confeti se tomaba como «demasiado pronto», no salía y la tarjeta quedaba marcada como vista. Ahora
+  `ultimo = -Infinity`. Además, este servidor (y cualquier escritorio remoto) tiene apagadas las animaciones de Windows →
+  el navegador reporta `prefers-reduced-motion: reduce` y antes no se lanzaba nada: ahora cae una **lluvia suave** desde
+  arriba (sin explosión ni giros rápidos) y la versión completa queda para quien no pide reducir movimiento.
+- **Rediseño:** tarjeta `.celebra-club` (vino institucional con brillo, «lo que sigue» en tres pasos: kit, carta de
+  resguardo, QR, y botón «Celebrar otra vez»); en el panel de inicio `.celebra-club-mini`. El confeti sale al cargar, al
+  volver a la tarjeta con scroll (cuando se ve el 40 % de ella o un tercio de la ventana) y con el botón.
+**Verificado:** backend F1 53/53 y F3 58/58 (nuevos: box lunch arriba del máximo de integrantes → 422 para líder y admin),
+navegador 20/20 (`verif_e57.mjs`: límites, 422 del servidor, confeti suave con «reducir movimiento» al cargar / al volver
+con scroll / con el botón, confeti completo en escritorio y en el panel de inicio, modalidad en todos los apartados, sin
+scroll horizontal a 390 px), vitest 181/181.

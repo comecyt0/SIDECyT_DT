@@ -442,6 +442,25 @@ bloqueados, alcance del admin de convocatoria, aceptar con corrección, asignaci
 límite de pendientes, temporadas), navegador **15/15** (líder a 390 px, admin de convocatoria con confirmación, admin con
 temporadas).
 
+## 16. E57 — Solo PDF, modalidad, topes de logística y celebración (02/10/2026)
+
+**Pedidos y decisiones del usuario:**
+- «Todos los formatos que digan "Súbela escaneada" que sea específicamente… obligatorio en PDF» → carta de la escuela,
+  carta de resguardo y formatos de transporte/box lunch solo en PDF (front y servidor, por contenido real).
+- «En transporte y clubes así como el resto de apartados debe indicar para la modalidad que se están registrando» →
+  la modalidad **es de la convocatoria** y se elige entre **estatal, nacional o internacional** (asistente y edición de la
+  convocatoria). El líder ve «Modalidad: …» junto al folio y en cada apartado (datos, integrantes, documentos, envío,
+  logística, kit, transporte y box lunch).
+- «Al definir el total de transporte y/o box lunch deberá limitarse…» → **transporte:** los lugares por club los define y
+  edita el personal; **box lunch:** como máximo, el número de integrantes definido al crear la convocatoria (el personal
+  puede bajarlo, nunca subirlo).
+- «Cuando dice "Tu club fue aceptado"… no me da la animación de confeti… hacerla más llamativa» → tarjeta de celebración
+  rediseñada con confeti al cargar, al volver con scroll y con «Celebrar otra vez»; también con «reducir movimiento»
+  (versión suave), porque en escritorio remoto Windows apaga las animaciones y el navegador lo reporta así.
+
+**Técnico:** ver `CLAUDE.md` E57 (`especie_config.modalidad`, `LogisticaClub::limitesClub`, `useConfetiAlVer` con
+`ultimo = -Infinity`, `ModalidadChip`, `.celebra-club`).
+
 ## 8. Modelo de datos (borrador técnico, a validar en F1)
 
 - `escuelas` (cct único, nombre, municipio, nivel, sistema `estatal|federal`, activo).

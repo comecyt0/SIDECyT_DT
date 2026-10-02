@@ -3,95 +3,136 @@
 import { useEffect, type RefObject } from 'react';
 
 /**
- * Confeti propio en canvas (sin dependencias), paleta vino/pastel. Lo usan los folios aprobados de la landing (E45) y el
- * panel del líder cuando su club está aceptado (E52 · F2). Respeta `prefers-reduced-motion` (no se lanza).
+ * Confeti propio en canvas (sin dependencias), paleta institucional vino + colores vivos. Lo usan los folios aprobados de
+ * la landing (E45) y el aviso «¡Tu club fue aceptado!» del líder (E52 · F2, rediseñado el 02/10/2026).
+ *
+ * Movimiento reducido (02/10/2026): antes no se lanzaba nada. En Windows Server y en escritorio remoto las animaciones del
+ * sistema vienen apagadas, así que el navegador reporta `prefers-reduced-motion: reduce` y el confeti no salía. Ahora,
+ * con movimiento reducido, cae una lluvia suave y corta desde arriba (sin explosión ni giros rápidos), y la versión
+ * completa se usa cuando el sistema no pide reducir.
  */
-const COLORES = ['#7a2748', '#a8466b', '#f2c6d6', '#fdebf4', '#e3f3ff', '#def5f5', '#fff5cc', '#08304c'];
+const COLORES = ['#7a2748', '#a8466b', '#e3557f', '#f2c6d6', '#ffd23f', '#3ec7a1', '#4aa8ff', '#9b6bff', '#ff8a3d', '#08304c'];
 
 export function movimientoReducido(): boolean {
   // matchMedia puede no existir (navegadores viejos, pruebas): sin él, se asume movimiento normal.
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/** Confeti en un canvas temporal a pantalla completa; se quita solo al terminar. */
-export function lanzarConfeti() {
-  if (movimientoReducido()) return;
+interface Pieza { x: number; y: number; vx: number; vy: number; w: number; h: number; rot: number; vr: number; color: string; forma: number; osc: number }
+
+let activos = 0;
+
+/** Confeti en un canvas temporal a pantalla completa; se quita solo al terminar. `fiesta` = más piezas y una lluvia extra. */
+export function lanzarConfeti(opciones: { fiesta?: boolean } = {}) {
+  if (typeof document === 'undefined' || activos >= 2) return;
+  const suave = movimientoReducido();
   const canvas = document.createElement('canvas');
   canvas.setAttribute('aria-hidden', 'true');
-  Object.assign(canvas.style, { position: 'fixed', inset: '0', width: '100vw', height: '100vh', pointerEvents: 'none', zIndex: '60' });
+  canvas.dataset.confeti = suave ? 'suave' : 'completo';
+  Object.assign(canvas.style, { position: 'fixed', inset: '0', width: '100vw', height: '100vh', pointerEvents: 'none', zIndex: '9999' });
   document.body.appendChild(canvas);
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = window.innerWidth * dpr;
-  canvas.height = window.innerHeight * dpr;
   const ctx = canvas.getContext('2d');
   if (!ctx) { canvas.remove(); return; }
-  ctx.scale(dpr, dpr);
+  activos++;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const W = window.innerWidth;
   const H = window.innerHeight;
-  const piezas = Array.from({ length: Math.min(160, Math.round(W / 6)) }, (_, i) => {
-    const desdeIzq = i % 2 === 0;
-    return {
-      x: desdeIzq ? W * 0.15 : W * 0.85,
-      y: H * 0.35,
-      vx: (desdeIzq ? 1 : -1) * (2 + Math.random() * 6),
-      vy: -(6 + Math.random() * 7),
-      w: 6 + Math.random() * 6,
-      h: 8 + Math.random() * 8,
-      rot: Math.random() * Math.PI,
-      vr: (Math.random() - 0.5) * 0.3,
-      color: COLORES[i % COLORES.length],
-      forma: i % 3, // 0 rectángulo, 1 círculo, 2 tira
-    };
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+
+  const base = Math.round(W / (suave ? 14 : 5));
+  const piezas: Pieza[] = [];
+  const nueva = (p: Partial<Pieza>): Pieza => ({
+    x: 0, y: 0, vx: 0, vy: 0, w: 6 + Math.random() * 7, h: 8 + Math.random() * 9, rot: Math.random() * Math.PI,
+    vr: (Math.random() - 0.5) * (suave ? 0.05 : 0.35), color: COLORES[Math.floor(Math.random() * COLORES.length)], forma: Math.floor(Math.random() * 3),
+    osc: Math.random() * Math.PI * 2, ...p,
   });
+  if (suave) {
+    // Lluvia suave desde arriba.
+    for (let i = 0; i < Math.min(70, base); i++) piezas.push(nueva({ x: Math.random() * W, y: -20 - Math.random() * H * 0.4, vx: 0, vy: 1.2 + Math.random() * 1.4 }));
+  } else {
+    // Dos cañones desde las esquinas inferiores + (en fiesta) una lluvia desde arriba.
+    const n = Math.min(opciones.fiesta ? 200 : 150, base);
+    for (let i = 0; i < n; i++) {
+      const izq = i % 2 === 0;
+      piezas.push(nueva({ x: izq ? -10 : W + 10, y: H * 0.85, vx: (izq ? 1 : -1) * (5 + Math.random() * 9), vy: -(11 + Math.random() * 9) }));
+    }
+    if (opciones.fiesta) {
+      for (let i = 0; i < Math.min(90, base / 2); i++) piezas.push(nueva({ x: Math.random() * W, y: -20 - Math.random() * H * 0.5, vx: (Math.random() - 0.5) * 2, vy: 2 + Math.random() * 3 }));
+    }
+  }
+
   const inicio = performance.now();
-  const DUR = 2600;
+  const DUR = suave ? 2600 : opciones.fiesta ? 4200 : 3400;
   const paso = (t: number) => {
     const p = (t - inicio) / DUR;
     ctx.clearRect(0, 0, W, H);
+    const alfa = Math.max(0, 1 - Math.max(0, p - 0.75) / 0.25);
     for (const c of piezas) {
-      c.vy += 0.22;
-      c.vx *= 0.99;
-      c.x += c.vx;
-      c.y += c.vy;
+      if (suave) {
+        c.osc += 0.03;
+        c.x += Math.sin(c.osc) * 0.4;
+        c.y += c.vy;
+      } else {
+        c.vy += 0.28;
+        c.vx *= 0.985;
+        c.vy = Math.min(c.vy, 6);
+        c.osc += 0.08;
+        c.x += c.vx + Math.sin(c.osc) * 0.6;
+        c.y += c.vy;
+      }
       c.rot += c.vr;
       ctx.save();
-      ctx.globalAlpha = Math.max(0, 1 - Math.max(0, p - 0.7) / 0.3);
+      ctx.globalAlpha = alfa;
       ctx.translate(c.x, c.y);
       ctx.rotate(c.rot);
       ctx.fillStyle = c.color;
       if (c.forma === 1) { ctx.beginPath(); ctx.arc(0, 0, c.w / 2, 0, Math.PI * 2); ctx.fill(); }
       else if (c.forma === 2) ctx.fillRect(-c.w / 4, -c.h, c.w / 2, c.h * 2);
-      else ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
+      else ctx.fillRect(-c.w / 2, -c.h / 2 * Math.abs(Math.cos(c.osc)), c.w, c.h * Math.abs(Math.cos(c.osc)) + 1);
       ctx.restore();
     }
     if (p < 1) requestAnimationFrame(paso);
-    else canvas.remove();
+    else { canvas.remove(); activos--; }
   };
   requestAnimationFrame(paso);
 }
 
 /**
  * Lanza confeti cada vez que el elemento ENTRA en pantalla (al cargar, al desplazarse y al regresar), no solo la primera
- * vez, con una pausa mínima entre lanzamientos. `activo` en falso lo desactiva.
+ * vez, con una pausa mínima entre lanzamientos. Cuenta como "en pantalla" cuando se ve al menos el 40 % del elemento o,
+ * si el elemento es más alto que la ventana, un tercio de la ventana. `activo` en falso lo desactiva.
  */
-export function useConfetiAlVer(ref: RefObject<HTMLElement | null>, activo: boolean) {
+export function useConfetiAlVer(ref: RefObject<HTMLElement | null>, activo: boolean, opciones: { fiesta?: boolean } = {}) {
+  const fiesta = opciones.fiesta === true;
   useEffect(() => {
     const el = ref.current;
     if (!el || !activo || typeof IntersectionObserver === 'undefined') return;
     let dentro = false;
-    let ultimo = 0;
+    // -Infinity, no 0: performance.now() cuenta desde que abrió la página; con 0, si la tarjeta aparecía antes de 1.5 s
+    // (lo normal al refrescar) el primer confeti se tomaba como "demasiado pronto" y no salía (bug corregido 02/10/2026).
+    let ultimo = -Infinity;
+    const umbrales = Array.from({ length: 21 }, (_, i) => i / 20);
     const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting && e.intersectionRatio >= 0.3) {
-        if (!dentro && performance.now() - ultimo > 1200) {
+      const alto = e.boundingClientRect.height || 1;
+      const visible = e.intersectionRect.height;
+      const suficiente = e.isIntersecting && visible >= Math.min(alto * 0.4, window.innerHeight / 3);
+      if (suficiente) {
+        if (!dentro && performance.now() - ultimo > 1500) {
           ultimo = performance.now();
-          lanzarConfeti();
+          lanzarConfeti({ fiesta });
+          // `data-visto` reinicia la animación de entrada de la tarjeta (CSS) cada vez que vuelve a verse.
+          el.removeAttribute('data-visto');
+          void el.offsetWidth;
+          el.setAttribute('data-visto', '');
         }
         dentro = true;
-      } else if (!e.isIntersecting || e.intersectionRatio < 0.05) {
+      } else if (!e.isIntersecting || visible < Math.min(alto * 0.05, 24)) {
         dentro = false;
       }
-    }, { threshold: [0, 0.05, 0.3] });
+    }, { threshold: umbrales });
     obs.observe(el);
     return () => obs.disconnect();
-  }, [ref, activo]);
+  }, [ref, activo, fiesta]);
 }

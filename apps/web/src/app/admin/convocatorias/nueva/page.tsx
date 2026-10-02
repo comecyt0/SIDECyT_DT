@@ -35,7 +35,7 @@ import {
 import SelectorPrograma from '@/components/admin/SelectorPrograma';
 import { Save, CloudOff, Cloud, Banknote, Package } from 'lucide-react';
 import ConfigEspecieForm from '@/components/admin/especie/ConfigEspecieForm';
-import { configVacia, validarConfig, CAMPOS_CLUB, CAMPOS_INTEGRANTE, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, type ConfigEspecie } from '@/lib/especie';
+import { configVacia, validarConfig, MODALIDADES, CAMPOS_CLUB, CAMPOS_INTEGRANTE, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, type ConfigEspecie } from '@/lib/especie';
 
 interface Campo {
   nombre_campo: string;
@@ -1661,6 +1661,7 @@ export default function ConvocatoriasNuevaPage() {
                   </CardHeader>
                   <CardContent className="text-sm space-y-2">
                     <p><strong>Kit:</strong> {state.especie.kit_nombre}</p>
+                    <p><strong>Modalidad:</strong> {MODALIDADES[state.especie.modalidad] ?? 'Estatal'}</p>
                     <p><strong>Integrantes por club:</strong> de {state.especie.min_integrantes} a {state.especie.max_integrantes} (incluye al líder)</p>
                     <p><strong>Clubes por escuela:</strong> {state.especie.clubes_por_escuela === '' ? 'Sin límite' : state.especie.clubes_por_escuela}</p>
                     <p><strong>Menores de edad:</strong> {state.especie.participan_menores ? 'Sí participan' : 'No participan'}</p>
