@@ -1943,6 +1943,15 @@ el seguimiento». **Decisiones del usuario:** lo escribe el admin; va **dentro**
 - Las respuestas de clubes traen `convocatoria_corto`; la lista del solicitante carga `convocatoria:id,nombre,nombre_corto`;
   la búsqueda del admin de solicitudes encuentra por nombre corto (y la de clubes escapa `%`/`_`).
 **Verificado:** backend 15/15 (`e2e_folio.php`), F1 sin regresiones, vitest 185/185.
+
+### E59 — Interruptor de modo claro / oscuro en todos los paneles [publicado 02-10-2026]
+**Pedido:** «agrega el botón de modo oscuro y modo claro en todos los paneles como switch ya que ya no está» (se había
+quitado el 28/09). `components/ui/ThemeSwitch.tsx` (`role="switch"`, `aria-checked` = oscuro, teclado) junto al idioma en
+`AdminTopLayout` y `RoleTopLayout` (todos los paneles). `ThemeContext` vuelve a **respetar la preferencia guardada**
+(`theme-mode`: `light`/`dark`; sin guardar sigue al sistema) y `layout.tsx` la aplica con un script con **nonce** antes de
+pintar (sin parpadeo; CSP intacta). **Pendiente visual:** el logo COMECYT del encabezado se ve tenue sobre el fondo oscuro.
+**Verificado:** navegador 13/13 (`verif_tema.mjs`: admin 1440 y líder 390 px, cambia, persiste al recargar desde el primer
+pintado, teclado, sin scroll horizontal, sin errores de CSP).
 **Verificado:** backend F1 53/53 y F3 58/58 (nuevos: box lunch arriba del máximo de integrantes → 422 para líder y admin),
 navegador 20/20 (`verif_e57.mjs`: límites, 422 del servidor, confeti suave con «reducir movimiento» al cargar / al volver
 con scroll / con el botón, confeti completo en escritorio y en el panel de inicio, modalidad en todos los apartados, sin

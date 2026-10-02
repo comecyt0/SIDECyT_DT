@@ -46,15 +46,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>('light');
   const [isDark, setIsDarkState] = useState(false);
 
-  // Mount: aplicar el tema del sistema operativo.
-  // 28/09/2026: se quitó el botón de tema del encabezado (pedido del usuario). Sin botón, una preferencia guardada
-  // ('dark'/'light') dejaría a la persona atrapada en ese modo: se descarta y todos siguen al sistema operativo.
+  // Mount: preferencia guardada o, si no hay, el sistema operativo.
+  // 28/09/2026 se quitó el botón de tema (y se borraba la preferencia para no dejar a nadie atrapado en un modo).
+  // 02/10/2026 vuelve como interruptor en el encabezado de todos los paneles (ThemeSwitch), así que se respeta lo guardado.
   useEffect(() => {
-    const initial: ThemeMode = 'system';
+    let initial: ThemeMode = 'system';
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      const guardado = localStorage.getItem(STORAGE_KEY);
+      if (guardado === 'light' || guardado === 'dark') initial = guardado;
     } catch {
-      // localStorage bloqueado: nada que limpiar
+      // localStorage bloqueado: sigue al sistema
     }
     setModeState(initial);
     const dark = resolveIsDark(initial);

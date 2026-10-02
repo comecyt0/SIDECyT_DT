@@ -58,6 +58,9 @@ export const metadata: Metadata = {
  * cualquier copia vieja guardada por un proxy. Tras cargar bien, el parámetro se limpia de la barra.
  * Lleva el nonce de la CSP por petición (proxy.ts + lib/csp.ts, 24/09/2026); no usa datos externos.
  */
+/** 02/10/2026 — Aplica el modo guardado (claro/oscuro) antes de pintar, para que no parpadee al recargar. Constante. */
+const TEMA_GUARDADO = `(function(){try{var m=localStorage.getItem('theme-mode');var r=document.documentElement;if(m==='dark'){r.classList.add('dark');r.dataset.theme='dark';}else if(m==='light'){r.dataset.theme='light';}}catch(e){}})();`;
+
 const RECUPERAR_CARGA = `(function(){try{
 var K='sg-reload-at',P='_r';
 try{var u0=new URL(location.href);if(u0.searchParams.has(P)){u0.searchParams.delete(P);history.replaceState(history.state,'',u0.pathname+u0.search+u0.hash);}}catch(_){}
@@ -93,6 +96,7 @@ export default async function RootLayout({
         <meta name="theme-color" content="var(--brand-vino)" />
         <meta name="color-scheme" content="light dark" />
         {/* Recuperación de "se queda cargando" (E42). Constante propia, sin datos de usuario. */}
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: TEMA_GUARDADO }} />
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: RECUPERAR_CARGA }} />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
