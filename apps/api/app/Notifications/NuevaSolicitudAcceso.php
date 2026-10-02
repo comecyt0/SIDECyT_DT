@@ -47,7 +47,9 @@ class NuevaSolicitudAcceso extends Notification implements ShouldQueue
             'nombre' => $this->solicitudAcceso->nombre,
             'email' => $this->solicitudAcceso->email,
             'empresa' => $this->solicitudAcceso->empresa_nombre,
-            'mensaje' => "Nueva solicitud de acceso de {$this->solicitudAcceso->nombre} ({$this->solicitudAcceso->email})",
+            'asunto' => 'Nueva solicitud de acceso',
+            'mensaje' => "{$this->solicitudAcceso->nombre} ({$this->solicitudAcceso->email}) pidió acceso al sistema. Ábrela para aprobarla o rechazarla.",
+            'enlace' => \App\Support\EnlaceAviso::ruta($notifiable, '/admin/solicitudes-acceso'),
             'url' => '/admin/solicitudes-acceso',
         ];
     }

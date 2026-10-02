@@ -79,7 +79,9 @@ class EvaluacionCompletada extends Notification implements ShouldQueue
             'tipo' => 'evaluacion_completada',
             'puntaje' => $this->puntaje,
             'aprobado' => $this->aprobado,
-            'mensaje' => $this->aprobado ? 'Tu evaluación ha sido aprobada.' : 'Tu evaluación no fue aprobada.',
+            'asunto' => $this->aprobado ? 'Tu solicitud aprobó la evaluación técnica' : 'Tu solicitud no aprobó la evaluación técnica',
+            'mensaje' => "La evaluación técnica de tu solicitud {$this->solicitud->folio} ".($this->aprobado ? 'fue aprobada' : 'no fue aprobada').' (puntaje: '.$this->puntaje.'). Ábrela para ver el detalle.',
+            'enlace' => \App\Support\EnlaceAviso::solicitud($notifiable, (int) $this->solicitud->id, $this->solicitud->folio),
             'url' => "/solicitante/solicitudes/{$this->solicitud->id}",
         ];
     }

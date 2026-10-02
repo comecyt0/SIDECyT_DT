@@ -1,3 +1,17 @@
+/** 02/10/2026 — Mismo patrón que App\Support\EnlaceAviso::PATRON: solo rutas internas de un panel. */
+const PATRON_ENLACE = /^\/(admin|revisor|evaluador|solicitante|club|operador)(\/[A-Za-z0-9_-]+)*(\?[A-Za-z0-9_=&-]+)?$/;
+
+/**
+ * 02/10/2026 — A dónde lleva el aviso (lo arma el servidor según el rol de quien lo recibe). Se vuelve a validar aquí y
+ * solo se usa si es del panel en el que está la persona (si cambió de rol después, se cae a las reglas de siempre).
+ */
+export function enlaceAviso(n: { enlace?: string | null }, pathname: string): string | null {
+  const e = n.enlace;
+  if (typeof e !== 'string' || e.length > 255 || !PATRON_ENLACE.test(e)) return null;
+  const panel = '/' + (pathname.split('/')[1] ?? '');
+  return e.startsWith(panel + '/') || e.startsWith(panel + '?') ? e : null;
+}
+
 /**
  * E45: a dónde lleva un aviso del buzón al pulsarlo. Devuelve null si la notificación no es del buzón.
  * El id se valida como entero positivo antes de ponerlo en la URL (el dato viene de la API).

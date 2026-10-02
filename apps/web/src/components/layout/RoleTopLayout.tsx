@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { hrefBuzon, hrefAvisoClub } from '@/lib/notificaciones';
+import { enlaceAviso, hrefBuzon, hrefAvisoClub } from '@/lib/notificaciones';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
 import { cerrarSesion } from '@/lib/logout';
@@ -380,8 +380,9 @@ export default function RoleTopLayout({
                                 if (isUnread) onMarkAsRead?.(n.id);
                                 // Aviso del buzón → directo a su hilo (E45). Solo el solicitante tiene buzón en estos paneles.
                                 // E52 · F2: avisos de clubes → bandeja del revisor o panel del líder.
-                                const destino = pathname.startsWith('/solicitante') ? hrefBuzon(n as NotificationDetail, '/solicitante/buzon')
-                                  : hrefAvisoClub(n, pathname);
+                                // 02/10/2026: primero el enlace del servidor (directo a lo que indica el aviso).
+                                const destino = enlaceAviso(n as NotificationDetail, pathname)
+                                  ?? (pathname.startsWith('/solicitante') ? hrefBuzon(n as NotificationDetail, '/solicitante/buzon') : hrefAvisoClub(n, pathname));
                                 if (destino) router.push(destino);
                                 else setSelectedNotif(n as NotificationDetail);
                               }}

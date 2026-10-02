@@ -62,7 +62,11 @@ class SolicitudEnviada extends Notification implements ShouldQueue
             'solicitud_id' => $this->solicitud->id,
             'folio' => $this->solicitud->folio,
             'tipo' => 'solicitud_enviada',
-            'mensaje' => 'Tu solicitud ha sido enviada a revisión.',
+            'asunto' => 'Solicitud enviada a revisión',
+            'mensaje' => \App\Support\EnlaceAviso::panel($notifiable) === '/solicitante'
+                ? "Tu solicitud {$this->solicitud->folio} se envió a revisión. Te avisaremos de cada cambio."
+                : "La solicitud {$this->solicitud->folio} se envió a revisión. Ábrela para revisarla.",
+            'enlace' => \App\Support\EnlaceAviso::solicitud($notifiable, (int) $this->solicitud->id, $this->solicitud->folio),
             'url' => "/solicitante/solicitudes/{$this->solicitud->id}",
         ];
     }

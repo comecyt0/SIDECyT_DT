@@ -199,13 +199,17 @@ class BuzonController extends Controller
             if ((int) $uid === (int) $autor->id) {
                 continue;
             }
+            $dest = User::find($uid);
+            $panel = $dest ? \App\Support\EnlaceAviso::panel($dest) : null;
             NotificacionLog::create([
                 'user_id' => $uid,
                 'tipo' => 'buzon_mensaje',
                 'conversacion_id' => $c->id,
                 'asunto' => 'Nuevo mensaje en el buzón: '.mb_substr($c->asunto, 0, 100),
-                'mensaje' => $autor->name.' escribió en «'.mb_substr($c->asunto, 0, 100).'».',
-                'correo_destino' => User::find($uid)?->email ?? '',
+                'mensaje' => $autor->name.' escribió en «'.mb_substr($c->asunto, 0, 100).'». Ábrelo para leerlo y responder.',
+                'correo_destino' => $dest?->email ?? '',
+                // 02/10/2026: directo a la conversación en el panel de quien recibe.
+                'enlace' => in_array($panel, ['/admin', '/solicitante'], true) ? $panel.'/buzon?hilo='.(int) $c->id : null,
                 'enviado' => false,
             ]);
         }

@@ -43,9 +43,9 @@ class NotificacionLog extends Model
                 PushSender::sendToUser($n->user_id, [
                     'title' => $n->asunto ?: 'COMECYT',
                     'body' => strip_tags((string) $n->mensaje),
-                    'url' => $n->conversacion_id
+                    'url' => \App\Support\EnlaceAviso::valido($n->enlace) ?? ($n->conversacion_id
                         ? ((int) $n->user?->rol_id === (int) config('comecyt.roles.solicitante') ? '/solicitante/buzon' : '/admin/buzon').'?hilo='.(int) $n->conversacion_id
-                        : ($n->solicitud_id ? '/solicitante/solicitudes/'.$n->solicitud_id : '/'),
+                        : ($n->solicitud_id ? '/solicitante/solicitudes/'.$n->solicitud_id : '/')),
                     'tag' => 'notif-'.$n->id,
                 ]);
             } catch (\Throwable $e) {

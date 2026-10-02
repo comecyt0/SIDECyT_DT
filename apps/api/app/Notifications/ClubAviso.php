@@ -37,20 +37,21 @@ class ClubAviso extends Notification implements ShouldQueue
         $x = $this->extra;
 
         return match ($this->evento) {
-            'enviado' => ['Nuevo club enviado a revisión', "El club «{$c->nombre}» ({$c->folio}) se envió a revisión."],
-            'por_revisar' => ['Club por revisar', "El club «{$c->nombre}» ({$c->folio}) espera revisión".(isset($x['etapa']) ? " en «{$x['etapa']}»" : '').'.'],
-            'observado' => ['Tu club tiene observaciones', "Revisa las observaciones de «{$c->nombre}» y corrígelas antes del ".($x['vence'] ?? 'plazo indicado').'.'],
+            // 02/10/2026: cada texto dice qué cambió, en qué club y qué hacer; el aviso lleva a la ficha del club.
+            'enviado' => ['Nuevo club enviado a revisión', "El club «{$c->nombre}» ({$c->folio}) se envió a revisión. Ábrelo para revisarlo."],
+            'por_revisar' => ['Club por revisar', "El club «{$c->nombre}» ({$c->folio}) espera tu revisión".(isset($x['etapa']) ? " en la etapa «{$x['etapa']}»" : '').'. Ábrelo para aprobar, pedir correcciones o rechazar.'],
+            'observado' => ['Tu club tiene observaciones', "Revisa las observaciones de «{$c->nombre}» y corrígelas antes del ".($x['vence'] ?? 'plazo indicado').'. Ábrelo para ver qué corregir.'],
             'prorroga' => ['Nuevo plazo para corregir tu club', "Se amplió el plazo para corregir «{$c->nombre}»: ahora tienes hasta el ".($x['vence'] ?? 'plazo indicado').'.'],
-            'etapa_aprobada' => ['Tu club avanzó en la revisión', "«{$c->nombre}» aprobó una etapa de revisión. Te avisaremos del siguiente paso."],
-            'aprobado_revision' => ['Club listo para visto bueno y comité', "El club «{$c->nombre}» ({$c->folio}) aprobó todas las revisiones."],
-            'subsanado' => ['Club corregido', "El club «{$c->nombre}» ({$c->folio}) envió sus correcciones."],
+            'etapa_aprobada' => ['Tu club avanzó en la revisión', "«{$c->nombre}» aprobó ".(isset($x['etapa']) ? "la etapa «{$x['etapa']}»" : 'una etapa de revisión').'. Te avisaremos del siguiente paso.'],
+            'aprobado_revision' => ['Club listo para visto bueno y comité', "El club «{$c->nombre}» ({$c->folio}) aprobó todas las revisiones: falta el visto bueno y la decisión del comité."],
+            'subsanado' => ['Club corregido', "El club «{$c->nombre}» ({$c->folio}) envió sus correcciones. Ábrelo para revisarlas."],
             'aceptado' => ['¡Tu club fue aceptado!', "El registro de «{$c->nombre}» fue aceptado. Entra a tu panel para ver los siguientes pasos."],
             'rechazado' => ['Tu club no fue aceptado', "El registro de «{$c->nombre}» no fue aceptado.".(isset($x['motivo']) ? ' Motivo: '.$x['motivo'] : '')],
             'qr_habilitado' => ['Tu QR del club ya está disponible', "Descarga la credencial con el QR de «{$c->nombre}» desde tu panel y llévala impresa o en tu celular a los eventos."],
             'qr_revocado' => ['El QR de tu club se desactivó', "El QR de «{$c->nombre}» ya no es válido. Si fue un error, comunícate con el COMECYT."],
-            'kit_asignado' => ['Fecha y lugar de entrega de tu kit', "Tu kit se entrega el ".($x['fecha'] ?? '—').' en '.($x['lugar'] ?? '—').'.'],
+            'kit_asignado' => ['Fecha y lugar de entrega de tu kit', "El kit de «{$c->nombre}» se entrega el ".($x['fecha'] ?? '—').' en '.($x['lugar'] ?? '—').'.'],
             'kit_entregado' => ['Kit entregado', "Registramos la entrega del kit de «{$c->nombre}». ¡Mucho éxito!"],
-            'firmado_subido' => ['Documento firmado por revisar', "El club «{$c->nombre}» ({$c->folio}) subió ".self::doc($x['tipo'] ?? '').' firmado.'],
+            'firmado_subido' => ['Documento firmado por revisar', "El club «{$c->nombre}» ({$c->folio}) subió ".self::doc($x['tipo'] ?? '').' firmado'.(! empty($x['evento']) ? " del evento «{$x['evento']}»" : '').'. Ábrelo para aprobarlo o rechazarlo.'],
             'firmado_aprobado' => ['Documento aprobado', 'Se aprobó '.self::doc($x['tipo'] ?? '')." de «{$c->nombre}»."],
             'firmado_rechazado' => ['Documento por corregir', 'Se rechazó '.self::doc($x['tipo'] ?? '')." de «{$c->nombre}»".(! empty($x['motivo']) ? ': '.$x['motivo'] : '').'. Sube una versión nueva.'],
             // E61 — acompañantes del club (líder B y director). Nunca llevan contraseñas.
@@ -71,7 +72,9 @@ class ClubAviso extends Notification implements ShouldQueue
     {
         [$asunto, $mensaje] = $this->textos();
 
-        return ['tipo' => 'club_'.$this->evento, 'asunto' => $asunto, 'mensaje' => $mensaje];
+        // 02/10/2026: lleva a la ficha del club en el panel de quien recibe (líder, revisor o personal).
+        return ['tipo' => 'club_'.$this->evento, 'asunto' => $asunto, 'mensaje' => $mensaje,
+            'enlace' => \App\Support\EnlaceAviso::club($notifiable, (int) $this->club->id)];
     }
 
     public function toMail(object $notifiable): MailMessage

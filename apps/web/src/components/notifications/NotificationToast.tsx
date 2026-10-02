@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BellRing, X } from 'lucide-react';
 import type { Notificacion } from '@/hooks/useNotifications';
+import { usePathname } from 'next/navigation';
+import { enlaceAviso } from '@/lib/notificaciones';
 import { useT } from '@/i18n/I18nProvider';
 
 const AUTO_HIDE_MS = 8000;
@@ -17,8 +19,11 @@ interface Props {
 }
 
 /** Aviso flotante cuando llega una notificación por WebSocket (misma tarjeta bento del sistema). */
-export default function NotificationToast({ notification, href, onClose }: Props) {
+export default function NotificationToast({ notification, href: hrefPanel, onClose }: Props) {
   const { t } = useT();
+  // 02/10/2026: «Ver» lleva a lo que indica el aviso (enlace del servidor, validado); si no trae, a lo que diga el panel.
+  const pathname = usePathname();
+  const href = (notification && enlaceAviso(notification, pathname ?? '')) ?? hrefPanel;
   useEffect(() => {
     if (!notification) return;
     const t = setTimeout(onClose, AUTO_HIDE_MS);

@@ -29,7 +29,8 @@ class SolicitudResetPassword extends Notification implements ShouldQueue
         return [
             'tipo' => 'reset_password',
             'asunto' => 'Solicitud de recuperación de contraseña',
-            'mensaje' => "{$this->resetRequest->email} pidió recuperar su contraseña. Apruébala o recházala en «Recuperación Contraseñas».",
+            'mensaje' => "{$this->resetRequest->email} pidió recuperar su contraseña. Ábrela para aprobarla o rechazarla.",
+            'enlace' => \App\Support\EnlaceAviso::ruta($notifiable, '/admin/reset-requests'),
         ];
     }
 

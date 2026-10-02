@@ -54,7 +54,10 @@ class ConvocatoriaCierreProximo extends Notification implements ShouldQueue
             'convocatoria_id' => $this->convocatoria->id,
             'tipo' => 'convocatoria_cierre_proximo',
             'dias_restantes' => $this->diasRestantes,
-            'mensaje' => "La convocatoria '{$this->convocatoria->nombre}' cierra en {$this->diasRestantes} día(s).",
+            'asunto' => "La convocatoria «{$this->convocatoria->nombre}» está por cerrar",
+            'mensaje' => "La convocatoria «{$this->convocatoria->nombre}» cierra en {$this->diasRestantes} día".($this->diasRestantes == 1 ? '' : 's').'. Revisa que tu solicitud esté completa y enviada.',
+            'enlace' => \App\Support\EnlaceAviso::ruta($notifiable, '/admin/convocatorias/'.$this->convocatoria->id)
+                ?? \App\Support\EnlaceAviso::ruta($notifiable, '/solicitante/solicitudes'),
             'url' => '/solicitante/solicitudes',
         ];
     }

@@ -36,7 +36,12 @@ class RolSolicitudAviso extends Notification implements ShouldQueue
 
     public function toCampana(object $notifiable): array
     {
-        return match ($this->evento) {
+        // 02/10/2026: el personal va a «Solicitudes de acceso»; la persona, a «Mi cuenta» de su panel.
+        $panel = \App\Support\EnlaceAviso::panel($notifiable);
+        $enlace = $this->evento === 'nueva' ? \App\Support\EnlaceAviso::ruta($notifiable, '/admin/solicitudes-acceso')
+            : ($panel ? \App\Support\EnlaceAviso::valido($panel.'/cuenta') : null);
+
+        return ['enlace' => $enlace] + match ($this->evento) {
             'nueva' => [
                 'tipo' => 'nueva_solicitud_rol',
                 'asunto' => 'Solicitud de rol: '.$this->rol(),

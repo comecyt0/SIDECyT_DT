@@ -72,7 +72,9 @@ class ConvenioCreado extends Notification implements ShouldQueue
             'folio' => $this->solicitud->folio,
             'tipo' => 'convenio_creado',
             'monto' => $this->convenio->monto_aprobado,
-            'mensaje' => 'Tu convenio ha sido generado y está listo para firmar.',
+            'asunto' => 'Tu convenio está listo para firmar',
+            'mensaje' => "Se generó el convenio de tu solicitud {$this->solicitud->folio} por $".number_format((float) $this->convenio->monto_aprobado, 2).'. Ábrela para revisarlo y firmarlo.',
+            'enlace' => \App\Support\EnlaceAviso::solicitud($notifiable, (int) $this->solicitud->id, $this->solicitud->folio),
             'url' => "/solicitante/solicitudes/{$this->solicitud->id}",
         ];
     }

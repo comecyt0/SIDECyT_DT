@@ -61,11 +61,18 @@ class SolicitudEstadoActualizado extends Notification implements ShouldQueue
      */
     public function toArray(object $notifiable): array
     {
+        // 02/10/2026: dice de qué solicitud, a qué estado pasó (legible) y lleva a ella.
+        $estado = str_replace('_', ' ', (string) $this->solicitud->estado);
+        $base = "La solicitud {$this->solicitud->folio} pasó a «{$estado}».";
+
         return [
             'solicitud_id' => $this->solicitud->id,
             'folio' => $this->solicitud->folio,
             'nuevo_estado' => $this->solicitud->estado,
-            'mensaje' => $this->mensajeCustom ?? "La solicitud ha cambiado a {$this->solicitud->estado}",
+            'tipo' => 'solicitud_estado',
+            'asunto' => "Tu solicitud {$this->solicitud->folio} cambió de estado",
+            'mensaje' => $this->mensajeCustom ? $base.' '.$this->mensajeCustom : $base.' Ábrela para ver el detalle.',
+            'enlace' => \App\Support\EnlaceAviso::solicitud($notifiable, (int) $this->solicitud->id, $this->solicitud->folio),
         ];
     }
 }

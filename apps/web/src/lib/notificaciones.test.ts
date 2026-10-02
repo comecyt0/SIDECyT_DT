@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { hrefAvisoAdmin, hrefBuzon } from './notificaciones';
+import { enlaceAviso, hrefAvisoAdmin, hrefBuzon } from './notificaciones';
+
+describe('enlaceAviso (02/10/2026)', () => {
+  it('usa el enlace del servidor solo si es una ruta interna del panel actual', () => {
+    expect(enlaceAviso({ enlace: '/admin/clubes/12' }, '/admin/dashboard')).toBe('/admin/clubes/12');
+    expect(enlaceAviso({ enlace: '/admin/solicitudes?search=COMECYT-LEGO26-AB12CD' }, '/admin/x')).toBe('/admin/solicitudes?search=COMECYT-LEGO26-AB12CD');
+    expect(enlaceAviso({ enlace: '/club/clubes/5' }, '/admin/dashboard')).toBeNull();
+    expect(enlaceAviso({ enlace: 'https://evil.example/admin' }, '/admin')).toBeNull();
+    expect(enlaceAviso({ enlace: '//evil.example/x' }, '/admin')).toBeNull();
+    expect(enlaceAviso({ enlace: '/admin/../x' }, '/admin')).toBeNull();
+    expect(enlaceAviso({ enlace: '/admin/x?a=<script>' }, '/admin')).toBeNull();
+    expect(enlaceAviso({ enlace: null }, '/admin')).toBeNull();
+  });
+});
 
 describe('hrefBuzon (E45)', () => {
   it('lleva el aviso del buzón a su hilo', () => {

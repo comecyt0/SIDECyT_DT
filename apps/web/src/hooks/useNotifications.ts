@@ -13,6 +13,8 @@ export interface Notificacion {
   solicitud_id?: number | null;
   tipo?: string;
   conversacion_id?: number | null;
+  /** 02/10/2026: a dónde lleva el aviso (ruta interna; validar con `enlaceAviso`). */
+  enlace?: string | null;
 }
 
 const DEFAULT_POLL_MS = 60_000;

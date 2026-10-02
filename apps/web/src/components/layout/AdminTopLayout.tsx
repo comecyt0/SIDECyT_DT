@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { hrefAvisoAdmin, hrefBuzon } from '@/lib/notificaciones';
+import { enlaceAviso, hrefAvisoAdmin, hrefBuzon } from '@/lib/notificaciones';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
 import { cerrarSesion } from '@/lib/logout';
@@ -421,8 +421,9 @@ export default function AdminTopLayout({
                               onClick={() => {
                                 setShowNotifs(false);
                                 if (isUnread) onMarkAsRead?.(n.id);
-                                // Aviso del buzón → directo a su hilo (E45); el resto abre el detalle.
-                                const destino = hrefBuzon(n as NotificationDetail, '/admin/buzon') ?? hrefAvisoAdmin(n as NotificationDetail);
+                                // 02/10/2026: directo a lo que indica el aviso (enlace del servidor); si no trae, buzón (E45),
+                                // páginas de acción conocidas y, al final, el detalle.
+                                const destino = enlaceAviso(n as NotificationDetail, '/admin') ?? hrefBuzon(n as NotificationDetail, '/admin/buzon') ?? hrefAvisoAdmin(n as NotificationDetail);
                                 if (destino) router.push(destino);
                                 else setSelectedNotif(n as NotificationDetail);
                               }}

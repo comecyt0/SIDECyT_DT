@@ -38,6 +38,8 @@ class CampanaChannel
                 'mensaje' => mb_substr($mensaje, 0, 2000),
                 'tipo' => mb_substr((string) ($datos['tipo'] ?? 'info'), 0, 60),
                 'solicitud_id' => isset($datos['solicitud_id']) ? (int) $datos['solicitud_id'] : null,
+                // 02/10/2026: a dónde lleva el aviso (solo rutas internas válidas; si no, null y el front decide).
+                'enlace' => \App\Support\EnlaceAviso::valido($datos['enlace'] ?? null),
                 'enviado' => false,
             ]);
         } catch (\Throwable $e) {

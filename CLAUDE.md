@@ -1962,6 +1962,24 @@ línea de tiempo, `ClubResumen` con descarga de documentos, historial y «Abrir 
 `leer()` y `documentosDe()` para no duplicar. Botón de cerrar propio (el header fijo tapaba el ✕ del diálogo).
 **Verificado:** navegador 13/13 (`verif_previa.mjs`, 1440 y 390 px).
 
+### E64 — Avisos que llevan a lo que indican y dicen el cambio con detalle [publicado 02-10-2026]
+**Pedido:** «las notificaciones como "documento firmado por revisar" y el resto, en todos los paneles, deben dirigirte a
+lo que específicamente indican… algunas solo son informativas sin indicar a dónde ir o qué hacer».
+- `notificaciones_log.enlace` (migración `2026_10_02_000006`). `App\Support\EnlaceAviso`: `PATRON` (solo rutas internas
+  de un panel, con id o consulta simple), `valido()`, `panel($u)` según el rol activo de quien recibe, `club()`,
+  `solicitud()` (admin → `/admin/solicitudes?search=<folio>`), `ruta()`. `CampanaChannel` guarda el enlace validado; el
+  push del navegador lo usa también.
+- Cada aviso arma su enlace y un texto con qué cambió, de qué registro y qué hacer: `ClubAviso` (ficha del club en el
+  panel de quien recibe: líder, revisor o personal), `ConvenioCreado`, `EvaluacionCompletada`, `PagoLiberado`,
+  `SolicitudEnviada`, `SolicitudObservada`, `SolicitudEstadoActualizado` (ahora con tipo y estado legible),
+  `ConvocatoriaCierreProximo`, `NuevaSolicitudAcceso`, `SolicitudResetPassword`, `RolSolicitudAviso`,
+  `EscuelaSolicitudAviso`, buzón (`?hilo=`) y la asignación del evaluador (directo a la rúbrica).
+- Front: `enlaceAviso(n, pathname)` vuelve a validar y solo acepta enlaces del panel actual; la campana de
+  `AdminTopLayout`/`RoleTopLayout`, `NotificationToast` y el detalle (`NotificationDetailModal`, botón «Ir a lo que
+  indica el aviso») lo usan primero y caen a las reglas anteriores si no hay.
+**Verificado:** backend 9/9 (`e2e_enlaces.php`: aviso real al personal y al líder con su enlace, rechazo de enlaces
+externos/`..`/raros, API), navegador 3/3 (`verif_enlaces.mjs`), vitest 184/184.
+
 ### E63 — Escaneo: entrada, salida y transporte (llegada y regreso) con el QR del club [publicado 02-10-2026]
 **Pedido:** «en escanear eventos también deben escanear el transporte desde el QR del club, así como la entrada y salida
 y la llegada y regreso del transporte». **Decisiones del usuario:** transporte = solo **llegada** al evento y **regreso**;

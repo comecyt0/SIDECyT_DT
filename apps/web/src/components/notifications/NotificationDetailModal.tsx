@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import { X, Bell, FileText } from 'lucide-react';
+import { X, Bell, FileText, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { enlaceAviso } from '@/lib/notificaciones';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useT } from '@/i18n/I18nProvider';
 
@@ -14,6 +16,8 @@ export interface NotificationDetail {
   solicitud_id?: number | null;
   /** E45: aviso del buzón → hilo al que pertenece. */
   conversacion_id?: number | null;
+  /** 02/10/2026: a dónde lleva el aviso (ruta interna; validar con `enlaceAviso`). */
+  enlace?: string | null;
   solicitud?: { id: number; folio: string } | null;
   created_at?: string;
   leida_at?: string;
@@ -28,6 +32,7 @@ interface Props {
 
 export default function NotificationDetailModal({ notification, onClose, solicitudHrefPattern }: Props) {
   const { t } = useT();
+  const pathname = usePathname();
   // Cerrar con Escape
   useEffect(() => {
     if (!notification) return;
@@ -39,7 +44,9 @@ export default function NotificationDetailModal({ notification, onClose, solicit
   }, [notification, onClose]);
 
   const solicitudId = notification?.solicitud?.id ?? notification?.solicitud_id ?? null;
-  const solicitudHref = solicitudHrefPattern && solicitudId ? solicitudHrefPattern(solicitudId) : null;
+  // 02/10/2026: el enlace del aviso (a lo que indica) manda; si no hay, la solicitud relacionada.
+  const enlace = notification ? enlaceAviso(notification, pathname ?? '') : null;
+  const solicitudHref = enlace ? null : solicitudHrefPattern && solicitudId ? solicitudHrefPattern(solicitudId) : null;
 
   return (
     <AnimatePresence>
@@ -105,6 +112,16 @@ export default function NotificationDetailModal({ notification, onClose, solicit
                       })
                     : ''}
                 </p>
+                {enlace && (
+                  <Link
+                    href={enlace}
+                    onClick={onClose}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-primary hover:bg-[var(--brand-vino-700)] px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5" />
+                    Ir a lo que indica el aviso
+                  </Link>
+                )}
                 {solicitudHref && (
                   <Link
                     href={solicitudHref}

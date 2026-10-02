@@ -342,8 +342,10 @@ class EvaluadorController extends Controller
             'solicitud_id' => $validated['solicitud_id'],
             'tipo' => 'nueva_asignacion',
             'asunto' => 'Nueva solicitud asignada para evaluación',
-            'mensaje' => "Se te ha asignado una solicitud para dictaminación. Fecha límite: {$validated['fecha_limite']}",
+            'mensaje' => 'Se te asignó la solicitud '.(Solicitud::whereKey($validated['solicitud_id'])->value('folio') ?? '')." para dictaminar. Fecha límite: {$validated['fecha_limite']}. Ábrela para calificarla.",
             'correo_destino' => $evaluador->email,
+            // 02/10/2026: directo a la rúbrica de esta asignación.
+            'enlace' => '/evaluador/asignaciones/'.(int) $asignacion->id.'/rubrica',
             'enviado' => false,
         ]);
 

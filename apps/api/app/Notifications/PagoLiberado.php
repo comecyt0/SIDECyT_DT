@@ -72,7 +72,9 @@ class PagoLiberado extends Notification implements ShouldQueue
             'folio' => $this->solicitud->folio,
             'tipo' => 'pago_liberado',
             'monto' => $this->ministracion->monto_aprobado,
-            'mensaje' => "Se ha liberado un pago de \${$this->ministracion->monto_aprobado}.",
+            'asunto' => 'Se liberó un pago de tu solicitud',
+            'mensaje' => 'Se liberó un pago de $'.number_format((float) $this->ministracion->monto_aprobado, 2)." de tu solicitud {$this->solicitud->folio}. Revisa tus ministraciones para ver el detalle y subir tus comprobantes.",
+            'enlace' => \App\Support\EnlaceAviso::ruta($notifiable, '/solicitante/ministraciones') ?? \App\Support\EnlaceAviso::solicitud($notifiable, (int) $this->solicitud->id, $this->solicitud->folio),
             'url' => '/solicitante/ministraciones',
         ];
     }

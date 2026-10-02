@@ -65,7 +65,9 @@ class SolicitudObservada extends Notification implements ShouldQueue
             'solicitud_id' => $this->solicitud->id,
             'folio' => $this->solicitud->folio,
             'tipo' => 'solicitud_observada',
-            'mensaje' => 'Tu solicitud ha sido devuelta con observaciones.',
+            'asunto' => 'Tu solicitud tiene observaciones',
+            'mensaje' => "Tu solicitud {$this->solicitud->folio} regresó con observaciones. Ábrela para ver qué corregir y vuelve a enviarla.",
+            'enlace' => \App\Support\EnlaceAviso::solicitud($notifiable, (int) $this->solicitud->id, $this->solicitud->folio),
             'url' => "/solicitante/solicitudes/{$this->solicitud->id}",
         ];
     }

@@ -34,7 +34,7 @@ class EscuelaSolicitudAviso extends Notification implements ShouldQueue
         $escuela = "«{$s->nombre}» (CCT {$s->cct})";
 
         return match ($this->evento) {
-            'nueva' => ['Solicitud de registro de escuela', "Un líder de club pidió dar de alta la escuela {$escuela}, de {$s->municipio}. Revísala en Escuelas → Solicitudes de registro."],
+            'nueva' => ['Solicitud de registro de escuela', "Un líder de club pidió dar de alta la escuela {$escuela}, de {$s->municipio}. Ábrela para aceptarla o rechazarla."],
             'aceptada' => ['Tu escuela ya está en el catálogo', "La escuela {$escuela} fue dada de alta y quedó asignada a tu club. Ya puedes completar y enviar tu registro."],
             'rechazada' => ['Tu solicitud de escuela no fue aceptada', "La solicitud de la escuela {$escuela} no fue aceptada. Motivo: ".mb_substr((string) $s->motivo, 0, 1000).' Puedes corregirla y enviarla de nuevo, o elegir una escuela del catálogo.'],
             default => ['Aviso de escuela', "Hay novedades en la solicitud de la escuela {$escuela}."],
@@ -46,8 +46,13 @@ class EscuelaSolicitudAviso extends Notification implements ShouldQueue
         [$asunto, $mensaje] = $this->textos();
         // El personal recibe `escuela_solicitud` (su campana lleva a Escuelas); el líder `club_escuela_*` (lleva a su club).
         $tipo = $this->evento === 'nueva' ? 'escuela_solicitud' : 'club_escuela_'.$this->evento;
+        // 02/10/2026: el personal va a las solicitudes de escuela; el líder, al club que la esperaba.
+        $clubId = $this->evento === 'nueva' ? null : \App\Models\Club::where('escuela_solicitud_id', $this->solicitud->id)->value('id');
+        $enlace = $this->evento === 'nueva'
+            ? \App\Support\EnlaceAviso::ruta($notifiable, '/admin/escuelas?tab=solicitudes')
+            : ($clubId ? \App\Support\EnlaceAviso::club($notifiable, (int) $clubId) : \App\Support\EnlaceAviso::ruta($notifiable, '/club/dashboard'));
 
-        return ['tipo' => $tipo, 'asunto' => $asunto, 'mensaje' => $mensaje];
+        return ['tipo' => $tipo, 'asunto' => $asunto, 'mensaje' => $mensaje, 'enlace' => $enlace];
     }
 
     public function toMail(object $notifiable): MailMessage
