@@ -41,17 +41,32 @@ class SolicitudEstadoActualizado extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $estado = str_replace('_', ' ', strtoupper($this->solicitud->estado));
+        // 02/10/2026: plantilla única de SIGAE, con estado legible, color y línea de avance.
+        $s = $this->solicitud;
+        $e = (string) $s->estado;
+        $estado = ucfirst(str_replace('_', ' ', $e));
+        $tono = match (true) {
+            in_array($e, ['aprobada', 'convenio', 'ministracion', 'concluida', 'finalizada'], true) => 'verde',
+            in_array($e, ['rechazada', 'cancelada', 'no_aprobada'], true) => 'rojo',
+            in_array($e, ['observada', 'en_subsanacion'], true) => 'oro',
+            default => 'vino',
+        };
+        $paso = match (true) {
+            in_array($e, ['enviada', 'en_revision', 'observada', 'en_subsanacion'], true) => 1,
+            in_array($e, ['en_evaluacion', 'evaluada'], true) => 2,
+            in_array($e, ['aprobada', 'convenio'], true) => 3,
+            in_array($e, ['ministracion', 'concluida', 'finalizada'], true) => 4,
+            default => 0,
+        };
 
-        return (new MailMessage)
-            ->subject("Actualización de Estado - Folio {$this->solicitud->folio}")
-            ->greeting("Hola, {$notifiable->name}")
-            ->line("Te informamos que el estado de tu solicitud con folio **{$this->solicitud->folio}** ha cambiado a: **{$estado}**.")
-            ->when($this->mensajeCustom, function ($mail) {
-                return $mail->line('Observaciones: '.$this->mensajeCustom);
-            })
-            ->action('Ver Solicitud', url(config('app.frontend_url')."/solicitante/solicitudes/{$this->solicitud->id}"))
-            ->line('Gracias por usar el sistema COMECYT.');
+        return \App\Support\CorreoSigae::nuevo("Tu solicitud {$s->folio} cambió de estado")
+            ->titulo('Tu solicitud cambió de estado', $s->titulo_proyecto)->estado($estado, $tono)
+            ->saludo($notifiable->name ?? '')
+            ->linea("Tu solicitud {$s->folio} pasó a «{$estado}».")
+            ->cita('Comentario', $this->mensajeCustom)
+            ->detalle(['Folio' => $s->folio, 'Proyecto' => $s->titulo_proyecto, 'Estado' => $estado])
+            ->progreso(['Enviada', 'Revisión', 'Evaluación', 'Convenio', 'Pagos'], $paso)
+            ->boton('Ver mi solicitud', \App\Support\EnlaceAviso::solicitud($notifiable, (int) $s->id, $s->folio) ?? '/login')->mail();
     }
 
     /**

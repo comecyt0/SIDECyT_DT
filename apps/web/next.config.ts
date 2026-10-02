@@ -71,6 +71,14 @@ const nextConfig: NextConfig = {
           // proxy reciben la política restrictiva de IIS (regla CspSiFalta de web.config).
         ],
       },
+      {
+        // 02/10/2026 — Excepción ÚNICA a CORP: los logos públicos de los correos de SIGAE (franja institucional y
+        // COMECYT) los cargan los clientes de correo desde otro origen (Outlook web, Apple Mail…); con 'same-origin'
+        // no se ven. Solo estos tres PNG públicos; todo lo demás sigue en 'same-origin'. Va DESPUÉS de la regla
+        // general para que gane en esta ruta.
+        source: "/identidad/correo-:archivo(franja|comecyt-negativo|comecyt-color).png",
+        headers: [{ key: "Cross-Origin-Resource-Policy", value: "cross-origin" }],
+      },
     ];
   },
 };

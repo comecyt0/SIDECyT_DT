@@ -41,17 +41,19 @@ class SolicitudObservada extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject("Solicitud Devuelta para Correcciones - Folio {$this->solicitud->folio}")
-            ->markdown('emails.solicitud-observada', [
-                'user_name' => $notifiable->name,
-                'folio' => $this->solicitud->folio,
-                'titulo_proyecto' => $this->solicitud->titulo_proyecto,
-                'fecha_observacion' => now(),
-                'observaciones' => $this->observaciones,
-                'solicitud_id' => $this->solicitud->id,
-                'app_url' => config('app.frontend_url'),
-            ]);
+        // 02/10/2026: plantilla única de SIGAE.
+        $s = $this->solicitud;
+        $obs = is_array($this->observaciones) ? implode("\n", array_map(fn ($o) => is_array($o) ? (string) ($o['comentario'] ?? $o['texto'] ?? json_encode($o)) : (string) $o, $this->observaciones)) : (string) $this->observaciones;
+
+        return \App\Support\CorreoSigae::nuevo("Tu solicitud {$s->folio} tiene observaciones")
+            ->titulo('Tu solicitud tiene observaciones', $s->titulo_proyecto)->estado('Con observaciones', 'oro')
+            ->saludo($notifiable->name ?? '')
+            ->linea('Revisamos tu solicitud y necesita correcciones antes de continuar.')
+            ->cita('Qué debes corregir', $obs)
+            ->detalle(['Folio' => $s->folio, 'Proyecto' => $s->titulo_proyecto])
+            ->progreso(['Enviada', 'Revisión', 'Evaluación', 'Convenio', 'Pagos'], 1)
+            ->pasos(['Abre tu solicitud y lee las observaciones.', 'Corrige los datos o vuelve a subir los documentos.', 'Envíala de nuevo a revisión.'])
+            ->boton('Corregir mi solicitud', \App\Support\EnlaceAviso::solicitud($notifiable, (int) $s->id, $s->folio) ?? '/login')->mail();
     }
 
     /**

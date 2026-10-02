@@ -41,22 +41,20 @@ class PagoLiberado extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject("Pago Liberado - Folio {$this->solicitud->folio}")
-            ->markdown('emails.pago-liberado', [
-                'user_name' => $notifiable->name,
-                'folio' => $this->solicitud->folio,
-                'titulo_proyecto' => $this->solicitud->titulo_proyecto,
-                'monto_ministrado' => $this->ministracion->monto_aprobado,
-                'numero_tranche' => $this->ministracion->numero_ministracion,
-                'total_tranches' => $this->ministracion->convenio->ministraciones()->count(),
-                'fecha_liberacion' => $this->ministracion->fecha_autorizacion ?? now(),
-                'banco_nombre' => 'Sistema Bancario COMECYT',
-                'numero_cuenta' => $notifiable->empresa?->numero_cuenta ?? 'No disponible',
-                'titular_cuenta' => $notifiable->empresa?->nombre ?? 'Tu Institución',
-                'solicitud_id' => $this->solicitud->id,
-                'app_url' => config('app.frontend_url'),
-            ]);
+        // 02/10/2026: plantilla única de SIGAE (sin datos bancarios en el correo).
+        $s = $this->solicitud;
+        $m = $this->ministracion;
+
+        return \App\Support\CorreoSigae::nuevo("Se liberó un pago de {$s->folio}")
+            ->titulo('¡Se liberó un pago de tu proyecto!', $s->titulo_proyecto)->estado('Pago liberado', 'verde')
+            ->saludo($notifiable->name ?? '')
+            ->linea('El COMECYT liberó una ministración de tu convenio.')
+            ->detalle(['Folio' => $s->folio, 'Monto' => '$'.number_format((float) $m->monto_aprobado, 2),
+                'Ministración' => $m->numero_ministracion.' de '.$m->convenio?->ministraciones()->count(),
+                'Fecha' => \Carbon\Carbon::parse($m->fecha_autorizacion ?? now())->format('d/m/Y')])
+            ->progreso(['Enviada', 'Revisión', 'Evaluación', 'Convenio', 'Pagos'], 4)
+            ->pasos(['Revisa el detalle en «Ministraciones».', 'Sube los comprobantes del gasto cuando se te pidan.'])
+            ->boton('Ver mis ministraciones', \App\Support\EnlaceAviso::ruta($notifiable, '/solicitante/ministraciones') ?? \App\Support\EnlaceAviso::solicitud($notifiable, (int) $s->id, $s->folio) ?? '/login')->mail();
     }
 
     /**

@@ -4,6 +4,8 @@ namespace App\Notifications;
 
 use App\Models\Club;
 use App\Notifications\Channels\CampanaChannel;
+use App\Support\CorreoSigae;
+use App\Support\EnlaceAviso;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -77,21 +79,47 @@ class ClubAviso extends Notification implements ShouldQueue
             'enlace' => \App\Support\EnlaceAviso::club($notifiable, (int) $this->club->id)];
     }
 
+    /** 02/10/2026 — Correo con la plantilla única de SIGAE (App\Support\CorreoSigae). */
     public function toMail(object $notifiable): MailMessage
     {
         [$asunto, $mensaje] = $this->textos();
-        $url = rtrim((string) config('app.frontend_url'), '/');
+        $c = $this->club;
+        $x = $this->extra;
+        $ev = $this->evento;
+        $tono = match ($ev) {
+            'aceptado', 'qr_habilitado', 'kit_entregado', 'firmado_aprobado', 'colider_activado', 'acceso_otorgado' => 'verde',
+            'observado', 'prorroga', 'kit_asignado' => 'oro',
+            'rechazado', 'firmado_rechazado', 'qr_revocado' => 'rojo',
+            default => 'vino',
+        };
+        $chip = ['observado' => 'Con observaciones', 'prorroga' => 'Plazo ampliado', 'aceptado' => 'Aceptado', 'rechazado' => 'No aceptado',
+            'qr_habilitado' => 'QR disponible', 'kit_asignado' => 'Entrega programada', 'acceso_otorgado' => 'Acceso concedido',
+            'colider_activado' => 'Rol de líder compartido'][$ev] ?? null;
 
-        $m = (new MailMessage)
-            ->subject($asunto.' — SIDECyT')
-            ->greeting('Hola, '.($notifiable->name ?? ''))
-            ->line($mensaje);
-        // Observaciones y prórroga: el comentario general del revisor (texto plano; el correo escapa el contenido).
-        if (in_array($this->evento, ['observado', 'prorroga'], true) && ! empty($this->extra['comentario'])) {
-            $m->line($this->evento === 'observado' ? 'Qué debes corregir:' : 'Motivo:')->line(mb_substr((string) $this->extra['comentario'], 0, 1500));
-        }
+        $m = CorreoSigae::nuevo($asunto)->etiqueta('SIGAE · Apoyo en especie')->titulo($asunto, $c->nombre)
+            ->preencabezado($mensaje)->saludo($notifiable->name ?? '')->linea($mensaje)
+            ->detalle(['Club' => $c->nombre, 'Folio' => $c->folio, 'Convocatoria' => $c->convocatoria?->nombre,
+                'Plazo para corregir' => in_array($ev, ['observado', 'prorroga'], true) ? ($x['vence'] ?? null) : null,
+                'Fecha de entrega' => $ev === 'kit_asignado' ? ($x['fecha'] ?? null) : null,
+                'Lugar' => $ev === 'kit_asignado' ? ($x['lugar'] ?? null) : null]);
+        if ($chip) $m->estado($chip, $tono); else $m->tono($tono);
+        if (in_array($ev, ['observado', 'prorroga'], true)) $m->cita($ev === 'observado' ? 'Qué debes corregir' : 'Motivo', $x['comentario'] ?? null);
+        if ($ev === 'rechazado') $m->cita('Motivo', $x['motivo'] ?? null);
 
-        return $m->action('Entrar a mi panel', $url.'/club/clubes/'.$this->club->id)
-            ->salutation('COMECYT — SIDECyT');
+        $m->pasos(match ($ev) {
+            'observado' => ['Abre tu club y lee las observaciones.', 'Corrige lo que se indica (puedes cambiar cualquier dato).', 'Pulsa «Enviar correcciones» antes de que venza el plazo.'],
+            'aceptado' => ['Espera la fecha y el lugar de entrega de tu kit (te llegará un correo).', 'Descarga la carta de resguardo, fírmala y súbela escaneada en PDF.', 'Cuando el COMECYT lo habilite, descarga tu QR y credencial.'],
+            'kit_asignado' => ['Lleva la carta de resguardo firmada.', 'Llega puntual al lugar indicado.', 'Quien reciba el kit firmará de recibido.'],
+            'qr_habilitado' => ['Descarga la credencial con el QR desde tu panel.', 'Llévala impresa o en tu celular a los eventos.'],
+            'acceso_otorgado' => ['Entra a SIDECyT con tu correo.', 'Si tu cuenta es nueva, usa la contraseña que te dio el líder: te pediremos cambiarla.', 'Abre «Clubes que acompaño» para seguir al club.'],
+            'firmado_rechazado' => ['Abre la logística de tu club y lee el motivo.', 'Sube una versión nueva, escaneada en PDF.'],
+            default => [],
+        });
+        $orden = ['observado' => 1, 'prorroga' => 1, 'etapa_aprobada' => 1, 'aprobado_revision' => 2, 'aceptado' => 3, 'kit_asignado' => 4, 'kit_entregado' => 5, 'qr_habilitado' => 4];
+        if (isset($orden[$ev])) $m->progreso(['Registro', 'Revisiones', 'Comité', 'Aceptado', 'Kit', 'Evento'], $orden[$ev]);
+
+        $destino = EnlaceAviso::club($notifiable, (int) $c->id) ?? '/club/clubes/'.$c->id;
+
+        return $m->boton(str_starts_with($destino, '/club') ? 'Abrir mi club' : 'Abrir el club', $destino)->mail();
     }
 }

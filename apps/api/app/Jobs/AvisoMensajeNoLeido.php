@@ -38,19 +38,19 @@ class AvisoMensajeNoLeido implements ShouldQueue
             ? Buzon::equipo((int) $c->convocatoria_id)
             : User::where('id', $c->solicitante_id)->where('activo', true)->get(['id', 'name', 'email']);
 
-        $base = rtrim((string) config('app.frontend_url'), '/');
         $ruta = $delSolicitante ? '/admin/buzon?hilo='.$c->id : '/solicitante/buzon?hilo='.$c->id;
-        $asunto = 'SIGAE: tienes un mensaje sin leer en el buzón';
+        $asuntoHilo = mb_substr(strip_tags((string) $c->asunto), 0, 120);
 
         foreach ($destinatarios as $u) {
             try {
-                Mail::raw(
-                    "Hola {$u->name}:\n\nTienes un mensaje sin leer en el buzón de sugerencias de SIGAE "
-                    ."(asunto: «".mb_substr(strip_tags((string) $c->asunto), 0, 120)."»).\n\n"
-                    ."Ábrelo aquí: {$base}{$ruta}\n\n"
-                    ."Por seguridad este correo no incluye el contenido del mensaje.\n\nCOMECYT",
-                    fn ($msg) => $msg->to($u->email)->subject($asunto)
-                );
+                // 02/10/2026: plantilla única de SIGAE (sigue sin incluir el contenido del mensaje).
+                $datos = \App\Support\CorreoSigae::nuevo('Tienes un mensaje sin leer en el buzón')
+                    ->titulo('Tienes un mensaje sin leer', 'Buzón de SIGAE')->estado('Sin leer', 'azul')
+                    ->saludo($u->name)->linea('Te escribieron en el buzón y el mensaje sigue sin leerse.')
+                    ->detalle(['Conversación' => $asuntoHilo])
+                    ->linea('Por seguridad, este correo no incluye el contenido del mensaje.')
+                    ->boton('Leer y responder', $ruta)->datos();
+                Mail::send('emails.sigae', $datos, fn ($msg) => $msg->to($u->email)->subject('Tienes un mensaje sin leer en el buzón — SIGAE'));
             } catch (\Throwable $e) {
                 Log::warning('AvisoMensajeNoLeido: no se pudo enviar', ['user_id' => $u->id, 'error' => $e->getMessage()]);
             }

@@ -34,18 +34,18 @@ class ConvocatoriaCierreProximo extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $institutionName = (string) config('comecyt.institucion_nombre', 'COMECYT');
-        $urgencia = $this->diasRestantes <= 1 ? 'URGENTE' : ($this->diasRestantes <= 3 ? 'IMPORTANTE' : 'AVISO');
+        // 02/10/2026: plantilla única de SIGAE.
         $diasText = $this->diasRestantes === 1 ? 'mañana' : "en {$this->diasRestantes} días";
+        $cierre = $this->convocatoria->fecha_cierre_efectiva ? \Carbon\Carbon::parse($this->convocatoria->fecha_cierre_efectiva)->format('d/m/Y') : null;
 
-        return (new MailMessage)
-            ->subject("[{$urgencia}] La convocatoria '{$this->convocatoria->nombre}' cierra {$diasText}")
-            ->greeting("Hola {$notifiable->name},")
-            ->line("Te informamos que la convocatoria **{$this->convocatoria->nombre}** cierra {$diasText} ({$this->convocatoria->fecha_cierre_efectiva}).")
-            ->line('Si tienes solicitudes en borrador o pendientes de subsanación, complétalas antes de la fecha de cierre.')
-            ->action('Ver convocatoria', config('app.frontend_url') . '/solicitante/solicitudes')
-            ->line("— Equipo {$institutionName}")
-            ->salutation('Atentamente');
+        return \App\Support\CorreoSigae::nuevo("La convocatoria «{$this->convocatoria->nombre}» cierra {$diasText}")
+            ->titulo("La convocatoria cierra {$diasText}", $this->convocatoria->nombre)
+            ->estado($this->diasRestantes <= 1 ? 'Último día' : ($this->diasRestantes <= 3 ? 'Quedan pocos días' : 'Aviso'), $this->diasRestantes <= 3 ? 'rojo' : 'oro')
+            ->saludo($notifiable->name ?? '')
+            ->linea('Si tienes una solicitud en borrador o con correcciones pendientes, complétala y envíala antes del cierre.')
+            ->detalle(['Convocatoria' => $this->convocatoria->nombre, 'Fecha de cierre' => $cierre])
+            ->pasos(['Revisa que tus datos y documentos estén completos.', 'Envía tu solicitud antes de la fecha de cierre.'])
+            ->boton('Ver mis solicitudes', \App\Support\EnlaceAviso::ruta($notifiable, '/admin/convocatorias/'.$this->convocatoria->id) ?? '/solicitante/solicitudes')->mail();
     }
 
     public function toArray(object $notifiable): array

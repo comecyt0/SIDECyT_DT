@@ -41,22 +41,20 @@ class ConvenioCreado extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject("Convenio Generado - Folio {$this->solicitud->folio}")
-            ->markdown('emails.convenio-creado', [
-                'user_name' => $notifiable->name,
-                'folio' => $this->solicitud->folio,
-                'convenio_numero' => $this->convenio->numero_convenio,
-                'titulo_proyecto' => $this->solicitud->titulo_proyecto,
-                'monto_aprobado' => $this->convenio->monto_aprobado,
-                'num_tranches' => $this->convenio->ministraciones()->count(),
-                'fecha_generacion' => $this->convenio->created_at,
-                'fecha_inicio' => $this->convenio->fecha_inicio,
-                'fecha_termino' => $this->convenio->fecha_termino,
-                'institucion_nombre' => $this->solicitud->empresa->nombre ?? 'Tu Institución',
-                'solicitud_id' => $this->solicitud->id,
-                'app_url' => config('app.frontend_url'),
-            ]);
+        // 02/10/2026: plantilla única de SIGAE.
+        $s = $this->solicitud;
+        $c = $this->convenio;
+        $fecha = fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d/m/Y') : null;
+
+        return \App\Support\CorreoSigae::nuevo("Tu convenio de {$s->folio} está listo")
+            ->titulo('¡Tu convenio está listo para firmar!', $s->titulo_proyecto)->estado('Convenio generado', 'verde')
+            ->saludo($notifiable->name ?? '')
+            ->linea('Generamos el convenio de tu proyecto. Revísalo, descárgalo y fírmalo.')
+            ->detalle(['Folio' => $s->folio, 'Número de convenio' => $c->numero_convenio, 'Monto aprobado' => '$'.number_format((float) $c->monto_aprobado, 2),
+                'Entregas (ministraciones)' => $c->ministraciones()->count(), 'Vigencia' => trim(($fecha($c->fecha_inicio) ?? '').' — '.($fecha($c->fecha_termino) ?? ''), ' —')])
+            ->progreso(['Enviada', 'Revisión', 'Evaluación', 'Convenio', 'Pagos'], 3)
+            ->pasos(['Abre tu solicitud y descarga el convenio.', 'Fírmalo y entrégalo como te indique el COMECYT.', 'Después se liberan las ministraciones.'])
+            ->boton('Ver mi convenio', \App\Support\EnlaceAviso::solicitud($notifiable, (int) $s->id, $s->folio) ?? '/login')->mail();
     }
 
     /**

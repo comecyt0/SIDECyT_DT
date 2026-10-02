@@ -57,14 +57,20 @@ class EscuelaSolicitudAviso extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
+        // 02/10/2026: plantilla única de SIGAE.
         [$asunto, $mensaje] = $this->textos();
-        $url = rtrim((string) config('app.frontend_url'), '/').($this->evento === 'nueva' ? '/admin/escuelas?tab=solicitudes' : '/club/dashboard');
+        $s = $this->solicitud;
+        $destino = $this->toCampana($notifiable)['enlace'] ?? ($this->evento === 'nueva' ? '/admin/escuelas?tab=solicitudes' : '/club/dashboard');
+        $m = \App\Support\CorreoSigae::nuevo($asunto)->etiqueta('SIGAE · Apoyo en especie')->titulo($asunto, $s->nombre)
+            ->saludo($notifiable->name ?? '')->linea($mensaje)
+            ->detalle(['Escuela' => $s->nombre, 'CCT' => $s->cct, 'Municipio' => $s->municipio]);
+        match ($this->evento) {
+            'nueva' => $m->estado('Por revisar', 'oro'),
+            'aceptada' => $m->estado('Dada de alta', 'verde')->pasos(['Abre tu club: la escuela ya quedó asignada.', 'Completa los datos que falten y envía tu registro.']),
+            'rechazada' => $m->estado('No aceptada', 'rojo')->cita('Motivo', $s->motivo)->pasos(['Corrige los datos de la escuela y vuelve a enviarla, o elige otra del catálogo.']),
+            default => $m,
+        };
 
-        return (new MailMessage)
-            ->subject($asunto.' — SIDECyT')
-            ->greeting('Hola, '.($notifiable->name ?? ''))
-            ->line($mensaje)
-            ->action($this->evento === 'nueva' ? 'Revisar la solicitud' : 'Entrar a mi panel', $url)
-            ->salutation('COMECYT — SIDECyT');
+        return $m->boton($this->evento === 'nueva' ? 'Revisar la solicitud' : 'Abrir mi club', $destino)->mail();
     }
 }

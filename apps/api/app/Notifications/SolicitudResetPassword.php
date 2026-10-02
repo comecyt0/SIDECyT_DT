@@ -36,16 +36,13 @@ class SolicitudResetPassword extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $appUrl = rtrim(config('app.frontend_url'), '/');
-
-        return (new MailMessage)
-            ->subject('⚠️ Solicitud de Recuperación de Contraseña — COMECYT')
-            ->greeting('Hola, Administrador')
-            ->line("El usuario **{$this->resetRequest->email}** ha solicitado recuperar su contraseña en el sistema COMECYT.")
-            ->line('Por favor accede al panel de administración para revisar y aprobar (o rechazar) esta solicitud.')
-            ->action('Ver Solicitudes de Recuperación', $appUrl.'/admin/reset-requests')
-            ->line('Si apruebas la solicitud, el sistema enviará automáticamente el enlace de recuperación al correo del usuario.')
-            ->line('Si no reconoces esta solicitud, puedes rechazarla sin problema.')
-            ->salutation('COMECYT — Sistema de Gestión de Apoyo Empresarial');
+        // 02/10/2026: plantilla única de SIGAE.
+        return \App\Support\CorreoSigae::nuevo('Solicitud de recuperación de contraseña')
+            ->titulo('Alguien pidió recuperar su contraseña')->estado('Por revisar', 'oro')
+            ->saludo($notifiable->name ?? '')
+            ->linea('Una persona pidió recuperar su contraseña. Revisa la solicitud y apruébala o recházala.')
+            ->detalle(['Cuenta' => $this->resetRequest->email])
+            ->pasos(['Abre «Recuperación de contraseñas».', 'Si la reconoces, apruébala: el sistema le envía el enlace.', 'Si no la reconoces, recházala.'])
+            ->boton('Revisar la solicitud', '/admin/reset-requests')->mail();
     }
 }

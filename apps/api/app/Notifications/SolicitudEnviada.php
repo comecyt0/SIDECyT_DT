@@ -38,17 +38,18 @@ class SolicitudEnviada extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject("Solicitud Enviada - Folio {$this->solicitud->folio}")
-            ->markdown('emails.solicitud-enviada', [
-                'user_name' => $notifiable->name,
-                'folio' => $this->solicitud->folio,
-                'titulo_proyecto' => $this->solicitud->titulo_proyecto,
-                'monto_solicitado' => $this->solicitud->monto_solicitado,
-                'fecha_envio' => now(),
-                'solicitud_id' => $this->solicitud->id,
-                'app_url' => config('app.frontend_url'),
-            ]);
+        // 02/10/2026: plantilla única de SIGAE.
+        $s = $this->solicitud;
+
+        return \App\Support\CorreoSigae::nuevo("Recibimos tu solicitud {$s->folio}")
+            ->titulo('¡Recibimos tu solicitud!', $s->titulo_proyecto)->estado('En revisión', 'verde')
+            ->saludo($notifiable->name ?? '')
+            ->linea('Tu solicitud se envió a revisión. Te avisaremos por aquí y en tu panel de cada cambio.')
+            ->detalle(['Folio' => $s->folio, 'Proyecto' => $s->titulo_proyecto,
+                'Monto solicitado' => $s->monto_solicitado ? '$'.number_format((float) $s->monto_solicitado, 2) : null, 'Enviada' => now('America/Mexico_City')->format('d/m/Y H:i')])
+            ->progreso(['Enviada', 'Revisión', 'Evaluación', 'Convenio', 'Pagos'], 1)
+            ->pasos(['El equipo de revisión verifica tus documentos.', 'Si algo falta, te pediremos correcciones con un plazo.', 'Después pasa a evaluación técnica.'])
+            ->boton('Ver mi solicitud', \App\Support\EnlaceAviso::solicitud($notifiable, (int) $s->id, $s->folio) ?? '/login')->mail();
     }
 
     /**

@@ -26,12 +26,13 @@ class AccesoRechazado extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject('Actualización sobre tu solicitud de acceso — COMECYT')
-            ->view('emails.acceso-rechazado', [
-                'nombre' => $this->solicitudAcceso->nombre,
-                'motivo_rechazo' => $this->solicitudAcceso->motivo_rechazo,
-                'app_url' => config('app.frontend_url'),
-            ]);
+        // 02/10/2026: plantilla única de SIGAE.
+        return \App\Support\CorreoSigae::nuevo('Tu solicitud de acceso no fue aprobada')
+            ->titulo('Tu solicitud de acceso no fue aprobada')->estado('No aprobada', 'rojo')
+            ->saludo($this->solicitudAcceso->nombre)
+            ->linea('Revisamos tu solicitud de acceso a SIGAE y por ahora no fue aprobada.')
+            ->cita('Motivo', $this->solicitudAcceso->motivo_rechazo)
+            ->pasos(['Revisa el motivo.', 'Si puedes corregirlo, vuelve a registrarte con los datos correctos.'])
+            ->boton('Volver a registrarme', '/registro')->mail();
     }
 }

@@ -30,13 +30,15 @@ class NuevaSolicitudAcceso extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject("Nueva Solicitud de Acceso — {$this->solicitudAcceso->nombre}")
-            ->view('emails.nueva-solicitud-acceso', [
-                'solicitud' => $this->solicitudAcceso,
-                'admin_name' => $notifiable->name,
-                'app_url' => config('app.frontend_url'),
-            ]);
+        // 02/10/2026: plantilla única de SIGAE.
+        $s = $this->solicitudAcceso;
+
+        return \App\Support\CorreoSigae::nuevo('Nueva solicitud de acceso')
+            ->titulo('Nueva solicitud de acceso', $s->nombre)->estado('Por revisar', 'oro')
+            ->saludo($notifiable->name ?? '')
+            ->linea("{$s->nombre} pidió acceso a SIGAE. Revisa sus datos y apruébala o recházala.")
+            ->detalle(['Nombre' => $s->nombre, 'Correo' => $s->email, 'Empresa o institución' => $s->empresa_nombre ?? null])
+            ->boton('Revisar la solicitud', '/admin/solicitudes-acceso')->mail();
     }
 
     public function toArray(object $notifiable): array

@@ -29,12 +29,13 @@ class AccesoAprobado extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject('Tu acceso a COMECYT ha sido aprobado')
-            ->view('emails.acceso-aprobado', [
-                'nombre' => $this->solicitudAcceso->nombre,
-                'email' => $this->solicitudAcceso->email,
-                'app_url' => config('app.frontend_url'),
-            ]);
+        // 02/10/2026: plantilla única de SIGAE.
+        return \App\Support\CorreoSigae::nuevo('Tu acceso a SIGAE fue aprobado')
+            ->titulo('¡Bienvenido(a) a SIGAE!', 'Tu solicitud de acceso fue aprobada')->estado('Acceso aprobado', 'verde')
+            ->saludo($this->solicitudAcceso->nombre)
+            ->linea('Ya puedes entrar al Sistema de Gestión de Apoyo Empresarial con tu correo.')
+            ->detalle(['Correo de acceso' => $this->solicitudAcceso->email])
+            ->pasos(['Entra con tu correo y la contraseña que registraste.', 'Completa tu perfil la primera vez.', 'Revisa las convocatorias abiertas y empieza tu solicitud.'])
+            ->boton('Entrar a SIGAE', '/login')->mail();
     }
 }

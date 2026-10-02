@@ -1962,6 +1962,27 @@ línea de tiempo, `ClubResumen` con descarga de documentos, historial y «Abrir 
 `leer()` y `documentosDe()` para no duplicar. Botón de cerrar propio (el header fijo tapaba el ✕ del diálogo).
 **Verificado:** navegador 13/13 (`verif_previa.mjs`, 1440 y 390 px).
 
+### E65 — Correos de SIGAE con un solo diseño institucional [publicado 02-10-2026]
+**Pedido:** «personaliza los correos con el estilo de la página de SIGAE, con los logos institucionales como en el header,
+unifica el diseño de todos los correos (solo de SIGAE), con colores, llamativo, interactivo y lo más intuitivo posible».
+- `resources/views/emails/sigae.blade.php`: franja institucional (Gobierno del Estado · Educación · COMECYT) arriba,
+  encabezado vino con degradado (o verde/oro/rojo/azul según el resultado), chip de estado, datos clave en tabla,
+  comentario destacado, **«Así va tu trámite»** (línea de avance), **«Qué sigue»** (pasos numerados), un botón principal
+  grande y el enlace en texto, pie vino con el logo COMECYT. Tablas y estilos en línea (Outlook, Gmail, Apple Mail),
+  `color-scheme: light`, responsive a 390 px, texto de vista previa.
+- `App\Support\CorreoSigae` (constructor fluido; rutas internas → URL absoluta con `FRONTEND_URL`; todo escapado).
+  Convertidos: `ClubAviso` (todos los eventos de clubes), `AccesoAprobado/Rechazado` (+ `AccesoRechazadoMail`),
+  `ResetPasswordNotification`, `SolicitudResetPassword`, `NuevaSolicitudAcceso`, `SolicitudEnviada/Observada/
+  EstadoActualizado`, `EvaluacionCompletada`, `ConvenioCreado`, `PagoLiberado` (sin datos bancarios),
+  `ConvocatoriaCierreProximo`, `EscuelaSolicitudAviso`, `RolSolicitudAviso` y el aviso del buzón sin leer. Se quitaron
+  las plantillas viejas (azules, fuera de identidad).
+- Logos de correo: `public/identidad/correo-franja.png` (1200 px), `correo-comecyt-negativo.png` y
+  `correo-comecyt-color.png`. **Excepción de CORP documentada:** solo esas tres rutas llevan
+  `Cross-Origin-Resource-Policy: cross-origin` (`next.config.ts`), porque los clientes de correo las cargan desde otro
+  origen; todo lo demás sigue `same-origin`.
+**Verificado:** los 16 correos se generan (`muestra_correos_todos.php`, sin envío), capturas a 700 y 390 px con logos,
+F2 57/57 y F3 58/58 sin trabajos fallidos en la cola. No se envió ningún correo real de prueba.
+
 ### E64 — Avisos que llevan a lo que indican y dicen el cambio con detalle [publicado 02-10-2026]
 **Pedido:** «las notificaciones como "documento firmado por revisar" y el resto, en todos los paneles, deben dirigirte a
 lo que específicamente indican… algunas solo son informativas sin indicar a dónde ir o qué hacer».

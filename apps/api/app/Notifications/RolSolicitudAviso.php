@@ -62,20 +62,20 @@ class RolSolicitudAviso extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $url = rtrim((string) config('app.frontend_url'), '/');
-        $m = (new MailMessage)->salutation('COMECYT — SIDECyT');
+        // 02/10/2026: plantilla única de SIGAE.
+        $rol = $this->rol();
 
         return match ($this->evento) {
-            'nueva' => $m->subject('Nueva solicitud de rol — SIDECyT')
-                ->line(($this->solicitud->user?->name ?? 'Una persona').' pidió el rol «'.$this->rol().'».')
-                ->action('Revisar solicitudes', $url.'/admin/solicitudes-acceso'),
-            'aprobada' => $m->subject('Tu rol «'.$this->rol().'» fue aprobado — SIDECyT')
-                ->line('Tu solicitud del rol «'.$this->rol().'» fue aprobada.')
-                ->line('Entra a tu panel y cambia de rol desde «Mi cuenta → Mis roles».')
-                ->action('Entrar a SIDECyT', $url.'/login'),
-            default => $m->subject('Actualización de tu solicitud de rol — SIDECyT')
-                ->line('Tu solicitud del rol «'.$this->rol().'» no fue aprobada.')
-                ->line('Motivo: '.($this->solicitud->motivo_rechazo ?? '—')),
+            'nueva' => \App\Support\CorreoSigae::nuevo('Nueva solicitud de rol')->titulo('Nueva solicitud de rol', $rol)->estado('Por revisar', 'oro')
+                ->saludo($notifiable->name ?? '')->linea(($this->solicitud->user?->name ?? 'Una persona').' pidió el rol «'.$rol.'». Revísala y apruébala o recházala.')
+                ->boton('Revisar la solicitud', '/admin/solicitudes-acceso')->mail(),
+            'aprobada' => \App\Support\CorreoSigae::nuevo('Tu rol «'.$rol.'» fue aprobado')->titulo('¡Tu nuevo rol fue aprobado!', $rol)->estado('Aprobado', 'verde')
+                ->saludo($notifiable->name ?? '')->linea('Ya puedes usar el rol «'.$rol.'».')
+                ->pasos(['Entra a SIGAE.', 'Ve a «Mi cuenta → Mis roles».', 'Cambia al rol «'.$rol.'».'])
+                ->boton('Entrar a SIGAE', '/login')->mail(),
+            default => \App\Support\CorreoSigae::nuevo('Tu solicitud de rol no fue aprobada')->titulo('Tu solicitud de rol no fue aprobada', $rol)->estado('No aprobada', 'rojo')
+                ->saludo($notifiable->name ?? '')->linea('Revisamos tu solicitud del rol «'.$rol.'» y por ahora no fue aprobada.')
+                ->cita('Motivo', $this->solicitud->motivo_rechazo)->boton('Entrar a SIGAE', '/login')->mail(),
         };
     }
 }
