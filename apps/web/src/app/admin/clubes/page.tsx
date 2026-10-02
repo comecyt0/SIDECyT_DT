@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Shapes, Loader2, Search, Users, School, ChevronRight, Inbox, Gavel, Truck } from 'lucide-react';
+import { Shapes, Loader2, Search, Users, School, ChevronRight, Inbox, Gavel, Truck, Eye } from 'lucide-react';
 import LogisticaConvocatoria from '@/components/especie/LogisticaConvocatoria';
 import { useRol } from '@/hooks/useRol';
 import BandejaClubes from '@/components/especie/BandejaClubes';
@@ -14,11 +14,15 @@ import { ESTADO_CLUB, SISTEMA_ESCUELA } from '@/lib/especie';
 import FotoClub from '@/components/especie/FotoClub';
 import { formatDate } from '@/lib/format';
 import Folio from '@/components/ui/folio';
+import { Button } from '@/components/ui/button';
+import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
+import VistaPreviaClub from '@/components/especie/VistaPreviaClub';
 
 interface ConvEspecie { id: number; nombre: string; fecha_apertura: string | null; fecha_cierre: string | null; clubes_count: number; enviados_count: number }
 interface ClubFila {
   id: number; folio: string; nombre: string; estado: string; logo_url: string | null; enviado_at: string | null; integrantes_count: number;
   convocatoria_corto?: string | null;
+  vence_at?: string | null; visto_bueno_at?: string | null; comite_resultado?: 'aceptado' | 'no_aceptado' | null;
   escuela: { cct: string; nombre: string; municipio: string; sistema: string } | null;
   lider: { name: string; email: string } | null;
 }
@@ -51,6 +55,7 @@ export default function ClubesAdminPage() {
   const [busqueda, setBusqueda] = useState('');
   const [q, setQ] = useState('');
   const [aviso, setAviso] = useState<string | null>(null);
+  const [previa, setPrevia] = useState<number | null>(null);
 
   useEffect(() => {
     api.get('/admin/especie/convocatorias')
@@ -193,8 +198,8 @@ export default function ClubesAdminPage() {
                 {clubes.map((c) => {
                   const est = ESTADO_CLUB[c.estado] ?? { etiqueta: c.estado, tono: 'neutral' };
                   return (
-                    <li key={c.id}>
-                      <Link href={`/admin/clubes/${c.id}`} className="app-card data-card flex items-center gap-3 p-4 transition-transform active:scale-[0.99]">
+                    <li key={c.id} className="app-card data-card flex flex-col gap-3 p-4">
+                      <Link href={`/admin/clubes/${c.id}`} className="flex items-center gap-3 rounded-[14px] transition-transform active:scale-[0.99]">
                         <FotoClub src={c.logo_url} fallback={<Shapes className="h-5 w-5 text-[var(--app-ink-2)]" aria-hidden="true" />} />
                         <span className="min-w-0 flex-1">
                           <span className="flex flex-wrap items-center gap-2">
@@ -213,6 +218,13 @@ export default function ClubesAdminPage() {
                         </span>
                         <ChevronRight className="h-4 w-4 shrink-0 text-[var(--app-ink-2)]" aria-hidden="true" />
                       </Link>
+                      {/* Línea de tiempo del estado en cada registro (pedido del usuario, 02/10/2026). */}
+                      <LineaAvanceClub estado={c.estado} avance={c} />
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button type="button" size="sm" variant="soft" onClick={() => setPrevia(c.id)} aria-label={`Vista previa de ${c.nombre}`}>
+                          <Eye className="h-4 w-4" aria-hidden="true" />Vista previa
+                        </Button>
+                      </div>
                     </li>
                   );
                 })}
@@ -222,6 +234,7 @@ export default function ClubesAdminPage() {
           </>)}
         </>
       )}
+      <VistaPreviaClub clubId={previa} onClose={() => setPrevia(null)} hrefFicha={(id) => `/admin/clubes/${id}`} />
     </div>
   );
 }

@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Loader2, Shapes, School, ChevronRight, Inbox, Timer } from 'lucide-react';
+import { Loader2, Shapes, School, ChevronRight, Inbox, Timer, Eye } from 'lucide-react';
 import api from '@/lib/api';
 import FotoClub from '@/components/especie/FotoClub';
 import { restante } from '@/components/especie/CuentaRegresiva';
 import Folio from '@/components/ui/folio';
+import { Button } from '@/components/ui/button';
+import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
+import VistaPreviaClub from '@/components/especie/VistaPreviaClub';
 import { ESTADO_CLUB, SISTEMA_ESCUELA, fechaHora } from '@/lib/especie';
 
 interface FilaBandeja {
@@ -25,6 +28,7 @@ export default function BandejaClubes({ vista, hrefFicha, convocatoriaId, vacio 
   const [filas, setFilas] = useState<FilaBandeja[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [previa, setPrevia] = useState<number | null>(null);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -60,8 +64,8 @@ export default function BandejaClubes({ vista, hrefFicha, convocatoriaId, vacio 
         const est = ESTADO_CLUB[c.estado] ?? { etiqueta: c.estado, tono: 'neutral' };
         const falta = c.vence_at ? new Date(c.vence_at).getTime() - Date.now() : null;
         return (
-          <li key={c.id}>
-            <Link href={hrefFicha(c.id)} className="app-card data-card flex items-center gap-3 p-4 transition-transform active:scale-[0.99]">
+          <li key={c.id} className="app-card data-card flex flex-col gap-3 p-4">
+            <Link href={hrefFicha(c.id)} className="flex items-center gap-3 rounded-[14px] transition-transform active:scale-[0.99]">
               <FotoClub src={c.logo_url} fallback={<Shapes className="h-5 w-5 text-[var(--app-ink-2)]" aria-hidden="true" />} />
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-2">
@@ -90,9 +94,17 @@ export default function BandejaClubes({ vista, hrefFicha, convocatoriaId, vacio 
               </span>
               <ChevronRight className="h-4 w-4 shrink-0 text-[var(--app-ink-2)]" aria-hidden="true" />
             </Link>
+            <LineaAvanceClub estado={c.estado} avance={c} />
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" size="sm" variant="soft" onClick={() => setPrevia(c.id)} aria-label={`Vista previa de ${c.nombre}`}>
+                <Eye className="h-4 w-4" aria-hidden="true" />Vista previa
+              </Button>
+            </div>
           </li>
         );
       })}
+      <VistaPreviaClub clubId={previa} onClose={() => setPrevia(null)} hrefFicha={hrefFicha}
+        endpoint={(id) => (hrefFicha(id).startsWith('/admin') ? `/admin/clubes/${id}` : `/revision/clubes/${id}`)} />
     </ul>
   );
 }

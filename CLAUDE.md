@@ -1952,6 +1952,15 @@ quitado el 28/09). `components/ui/ThemeSwitch.tsx` (`role="switch"`, `aria-check
 pintar (sin parpadeo; CSP intacta). **Pendiente visual:** el logo COMECYT del encabezado se ve tenue sobre el fondo oscuro.
 **Verificado:** navegador 13/13 (`verif_tema.mjs`: admin 1440 y líder 390 px, cambia, persiste al recargar desde el primer
 pintado, teclado, sin scroll horizontal, sin errores de CSP).
+
+### E60 — admin/clubes: línea de tiempo en cada registro y vista previa [publicado 02-10-2026]
+**Pedido:** «en admin/clubes también debe tener visualmente la línea de tiempo del status del club en cada registro así
+como sus detalles con un botón de vista previa». Las tarjetas de «Todos» y de la bandeja («Por revisar» y «Comité») traen
+`LineaAvanceClub` y el botón «Vista previa» → `components/especie/VistaPreviaClub.tsx` (diálogo de solo lectura con la
+línea de tiempo, `ClubResumen` con descarga de documentos, historial y «Abrir ficha»; usa el endpoint de la ficha:
+`/admin/clubes/{id}` o `/revision/clubes/{id}` según el panel, el servidor aplica el alcance). `FichaClubPersonal` exporta
+`leer()` y `documentosDe()` para no duplicar. Botón de cerrar propio (el header fijo tapaba el ✕ del diálogo).
+**Verificado:** navegador 13/13 (`verif_previa.mjs`, 1440 y 390 px).
 **Verificado:** backend F1 53/53 y F3 58/58 (nuevos: box lunch arriba del máximo de integrantes → 422 para líder y admin),
 navegador 20/20 (`verif_e57.mjs`: límites, 422 del servidor, confeti suave con «reducir movimiento» al cargar / al volver
 con scroll / con el botón, confeti completo en escritorio y en el panel de inicio, modalidad en todos los apartados, sin

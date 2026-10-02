@@ -16,7 +16,7 @@ import {
   type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi,
 } from '@/lib/especie';
 
-interface Detalle {
+export interface DetalleClubPersonal {
   club: ClubApi;
   integrantes: IntegranteApi[];
   documentos: { clave: string; nombre_original: string; subido_at: string | null }[];
@@ -28,10 +28,22 @@ interface Detalle {
   logistica: LogisticaEstado | null;
 }
 
+/** Documentos que pide la convocatoria (carta de la escuela + los del programa) con lo que subió el club. */
+export function documentosDe(d: DetalleClubPersonal): DocumentoClub[] {
+  const subidos = new Map(d.documentos.map((x) => [x.clave, x]));
+  return [
+    { clave: CARTA_ESCUELA, nombre: 'Carta de consentimiento de la escuela', obligatorio: true },
+    ...(Array.isArray(d.config.documentos) ? d.config.documentos : []).map((x) => ({ clave: x.clave, nombre: x.nombre, obligatorio: Boolean(x.obligatorio) })),
+  ].map((x) => {
+    const s = subidos.get(x.clave);
+    return { ...x, subido: s ? { nombre_original: s.nombre_original, subido_at: s.subido_at } : null };
+  });
+}
+
 const SIN_PERMISOS: PermisosRevision & { logistica?: boolean } = { resolver: false, observar: false, rechazar: false, prorroga: false, visto_bueno: false, comite: false, acta: false, logistica: false };
 
-function leer(data: unknown): Detalle | null {
-  const d = data as Partial<Detalle> | null;
+export function leer(data: unknown): DetalleClubPersonal | null {
+  const d = data as Partial<DetalleClubPersonal> | null;
   if (!d?.club || typeof d.club.id !== 'number') return null;
   return {
     club: d.club,
@@ -51,7 +63,7 @@ function leer(data: unknown): Detalle | null {
  * /revision/clubes/{id} (revisor). El servidor aplica el alcance (404 fuera de él).
  */
 export default function FichaClubPersonal({ endpoint, volverHref }: { endpoint: string; volverHref: (convocatoriaId?: number) => string }) {
-  const [d, setD] = useState<Detalle | null>(null);
+  const [d, setD] = useState<DetalleClubPersonal | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -74,14 +86,7 @@ export default function FichaClubPersonal({ endpoint, volverHref }: { endpoint: 
   if (cargando) return <div className="grid min-h-[50vh] place-items-center"><Loader2 className="h-8 w-8 animate-spin" aria-label="Cargando" /></div>;
   if (!d) return <div className="space-y-6"><PageHeader title="Club" backHref={volverHref()} backLabel="Volver" /><AlertBox type="error" message={error ?? 'No se pudo cargar el club.'} /></div>;
 
-  const subidos = new Map(d.documentos.map((x) => [x.clave, x]));
-  const documentos: DocumentoClub[] = [
-    { clave: CARTA_ESCUELA, nombre: 'Carta de consentimiento de la escuela', obligatorio: true },
-    ...(Array.isArray(d.config.documentos) ? d.config.documentos : []).map((x) => ({ clave: x.clave, nombre: x.nombre, obligatorio: Boolean(x.obligatorio) })),
-  ].map((x) => {
-    const s = subidos.get(x.clave);
-    return { ...x, subido: s ? { nombre_original: s.nombre_original, subido_at: s.subido_at } : null };
-  });
+  const documentos = documentosDe(d);
 
   const descargar = async (clave: string, nombre: string) => {
     setDescargando(clave);
