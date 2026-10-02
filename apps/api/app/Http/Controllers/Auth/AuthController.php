@@ -24,6 +24,10 @@ class AuthController extends Controller
             'email' => 'required|email',
             'password' => 'required',
         ]);
+        // 02/10/2026: el correo no distingue mayúsculas (PostgreSQL sí). Se usa el correo tal como está guardado; si no
+        // existe, se intenta con lo escrito y falla igual que una contraseña incorrecta (no se revela nada).
+        $guardado = \App\Models\User::whereRaw('LOWER(email) = ?', [mb_strtolower(trim((string) $credentials['email']))])->value('email');
+        if ($guardado) $credentials['email'] = $guardado;
 
         // SEGURIDAD (24/09/2026): solo cuentas activas. Una desactivada recibe el mismo mensaje que una contraseña
         // incorrecta (no se revela que existe).

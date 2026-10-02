@@ -1992,8 +1992,9 @@ momento; mientras sea colíder recibe los avisos. La fecha y el lugar del kit ta
   «Compartir mi rol de líder», todo con confirmación), aviso del papel en la página del club, `LogisticaLider` con
   `soloLectura`, panel de inicio «Clubes que acompaño» sin convocatorias abiertas, etiqueta del rol en el panel, roles en
   `roles.ts`/`proxy.ts`/i18n.
-**Pendiente detectado:** el login compara el correo distinguiendo mayúsculas (PostgreSQL); las cuentas que crea el líder
-se guardan en minúsculas, pero quien escriba su correo con mayúsculas no entra. Conviene normalizar en el login.
+**Corregido de paso:** el login comparaba el correo distinguiendo mayúsculas (PostgreSQL): quien lo escribía con
+mayúsculas no entraba. `AuthController::login` busca el correo guardado con `LOWER(email)` y usa ese (si no existe, falla
+igual que una contraseña incorrecta). Verificado: minúsculas 200, mayúsculas 200, contraseña mala 401.
 **Verificado:** backend 37/37 (`e2e_acompanante.php`), navegador 14/14 (`verif_e61.mjs`: alta por el líder, colíder con
 confirmación, login → cambio obligatorio sin poder saltarlo, solo lectura del líder B a 390 px, director colíder con
 acciones), F1–F4 sin regresiones (53/57/58/84), vitest 183/183.
