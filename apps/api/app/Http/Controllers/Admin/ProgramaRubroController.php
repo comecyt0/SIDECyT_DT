@@ -19,7 +19,8 @@ class ProgramaRubroController extends Controller
 
     public function index(TipoPrograma $tipoPrograma)
     {
-        $rubros = $tipoPrograma->rubros()->get();
+        // E56: `en_uso` = alguna solicitud ya presupuestó con este concepto.
+        $rubros = \App\Support\EstructuraPrograma::marcarEnUso('rubros', $tipoPrograma->id, $tipoPrograma->rubros()->orderBy('id')->get());
 
         return response()->json([
             'message' => 'OK',
@@ -82,12 +83,15 @@ class ProgramaRubroController extends Controller
             return response()->json(['message' => 'Rubro no pertenece a este programa'], 404);
         }
 
-        $rubro->delete();
+        // E56: antes se borraba siempre y en cascada se perdían los presupuestos de las solicitudes; ahora se oculta si
+        // ya se usó y solo se elimina si nadie lo presupuestó.
+        $resultado = \App\Support\EstructuraPrograma::quitar('rubros', $rubro);
 
         $this->clearProgramCache($tipoPrograma->id);
 
         return response()->json([
-            'message' => 'Rubro eliminado exitosamente',
+            'message' => \App\Support\EstructuraPrograma::mensaje($resultado, 'el concepto de gasto'),
+            'resultado' => $resultado,
         ]);
     }
 

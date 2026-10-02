@@ -22,7 +22,8 @@ class ProgramaDocumentoController extends Controller
      */
     public function index(TipoPrograma $tipoPrograma)
     {
-        $documentos = $tipoPrograma->documentos()->orderBy('orden')->get();
+        // E56: `en_uso` = alguna solicitud o club ya subió ese documento.
+        $documentos = \App\Support\EstructuraPrograma::marcarEnUso('documentos', $tipoPrograma->id, $tipoPrograma->documentos()->orderBy('orden')->get());
 
         return response()->json([
             'message' => 'OK',
@@ -104,12 +105,14 @@ class ProgramaDocumentoController extends Controller
             return response()->json(['message' => 'Documento no pertenece a este programa'], 404);
         }
 
-        $documento->delete();
+        // E56: si ya hay archivos subidos con ese documento, se oculta (se conservan); si no, se elimina.
+        $resultado = \App\Support\EstructuraPrograma::quitar('documentos', $documento);
 
         $this->clearProgramCache($tipoPrograma->id);
 
         return response()->json([
-            'message' => 'Documento eliminado exitosamente',
+            'message' => \App\Support\EstructuraPrograma::mensaje($resultado, 'el documento'),
+            'resultado' => $resultado,
         ]);
     }
 

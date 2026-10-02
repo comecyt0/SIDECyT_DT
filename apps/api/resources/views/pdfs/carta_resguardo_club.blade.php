@@ -52,7 +52,7 @@
         <table>
             <tr><th>Nombre</th><td>{{ $cfg->kit_nombre ?: '—' }}</td></tr>
             @if ($cfg->kit_descripcion)<tr><th>Contenido</th><td>{{ $cfg->kit_descripcion }}</td></tr>@endif
-            <tr><th>Entrega programada</th><td>{{ $club->kit_fecha ? $club->kit_fecha->setTimezone($tz)->format('d/m/Y H:i').' h' : 'Por asignar' }}{{ $club->kit_lugar ? ' · '.$club->kit_lugar : '' }}</td></tr>
+            <tr><th>Entrega programada</th><td>{{ $club->kit_fecha ? \App\Support\RevisionClub::fechaLegible($club->kit_fecha) : 'Por asignar' }}{{ $club->kit_lugar ? ' · '.$club->kit_lugar : '' }}</td></tr>
         </table>
     </div>
 

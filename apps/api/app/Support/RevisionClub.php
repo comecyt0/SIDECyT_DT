@@ -68,7 +68,11 @@ class RevisionClub
 
     public static function fechaLegible(?\DateTimeInterface $f): ?string
     {
-        return $f ? \Carbon\Carbon::instance($f)->setTimezone(self::ZONA)->format('d/m/Y H:i').' h (hora del centro)' : null;
+        // E56 (pedido del usuario): hora en 12 h con a. m. / p. m., p. ej. «15/10/2026 a las 10:30 a. m. (hora del centro)».
+        if (! $f) return null;
+        $c = \Carbon\Carbon::instance($f)->setTimezone(self::ZONA);
+
+        return $c->format('d/m/Y').' a las '.$c->format('g:i').' '.($c->format('A') === 'AM' ? 'a. m.' : 'p. m.').' (hora del centro)';
     }
 
     // ───────────────────────── Transiciones ─────────────────────────

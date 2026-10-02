@@ -22,7 +22,8 @@ class ProgramaCampoController extends Controller
      */
     public function index(TipoPrograma $tipoPrograma)
     {
-        $campos = $tipoPrograma->campos()->orderBy('orden')->get();
+        // E56: `en_uso` = ya tiene respuestas (al quitarla se oculta en vez de borrarse).
+        $campos = \App\Support\EstructuraPrograma::marcarEnUso('campos', $tipoPrograma->id, $tipoPrograma->campos()->orderBy('orden')->get());
 
         return response()->json([
             'message' => 'OK',
@@ -113,12 +114,14 @@ class ProgramaCampoController extends Controller
             return response()->json(['message' => 'Campo no pertenece a este programa'], 404);
         }
 
-        $campo->delete();
+        // E56: se elimina solo si nadie la ha respondido; si ya tiene respuestas, se oculta y se conservan.
+        $resultado = \App\Support\EstructuraPrograma::quitar('campos', $campo);
 
         $this->clearProgramCache($tipoPrograma->id);
 
         return response()->json([
-            'message' => 'Campo eliminado exitosamente',
+            'message' => \App\Support\EstructuraPrograma::mensaje($resultado, 'la pregunta'),
+            'resultado' => $resultado,
         ]);
     }
 

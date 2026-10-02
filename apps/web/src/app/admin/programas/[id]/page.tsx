@@ -2,18 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import PageHeader from '@/components/ui/page-header';
 import BannerManager from '@/components/admin/BannerManager';
-import { Loader2, Plus, Edit, Trash2, Check, Inbox } from 'lucide-react';
+import { Loader2, ListChecks, Info } from 'lucide-react';
 import api from '@/lib/api';
-import { NestedCRUDModal } from '@/components/admin/NestedCRUDModal';
-import { AlertBox } from '@/components/ui/alert-box';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import DocumentosPrograma from '@/components/admin/DocumentosPrograma';
+import EstructuraPrograma from '@/components/admin/EstructuraPrograma';
 
 interface TipoPrograma {
   id: number;
@@ -26,384 +21,29 @@ interface TipoPrograma {
   activo?: boolean;
 }
 
-type TabType = 'info' | 'campos' | 'documentos' | 'rubros' | 'etapas' | 'modalidades' | 'criterios';
-
-// "Título del proyecto" → "titulo_del_proyecto": identificador interno a partir del texto visible
-const slugify = (s: string) =>
-  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 50);
-
-const TAB_LABELS: Record<TabType, string> = {
-  info: 'Datos generales',
-  campos: 'Preguntas',
-  documentos: 'Documentos',
-  rubros: 'Conceptos de gasto',
-  etapas: 'Etapas',
-  modalidades: 'Modalidades',
-  criterios: 'Criterios',
-};
-
-const TAB_TITLES: Record<TabType, { create: string; edit: string }> = {
-  info: { create: 'Datos generales', edit: 'Datos generales' },
-  campos: { create: 'Nueva pregunta', edit: 'Editar pregunta' },
-  documentos: { create: 'Nuevo documento', edit: 'Editar documento' },
-  rubros: { create: 'Nuevo concepto de gasto', edit: 'Editar concepto de gasto' },
-  etapas: { create: 'Nueva etapa', edit: 'Editar etapa' },
-  modalidades: { create: 'Nueva modalidad', edit: 'Editar modalidad' },
-  criterios: { create: 'Nuevo criterio', edit: 'Editar criterio' },
-};
-
-const TIPO_CAMPO_LABELS: Record<string, string> = {
-  text: 'Texto corto',
-  number: 'Número',
-  textarea: 'Texto largo',
-  date: 'Fecha',
-  select: 'Lista de opciones',
-  checkbox: 'Casilla',
-  email: 'Correo electrónico',
-};
-
+/**
+ * Ficha de la configuración técnica de una convocatoria (TipoPrograma): datos, banner y su estructura (preguntas,
+ * documentos, conceptos de gasto, etapas, modalidades y criterios). E56: la estructura es el componente compartido con
+ * «Editar convocatoria» (antes la pestaña «Preguntas» nunca cargaba sus registros y quitar borraba siempre).
+ */
 export default function ProgramaDetailPage() {
   const params = useParams();
   const programaId = params.id as string;
-
   const [programa, setPrograma] = useState<TipoPrograma | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>('info');
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  type TabItem = Record<string, any> & { id: number };
-  // Estados por tab
-  const [campos, setCampos] = useState<TabItem[]>([]);
-  const [rubros, setRubros] = useState<TabItem[]>([]);
-  const [etapas, setEtapas] = useState<TabItem[]>([]);
-  const [modalidades, setModalidades] = useState<TabItem[]>([]);
-  const [criterios, setCriterios] = useState<TabItem[]>([]);
-
-  // Modal states
-  const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState<'create' | 'edit'>('create');
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState<Record<string, unknown>>({});
-  const [feedback, setFeedback] = useState<{type: 'error'|'success'|'info'|'warning', message: string}|null>(null);
-  const [confirmState, setConfirmState] = useState<{open: boolean, action: () => void, title: string, description: string}>({open: false, action: () => {}, title: '', description: ''});
+  const [error, setError] = useState(false);
 
   const fetchPrograma = useCallback(async () => {
     try {
       const { data } = await api.get(`/catalogs/programa/${programaId}`);
       setPrograma(data.data || data);
-    } catch (error) {
-      console.error('Error cargando programa:', error);
+    } catch {
+      setError(true);
     }
   }, [programaId]);
+  useEffect(() => { void fetchPrograma(); }, [fetchPrograma]);
 
-  const fetchTabData = useCallback(async (tab: TabType) => {
-    try {
-      const { data } = await api.get(`/admin/programas/${programaId}/${tab}`);
-      const items = Array.isArray(data) ? data : data.data || [];
-
-      switch (tab) {
-        case 'campos':
-          setCampos(items);
-          break;
-        case 'rubros':
-          setRubros(items);
-          break;
-        case 'etapas':
-          setEtapas(items);
-          break;
-        case 'modalidades':
-          setModalidades(items);
-          break;
-        case 'criterios':
-          setCriterios(items);
-          break;
-      }
-    } catch (error) {
-      console.error(`Error cargando ${tab}:`, error);
-    }
-  }, [programaId]);
-
-  useEffect(() => {
-    fetchPrograma();
-    setLoading(false);
-  }, [fetchPrograma]);
-
-  useEffect(() => {
-    if (activeTab !== 'info' && activeTab !== 'campos' && activeTab !== 'documentos') {
-      fetchTabData(activeTab);
-    }
-  }, [activeTab, fetchTabData]);
-
-  const handleOpenCreate = (tab: TabType) => {
-    setModalType('create');
-    setEditingId(null);
-    setFormData(getEmptyForm(tab));
-    setShowModal(true);
-  };
-
-  const handleOpenEdit = (tab: TabType, item: any) => {
-    setModalType('edit');
-    setEditingId(item.id);
-    setFormData(item);
-    setShowModal(true);
-  };
-
-  const handleSaveItem = async () => {
-    setSaving(true);
-    try {
-      const url = `/admin/programas/${programaId}/${activeTab}`;
-      // Las claves internas no se piden: se derivan del texto visible si el registro aún no tiene una
-      const payload = { ...formData };
-      if (activeTab === 'campos' && !payload.nombre_campo) payload.nombre_campo = slugify(String(payload.etiqueta ?? ''));
-      if ((activeTab === 'rubros' || activeTab === 'modalidades') && !payload.clave) payload.clave = slugify(String(payload.nombre ?? '')).toUpperCase().slice(0, 20);
-      if (modalType === 'create') {
-        await api.post(url, payload);
-      } else {
-        await api.put(`${url}/${editingId}`, payload);
-      }
-      setShowModal(false);
-      fetchTabData(activeTab as TabType);
-    } catch (error: any) {
-      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo guardar. Inténtalo de nuevo.' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (itemId: number) => {
-    setConfirmState({
-      open: true,
-      title: 'Eliminar registro',
-      description: 'Se quitará de este programa. Esta acción no se puede deshacer.',
-      action: async () => {
-        try {
-          await api.delete(`/admin/programas/${programaId}/${activeTab}/${itemId}`);
-          fetchTabData(activeTab as TabType);
-        } catch (error: any) {
-          setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo eliminar. Inténtalo de nuevo.' });
-        }
-      },
-    });
-  };
-
-  const getEmptyForm = (tab: TabType): any => {
-    const forms: Record<TabType, any> = {
-      info: {},
-      documentos: {},
-      campos: { nombre_campo: '', etiqueta: '', tipo_campo: 'text', orden: 1, requerido: false, activo: true },
-      rubros: { clave: '', nombre: '', descripcion: '', activo: true },
-      etapas: { numero_etapa: 1, nombre: '', duracion_meses: 1, es_evaluacion_tecnica: false, activo: true },
-      modalidades: { clave: '', nombre: '', descripcion: '', activo: true },
-      criterios: { nombre: '', descripcion: '', puntaje_maximo: 25, ponderacion: 25, activo: true },
-    };
-    return forms[tab] || {};
-  };
-
-  const getModalFields = (tab: TabType) => {
-    const fieldConfigs: Record<TabType, any[]> = {
-      info: [],
-      documentos: [],
-      campos: [
-        { name: 'etiqueta', label: 'Texto de la pregunta', type: 'text', required: true, placeholder: 'Ej. Título del proyecto', hint: 'Tal como lo leerá el solicitante. El identificador interno se genera solo.' },
-        { name: 'tipo_campo', label: 'Tipo de respuesta', type: 'select', required: true, options: [
-          { value: 'text', label: 'Texto corto' },
-          { value: 'number', label: 'Número' },
-          { value: 'textarea', label: 'Texto largo' },
-          { value: 'date', label: 'Fecha' },
-          { value: 'select', label: 'Lista de opciones' },
-          { value: 'checkbox', label: 'Casilla' },
-          { value: 'email', label: 'Correo electrónico' },
-        ]},
-        { name: 'orden', label: 'Posición', type: 'number', required: true },
-        { name: 'requerido', label: 'Es obligatoria', type: 'checkbox' },
-        { name: 'activo', label: 'Activa', type: 'checkbox' },
-      ],
-      rubros: [
-        { name: 'nombre', label: 'Nombre del concepto de gasto', type: 'text', required: true, placeholder: 'Ej. Equipo de cómputo', hint: 'En qué se puede usar el dinero. La clave interna se genera sola.' },
-        { name: 'descripcion', label: 'Qué incluye', type: 'textarea', placeholder: 'Ej. Computadoras, licencias y periféricos.' },
-        { name: 'activo', label: 'Disponible para los solicitantes', type: 'checkbox' },
-      ],
-      etapas: [
-        { name: 'numero_etapa', label: 'Número de etapa', type: 'number', required: true },
-        { name: 'nombre', label: 'Nombre', type: 'text', required: true },
-        { name: 'duracion_meses', label: 'Duración (meses)', type: 'number' },
-        { name: 'es_evaluacion_tecnica', label: 'Es de evaluación técnica', type: 'checkbox' },
-        { name: 'activo', label: 'Activa', type: 'checkbox' },
-      ],
-      modalidades: [
-        { name: 'nombre', label: 'Nombre de la modalidad', type: 'text', required: true, placeholder: 'Ej. Proyecto individual', hint: 'Una forma de participar dentro del programa. La clave interna se genera sola.' },
-        { name: 'descripcion', label: 'En qué consiste', type: 'textarea' },
-        { name: 'activo', label: 'Disponible para los solicitantes', type: 'checkbox' },
-      ],
-      criterios: [
-        { name: 'nombre', label: 'Nombre del criterio', type: 'text', required: true },
-        { name: 'descripcion', label: 'Descripción', type: 'textarea' },
-        { name: 'puntaje_maximo', label: 'Calificación máxima', type: 'number', required: true },
-        { name: 'ponderacion', label: 'Peso (%)', type: 'number', required: true },
-        { name: 'activo', label: 'Activo', type: 'checkbox' },
-      ],
-    };
-    return fieldConfigs[tab] || [];
-  };
-
-  const renderTabContent = () => {
-    // E45 (punto 6): documentos con tipos y tamaño por documento.
-    if (activeTab === 'documentos') return <DocumentosPrograma programaId={programaId} />;
-    if (activeTab === 'info') {
-      return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Clave</h3>
-            <p className="font-mono text-[var(--app-ink)] mt-1">{programa?.clave}</p>
-          </div>
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Nombre</h3>
-            <p className="font-semibold text-[var(--app-ink)] mt-1">{programa?.nombre}</p>
-          </div>
-          <div className="sm:col-span-2">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Descripción</h3>
-            <p className="text-[var(--app-ink)] mt-1">{programa?.descripcion || 'Sin descripción'}</p>
-          </div>
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)] mb-1">Se entrega por etapas</h3>
-            <Badge variant={programa?.tiene_etapas ? 'default' : 'secondary'}>
-              {programa?.tiene_etapas ? 'Sí' : 'No'}
-            </Badge>
-          </div>
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)] mb-1">Requiere equipo</h3>
-            <Badge variant={programa?.tiene_equipo ? 'default' : 'secondary'}>
-              {programa?.tiene_equipo ? 'Sí' : 'No'}
-            </Badge>
-          </div>
-        </div>
-      );
-    }
-
-    const items =
-      activeTab === 'campos'
-        ? campos
-        : activeTab === 'rubros'
-          ? rubros
-          : activeTab === 'etapas'
-            ? etapas
-            : activeTab === 'modalidades'
-              ? modalidades
-              : criterios;
-
-    return (
-      <div>
-        <div className="mb-4">
-          <Button onClick={() => handleOpenCreate(activeTab)}>
-            <Plus className="h-4 w-4" /> Agregar
-          </Button>
-        </div>
-
-        {items.length === 0 ? (
-          <div className="empty-state">
-            <span className="tone-chip" data-tone="violet"><Inbox aria-hidden="true" /></span>
-            <p className="font-bold text-[var(--app-ink)]">Sin registros todavía</p>
-            <p className="text-sm text-[var(--app-ink-2)]">Usa «Agregar» para crear el primero.</p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {activeTab === 'campos' && (
-                  <>
-                    <TableHead>Pregunta</TableHead>
-                    <TableHead>Tipo de respuesta</TableHead>
-                    <TableHead>Obligatoria</TableHead>
-                    <TableHead>Posición</TableHead>
-                  </>
-                )}
-                {activeTab === 'rubros' && (
-                  <>
-                    <TableHead>Clave</TableHead>
-                    <TableHead>Nombre</TableHead>
-                  </>
-                )}
-                {activeTab === 'etapas' && (
-                  <>
-                    <TableHead>Número</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Duración</TableHead>
-                  </>
-                )}
-                {activeTab === 'modalidades' && (
-                  <>
-                    <TableHead>Clave</TableHead>
-                    <TableHead>Nombre</TableHead>
-                  </>
-                )}
-                {activeTab === 'criterios' && (
-                  <>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Calificación máxima</TableHead>
-                    <TableHead>Peso</TableHead>
-                  </>
-                )}
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  {activeTab === 'campos' && (
-                    <>
-                      <TableCell className="font-medium">{item.etiqueta || item.nombre_campo}</TableCell>
-                      <TableCell><Badge variant="outline">{TIPO_CAMPO_LABELS[item.tipo_campo] ?? item.tipo_campo}</Badge></TableCell>
-                      <TableCell>{item.requerido ? <Check className="w-4 h-4" style={{ color: 'var(--tile-emerald-fg)' }} aria-label="Obligatoria" /> : '—'}</TableCell>
-                      <TableCell>{item.orden}</TableCell>
-                    </>
-                  )}
-                  {activeTab === 'rubros' && (
-                    <>
-                      <TableCell className="font-mono text-sm">{item.clave}</TableCell>
-                      <TableCell>{item.nombre}</TableCell>
-                    </>
-                  )}
-                  {activeTab === 'etapas' && (
-                    <>
-                      <TableCell>{item.numero_etapa}</TableCell>
-                      <TableCell>{item.nombre}</TableCell>
-                      <TableCell>{item.duracion_meses || '—'} meses</TableCell>
-                    </>
-                  )}
-                  {activeTab === 'modalidades' && (
-                    <>
-                      <TableCell className="font-mono text-sm">{item.clave}</TableCell>
-                      <TableCell>{item.nombre}</TableCell>
-                    </>
-                  )}
-                  {activeTab === 'criterios' && (
-                    <>
-                      <TableCell>{item.nombre}</TableCell>
-                      <TableCell>{item.puntaje_maximo}</TableCell>
-                      <TableCell>{item.ponderacion}%</TableCell>
-                    </>
-                  )}
-                  <TableCell className="text-right">
-                    <div className="inline-flex items-center gap-1.5">
-                      <Button variant="soft" size="icon-sm" onClick={() => handleOpenEdit(activeTab, item)} aria-label="Editar" title="Editar">
-                        <Edit />
-                      </Button>
-                      <Button variant="destructive" size="icon-sm" onClick={() => handleDelete(item.id)} aria-label="Eliminar" title="Eliminar">
-                        <Trash2 />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
-    );
-  };
-
-  if (loading || !programa) {
+  if (error) return <p className="py-20 text-center text-[var(--app-ink-2)]">No se pudo abrir este programa.</p>;
+  if (!programa) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--auth-vino)' }} />
@@ -413,7 +53,6 @@ export default function ProgramaDetailPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {feedback && <AlertBox type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
       <PageHeader
         backHref="/admin/programas"
         backLabel="Volver a programas"
@@ -421,6 +60,34 @@ export default function ProgramaDetailPage() {
         title={programa.nombre}
         description="Ajusta las preguntas, los conceptos de gasto, las etapas, las modalidades y los criterios de evaluación de este programa."
       />
+
+      <Card>
+        <CardHeader><CardTitle><Info className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Datos generales</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Clave</h3>
+              <p className="font-mono text-[var(--app-ink)] mt-1">{programa.clave}</p>
+            </div>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Nombre</h3>
+              <p className="font-semibold text-[var(--app-ink)] mt-1">{programa.nombre}</p>
+            </div>
+            <div className="sm:col-span-2">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Descripción</h3>
+              <p className="text-[var(--app-ink)] mt-1">{programa.descripcion || 'Sin descripción'}</p>
+            </div>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)] mb-1">Se entrega por etapas</h3>
+              <Badge variant={programa.tiene_etapas ? 'default' : 'secondary'}>{programa.tiene_etapas ? 'Sí' : 'No'}</Badge>
+            </div>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)] mb-1">Requiere equipo</h3>
+              <Badge variant={programa.tiene_equipo ? 'default' : 'secondary'}>{programa.tiene_equipo ? 'Sí' : 'No'}</Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* E40: banner del programa (solo admin). Las convocatorias del programa sin banner propio usan este. */}
       <BannerManager
@@ -432,49 +99,11 @@ export default function ProgramaDetailPage() {
       />
 
       <Card>
-        <CardHeader className="pb-0">
-          <div className="seg-tabs flex gap-1 overflow-x-auto -mb-px" role="tablist" aria-label="Secciones del programa">
-            {(['info', 'campos', 'documentos', 'rubros', 'etapas', 'modalidades', 'criterios'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-3 sm:px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
-                  activeTab === tab
-                    ? 'text-[var(--auth-vino)] border-[var(--auth-vino)]'
-                    : 'text-[var(--app-ink-2)] border-transparent hover:text-[var(--app-ink)]'
-                }`}
-              >
-                {TAB_LABELS[tab]}
-              </button>
-            ))}
-          </div>
-        </CardHeader>
+        <CardHeader><CardTitle><ListChecks className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} /> Lo que se pide</CardTitle></CardHeader>
         <CardContent>
-          {renderTabContent()}
+          <EstructuraPrograma programaId={programa.id} pestanas={['campos', 'documentos', 'rubros', 'etapas', 'modalidades', 'criterios']} />
         </CardContent>
       </Card>
-
-      <NestedCRUDModal
-        isOpen={showModal}
-        title={modalType === 'create' ? TAB_TITLES[activeTab].create : TAB_TITLES[activeTab].edit}
-        fields={getModalFields(activeTab as TabType)}
-        formData={formData}
-        onFormChange={setFormData}
-        onSave={handleSaveItem}
-        onClose={() => setShowModal(false)}
-        loading={saving}
-      />
-      <ConfirmDialog
-        open={confirmState.open}
-        title={confirmState.title}
-        description={confirmState.description}
-        onConfirm={() => { confirmState.action(); setConfirmState(s => ({...s, open: false})); }}
-        onCancel={() => setConfirmState(s => ({...s, open: false}))}
-        variant="destructive"
-      />
     </div>
   );
 }

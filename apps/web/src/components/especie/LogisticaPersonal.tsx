@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { mensajeError } from '@/lib/errores-formulario';
+import FechaHoraAmPm, { fechaHoraCompleta } from '@/components/ui/fecha-hora-ampm';
 import StepFrame from '@/components/ui/step-frame';
 import AvisoErrores from '@/components/ui/aviso-errores';
 import VersionesFirmadas from '@/components/especie/VersionesFirmadas';
@@ -196,7 +197,8 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
           question: dialogo.tipo === 'rechazar' ? '¿Qué debe corregir el líder?' : dialogo.tipo === 'asignar' ? '¿Cuándo y dónde se entrega?' : '¿Cómo se entregó?',
           validate: () => {
             if (dialogo.tipo === 'rechazar') return form.motivo.trim() ? null : 'Escribe el motivo.';
-            if (!form.fecha || !form.lugar.trim()) return 'Indica la fecha, la hora y el lugar.';
+            if (!fechaHoraCompleta(form.fecha)) return 'Indica la fecha y la hora (con a. m. o p. m.).';
+            if (!form.lugar.trim()) return 'Indica el lugar.';
             if (dialogo.tipo === 'entregar' && (!form.entrego.trim() || !form.recibio.trim())) return 'Indica quién entregó y quién recibió.';
             return null;
           },
@@ -207,12 +209,12 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <label htmlFor="lp-fecha" className={labelCls}>{dialogo.tipo === 'asignar' ? 'Fecha y hora *' : 'Fecha y hora de entrega *'}</label>
-                <input id="lp-fecha" type="datetime-local" value={form.fecha} max={dialogo.tipo === 'entregar' ? ahoraLocal() : undefined}
-                  onChange={(e) => setForm({ ...form, fecha: e.target.value })} className={inputCls} />
+              {/* Fecha y hora por separado, con a. m. / p. m. (pedido del usuario). */}
+              <div className="sm:col-span-2">
+                <FechaHoraAmPm value={form.fecha} onChange={(v) => setForm({ ...form, fecha: v })} max={dialogo.tipo === 'entregar' ? ahoraLocal() : undefined}
+                  etiquetaFecha={dialogo.tipo === 'asignar' ? 'Fecha de entrega *' : 'Fecha en que se entregó *'} etiquetaHora={dialogo.tipo === 'asignar' ? 'Hora de entrega *' : 'Hora en que se entregó *'} />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 sm:col-span-2">
                 <label htmlFor="lp-lugar" className={labelCls}>Lugar *</label>
                 <input id="lp-lugar" maxLength={255} value={form.lugar} onChange={(e) => setForm({ ...form, lugar: e.target.value })} className={inputCls} placeholder="Ej. Auditorio COMECYT, Toluca" />
               </div>

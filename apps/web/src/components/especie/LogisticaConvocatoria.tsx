@@ -9,6 +9,7 @@ import StepFrame from '@/components/ui/step-frame';
 import AvisoErrores from '@/components/ui/aviso-errores';
 import { erroresFormulario, mensajeError, type ErroresFormulario } from '@/lib/errores-formulario';
 import { descargarReporteClubes } from '@/lib/especie-api';
+import FechaHoraAmPm, { fechaHoraCompleta } from '@/components/ui/fecha-hora-ampm';
 import { ESTADO_CLUB, ESTADO_FIRMADO, ESTADO_SOLICITUD, fechaHora, type Cupo } from '@/lib/especie';
 
 interface Evento { id?: number; nombre: string; fecha: string; sede: string; cupo_transporte: string; cupo_lunch: string; con_solicitudes?: boolean }
@@ -284,10 +285,10 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
         error={errKit ? <AvisoErrores errores={errKit} /> : null}
         steps={asignar ? [{
           key: 'kit', label: 'Entrega', question: '¿Cuándo y dónde se entrega?',
-          validate: () => (!kit.fecha || !kit.lugar.trim() ? 'Indica la fecha, la hora y el lugar.' : null),
+          validate: () => (!fechaHoraCompleta(kit.fecha) ? 'Indica la fecha y la hora de entrega (con a. m. o p. m.).' : !kit.lugar.trim() ? 'Indica el lugar de entrega.' : null),
           content: (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="space-y-1.5"><span className={labelCls}>Fecha y hora *</span><input type="datetime-local" className={inputCls} value={kit.fecha} onChange={(e) => setKit({ ...kit, fecha: e.target.value })} /></label>
+              <div className="sm:col-span-2"><FechaHoraAmPm value={kit.fecha} onChange={(v) => setKit({ ...kit, fecha: v })} etiquetaFecha="Fecha de entrega *" etiquetaHora="Hora de entrega *" /></div>
               <label className="space-y-1.5"><span className={labelCls}>Lugar *</span><input className={inputCls} maxLength={255} value={kit.lugar} placeholder="Ej. Auditorio COMECYT, Toluca" onChange={(e) => setKit({ ...kit, lugar: e.target.value })} /></label>
             </div>
           ),

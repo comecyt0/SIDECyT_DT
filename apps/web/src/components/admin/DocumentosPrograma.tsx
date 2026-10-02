@@ -17,6 +17,8 @@ interface Doc {
   activo: boolean;
   formato_permitido?: string | null;
   tamaño_maximo_mb?: number | null;
+  /** E56: ya hay archivos subidos con este documento (quitarlo lo oculta en vez de borrarlo). */
+  en_uso?: boolean;
 }
 type Editable = Doc & { lista: string[]; mb: number; cambiado?: boolean };
 
@@ -88,10 +90,11 @@ export default function DocumentosPrograma({ programaId }: { programaId: string 
     const d = borrar;
     setBorrar(null);
     try {
-      await api.delete(`/admin/programas/${programaId}/documentos/${d.id}`);
+      const { data } = await api.delete(`/admin/programas/${programaId}/documentos/${d.id}`);
+      setAviso({ tipo: 'success', texto: typeof data?.message === 'string' ? data.message : 'Documento eliminado.' });
       void cargar();
     } catch {
-      setAviso({ tipo: 'error', texto: 'No se pudo eliminar el documento.' });
+      setAviso({ tipo: 'error', texto: 'No se pudo quitar el documento.' });
     }
   };
 
@@ -110,8 +113,12 @@ export default function DocumentosPrograma({ programaId }: { programaId: string 
                 <div className="min-w-0">
                   <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--app-ink)]"><FileText className="h-4 w-4 text-[var(--sg-vino)]" aria-hidden="true" />{d.nombre}</h3>
                   <p className="mt-0.5 text-xs text-[var(--app-ink-2)]">{etiquetas(d.lista)} · hasta {d.mb} MB · <code className="font-mono">{d.clave}</code></p>
+                  <p className="mt-1 flex flex-wrap gap-1">
+                    {!d.activo && <span className="pill" data-tone="neutral">Oculto</span>}
+                    {d.en_uso && <span className="pill" data-tone="sky" title="Ya hay archivos subidos con este documento">Tiene archivos</span>}
+                  </p>
                 </div>
-                <Button size="sm" variant="destructive" onClick={() => setBorrar(d)} aria-label={`Eliminar ${d.nombre}`}><Trash2 className="h-4 w-4" /></Button>
+                {!(d.en_uso && !d.activo) && <Button size="sm" variant="destructive" onClick={() => setBorrar(d)} aria-label={`Quitar ${d.nombre}`}><Trash2 className="h-4 w-4" /></Button>}
               </div>
               <SelectorFormatos idBase={`doc-${d.id}`} formatos={d.lista} tamano={d.mb}
                 onChange={(lista, mb) => setDocs((ds) => ds.map((x) => (x.id === d.id ? { ...x, lista, mb, cambiado: true } : x)))} />
@@ -136,8 +143,11 @@ export default function DocumentosPrograma({ programaId }: { programaId: string 
           </form>
         </div>
       )}
-      <ConfirmDialog open={borrar !== null} title="Eliminar documento" description={`Se quitará «${borrar?.nombre ?? ''}» de este programa. Las solicitudes que ya lo subieron conservan su archivo.`}
-        confirmLabel="Eliminar" variant="destructive" onConfirm={eliminar} onCancel={() => setBorrar(null)} />
+      <ConfirmDialog open={borrar !== null} title="¿Quitar el documento?"
+        description={borrar?.en_uso
+          ? `«${borrar?.nombre ?? ''}» ya tiene archivos subidos: se ocultará para las solicitudes nuevas y se conservarán los archivos. Puedes volver a mostrarlo marcando «Activo».`
+          : `«${borrar?.nombre ?? ''}» todavía no tiene archivos: se eliminará.`}
+        confirmLabel={borrar?.en_uso ? 'Ocultar' : 'Eliminar'} variant="destructive" onConfirm={eliminar} onCancel={() => setBorrar(null)} />
     </div>
   );
 }

@@ -347,7 +347,8 @@ export function fechaHora(v: string | null | undefined): string {
   if (!v) return '—';
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  // Hora en 12 h con a. m. / p. m. (pedido del usuario, E56).
+  return d.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 export const NIVEL_ESCUELA: Record<string, string> = {

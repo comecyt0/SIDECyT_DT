@@ -19,12 +19,15 @@ class ProgramaCriterioEvaluacionController extends Controller
 
     public function index(TipoPrograma $tipoPrograma)
     {
-        $criterios = $tipoPrograma->criterios()->get();
+        // E56: `en_uso` = ya hay dictámenes que lo calificaron.
+        $criterios = \App\Support\EstructuraPrograma::marcarEnUso('criterios', $tipoPrograma->id, $tipoPrograma->criterios()->orderBy('orden')->orderBy('id')->get());
 
         return response()->json([
             'message' => 'OK',
             'data' => $criterios,
             'count' => $criterios->count(),
+            // Los pesos de los criterios visibles deben sumar 100: el panel avisa si no.
+            'suma_ponderacion' => round((float) $criterios->where('activo', true)->sum('ponderacion'), 2),
         ]);
     }
 
@@ -82,12 +85,15 @@ class ProgramaCriterioEvaluacionController extends Controller
             return response()->json(['message' => 'Criterio no pertenece a este programa'], 404);
         }
 
-        $criterio->delete();
+        // E56: antes se borraba siempre y en cascada se perdían las calificaciones de los dictámenes; ahora se oculta si
+        // ya se calificó y solo se elimina si nadie lo usó.
+        $resultado = \App\Support\EstructuraPrograma::quitar('criterios', $criterio);
 
         $this->clearProgramCache($tipoPrograma->id);
 
         return response()->json([
-            'message' => 'Criterio eliminado exitosamente',
+            'message' => \App\Support\EstructuraPrograma::mensaje($resultado, 'el criterio'),
+            'resultado' => $resultado,
         ]);
     }
 

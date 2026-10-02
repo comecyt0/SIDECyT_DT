@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Megaphone } from 'lucide-react';
+import { Loader2, Megaphone, ListChecks } from 'lucide-react';
+import EstructuraPrograma from '@/components/admin/EstructuraPrograma';
+import EspecieConvocatoriaPanel from '@/components/admin/especie/EspecieConvocatoriaPanel';
 import PageHeader from '@/components/ui/page-header';
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -39,6 +41,8 @@ export default function EditarConvocatoriaPage() {
   const [errorGuardar, setErrorGuardar] = useState<ErroresFormulario | null>(null);
   // E52: en Apoyo en especie no hay montos (los clubes y el kit se editan en la ficha).
   const [esEspecie, setEsEspecie] = useState(false);
+  // E56: configuración técnica de esta convocatoria (preguntas, documentos, conceptos de gasto y criterios).
+  const [tipoProgramaId, setTipoProgramaId] = useState<number | null>(null);
   useEffect(() => {
     api.get('/admin/periodos').then(({ data }) => setPeriodos(Array.isArray(data) ? data : [])).catch(() => setPeriodos([]));
   }, []);
@@ -62,6 +66,7 @@ export default function EditarConvocatoriaPage() {
         periodo_id: data.periodo_id ? String(data.periodo_id) : '',
       });
       setEsEspecie(data?.tipo_programa?.tipo_apoyo === 'especie');
+      setTipoProgramaId(typeof data?.tipo_programa?.id === 'number' ? data.tipo_programa.id : null);
     } catch {
       setFeedback({ type: 'error', message: 'No se pudo abrir la convocatoria.' });
       router.push('/admin/convocatorias');
@@ -113,7 +118,7 @@ export default function EditarConvocatoriaPage() {
         inline
         title="Ajustar la convocatoria"
         icon={<Megaphone className="h-5 w-5" />}
-        intro={<>Aquí cambias <strong>nombre, fechas, montos y estado</strong>. Los campos del formulario, documentos y criterios de evaluación se editan desde la ficha del programa.</>}
+        intro={<>Aquí cambias <strong>nombre, fechas, montos y estado</strong>. Las preguntas, documentos{esEspecie ? ' y datos de los clubes' : ', conceptos de gasto y criterios'} se agregan y quitan más abajo.</>}
         onClose={() => router.push('/admin/convocatorias')}
         onSubmit={handleSubmit}
         error={errorGuardar ? <AvisoErrores errores={errorGuardar} /> : null}
@@ -213,6 +218,27 @@ export default function EditarConvocatoriaPage() {
           },
         ]}
       />
+
+      {/* E56: agregar, editar y quitar lo que se pide en esta convocatoria. Quitar algo que ya tiene datos lo oculta. */}
+      {tipoProgramaId && (
+        <section className="app-card space-y-4 p-5" aria-labelledby="estructura-titulo">
+          <div>
+            <h2 id="estructura-titulo" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><ListChecks className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Lo que se pide en esta convocatoria</h2>
+            <p className="text-sm text-[var(--app-ink-2)]">
+              Agrega o quita en cualquier momento. Si algo ya tiene respuestas, archivos o calificaciones, al quitarlo se oculta para
+              las solicitudes nuevas y lo capturado se conserva.
+            </p>
+          </div>
+          {esEspecie ? (
+            <>
+              <EspecieConvocatoriaPanel convocatoriaId={Number(id)} puedeEditar />
+              <EstructuraPrograma programaId={tipoProgramaId} pestanas={['documentos']} />
+            </>
+          ) : (
+            <EstructuraPrograma programaId={tipoProgramaId} pestanas={['campos', 'documentos', 'rubros', 'criterios']} />
+          )}
+        </section>
+      )}
     </div>
   );
 }

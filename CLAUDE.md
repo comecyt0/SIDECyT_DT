@@ -1873,3 +1873,23 @@ Detalle y decisiones del usuario: `docs/APOYO_EN_ESPECIE.md` §15. Para desarrol
   sigue siendo solo del admin en el backend).
 - **Regla para pruebas:** los admins tienen correo institucional real; una prueba que dispare avisos con correo al personal
   debe detener `comecyt-queue` y descartar esos trabajos de correo (ver `e2e_escuelas.php`), nunca enviarlos.
+
+### E56 — Agregar y quitar lo que se pide al editar una convocatoria; fecha y hora del kit con a. m./p. m. [publicado 02-10-2026]
+**Reporte del usuario:** «al editar convocatorias no me permite agregar o quitar campos, solo editar los que ya existen».
+**Causas:** (1) «Editar convocatoria» solo cambiaba datos generales; la estructura vivía en la ficha del programa, sin
+acceso desde la convocatoria; (2) en esa ficha la pestaña **«Preguntas» nunca cargaba** (el efecto la excluía); (3) quitar
+siempre borraba, y `programa_rubros` / `programa_criterios_evaluacion` tienen `cascadeOnDelete`: **quitar un concepto de
+gasto borraba los presupuestos de las solicitudes, y un criterio, las calificaciones de los dictámenes**.
+**Fix (decisiones del usuario):** en «Editar convocatoria» se agregan, editan y quitan preguntas, documentos, conceptos de
+gasto y criterios (en especie: el panel «Clubes y kit» + documentos). `App\Support\EstructuraPrograma::quitar()`: si nadie
+lo ha usado se elimina; si ya tiene respuestas, archivos, presupuestos o calificaciones se **oculta** (`activo=false`,
+desaparece para solicitudes nuevas, los datos se conservan) y se puede «Volver a mostrar». Los listados del panel traen
+`en_uso` y los criterios `suma_ponderacion` (aviso si los visibles no suman 100). Componente compartido
+`components/admin/EstructuraPrograma.tsx` (ficha del programa y editar convocatoria). Bitácora `programa.elemento_*`.
+**Kit (pedido del usuario):** fecha y hora por separado con a. m./p. m. (`components/ui/fecha-hora-ampm.tsx`, devuelve el
+mismo `AAAA-MM-DDTHH:mm` que espera el servidor); `fechaHora()` del front y `RevisionClub::fechaLegible()` (avisos, correos
+y carta de resguardo) en 12 h: «15/10/2026 a las 3:30 p. m. (hora del centro)».
+**Ojo:** `audit_logs.created_at` se guarda en hora local y la app corre en UTC: no filtrar la bitácora por «últimos N
+minutos» con `now()` en pruebas.
+**Verificado:** backend 20/20 (`e2e_estructura.php`, con datos reales simulados en los cuatro tipos), navegador 17/17
+(1440 y 390 px, kit con a. m./p. m.), vitest 180/180.
