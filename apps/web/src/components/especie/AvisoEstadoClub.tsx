@@ -48,6 +48,7 @@ export default function AvisoEstadoClub({ estado, avance, onVence, nombreClub }:
       // Celebración (rediseño 02/10/2026): confeti cada vez que la tarjeta entra en pantalla y botón para repetirlo.
       return (
         <section ref={ref} role="status" aria-live="polite" className="celebra-club">
+          <span className="celebra-club-brillo" aria-hidden="true" />
           <div className="flex items-start gap-4">
             <span className="celebra-club-icono" aria-hidden="true"><PartyPopper /></span>
             <div className="min-w-0">

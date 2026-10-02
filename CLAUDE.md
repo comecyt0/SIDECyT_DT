@@ -1920,6 +1920,13 @@ limitan; (4) «¡Tu club fue aceptado!» no lanzaba confeti al refrescar ni al h
 - **Rediseño:** tarjeta `.celebra-club` (vino institucional con brillo, «lo que sigue» en tres pasos: kit, carta de
   resguardo, QR, y botón «Celebrar otra vez»); en el panel de inicio `.celebra-club-mini`. El confeti sale al cargar, al
   volver a la tarjeta con scroll (cuando se ve el 40 % de ella o un tercio de la ventana) y con el botón.
+- **Segundo pedido («más llamativo y que llene toda la pantalla»):** el confeti escala con el **área** de la ventana
+  (cañones + explosión central + lluvia en todo el ancho; suave = lluvia en toda la pantalla) y piezas más grandes.
+  `components/especie/CelebracionAceptado.tsx`: momento a pantalla completa (trofeo, «¡Tu club fue aceptado!», «Ver lo
+  que sigue» y «Más confeti») una vez por sesión y por club (`sessionStorage`, con try/catch), diálogo accesible (foco
+  atrapado, Escape, clic fuera). **Ojo:** se monta con `createPortal` a `body` porque los contenedores de la página usan
+  `transform` en su transición y encerraban al `position: fixed` (el fondo no cubría la parte de abajo). La tarjeta
+  lleva un brillo que la recorre y un anillo que late (solo con movimiento normal).
 **Verificado:** backend F1 53/53 y F3 58/58 (nuevos: box lunch arriba del máximo de integrantes → 422 para líder y admin),
 navegador 20/20 (`verif_e57.mjs`: límites, 422 del servidor, confeti suave con «reducir movimiento» al cargar / al volver
 con scroll / con el botón, confeti completo en escritorio y en el panel de inicio, modalidad en todos los apartados, sin

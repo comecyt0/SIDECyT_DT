@@ -8,8 +8,8 @@ import { useEffect, type RefObject } from 'react';
  *
  * Movimiento reducido (02/10/2026): antes no se lanzaba nada. En Windows Server y en escritorio remoto las animaciones del
  * sistema vienen apagadas, así que el navegador reporta `prefers-reduced-motion: reduce` y el confeti no salía. Ahora,
- * con movimiento reducido, cae una lluvia suave y corta desde arriba (sin explosión ni giros rápidos), y la versión
- * completa se usa cuando el sistema no pide reducir.
+ * con movimiento reducido, cae una lluvia suave en toda la pantalla (sin explosión ni giros rápidos), y la versión
+ * completa (cañones + explosión central + lluvia que llena la ventana) se usa cuando el sistema no pide reducir.
  */
 const COLORES = ['#7a2748', '#a8466b', '#e3557f', '#f2c6d6', '#ffd23f', '#3ec7a1', '#4aa8ff', '#9b6bff', '#ff8a3d', '#08304c'];
 
@@ -41,30 +41,43 @@ export function lanzarConfeti(opciones: { fiesta?: boolean } = {}) {
   canvas.height = H * dpr;
   ctx.scale(dpr, dpr);
 
-  const base = Math.round(W / (suave ? 14 : 5));
+  // Cantidad según el área de la pantalla: llena toda la ventana en teléfono y en monitor grande.
+  const area = W * H;
+  const base = Math.round(area / (suave ? 7000 : 2600));
   const piezas: Pieza[] = [];
   const nueva = (p: Partial<Pieza>): Pieza => ({
-    x: 0, y: 0, vx: 0, vy: 0, w: 6 + Math.random() * 7, h: 8 + Math.random() * 9, rot: Math.random() * Math.PI,
+    x: 0, y: 0, vx: 0, vy: 0, w: 7 + Math.random() * 9, h: 10 + Math.random() * 12, rot: Math.random() * Math.PI,
     vr: (Math.random() - 0.5) * (suave ? 0.05 : 0.35), color: COLORES[Math.floor(Math.random() * COLORES.length)], forma: Math.floor(Math.random() * 3),
     osc: Math.random() * Math.PI * 2, ...p,
   });
+  const lluvia = (n: number, vMin: number, vVar: number) => {
+    // Repartida en todo el ancho y escalonada en altura: cubre la pantalla completa mientras cae.
+    for (let i = 0; i < n; i++) piezas.push(nueva({ x: Math.random() * W, y: -20 - Math.random() * H * (suave ? 0.5 : 1.1), vx: (Math.random() - 0.5) * (suave ? 0 : 2), vy: vMin + Math.random() * vVar }));
+  };
   if (suave) {
-    // Lluvia suave desde arriba.
-    for (let i = 0; i < Math.min(70, base); i++) piezas.push(nueva({ x: Math.random() * W, y: -20 - Math.random() * H * 0.4, vx: 0, vy: 1.2 + Math.random() * 1.4 }));
+    // Lluvia suave desde arriba, en toda la pantalla.
+    lluvia(Math.min(220, Math.max(90, base)), 2.6, 2);
   } else {
-    // Dos cañones desde las esquinas inferiores + (en fiesta) una lluvia desde arriba.
-    const n = Math.min(opciones.fiesta ? 200 : 150, base);
+    const fiesta = opciones.fiesta === true;
+    // Dos cañones desde las esquinas inferiores…
+    const n = Math.min(fiesta ? 260 : 160, Math.max(90, base * 0.5));
     for (let i = 0; i < n; i++) {
       const izq = i % 2 === 0;
-      piezas.push(nueva({ x: izq ? -10 : W + 10, y: H * 0.85, vx: (izq ? 1 : -1) * (5 + Math.random() * 9), vy: -(11 + Math.random() * 9) }));
+      piezas.push(nueva({ x: izq ? -10 : W + 10, y: H * 0.9, vx: (izq ? 1 : -1) * (5 + Math.random() * (W / 90)), vy: -(12 + Math.random() * (H / 70)) }));
     }
-    if (opciones.fiesta) {
-      for (let i = 0; i < Math.min(90, base / 2); i++) piezas.push(nueva({ x: Math.random() * W, y: -20 - Math.random() * H * 0.5, vx: (Math.random() - 0.5) * 2, vy: 2 + Math.random() * 3 }));
+    if (fiesta) {
+      // …una explosión al centro y una lluvia que llena toda la ventana.
+      for (let i = 0; i < Math.min(140, base * 0.3); i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const vel = 6 + Math.random() * 10;
+        piezas.push(nueva({ x: W / 2, y: H * 0.42, vx: Math.cos(ang) * vel, vy: Math.sin(ang) * vel - 5 }));
+      }
+      lluvia(Math.min(420, Math.max(160, base)), 2.2, 3);
     }
   }
 
   const inicio = performance.now();
-  const DUR = suave ? 2600 : opciones.fiesta ? 4200 : 3400;
+  const DUR = suave ? 4200 : opciones.fiesta ? 5600 : 3800;
   const paso = (t: number) => {
     const p = (t - inicio) / DUR;
     ctx.clearRect(0, 0, W, H);

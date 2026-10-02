@@ -30,6 +30,7 @@ import {
 import { PATRON_CURP, PATRON_TELEFONO, PATRON_CORREO } from '@/lib/registro';
 import { formatDate } from '@/lib/format';
 import ModalidadChip from '@/components/especie/ModalidadChip';
+import CelebracionAceptado from '@/components/especie/CelebracionAceptado';
 
 interface Detalle {
   club: ClubApi;
@@ -329,6 +330,10 @@ export default function MiClubPage() {
           </div>
           <LineaAvanceClub estado={club.estado} avance={club} />
         </section>
+        {club.estado === 'aceptado' && (
+          <CelebracionAceptado clubId={club.id} nombreClub={club.nombre}
+            onVerSiguiente={() => document.getElementById('sec-logistica')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
+        )}
         <AvisoEstadoClub estado={club.estado} avance={club} nombreClub={club.nombre} onVence={() => void cargar()} />
         {d.logistica && (
           <LogisticaLider clubId={club.id} folio={club.folio} logistica={d.logistica}

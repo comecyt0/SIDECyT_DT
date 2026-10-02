@@ -12,6 +12,7 @@ import { AlertBox } from '@/components/ui/alert-box';
 import StepFrame from '@/components/ui/step-frame';
 import EscuelaPicker, { type EscuelaElegida } from '@/components/especie/EscuelaPicker';
 import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
+import CelebracionAceptado from '@/components/especie/CelebracionAceptado';
 import { ESTADO_CLUB } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
 
@@ -123,6 +124,9 @@ export default function ClubDashboardPage() {
                       )}
                       {club.estado === 'vencido' && <p className="text-sm font-semibold" style={{ color: 'var(--auth-danger)' }}>El plazo para corregir venció; el COMECYT decidirá.</p>}
                       {club.estado === 'aceptado' && <AceptadoMini />}
+                      {club.estado === 'aceptado' && (
+                        <CelebracionAceptado clubId={club.id} nombreClub={club.nombre} onVerSiguiente={() => router.push(`/club/clubes/${club.id}`)} />
+                      )}
                       {club.estado === 'borrador' && c.fecha_limite && (
                         <p className="flex items-center gap-1.5 text-sm text-[var(--app-ink-2)]">
                           <CalendarClock className="h-4 w-4" aria-hidden="true" />
