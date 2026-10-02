@@ -58,10 +58,11 @@ class RevisionClubController extends Controller
 
         return response()->json($clubes->map(fn (Club $c) => [
             'id' => $c->id, 'folio' => $c->folio, 'nombre' => $c->nombre, 'estado' => $c->estadoVisible(), 'logo_url' => $c->logo_url,
+            'convocatoria_corto' => $c->convocatoria?->nombre_corto,
             'enviado_at' => $c->enviado_at, 'vence_at' => $c->vence_at, 'integrantes_count' => $c->integrantes_count,
             'etapa' => $c->etapaActual ? ['orden' => $c->etapaActual->orden, 'nombre' => $c->etapaActual->nombre] : null,
             'visto_bueno_at' => $c->visto_bueno_at, 'comite_resultado' => $c->comite_resultado,
-            'escuela' => $c->escuela, 'convocatoria' => $c->convocatoria ? ['id' => $c->convocatoria->id, 'nombre' => $c->convocatoria->nombre] : null,
+            'escuela' => $c->escuela, 'convocatoria' => $c->convocatoria ? ['id' => $c->convocatoria->id, 'nombre' => $c->convocatoria->nombre, 'nombre_corto' => $c->convocatoria->nombre_corto] : null,
             'puede_resolver' => RevisionClub::puedeResolver(request()->user(), $c),
         ])->values());
     }
@@ -174,7 +175,7 @@ class RevisionClubController extends Controller
             'club' => [
                 'id' => $club->id, 'folio' => $club->folio, 'nombre' => $club->nombre, 'estado' => $club->estadoVisible(),
                 'logo_url' => $club->logo_url, 'datos' => $club->datos ?? [], 'enviado_at' => $club->enviado_at,
-                'escuela' => $club->escuela, 'lider' => $club->lider,
+                'escuela' => $club->escuela, 'lider' => $club->lider, 'convocatoria_corto' => $club->convocatoria->nombre_corto,
             ] + ClubController::avance($club),
             'integrantes' => $club->integrantes->values(),
             'documentos' => $club->documentos->map(fn ($d) => ['clave' => $d->clave, 'nombre_original' => $d->nombre_original, 'subido_at' => $d->updated_at])->values(),

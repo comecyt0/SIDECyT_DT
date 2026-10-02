@@ -1,12 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import {
   armarPayload, describirError, erroresDelServidor, pasoDeError, restaurarBorrador, tieneContenido, CLAVE_PROGRAMA_RE,
-  pasosDe, leerCatalogo, normalizarNombre, programaRepetido, type EstadoAsistente,
+  pasosDe, leerCatalogo, normalizarNombre, programaRepetido, PATRON_CORTO, normalizarCorto, sugerirCorto, type EstadoAsistente,
 } from './asistente-convocatoria';
+import { folioIncluyeCorto } from '@/components/ui/folio';
+
+describe('E58 · nombre corto y folio', () => {
+  it('normaliza, valida y sugiere el nombre corto', () => {
+    expect(normalizarCorto(' lego 26 ')).toBe('LEGO26');
+    expect(PATRON_CORTO.test('LEGO26')).toBe(true);
+    expect(PATRON_CORTO.test('LE')).toBe(false);
+    expect(PATRON_CORTO.test('LEGO-26')).toBe(false);
+    expect(sugerirCorto('Programa Lego Convocatoria 2026', '2026')).toBe('LEGO26');
+    expect(sugerirCorto('Clubes de Robótica Escolar', '2026')).toBe('CRE26');
+    expect(sugerirCorto('', '2026')).toBe('');
+  });
+  it('el folio nuevo ya trae el nombre corto; al anterior se le pone al lado', () => {
+    expect(folioIncluyeCorto('CLUB-LEGO26-F0BMIW', 'LEGO26')).toBe(true);
+    expect(folioIncluyeCorto('CLUB-2026-F0BMIW', 'LEGO26')).toBe(false);
+    expect(folioIncluyeCorto('CLUB-2026-F0BMIW', null)).toBe(true);
+  });
+});
 import { configVacia, leerConfig, validarConfig } from './especie';
 
 const vacio: EstadoAsistente = {
-  convocatoria: { nombre: '', ejercicio_fiscal: '2026', periodo_id: '', estado: 'borrador', descripcion: '', fecha_apertura: '', fecha_cierre: '', monto_maximo_apoyo: 0, porcentaje_aportacion_minima: 20 },
+  convocatoria: { nombre: '', nombre_corto: '', ejercicio_fiscal: '2026', periodo_id: '', estado: 'borrador', descripcion: '', fecha_apertura: '', fecha_cierre: '', monto_maximo_apoyo: 0, porcentaje_aportacion_minima: 20 },
   programa: { clave: '', nombre: '', tipo_apoyo: 'concurrente', monto_maximo: 50000, tiene_etapas: false, num_etapas: 1, tiene_equipo: false, min_miembros_equipo: 1, max_miembros_equipo: 5, requiere_evaluacion_tecnica: true, puntaje_minimo_aprobatorio: 80, programa_publico_id: null, programa_nuevo: false, sistema: 'sigae' },
   campos: [], documentos: [], rubros: [], criterios: [],
   especie: configVacia(),

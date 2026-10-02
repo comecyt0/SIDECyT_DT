@@ -77,7 +77,7 @@ export default function VerConvocatoriaPage() {
       <PageHeader
         backHref="/admin/convocatorias"
         backLabel="Volver a convocatorias"
-        eyebrow="Convocatoria"
+        eyebrow={convocatoria.nombre_corto ? `Convocatoria · folios ${convocatoria.nombre_corto}` : 'Convocatoria · sin nombre corto (ponlo en Editar)'}
         title={convocatoria.nombre}
         description={esEspecie
           ? `Ejercicio fiscal ${convocatoria.ejercicio_fiscal}. Apoyo en especie: fechas, clubes y kit, banner y la descripción que conocen los líderes de club.`

@@ -31,6 +31,7 @@ import { PATRON_CURP, PATRON_TELEFONO, PATRON_CORREO } from '@/lib/registro';
 import { formatDate } from '@/lib/format';
 import ModalidadChip from '@/components/especie/ModalidadChip';
 import CelebracionAceptado from '@/components/especie/CelebracionAceptado';
+import Folio from '@/components/ui/folio';
 
 interface Detalle {
   club: ClubApi;
@@ -325,7 +326,7 @@ export default function MiClubPage() {
         {aviso && <AlertBox type={aviso.tipo} message={aviso.texto} onClose={() => setAviso(null)} />}
         <section className="app-card space-y-3 p-5" aria-label="Avance">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--app-ink-2)]">Folio <span className="font-mono font-semibold text-[var(--app-ink)]">{club.folio}</span><ModalidadChip modalidad={config.modalidad} /></p>
+            <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--app-ink-2)]">Folio <Folio folio={club.folio} corto={club.convocatoria_corto} className="font-mono font-semibold text-[var(--app-ink)]" /><ModalidadChip modalidad={config.modalidad} /></p>
             <span className="pill" data-tone={est.tono} data-dot="on">{est.etiqueta}</span>
           </div>
           <LineaAvanceClub estado={club.estado} avance={club} />
@@ -355,7 +356,7 @@ export default function MiClubPage() {
 
       <section className="app-card space-y-3 p-5" aria-label="Avance">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--app-ink-2)]">Folio <span className="font-mono font-semibold text-[var(--app-ink)]">{club.folio}</span><ModalidadChip modalidad={config.modalidad} /></p>
+          <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--app-ink-2)]">Folio <Folio folio={club.folio} corto={club.convocatoria_corto} className="font-mono font-semibold text-[var(--app-ink)]" /><ModalidadChip modalidad={config.modalidad} /></p>
           <span className="pill" data-tone={est.tono} data-dot="on">{est.etiqueta}</span>
         </div>
         <LineaAvanceClub estado={club.estado} avance={club} />

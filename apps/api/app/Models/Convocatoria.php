@@ -21,9 +21,42 @@ class Convocatoria extends Model
         'fecha_prorroga', 'motivo_prorroga', 'prorroga_at', 'prorroga_por', 'banner_url',
         // E54: el programa se fija solo desde el asistente o el cambio de programa (validado, admin), nunca por PUT genérico.
         'programa_publico_id',
+        // E58: el nombre corto va dentro de los folios; solo lo escriben el asistente y el update con su validación.
+        'nombre_corto',
     ];
 
     protected $table = 'convocatorias';
+
+    /** E58 — Nombre corto (3 a 12 letras o números, en mayúsculas), p. ej. LEGO26. Va dentro de los folios nuevos. */
+    public const PATRON_CORTO = '/^[A-Z0-9]{3,12}$/';
+
+    /** "lego 26" → "LEGO26"; vacío → null. Se aplica ANTES de validar (así la unicidad compara en mayúsculas). */
+    public static function normalizarCorto(mixed $s): ?string
+    {
+        if (! is_string($s)) return null;
+        $s = strtoupper(preg_replace('/\s+/u', '', $s) ?? '');
+
+        return $s === '' ? null : $s;
+    }
+
+    /**
+     * Folio nuevo de un registro de esta convocatoria: PREFIJO-NOMBRECORTO-XXXXXX (p. ej. CLUB-LEGO26-F0BMIW). Sin nombre
+     * corto (convocatorias anteriores a E58) conserva el formato de siempre: PREFIJO-AAAA-XXXXXX.
+     */
+    public static function nuevoFolio(string $prefijo, ?self $c): string
+    {
+        $corto = $c?->nombre_corto;
+        $medio = is_string($corto) && preg_match(self::PATRON_CORTO, $corto) ? $corto : date('Y');
+
+        return $prefijo.'-'.$medio.'-'.strtoupper(\Illuminate\Support\Str::random(6));
+    }
+
+    /** ¿Ya hay clubes o solicitudes con folio? Entonces el nombre corto ya no cambia (los folios lo llevan dentro). */
+    public function tieneRegistros(): bool
+    {
+        return \Illuminate\Support\Facades\DB::table('clubes')->where('convocatoria_id', $this->id)->exists()
+            || \Illuminate\Support\Facades\DB::table('solicitudes')->where('convocatoria_id', $this->id)->exists();
+    }
 
     /** Estado que ve el público (landing) y el admin, derivado de `estado` + fechas (E40). */
     public const PUBLICO_BORRADOR = 'borrador';

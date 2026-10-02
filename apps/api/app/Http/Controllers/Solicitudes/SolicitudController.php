@@ -22,7 +22,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class SolicitudController extends Controller
@@ -37,7 +36,7 @@ class SolicitudController extends Controller
         $user = $request->user();
 
         $solicitudes = Solicitud::where('user_id', $user->id)
-            ->with(['ministracion', 'convenio', 'empresa'])
+            ->with(['ministracion', 'convenio', 'empresa', 'convocatoria:id,nombre,nombre_corto'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -67,7 +66,9 @@ class SolicitudController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('folio', 'ilike', "%{$search}%")
                     ->orWhere('titulo_proyecto', 'ilike', "%{$search}%")
-                    ->orWhereHas('empresa', fn ($qi) => $qi->where('nombre', 'ilike', "%{$search}%"));
+                    ->orWhereHas('empresa', fn ($qi) => $qi->where('nombre', 'ilike', "%{$search}%"))
+                    // E58: buscar también por el nombre corto de la convocatoria (seguimiento).
+                    ->orWhereHas('convocatoria', fn ($qc) => $qc->where('nombre_corto', 'ilike', "%{$search}%"));
             });
         }
 
@@ -147,16 +148,15 @@ class SolicitudController extends Controller
 
         DB::beginTransaction();
         try {
-            // Generar folio único: COMECYT-YYYY-RANDOM6
+            // Generar folio único: COMECYT-NOMBRECORTO-RANDOM6 (E58; sin nombre corto: COMECYT-YYYY-RANDOM6).
             // El campo `folio` tiene unique constraint a nivel DB; el reintento
             // dentro del catch de QueryException protege contra el race que existía
             // entre el check exists() y el INSERT en concurrencia.
-            $year = date('Y');
             $solicitud = null;
             $maxRetries = 5;
 
             for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
-                $folio = 'COMECYT-'.$year.'-'.strtoupper(Str::random(6));
+                $folio = Convocatoria::nuevoFolio('COMECYT', $convocatoria);
                 try {
                     // forceFill, NO create(): `folio` y `estado` están en Solicitud::$guarded (SEV-1). create() los
                     // descartaba en silencio y el INSERT fallaba por `folio` NOT NULL → NINGUNA solicitud se podía

@@ -29,7 +29,7 @@ import ConvocatoriaPreviewPanel from '@/components/admin/ConvocatoriaPreviewPane
 import SelectorFormatos from '@/components/admin/SelectorFormatos';
 import {
   LIMITES, CLAVE_PROGRAMA_RE, armarPayload, erroresDelServidor, restaurarBorrador, tieneContenido, pasosDe,
-  leerCatalogo, programaRepetido,
+  leerCatalogo, programaRepetido, PATRON_CORTO, normalizarCorto, sugerirCorto,
   type EstadoAsistente, type PasoAsistente, type ProgramaCatalogo, type SistemaPrograma,
 } from '@/lib/asistente-convocatoria';
 import SelectorPrograma from '@/components/admin/SelectorPrograma';
@@ -75,6 +75,8 @@ interface Criterio {
 interface WizardState {
   convocatoria: {
     nombre: string;
+    // E58: nombre corto (va dentro de los folios), p. ej. LEGO26.
+    nombre_corto: string;
     ejercicio_fiscal: string;
     // E45 (punto 5): periodo de la convocatoria (alcance de visión por periodo).
     periodo_id: string;
@@ -179,6 +181,7 @@ const claveDesdeNombre = (nombre: string) => {
 const emptyWizardState: WizardState = {
   convocatoria: {
     nombre: '',
+    nombre_corto: '',
     ejercicio_fiscal: new Date().getFullYear().toString(),
     periodo_id: '',
     estado: 'borrador',
@@ -398,6 +401,8 @@ export default function ConvocatoriasNuevaPage() {
     if (clave === 'convocatoria') {
       if (!state.convocatoria.nombre.trim()) errors.nombre = 'Nombre requerido';
       if (!state.convocatoria.ejercicio_fiscal.trim()) errors.ejercicio_fiscal = 'Ejercicio fiscal requerido';
+      if (!state.convocatoria.nombre_corto) errors.nombre_corto = 'Escribe el nombre corto (va dentro del folio de cada registro).';
+      else if (!PATRON_CORTO.test(state.convocatoria.nombre_corto)) errors.nombre_corto = 'De 3 a 12 letras o números, sin espacios ni signos (p. ej. LEGO26).';
       if (!state.convocatoria.fecha_apertura) errors.fecha_apertura = 'Fecha de apertura requerida';
       if (!state.convocatoria.fecha_cierre) errors.fecha_cierre = 'Fecha de cierre requerida';
       if (state.convocatoria.fecha_apertura > state.convocatoria.fecha_cierre) {
@@ -818,6 +823,32 @@ export default function ConvocatoriasNuevaPage() {
                   />
                   {validationErrors.nombre && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.nombre}</p>}
                   <p className="text-xs text-[var(--app-ink-2)]">Así la verán los solicitantes en la lista de convocatorias abiertas.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="conv_nombre_corto" className={wizLabelCls}>Nombre corto *</Label>
+                  <div className="flex gap-2">
+                    <input
+                      id="conv_nombre_corto"
+                      maxLength={12}
+                      autoCapitalize="characters"
+                      spellCheck={false}
+                      value={state.convocatoria.nombre_corto}
+                      onChange={(e) => setState({ ...state, convocatoria: { ...state.convocatoria, nombre_corto: normalizarCorto(e.target.value).replace(/[^A-Z0-9]/g, '').slice(0, 12) } })}
+                      placeholder="LEGO26"
+                      className={`${wizInputCls} min-w-0 flex-1 font-mono uppercase`}
+                      aria-invalid={validationErrors.nombre_corto ? 'true' : undefined}
+                      aria-describedby="conv_nombre_corto_ayuda"
+                    />
+                    <Button type="button" variant="outline" size="sm" className="shrink-0 self-center"
+                      disabled={!sugerirCorto(state.convocatoria.nombre, state.convocatoria.ejercicio_fiscal)}
+                      onClick={() => setState({ ...state, convocatoria: { ...state.convocatoria, nombre_corto: sugerirCorto(state.convocatoria.nombre, state.convocatoria.ejercicio_fiscal) } })}>
+                      Sugerir
+                    </Button>
+                  </div>
+                  {validationErrors.nombre_corto && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.nombre_corto}</p>}
+                  <p id="conv_nombre_corto_ayuda" className="text-xs text-[var(--app-ink-2)]">
+                    Va dentro del folio de cada registro para darle seguimiento: <span className="font-mono font-semibold">CLUB-{state.convocatoria.nombre_corto || 'LEGO26'}-F0BMIW</span>. De 3 a 12 letras o números.
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="ejercicio_fiscal" className={wizLabelCls}>Ejercicio fiscal *</Label>
@@ -1629,6 +1660,7 @@ export default function ConvocatoriasNuevaPage() {
                   </CardHeader>
                   <CardContent className="text-sm space-y-2">
                     <p><strong>Nombre:</strong> {state.convocatoria.nombre}</p>
+                    <p><strong>Nombre corto (folios):</strong> <span className="font-mono">{state.convocatoria.nombre_corto}</span></p>
                     <p><strong>Ejercicio fiscal:</strong> {state.convocatoria.ejercicio_fiscal}</p>
                     <p><strong>Apertura:</strong> {state.convocatoria.fecha_apertura}</p>
                     <p><strong>Cierre:</strong> {state.convocatoria.fecha_cierre}</p>

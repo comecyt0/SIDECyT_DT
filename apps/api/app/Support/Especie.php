@@ -145,9 +145,9 @@ class Especie
         return $out;
     }
 
-    /** Folio legible y único: CLUB-AAAA-XXXXXX. */
-    public static function nuevoFolio(): string
+    /** Folio legible y único: CLUB-NOMBRECORTO-XXXXXX (E58), o CLUB-AAAA-XXXXXX si la convocatoria no tiene nombre corto. */
+    public static function nuevoFolio(?\App\Models\Convocatoria $c = null): string
     {
-        return 'CLUB-'.date('Y').'-'.strtoupper(\Illuminate\Support\Str::random(6));
+        return \App\Models\Convocatoria::nuevoFolio('CLUB', $c);
     }
 }

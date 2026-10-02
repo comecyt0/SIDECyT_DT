@@ -49,6 +49,7 @@ describe('ConvocatoriasNuevaPage — Wizard 7 pasos', () => {
     fireEvent.change(screen.getByLabelText(/Nombre de la Convocatoria/i), {
       target: { value: 'Convocatoria Test 2026' },
     });
+    fireEvent.change(screen.getByLabelText(/Nombre corto/i), { target: { value: 'prueba26' } });
     fireEvent.change(screen.getByLabelText(/Ejercicio Fiscal/i), {
       target: { value: '2026' },
     });
@@ -75,6 +76,7 @@ describe('ConvocatoriasNuevaPage — Wizard 7 pasos', () => {
     fireEvent.change(screen.getByLabelText(/Nombre de la Convocatoria/i), {
       target: { value: 'X' },
     });
+    fireEvent.change(screen.getByLabelText(/Nombre corto/i), { target: { value: 'prueba26' } });
     fireEvent.change(screen.getByLabelText(/Ejercicio Fiscal/i), { target: { value: '2026' } });
     fireEvent.change(screen.getByLabelText(/Fecha de Apertura/i), { target: { value: '2026-01-01' } });
     fireEvent.change(screen.getByLabelText(/Fecha de Cierre/i), { target: { value: '2026-12-31' } });
@@ -95,6 +97,7 @@ describe('ConvocatoriasNuevaPage — Wizard 7 pasos', () => {
     fireEvent.change(screen.getByLabelText(/Nombre de la Convocatoria/i), {
       target: { value: 'X' },
     });
+    fireEvent.change(screen.getByLabelText(/Nombre corto/i), { target: { value: 'prueba26' } });
     fireEvent.change(screen.getByLabelText(/Ejercicio Fiscal/i), { target: { value: '2026' } });
     // Apertura DESPUÉS de cierre — inválido
     fireEvent.change(screen.getByLabelText(/Fecha de Apertura/i), { target: { value: '2026-12-31' } });

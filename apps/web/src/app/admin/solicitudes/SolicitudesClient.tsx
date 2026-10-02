@@ -19,6 +19,7 @@ import { formatCurrency } from '@/lib/format';
 import { UserChip } from '@/components/ui/user-avatar';
 import { useRol } from '@/hooks/useRol';
 import { mensajeError } from '@/lib/errores-formulario';
+import Folio from '@/components/ui/folio';
 
 interface PaginationMeta {
   current_page: number;
@@ -289,7 +290,7 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
               <div className="pl-3">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0 flex-1">
-                    <span className="text-[10px] font-bold uppercase tracking-widest font-mono" style={{ color: 'var(--auth-vino)' }}>{sol.folio}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest font-mono" style={{ color: 'var(--auth-vino)' }}><Folio folio={sol.folio} corto={sol.convocatoria?.nombre_corto} className="" chipClassName="normal-case tracking-normal" /></span>
                     <h3 className="text-sm font-bold text-[var(--app-ink)] leading-tight mt-0.5 line-clamp-2">{sol.titulo_proyecto}</h3>
                   </div>
                   <span className={`shrink-0 ${estadoBadgeClass(sol.estado)}`}>

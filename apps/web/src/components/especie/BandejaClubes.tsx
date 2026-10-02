@@ -6,10 +6,11 @@ import { Loader2, Shapes, School, ChevronRight, Inbox, Timer } from 'lucide-reac
 import api from '@/lib/api';
 import FotoClub from '@/components/especie/FotoClub';
 import { restante } from '@/components/especie/CuentaRegresiva';
+import Folio from '@/components/ui/folio';
 import { ESTADO_CLUB, SISTEMA_ESCUELA, fechaHora } from '@/lib/especie';
 
 interface FilaBandeja {
-  id: number; folio: string; nombre: string; estado: string; logo_url: string | null; enviado_at: string | null; vence_at: string | null;
+  id: number; folio: string; convocatoria_corto?: string | null; nombre: string; estado: string; logo_url: string | null; enviado_at: string | null; vence_at: string | null;
   integrantes_count: number; etapa: { orden: number; nombre: string } | null; visto_bueno_at: string | null;
   escuela: { nombre: string; municipio: string; sistema: string } | null; convocatoria: { id: number; nombre: string } | null; puede_resolver: boolean;
 }
@@ -69,7 +70,7 @@ export default function BandejaClubes({ vista, hrefFicha, convocatoriaId, vacio 
                   {c.puede_resolver && <span className="pill" data-tone="vino">Te toca</span>}
                 </span>
                 <span className="block text-xs text-[var(--app-ink-2)]">
-                  <span className="font-mono">{c.folio}</span>
+                  <Folio folio={c.folio} corto={c.convocatoria_corto} />
                   {c.etapa ? ` · etapa ${c.etapa.orden}: ${c.etapa.nombre}` : ''}
                   {c.estado === 'aprobado_revision' ? (c.visto_bueno_at ? ' · con visto bueno' : ' · falta visto bueno') : ''}
                   {c.convocatoria ? ` · ${c.convocatoria.nombre}` : ''}

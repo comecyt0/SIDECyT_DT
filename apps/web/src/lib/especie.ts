@@ -384,6 +384,8 @@ export interface DocumentoClub {
 export interface ClubApi extends Partial<AvanceClub> {
   id: number; folio: string; nombre: string; estado: string; logo_url: string | null; datos: Record<string, unknown>;
   enviado_at: string | null; escuela: EscuelaApi | null; editable?: boolean;
+  /** E58: nombre corto de la convocatoria (los folios nuevos ya lo llevan dentro). */
+  convocatoria_corto?: string | null;
   /** E55: escuela solicitada (en revisión o rechazada) mientras el club no tiene una del catálogo. */
   escuela_solicitud?: { id: number; cct: string; nombre: string; municipio: string; nivel: string; sistema: string; estado: 'pendiente' | 'aceptada' | 'rechazada'; motivo: string | null } | null;
   lider?: { name: string; email: string; telefono?: string | null; cargo?: string | null; municipio?: string | null } | null;

@@ -63,7 +63,8 @@ class ConvocatoriaController extends Controller
         return response()->json($convocatoria->load([
             'tipoPrograma:id,nombre,banner_url,tipo_apoyo', 'periodo:id,nombre', 'administradores:id,name,email,avatar_path',
             'programaPublico:id,nombre,sistema,activo',
-        ]));
+        ])->toArray() + ['tiene_registros' => $convocatoria->tieneRegistros()]); // E58: el nombre corto queda fijo con registros
+
     }
 
     /**
@@ -105,6 +106,25 @@ class ConvocatoriaController extends Controller
                 'message' => 'Esta convocatoria tiene prórroga hasta el '.substr((string) $convocatoria->fecha_prorroga, 0, 10)
                     .'. Para ampliar el plazo usa «Dar prórroga».',
             ], 422);
+        }
+
+        // E58: nombre corto (va dentro de los folios nuevos). Se puede poner o corregir mientras no haya clubes ni
+        // solicitudes; después queda fijo para que todos los folios de la convocatoria coincidan.
+        if ($request->has('nombre_corto')) {
+            $corto = Convocatoria::normalizarCorto($request->input('nombre_corto'));
+            if ($corto !== $convocatoria->nombre_corto) {
+                if ($convocatoria->tieneRegistros()) {
+                    return response()->json(['message' => 'La convocatoria ya tiene registros con folio: el nombre corto ya no se puede cambiar.',
+                        'errors' => ['nombre_corto' => ['La convocatoria ya tiene registros con folio: el nombre corto ya no se puede cambiar.']]], 422);
+                }
+                validator(['nombre_corto' => $corto], ['nombre_corto' => ['nullable', 'regex:'.Convocatoria::PATRON_CORTO,
+                    \Illuminate\Validation\Rule::unique('convocatorias', 'nombre_corto')->ignore($convocatoria->id)]],
+                    ['nombre_corto.regex' => 'El nombre corto lleva de 3 a 12 letras o números, sin espacios ni signos (p. ej. LEGO26).',
+                        'nombre_corto.unique' => 'Ese nombre corto ya lo usa otra convocatoria; elige otro.'])->validate();
+                $antes = $convocatoria->nombre_corto;
+                $convocatoria->forceFill(['nombre_corto' => $corto]);
+                Audit::log('convocatoria.nombre_corto', $convocatoria, ['antes' => $antes, 'despues' => $corto]);
+            }
         }
 
         $convocatoria->update($validated);

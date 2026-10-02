@@ -1927,6 +1927,22 @@ limitan; (4) «¡Tu club fue aceptado!» no lanzaba confeti al refrescar ni al h
   atrapado, Escape, clic fuera). **Ojo:** se monta con `createPortal` a `body` porque los contenedores de la página usan
   `transform` en su transición y encerraban al `position: fixed` (el fondo no cubría la parte de abajo). La tarjeta
   lleva un brillo que la recorre y un anillo que late (solo con movimiento normal).
+
+### E58 — Nombre corto de la convocatoria dentro del folio [publicado 02-10-2026]
+**Pedido:** «El folio que se genera para cada registro también debe mostrar el nombre corto de la convocatoria para tener
+el seguimiento». **Decisiones del usuario:** lo escribe el admin; va **dentro** del folio; aplica a clubes y solicitudes.
+- `convocatorias.nombre_corto` (12, único, nullable; migración `2026_10_02_000004`), en `$guarded`. `Convocatoria::
+  PATRON_CORTO` (`^[A-Z0-9]{3,12}$`), `normalizarCorto()` (mayúsculas, sin espacios; se aplica **antes** de validar para
+  que la unicidad compare igual), `nuevoFolio($prefijo, $conv)` y `tieneRegistros()`.
+- Folios nuevos: `CLUB-LEGO26-F0BMIW` (`Especie::nuevoFolio($conv)`) y `COMECYT-LEGO26-XXXXXX` (`SolicitudController`).
+  Sin nombre corto (convocatorias anteriores) sigue el formato con el año. Los folios existentes **no cambian** (QR, PDF y
+  búsquedas siguen funcionando) y se muestran con el nombre corto al lado (`components/ui/folio.tsx`).
+- Asistente: campo obligatorio «Nombre corto» con botón «Sugerir» (`sugerirCorto`: iniciales/palabra + año) y vista del
+  folio; en el servidor es opcional para no romper integraciones. Editar convocatoria: se pone o corrige **solo mientras no
+  haya clubes ni solicitudes** (`tiene_registros` en la ficha; después 422), con bitácora `convocatoria.nombre_corto`.
+- Las respuestas de clubes traen `convocatoria_corto`; la lista del solicitante carga `convocatoria:id,nombre,nombre_corto`;
+  la búsqueda del admin de solicitudes encuentra por nombre corto (y la de clubes escapa `%`/`_`).
+**Verificado:** backend 15/15 (`e2e_folio.php`), F1 sin regresiones, vitest 185/185.
 **Verificado:** backend F1 53/53 y F3 58/58 (nuevos: box lunch arriba del máximo de integrantes → 422 para líder y admin),
 navegador 20/20 (`verif_e57.mjs`: límites, 422 del servidor, confeti suave con «reducir movimiento» al cargar / al volver
 con scroll / con el botón, confeti completo en escritorio y en el panel de inicio, modalidad en todos los apartados, sin

@@ -8,6 +8,7 @@ import {
   type CampoApi, type ClubApi, type DocumentoClub, type IntegranteApi, type Predef,
 } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
+import Folio from '@/components/ui/folio';
 
 /**
  * E52 · F1 — Vista de solo lectura de un club: datos, escuela, líder, integrantes con foto, respuestas adicionales y
@@ -49,7 +50,7 @@ export default function ClubResumen({ club, integrantes, documentos, campos, cam
             <span className="pill" data-tone={est.tono} data-dot="on">{est.etiqueta}</span>
           </div>
           <p className="text-sm text-[var(--app-ink-2)]">
-            Folio <span className="font-mono font-semibold text-[var(--app-ink)]">{club.folio}</span>
+            Folio <Folio folio={club.folio} corto={club.convocatoria_corto} className="font-mono font-semibold text-[var(--app-ink)]" />
             {club.enviado_at ? ` · enviado el ${formatDate(club.enviado_at)}` : ''}
           </p>
           {kit && <p className="flex items-center gap-1.5 text-sm text-[var(--app-ink-2)]"><Package className="h-4 w-4" aria-hidden="true" />Kit: {kit}</p>}

@@ -50,12 +50,13 @@ class ClubController extends Controller
             return [
                 'id' => $c->id,
                 'nombre' => $c->nombre,
+                'nombre_corto' => $c->nombre_corto,
                 'descripcion' => $c->descripcion ? mb_substr(strip_tags($c->descripcion), 0, 400) : null,
                 'estado_publico' => $c->estado_publico,
                 'acepta' => $c->aceptaSolicitudes(),
                 'fecha_limite' => $c->fecha_cierre_efectiva ? substr((string) $c->fecha_cierre_efectiva, 0, 10) : null,
                 'kit' => $c->especieConfig?->kit_nombre,
-                'club' => $club ? ['id' => $club->id, 'folio' => $club->folio, 'nombre' => $club->nombre, 'estado' => $club->estadoVisible(), 'vence_at' => $club->vence_at] : null,
+                'club' => $club ? ['id' => $club->id, 'folio' => $club->folio, 'convocatoria_corto' => $c->nombre_corto, 'nombre' => $club->nombre, 'estado' => $club->estadoVisible(), 'vence_at' => $club->vence_at] : null,
             ];
         })->values());
     }
@@ -95,7 +96,7 @@ class ClubController extends Controller
             $club = new Club(['nombre' => trim(strip_tags($v['nombre'])), 'escuela_id' => $escuelaId, 'datos' => []]);
             for ($i = 0; $i < 5; $i++) {
                 try {
-                    $club->forceFill(['folio' => Especie::nuevoFolio(), 'estado' => 'borrador', 'lider_id' => $user->id, 'convocatoria_id' => $conv->id, 'escuela_solicitud_id' => $solicitudId])->save();
+                    $club->forceFill(['folio' => Especie::nuevoFolio($conv), 'estado' => 'borrador', 'lider_id' => $user->id, 'convocatoria_id' => $conv->id, 'escuela_solicitud_id' => $solicitudId])->save();
                     break;
                 } catch (\Illuminate\Database\QueryException $e) {
                     if ($i === 4 || ! in_array($e->getCode(), ['23505', '23000'], true)) throw $e;
@@ -469,7 +470,7 @@ class ClubController extends Controller
             'club' => [
                 'id' => $club->id, 'folio' => $club->folio, 'nombre' => $club->nombre, 'estado' => $club->estadoVisible(),
                 'logo_url' => $club->logo_url, 'datos' => $club->datos ?? [], 'enviado_at' => $club->enviado_at,
-                'escuela' => $club->escuela, 'editable' => $club->editable(),
+                'escuela' => $club->escuela, 'editable' => $club->editable(), 'convocatoria_corto' => $club->convocatoria->nombre_corto,
                 // E55: escuela solicitada (en revisión o rechazada) mientras el club no tiene una del catálogo.
                 'escuela_solicitud' => ! $club->escuela_id && $club->escuelaSolicitud
                     ? $club->escuelaSolicitud->only(['id', 'cct', 'nombre', 'municipio', 'nivel', 'sistema', 'estado', 'motivo'])
@@ -479,7 +480,7 @@ class ClubController extends Controller
             'documentos' => $requeridos->values(),
             'config' => EspecieConfigController::payload($club->convocatoria, $cfg),
             'convocatoria' => [
-                'id' => $club->convocatoria->id, 'nombre' => $club->convocatoria->nombre, 'acepta' => $club->convocatoria->aceptaSolicitudes(),
+                'id' => $club->convocatoria->id, 'nombre' => $club->convocatoria->nombre, 'nombre_corto' => $club->convocatoria->nombre_corto, 'acepta' => $club->convocatoria->aceptaSolicitudes(),
                 'fecha_limite' => $club->convocatoria->fecha_cierre_efectiva ? substr((string) $club->convocatoria->fecha_cierre_efectiva, 0, 10) : null,
             ],
             'faltantes' => $club->editable() ? $this->faltantes($club) : [],

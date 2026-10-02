@@ -47,6 +47,8 @@ export interface TipoPrograma {
 export interface Convocatoria {
   id: number;
   nombre: string;
+  /** E58: nombre corto (p. ej. LEGO26); va dentro de los folios nuevos. */
+  nombre_corto?: string | null;
   ejercicio_fiscal: string;
   estado: string;
   descripcion?: string;

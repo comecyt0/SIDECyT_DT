@@ -13,11 +13,12 @@ import StepFrame from '@/components/ui/step-frame';
 import EscuelaPicker, { type EscuelaElegida } from '@/components/especie/EscuelaPicker';
 import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
 import CelebracionAceptado from '@/components/especie/CelebracionAceptado';
+import Folio from '@/components/ui/folio';
 import { ESTADO_CLUB } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
 
 interface ConvClub {
-  id: number; nombre: string; descripcion: string | null; estado_publico: string; acepta: boolean; fecha_limite: string | null; kit: string | null;
+  id: number; nombre: string; nombre_corto?: string | null; descripcion: string | null; estado_publico: string; acepta: boolean; fecha_limite: string | null; kit: string | null;
   club: { id: number; folio: string; nombre: string; estado: string; vence_at?: string | null } | null;
 }
 
@@ -111,7 +112,7 @@ export default function ClubDashboardPage() {
                         <div className="min-w-0">
                           <p className="text-xs text-[var(--app-ink-2)]">{c.nombre}</p>
                           <p className="break-words text-lg font-bold text-[var(--app-ink)]">{club.nombre}</p>
-                          <p className="text-xs text-[var(--app-ink-2)]">Folio <span className="font-mono">{club.folio}</span></p>
+                          <p className="text-xs text-[var(--app-ink-2)]">Folio <Folio folio={club.folio} corto={c.nombre_corto} /></p>
                         </div>
                         <span className="pill" data-tone={est.tono} data-dot="on">{est.etiqueta}</span>
                       </div>

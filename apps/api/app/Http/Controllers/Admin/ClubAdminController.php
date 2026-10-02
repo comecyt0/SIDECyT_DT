@@ -23,7 +23,7 @@ class ClubAdminController extends Controller
         Alcance::aplicar($q, $request->user(), 'id');
 
         return response()->json($q->withCount(['clubes', 'clubes as enviados_count' => fn ($c) => $c->where('estado', '!=', 'borrador')])
-            ->orderByDesc('fecha_apertura')->get(['id', 'nombre', 'fecha_apertura', 'fecha_cierre', 'estado']));
+            ->orderByDesc('fecha_apertura')->get(['id', 'nombre', 'nombre_corto', 'fecha_apertura', 'fecha_cierre', 'estado']));
     }
 
     public function index(Request $request, Convocatoria $convocatoria)
@@ -40,6 +40,7 @@ class ClubAdminController extends Controller
             default => $q->where('estado', $request->input('estado')),
         };
         if ($t = trim((string) $request->input('q'))) {
+            $t = addcslashes($t, '%_\\');
             $q->where(fn ($w) => $w->where('nombre', 'ilike', "%{$t}%")->orWhere('folio', 'ilike', "%{$t}%")->orWhereHas('escuela', fn ($e) => $e->where('nombre', 'ilike', "%{$t}%")->orWhere('cct', 'ilike', "%{$t}%")));
         }
 
@@ -47,7 +48,7 @@ class ClubAdminController extends Controller
             'id' => $c->id, 'folio' => $c->folio, 'nombre' => $c->nombre, 'estado' => $c->estadoVisible(), 'logo_url' => $c->logo_url,
             'enviado_at' => $c->enviado_at, 'integrantes_count' => $c->integrantes_count, 'vence_at' => $c->vence_at,
             'visto_bueno_at' => $c->visto_bueno_at, 'comite_resultado' => $c->comite_resultado,
-            'escuela' => $c->escuela, 'lider' => $c->lider,
+            'escuela' => $c->escuela, 'lider' => $c->lider, 'convocatoria_corto' => $convocatoria->nombre_corto,
         ]));
     }
 

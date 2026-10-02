@@ -13,6 +13,8 @@ import { AlertBox } from '@/components/ui/alert-box';
 import StepFrame from '@/components/ui/step-frame';
 import AvisoErrores from '@/components/ui/aviso-errores';
 import { erroresFormulario, type ErroresFormulario } from '@/lib/errores-formulario';
+import { Button } from '@/components/ui/button';
+import { PATRON_CORTO, normalizarCorto, sugerirCorto } from '@/lib/asistente-convocatoria';
 
 const labelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
 const inputCls = 'auth-input auth-input-static pl-4';
@@ -25,6 +27,8 @@ export default function EditarConvocatoriaPage() {
   const [feedback, setFeedback] = useState<{type: 'error'|'success'|'info'|'warning', message: string}|null>(null);
   const [formData, setFormData] = useState({
     nombre: '',
+    // E58: nombre corto (va dentro de los folios nuevos).
+    nombre_corto: '',
     ejercicio_fiscal: '',
     descripcion: '',
     fecha_apertura: '',
@@ -43,6 +47,8 @@ export default function EditarConvocatoriaPage() {
   const [esEspecie, setEsEspecie] = useState(false);
   // E56: configuración técnica de esta convocatoria (preguntas, documentos, conceptos de gasto y criterios).
   const [tipoProgramaId, setTipoProgramaId] = useState<number | null>(null);
+  // E58: con clubes o solicitudes ya registrados, el nombre corto queda fijo (los folios lo llevan dentro).
+  const [cortoFijo, setCortoFijo] = useState(false);
   useEffect(() => {
     api.get('/admin/periodos').then(({ data }) => setPeriodos(Array.isArray(data) ? data : [])).catch(() => setPeriodos([]));
   }, []);
@@ -56,6 +62,7 @@ export default function EditarConvocatoriaPage() {
       const { data } = await api.get(`/admin/convocatorias/${id}`);
       setFormData({
         nombre: data.nombre,
+        nombre_corto: typeof data.nombre_corto === 'string' ? data.nombre_corto : '',
         ejercicio_fiscal: data.ejercicio_fiscal,
         descripcion: data.descripcion || '',
         fecha_apertura: String(data.fecha_apertura ?? '').slice(0, 10),
@@ -66,6 +73,7 @@ export default function EditarConvocatoriaPage() {
         periodo_id: data.periodo_id ? String(data.periodo_id) : '',
       });
       setEsEspecie(data?.tipo_programa?.tipo_apoyo === 'especie');
+      setCortoFijo(data?.tiene_registros === true);
       setTipoProgramaId(typeof data?.tipo_programa?.id === 'number' ? data.tipo_programa.id : null);
     } catch {
       setFeedback({ type: 'error', message: 'No se pudo abrir la convocatoria.' });
@@ -81,14 +89,15 @@ export default function EditarConvocatoriaPage() {
     try {
       const cuerpo: Record<string, unknown> = { ...formData, periodo_id: formData.periodo_id ? Number(formData.periodo_id) : null };
       if (esEspecie) { delete cuerpo.monto_maximo_apoyo; delete cuerpo.porcentaje_aportacion_minima; }
+      if (cortoFijo) delete cuerpo.nombre_corto;
       await api.put(`/admin/convocatorias/${id}`, cuerpo);
       setFeedback({ type: 'success', message: 'Convocatoria actualizada.' });
       router.push(`/admin/convocatorias/${id}`);
     } catch (error: unknown) {
       setErrorGuardar(erroresFormulario(error,
-        { nombre: 'Nombre', ejercicio_fiscal: 'Ejercicio fiscal', periodo_id: 'Periodo', descripcion: 'Descripción', fecha_apertura: 'Abre el',
+        { nombre: 'Nombre', nombre_corto: 'Nombre corto', ejercicio_fiscal: 'Ejercicio fiscal', periodo_id: 'Periodo', descripcion: 'Descripción', fecha_apertura: 'Abre el',
           fecha_cierre: 'Cierra el', monto_maximo_apoyo: 'Monto máximo', porcentaje_aportacion_minima: 'Aportación mínima', estado: 'Estado' },
-        { nombre: 'nombre', ejercicio_fiscal: 'nombre', periodo_id: 'nombre', descripcion: 'nombre', fecha_apertura: 'fechas', fecha_cierre: 'fechas',
+        { nombre: 'nombre', nombre_corto: 'nombre', ejercicio_fiscal: 'nombre', periodo_id: 'nombre', descripcion: 'nombre', fecha_apertura: 'fechas', fecha_cierre: 'fechas',
           monto_maximo_apoyo: 'montos', porcentaje_aportacion_minima: 'montos', estado: 'montos' }));
     } finally {
       setSaving(false);
@@ -133,6 +142,7 @@ export default function EditarConvocatoriaPage() {
             validate: () => {
               if (!formData.nombre.trim()) return 'Escribe el nombre de la convocatoria.';
               if (!/^\d{4}$/.test(formData.ejercicio_fiscal)) return 'El ejercicio fiscal son 4 dígitos, por ejemplo 2026.';
+              if (!cortoFijo && !PATRON_CORTO.test(formData.nombre_corto)) return 'Escribe el nombre corto: de 3 a 12 letras o números, sin espacios (p. ej. LEGO26).';
               return null;
             },
             content: (
@@ -140,6 +150,24 @@ export default function EditarConvocatoriaPage() {
                 <div className="space-y-1.5">
                   <Label htmlFor="nombre" className={labelCls}>Nombre *</Label>
                   <input id="nombre" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} className={inputCls} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="nombre_corto" className={labelCls}>Nombre corto {cortoFijo ? '' : '*'}</Label>
+                  <div className="flex gap-2">
+                    <input id="nombre_corto" maxLength={12} autoCapitalize="characters" spellCheck={false} disabled={cortoFijo} placeholder="LEGO26"
+                      value={formData.nombre_corto} aria-describedby="nombre_corto_ayuda"
+                      onChange={(e) => setFormData({ ...formData, nombre_corto: normalizarCorto(e.target.value).replace(/[^A-Z0-9]/g, '').slice(0, 12) })}
+                      className={`${inputCls} min-w-0 flex-1 font-mono uppercase`} />
+                    {!cortoFijo && (
+                      <Button type="button" variant="outline" size="sm" className="shrink-0 self-center" disabled={!sugerirCorto(formData.nombre, formData.ejercicio_fiscal)}
+                        onClick={() => setFormData({ ...formData, nombre_corto: sugerirCorto(formData.nombre, formData.ejercicio_fiscal) })}>Sugerir</Button>
+                    )}
+                  </div>
+                  <p id="nombre_corto_ayuda" className="text-xs text-[var(--app-ink-2)]">
+                    {cortoFijo
+                      ? 'Ya hay registros con folio en esta convocatoria: el nombre corto ya no se puede cambiar.'
+                      : <>Va dentro del folio de cada registro nuevo: <span className="font-mono font-semibold">{esEspecie ? 'CLUB' : 'COMECYT'}-{formData.nombre_corto || 'LEGO26'}-F0BMIW</span>.</>}
+                  </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">

@@ -11,6 +11,7 @@ import PageHeader from '@/components/ui/page-header';
 import StatTile, { type TileTone } from '@/components/ui/stat-tile';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import Folio from '@/components/ui/folio';
 
 const container = {
   hidden: { opacity: 0 },
@@ -127,7 +128,7 @@ export default function SolicitudesClient({ solicitudes }: Props) {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="font-mono text-[11px] font-bold text-[var(--app-ink-2)] bg-[var(--auth-field)] px-2 py-0.5 rounded-md">
-                        {s.folio}
+                        <Folio folio={s.folio} corto={s.convocatoria?.nombre_corto} className="" />
                       </span>
                       <span className={estadoBadgeClass(s.estado)}>
                         {estadoLabel(s.estado)}

@@ -24,9 +24,25 @@ export interface CampoA { nombre_campo: string; etiqueta: string; tipo_campo: st
 export interface DocumentoA { clave: string; nombre: string; descripcion: string; obligatorio: boolean; orden: number; formatos: string[]; tamano_mb: number }
 export interface RubroA { clave: string; nombre: string; descripcion: string; porcentaje_maximo: number }
 export interface CriterioA { nombre: string; descripcion: string; ponderacion: number; puntaje_maximo: number; orden: number }
+/** E58 — Nombre corto de la convocatoria (va dentro de los folios): 3 a 12 letras o números, en mayúsculas. */
+export const PATRON_CORTO = /^[A-Z0-9]{3,12}$/;
+export function normalizarCorto(s: string): string {
+  return s.replace(/\s+/g, '').toUpperCase();
+}
+/** Propuesta a partir del nombre: iniciales de las palabras con significado + los dos últimos dígitos del año. */
+export function sugerirCorto(nombre: string, anio: string): string {
+  const vacias = new Set(['DE', 'DEL', 'LA', 'LAS', 'EL', 'LOS', 'Y', 'E', 'EN', 'PARA', 'POR', 'A', 'AL', 'CONVOCATORIA', 'PROGRAMA']);
+  const palabras = nombre.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/)
+    .filter((p) => p && !vacias.has(p) && !/^\d+$/.test(p));
+  const base = palabras.length === 1 ? palabras[0].slice(0, 6) : palabras.map((p) => p[0]).join('').slice(0, 8);
+  const yy = /^\d{4}$/.test(anio.trim()) ? anio.trim().slice(2) : '';
+  const s = (base + yy).slice(0, 12);
+  return s.length >= 3 ? s : '';
+}
+
 export interface EstadoAsistente {
   convocatoria: {
-    nombre: string; ejercicio_fiscal: string; periodo_id: string; estado: string; descripcion: string;
+    nombre: string; nombre_corto: string; ejercicio_fiscal: string; periodo_id: string; estado: string; descripcion: string;
     fecha_apertura: string; fecha_cierre: string; monto_maximo_apoyo: number; porcentaje_aportacion_minima: number;
   };
   programa: {
@@ -131,7 +147,7 @@ const CAMPO_LEGIBLE: Record<string, string> = {
   nombre: 'nombre', etiqueta: 'texto', clave: 'identificador', descripcion: 'descripción', opciones: 'opciones',
   ponderacion: 'peso', puntaje_maximo: 'calificación máxima', porcentaje_maximo: 'porcentaje máximo', tamano_mb: 'tamaño máximo',
   nombre_campo: 'identificador', tipo_campo: 'tipo de respuesta', fecha_apertura: 'fecha de apertura', fecha_cierre: 'fecha de cierre',
-  monto_maximo_apoyo: 'apoyo máximo', porcentaje_aportacion_minima: 'aportación mínima', ejercicio_fiscal: 'ejercicio fiscal',
+  monto_maximo_apoyo: 'apoyo máximo', porcentaje_aportacion_minima: 'aportación mínima', ejercicio_fiscal: 'ejercicio fiscal', nombre_corto: 'nombre corto',
   periodo_id: 'periodo', monto_maximo: 'monto máximo', programa_publico_id: 'programa', sistema: 'sistema', num_etapas: 'número de etapas', min_miembros_equipo: 'mínimo de integrantes',
   max_miembros_equipo: 'máximo de integrantes', puntaje_minimo_aprobatorio: 'calificación mínima', tipo_apoyo: 'forma del apoyo',
   min_integrantes: 'mínimo de integrantes', max_integrantes: 'máximo de integrantes', clubes_por_escuela: 'clubes por escuela',
@@ -207,7 +223,7 @@ export function restaurarBorrador(datos: unknown, vacio: EstadoAsistente): Estad
   const v = vacio;
   return {
     convocatoria: {
-      nombre: txt(c.nombre), ejercicio_fiscal: txt(c.ejercicio_fiscal, v.convocatoria.ejercicio_fiscal),
+      nombre: txt(c.nombre), nombre_corto: normalizarCorto(txt(c.nombre_corto)).slice(0, 12), ejercicio_fiscal: txt(c.ejercicio_fiscal, v.convocatoria.ejercicio_fiscal),
       periodo_id: txt(c.periodo_id), estado: 'borrador', descripcion: txt(c.descripcion),
       fecha_apertura: txt(c.fecha_apertura), fecha_cierre: txt(c.fecha_cierre),
       monto_maximo_apoyo: num(c.monto_maximo_apoyo, v.convocatoria.monto_maximo_apoyo),

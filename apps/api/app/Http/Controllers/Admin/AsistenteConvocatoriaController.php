@@ -107,7 +107,12 @@ class AsistenteConvocatoriaController extends Controller
         // E52: "Apoyo en especie" (kits a clubes escolares) no maneja dinero: sin monto, conceptos de gasto ni criterios;
         // sus preguntas son del club o del integrante y trae su propia configuración (límites, menores, kit, campos).
         $esEspecie = $request->input('programa.tipo_apoyo') === \App\Support\Especie::TIPO_APOYO;
-        $validator = Validator::make($request->all(), $this->reglas($esEspecie), [], $this->atributos());
+        // E58: nombre corto en mayúsculas y sin espacios antes de validar (la unicidad compara así).
+        if (is_array($request->input('convocatoria'))) {
+            $request->merge(['convocatoria' => ['nombre_corto' => Convocatoria::normalizarCorto($request->input('convocatoria.nombre_corto'))] + $request->input('convocatoria')]);
+        }
+        $validator = Validator::make($request->all(), $this->reglas($esEspecie), ['convocatoria.nombre_corto.regex' => 'El nombre corto lleva de 3 a 12 letras o números, sin espacios ni signos (p. ej. LEGO26).',
+            'convocatoria.nombre_corto.unique' => 'Ese nombre corto ya lo usa otra convocatoria; elige otro.'], $this->atributos());
         $validator->after(function ($validator) use ($request, $esEspecie) {
             foreach ($this->erroresDeCoherencia($request->all(), $esEspecie) as $campo => $mensaje) {
                 $validator->errors()->add($campo, $mensaje);
@@ -214,7 +219,7 @@ class AsistenteConvocatoriaController extends Controller
                 'estado' => 'activa',
                 'tipo_programa_id' => $programa->id,
             ]);
-            $convocatoria->forceFill(['programa_publico_id' => $publico->id])->save();
+            $convocatoria->forceFill(['programa_publico_id' => $publico->id, 'nombre_corto' => $cv['nombre_corto'] ?? null])->save();
 
             if ($esEspecie) {
                 $e = $v['especie'];
@@ -330,6 +335,8 @@ class AsistenteConvocatoriaController extends Controller
 
             'convocatoria' => 'required|array',
             'convocatoria.nombre' => 'required|string|max:255',
+            // E58: el asistente del panel lo exige; aquí es opcional para no romper integraciones (sin él, folio con el año).
+            'convocatoria.nombre_corto' => ['nullable', 'string', 'regex:'.Convocatoria::PATRON_CORTO, Rule::unique('convocatorias', 'nombre_corto')],
             'convocatoria.ejercicio_fiscal' => 'required|digits:4',
             'convocatoria.periodo_id' => 'nullable|integer|exists:periodos,id',
             'convocatoria.descripcion' => 'nullable|string|max:10000',
@@ -471,6 +478,7 @@ class AsistenteConvocatoriaController extends Controller
             'programa.programa_publico_id' => 'programa',
             'programa.sistema' => 'sistema del programa',
             'convocatoria.nombre' => 'nombre de la convocatoria',
+            'convocatoria.nombre_corto' => 'nombre corto',
             'convocatoria.ejercicio_fiscal' => 'ejercicio fiscal',
             'convocatoria.periodo_id' => 'periodo',
             'convocatoria.fecha_apertura' => 'fecha de apertura',

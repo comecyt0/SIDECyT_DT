@@ -13,10 +13,12 @@ import { AlertBox } from '@/components/ui/alert-box';
 import { ESTADO_CLUB, SISTEMA_ESCUELA } from '@/lib/especie';
 import FotoClub from '@/components/especie/FotoClub';
 import { formatDate } from '@/lib/format';
+import Folio from '@/components/ui/folio';
 
 interface ConvEspecie { id: number; nombre: string; fecha_apertura: string | null; fecha_cierre: string | null; clubes_count: number; enviados_count: number }
 interface ClubFila {
   id: number; folio: string; nombre: string; estado: string; logo_url: string | null; enviado_at: string | null; integrantes_count: number;
+  convocatoria_corto?: string | null;
   escuela: { cct: string; nombre: string; municipio: string; sistema: string } | null;
   lider: { name: string; email: string } | null;
 }
@@ -200,7 +202,7 @@ export default function ClubesAdminPage() {
                             <span className="pill" data-tone={est.tono}>{est.etiqueta}</span>
                           </span>
                           <span className="block text-xs text-[var(--app-ink-2)]">
-                            <span className="font-mono">{c.folio}</span> · {c.integrantes_count} integrantes{c.lider ? ` · ${c.lider.name}` : ''}
+                            <Folio folio={c.folio} corto={c.convocatoria_corto} /> · {c.integrantes_count} integrantes{c.lider ? ` · ${c.lider.name}` : ''}
                           </span>
                           {c.escuela && (
                             <span className="mt-0.5 flex items-center gap-1 text-xs text-[var(--app-ink-2)]">
