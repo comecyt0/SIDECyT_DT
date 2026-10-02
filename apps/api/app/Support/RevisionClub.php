@@ -281,9 +281,12 @@ class RevisionClub
         foreach (self::adminsDe($club) as $u) $u->notify(new ClubAviso($club, $evento));
     }
 
-    private static function avisarLider(Club $club, string $evento, array $extra = []): void
+    /**
+     * Aviso al líder del club. E61: también al director mientras comparta el rol de líder y, con `conLiderB`, al líder B
+     * (fecha y lugar del kit, entrega y QR: lo que también siguen). Solo cuentas activas.
+     */
+    public static function avisarLider(Club $club, string $evento, array $extra = [], bool $conLiderB = false): void
     {
-        $club->loadMissing('lider');
-        if ($club->lider && $club->lider->activo) $club->lider->notify(new ClubAviso($club, $evento, $extra));
+        foreach ($club->destinatarios($conLiderB) as $u) $u->notify(new ClubAviso($club, $evento, $extra));
     }
 }

@@ -85,6 +85,54 @@ class Club extends Model
         return $this->hasMany(ClubIntegrante::class)->orderByDesc('es_lider')->orderBy('orden')->orderBy('id');
     }
 
+    /** E61 — líder B y director (acompañantes del club). */
+    public function accesos()
+    {
+        return $this->hasMany(ClubAcceso::class);
+    }
+
+    /**
+     * E61 — Qué es esta persona para el club: 'lider', 'lider_b', 'director', 'director_colider' o null.
+     * Los acompañantes solo cuentan con el rol activo `acompanante_club` (así un líder de otro club que también es
+     * acompañante aquí opera cada club desde el rol correspondiente).
+     */
+    public function accesoDe(?User $u): ?string
+    {
+        if (! $u) return null;
+        if ((int) $this->lider_id === (int) $u->id) return 'lider';
+        if (! $u->tieneRol('acompanante_club')) return null;
+        $a = $this->relationLoaded('accesos') ? $this->accesos->firstWhere('user_id', $u->id) : $this->accesos()->where('user_id', $u->id)->first();
+        if (! $a) return null;
+
+        return $a->tipo === 'director' && $a->colider ? 'director_colider' : $a->tipo;
+    }
+
+    /** E61 — Ver el club (seguimiento, QR, datos, logística): líder y acompañantes. */
+    public function puedeVer(?User $u): bool
+    {
+        return $this->accesoDe($u) !== null;
+    }
+
+    /** E61 — Operar (editar, enviar, logística, subir firmados): el líder y el director mientras sea colíder. */
+    public function puedeOperar(?User $u): bool
+    {
+        return in_array($this->accesoDe($u), ['lider', 'director_colider'], true);
+    }
+
+    /**
+     * E61 — A quién avisar de lo que pasa con el club: el líder y el director mientras sea colíder (decisión del usuario);
+     * con `conLiderB` también el líder B (fecha y lugar del kit). Solo cuentas activas.
+     */
+    public function destinatarios(bool $conLiderB = false): \Illuminate\Support\Collection
+    {
+        $ids = collect([$this->lider_id]);
+        foreach ($this->accesos()->get() as $a) {
+            if (($a->tipo === 'director' && $a->colider) || ($conLiderB && $a->tipo === 'lider_b')) $ids->push($a->user_id);
+        }
+
+        return User::whereIn('id', $ids->filter()->unique()->all())->where('activo', true)->get();
+    }
+
     public function documentos()
     {
         return $this->hasMany(ClubDocumento::class);

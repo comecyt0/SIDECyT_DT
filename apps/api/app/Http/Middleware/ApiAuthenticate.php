@@ -49,6 +49,14 @@ class ApiAuthenticate
             throw new AuthenticationException('Unauthenticated');
         }
 
+        // E61: con contraseña definida por otra persona (líder de club), solo se permite cambiarla, ver quién es y salir.
+        if ($user->debe_cambiar_password && ! $request->is('api/auth/me', 'api/auth/change-password', 'api/auth/logout', 'api/auth/refresh')) {
+            return response()->json([
+                'message' => 'Antes de continuar, cambia la contraseña que te dieron por una tuya.',
+                'codigo' => 'debe_cambiar_password',
+            ], 403);
+        }
+
         return $next($request);
     }
 }

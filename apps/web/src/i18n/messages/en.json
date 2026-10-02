@@ -161,6 +161,7 @@
     "admin_convocatoria": "Call administrator",
     "consulta": "Read-only",
     "lider_club": "Club leader",
+    "acompanante_club": "Club companion",
     "operador_evento": "Event operator"
   },
   "request_access": {

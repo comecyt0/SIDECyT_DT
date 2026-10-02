@@ -193,7 +193,7 @@ class LogisticaClub
         $club = $f->club;
         Audit::log('club.firmado_'.($resultado === 'aprobar' ? 'aprobado' : 'rechazado'), $club, ['firmado_id' => $f->id, 'tipo' => $f->tipo]);
         $club->loadMissing('lider');
-        $club->lider?->notify(new ClubAviso($club, $resultado === 'aprobar' ? 'firmado_aprobado' : 'firmado_rechazado', ['tipo' => $f->tipo, 'motivo' => $motivo]));
+        RevisionClub::avisarLider($club, $resultado === 'aprobar' ? 'firmado_aprobado' : 'firmado_rechazado', ['tipo' => $f->tipo, 'motivo' => $motivo]);
 
         return $f;
     }
@@ -212,7 +212,8 @@ class LogisticaClub
             $c->forceFill(['kit_fecha' => $fecha, 'kit_lugar' => $lugar, 'kit_asignado_at' => now()])->save();
             Audit::log('club.kit_asignado', $c, ['fecha' => $fecha->toIso8601String()]);
             $c->loadMissing('lider');
-            $c->lider?->notify(new ClubAviso($c, 'kit_asignado', ['fecha' => RevisionClub::fechaLegible($fecha), 'lugar' => $lugar]));
+            // E61 (pedido del usuario): la fecha y el lugar del kit también le llegan al líder B (campana y correo).
+            RevisionClub::avisarLider($c, 'kit_asignado', ['fecha' => RevisionClub::fechaLegible($fecha), 'lugar' => $lugar], true);
             $hechos[] = $c->id;
         }
 
@@ -229,7 +230,7 @@ class LogisticaClub
         });
         Audit::log('club.kit_entregado', $club, ['folio' => $club->folio]);
         $club->refresh()->loadMissing('lider');
-        $club->lider?->notify(new ClubAviso($club, 'kit_entregado'));
+        RevisionClub::avisarLider($club, 'kit_entregado', [], true);
 
         return $club;
     }

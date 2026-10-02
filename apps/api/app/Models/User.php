@@ -95,6 +95,8 @@ class User extends Authenticatable implements JWTSubject
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
             'datos_registro' => 'array',
+            // E61: cuenta creada por un líder de club con contraseña que él definió → cambio obligatorio al entrar.
+            'debe_cambiar_password' => 'boolean',
         ];
     }
 
@@ -108,6 +110,8 @@ class User extends Authenticatable implements JWTSubject
         static::saving(function (User $user) {
             if ($user->isDirty('password') && $user->exists) {
                 $user->password_changed_at = now();
+                // E61: cualquier cambio posterior (propio o por correo de restablecimiento) deja de ser la clave del líder.
+                if (! $user->isDirty('debe_cambiar_password')) $user->debe_cambiar_password = false;
             }
         });
     }
@@ -158,6 +162,8 @@ class User extends Authenticatable implements JWTSubject
         return [
             'rol' => $this->rol ? $this->rol->slug : null,
             'empresa' => $this->empresa ? $this->empresa->acronimo : null,
+            // E61: el front (proxy) manda a /cambiar-contrasena mientras sea verdadero; el servidor bloquea lo demás.
+            'cambiar' => (bool) $this->debe_cambiar_password,
         ];
     }
 }

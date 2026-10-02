@@ -22,7 +22,7 @@ class ClubAviso extends Notification implements ShouldQueue
     public bool $deleteWhenMissingModels = true;
 
     /** Eventos que además van por correo al líder. */
-    public const CON_CORREO = ['observado', 'prorroga', 'aceptado', 'qr_habilitado', 'kit_asignado'];
+    public const CON_CORREO = ['observado', 'prorroga', 'aceptado', 'qr_habilitado', 'kit_asignado', 'acceso_otorgado', 'colider_activado'];
 
     public function __construct(public readonly Club $club, public readonly string $evento, public readonly array $extra = []) {}
 
@@ -53,6 +53,11 @@ class ClubAviso extends Notification implements ShouldQueue
             'firmado_subido' => ['Documento firmado por revisar', "El club «{$c->nombre}» ({$c->folio}) subió ".self::doc($x['tipo'] ?? '').' firmado.'],
             'firmado_aprobado' => ['Documento aprobado', 'Se aprobó '.self::doc($x['tipo'] ?? '')." de «{$c->nombre}»."],
             'firmado_rechazado' => ['Documento por corregir', 'Se rechazó '.self::doc($x['tipo'] ?? '')." de «{$c->nombre}»".(! empty($x['motivo']) ? ': '.$x['motivo'] : '').'. Sube una versión nueva.'],
+            // E61 — acompañantes del club (líder B y director). Nunca llevan contraseñas.
+            'acceso_otorgado' => ['Te dieron acceso a un club', ($x['quien'] ?? 'El líder')." te registró como ".($x['rol'] ?? 'acompañante')." del club «{$c->nombre}» ({$c->folio}). Entra a SIDECyT con tu correo: si ya tenías cuenta, con tu contraseña de siempre; si es nueva, con la que te dio el líder (te pediremos cambiarla)."],
+            'acceso_retirado' => ['Ya no tienes acceso a un club', "El líder retiró tu acceso como ".($x['rol'] ?? 'acompañante')." del club «{$c->nombre}»."],
+            'colider_activado' => ['Ahora compartes el rol de líder', "El líder de «{$c->nombre}» te dio el rol de líder del club mientras no pueda asistir: ya puedes editar, enviar y atender la logística."],
+            'colider_retirado' => ['Ya no compartes el rol de líder', "El líder de «{$c->nombre}» retomó el rol de líder. Sigues como acompañante del club."],
             default => ['Aviso de tu club', "Hay novedades en «{$c->nombre}»."],
         };
     }

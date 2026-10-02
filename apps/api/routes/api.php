@@ -335,8 +335,15 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
         });
 
         // ═══ E52 · F1 — PANEL DEL LÍDER DE CLUB (Apoyo en especie). Propiedad del club revisada en el controlador. ═══
-        Route::group(['prefix' => 'club', 'middleware' => 'rol:lider_club'], function () {
+        // E61: también el «Acompañante de club» (líder B / director); qué puede ver u operar lo decide Club::accesoDe().
+        Route::group(['prefix' => 'club', 'middleware' => 'rol:lider_club,acompanante_club'], function () {
             $c = \App\Http\Controllers\Club\ClubController::class;
+            // E61 — acompañantes del club (solo el líder)
+            $ac = \App\Http\Controllers\Club\ClubAccesoController::class;
+            Route::get('clubes/{club}/accesos', [$ac, 'index']);
+            Route::post('clubes/{club}/accesos', [$ac, 'store'])->middleware('throttle:10,10,club-accesos');
+            Route::delete('clubes/{club}/accesos/{tipo}', [$ac, 'destroy'])->where('tipo', 'lider_b|director')->middleware('throttle:20,10,club-accesos-baja');
+            Route::put('clubes/{club}/accesos/director/colider', [$ac, 'colider'])->middleware('throttle:20,10,club-colider');
             Route::get('convocatorias', [$c, 'convocatorias']);
             Route::get('escuelas', [$c, 'escuelas'])->middleware('throttle:60,1,escuelas-buscar');
             // E55 — solicitar el registro de una escuela que no está en el catálogo

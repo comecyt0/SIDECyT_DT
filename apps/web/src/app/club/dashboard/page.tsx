@@ -14,12 +14,15 @@ import EscuelaPicker, { type EscuelaElegida } from '@/components/especie/Escuela
 import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
 import CelebracionAceptado from '@/components/especie/CelebracionAceptado';
 import Folio from '@/components/ui/folio';
+import { useRol } from '@/hooks/useRol';
+
+const PAPEL: Record<string, string> = { lider_b: 'Eres líder B', director: 'Eres director(a)', director_colider: 'Director(a) con rol de líder' };
 import { ESTADO_CLUB } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
 
 interface ConvClub {
   id: number; nombre: string; nombre_corto?: string | null; descripcion: string | null; estado_publico: string; acepta: boolean; fecha_limite: string | null; kit: string | null;
-  club: { id: number; folio: string; nombre: string; estado: string; vence_at?: string | null } | null;
+  club: { id: number; folio: string; nombre: string; estado: string; vence_at?: string | null; acceso?: string | null } | null;
 }
 
 /** Aviso de club aceptado en su tarjeta: confeti cada vez que entra en pantalla (hasta que se entregue el kit, F3). */
@@ -45,6 +48,9 @@ function err(e: unknown, def: string) {
  */
 export default function ClubDashboardPage() {
   const router = useRouter();
+  // E61: el acompañante (líder B / director) solo ve los clubes que le compartieron; no registra clubes.
+  const { rol } = useRol();
+  const acompanante = rol === 'acompanante_club';
   const [convs, setConvs] = useState<ConvClub[]>([]);
   const [cargando, setCargando] = useState(true);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -91,8 +97,17 @@ export default function ClubDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Mi club" icon={<School className="h-5 w-5" />}
-        description="Registra a tu club en las convocatorias de Apoyo en especie, completa sus datos y sigue su avance hasta la entrega del kit." />
+      <PageHeader title={acompanante ? 'Clubes que acompaño' : 'Mi club'} icon={<School className="h-5 w-5" />}
+        description={acompanante
+          ? 'Clubes en los que el líder te dio acceso como líder B o director: sigue su avance, su QR y su logística.'
+          : 'Registra a tu club en las convocatorias de Apoyo en especie, completa sus datos y sigue su avance hasta la entrega del kit.'} />
+      {!cargando && acompanante && conClub.length === 0 && (
+        <div className="empty-state rounded-[20px] bg-[var(--app-card-bg)]">
+          <span className="tone-chip" data-tone="violet"><Shapes aria-hidden="true" /></span>
+          <p className="font-bold text-[var(--app-ink)]">Todavía no acompañas a ningún club</p>
+          <p className="text-sm text-[var(--app-ink-2)]">Cuando un líder te dé acceso a su club, aparecerá aquí y te llegará un correo.</p>
+        </div>
+      )}
       {aviso && <AlertBox type="error" message={aviso} onClose={() => setAviso(null)} />}
 
       {cargando ? (
@@ -114,7 +129,7 @@ export default function ClubDashboardPage() {
                           <p className="break-words text-lg font-bold text-[var(--app-ink)]">{club.nombre}</p>
                           <p className="text-xs text-[var(--app-ink-2)]">Folio <Folio folio={club.folio} corto={c.nombre_corto} /></p>
                         </div>
-                        <span className="pill" data-tone={est.tono} data-dot="on">{est.etiqueta}</span>
+                        <span className="flex flex-wrap gap-1.5">{club.acceso && PAPEL[club.acceso] && <span className="pill" data-tone="violet">{PAPEL[club.acceso]}</span>}<span className="pill" data-tone={est.tono} data-dot="on">{est.etiqueta}</span></span>
                       </div>
                       <LineaAvanceClub estado={club.estado} />
                       {club.estado === 'observado' && club.vence_at && (
@@ -144,7 +159,7 @@ export default function ClubDashboardPage() {
             </section>
           )}
 
-          <section className="space-y-4" aria-labelledby="convs-abiertas">
+          {!acompanante && <section className="space-y-4" aria-labelledby="convs-abiertas">
             <h2 id="convs-abiertas" className="text-base font-bold text-[var(--app-ink)]">Convocatorias abiertas</h2>
             {disponibles.length === 0 ? (
               <div className="empty-state rounded-[20px] bg-[var(--app-card-bg)]">
@@ -171,7 +186,7 @@ export default function ClubDashboardPage() {
                 ))}
               </ul>
             )}
-          </section>
+          </section>}
         </>
       )}
 

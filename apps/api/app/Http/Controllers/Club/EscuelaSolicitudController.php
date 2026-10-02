@@ -47,6 +47,8 @@ class EscuelaSolicitudController extends Controller
     public function store(Request $request)
     {
         $u = $request->user();
+        // E61: las solicitudes de escuela las hace el líder (el acompañante solo sigue el club).
+        abort_unless($u->tieneRol('lider_club'), 403, 'Solo el líder del club puede solicitar el registro de una escuela.');
         $v = $this->validarDatos($request, true);
         $conv = Convocatoria::with('tipoPrograma')->whereNull('deleted_at')->find($v['convocatoria_id']);
         if (! $conv || ! Especie::esEspecie($conv)) {

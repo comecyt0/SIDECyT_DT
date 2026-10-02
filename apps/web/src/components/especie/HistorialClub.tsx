@@ -5,7 +5,7 @@ const TONO: Record<string, string> = {
   aprobado: 'emerald', comite_aceptado: 'emerald', visto_bueno: 'teal', observado: 'gold', prorroga: 'gold',
   rechazado: 'red', comite_no_aceptado: 'red', subsanado: 'violet', enviado: 'sky',
 };
-const ROL: Record<string, string> = { admin: 'Admin', admin_convocatoria: 'Admin de convocatoria', revisor: 'Revisor', lider_club: 'Líder' };
+const ROL: Record<string, string> = { admin: 'Admin', admin_convocatoria: 'Admin de convocatoria', revisor: 'Revisor', lider_club: 'Líder', acompanante_club: 'Director (colíder)' };
 
 /**
  * E52 · F2 — Historial del club (envíos, resoluciones, prórrogas, correcciones, visto bueno y comité), del más reciente al

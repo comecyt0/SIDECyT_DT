@@ -25,7 +25,8 @@ const ROLE_PREFIXES: Record<string, string[]> = {
   '/evaluador':   ['evaluador'],
   '/solicitante': ['solicitante'],
   // E52: panel del líder de club (Apoyo en especie).
-  '/club':        ['lider_club'],
+  // E61: también el acompañante de club (líder B / director); qué puede hacer lo decide el servidor.
+  '/club':        ['lider_club', 'acompanante_club'],
   // E52 · F4: escaneo en eventos.
   '/operador':    ['operador_evento'],
 };
@@ -61,6 +62,7 @@ function roleSlugFromPayload(payload: Record<string, unknown> | null): string | 
     case 6: return 'consulta';
     case 7: return 'lider_club';
     case 8: return 'operador_evento';
+    case 9: return 'acompanante_club';
     default: return null;
   }
 }
@@ -126,6 +128,14 @@ export function proxy(request: NextRequest) {
 
   if (!sesion || !rol) {
     return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  // E61: cuenta con contraseña definida por un líder de club → primero la cambia (el servidor además bloquea el API).
+  if (payload?.cambiar === true && path !== '/cambiar-contrasena') {
+    return NextResponse.redirect(new URL('/cambiar-contrasena', request.url));
+  }
+  if (path === '/cambiar-contrasena' && payload?.cambiar !== true) {
+    return NextResponse.redirect(new URL(DASHBOARD_BY_ROLE[rol], request.url));
   }
 
   for (const [prefix, allowed] of Object.entries(ROLE_PREFIXES)) {

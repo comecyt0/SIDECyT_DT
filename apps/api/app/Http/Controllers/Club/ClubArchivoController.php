@@ -22,7 +22,8 @@ class ClubArchivoController extends Controller
 {
     public static function puedeVer(User $u, Club $club): bool
     {
-        if ((int) $club->lider_id === (int) $u->id) {
+        // E61: el líder y sus acompañantes (líder B, director).
+        if ($club->puedeVer($u)) {
             return true;
         }
         if ($u->tieneRol('admin', 'admin_convocatoria', 'consulta', 'revisor')) {

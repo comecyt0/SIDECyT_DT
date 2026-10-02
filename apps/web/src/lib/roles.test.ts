@@ -9,12 +9,14 @@ describe('ROLES', () => {
     expect(ROLES.SOLICITANTE).toBe(4);
   });
 
-  it('incluye los roles de E45, el líder de club y el operador de evento de E52 (ocho en total)', () => {
+  it('incluye los roles de E45, E52 y el acompañante de club de E61 (nueve en total)', () => {
     expect(ROLES.ADMIN_CONVOCATORIA).toBe(5);
     expect(ROLES.CONSULTA).toBe(6);
     expect(ROLES.LIDER_CLUB).toBe(7);
     expect(ROLES.OPERADOR_EVENTO).toBe(8);
-    expect(Object.keys(ROLES)).toHaveLength(8);
+    expect(ROLES.ACOMPANANTE_CLUB).toBe(9);
+    expect(Object.keys(ROLES)).toHaveLength(9);
+    expect(PANEL_POR_ROL.acompanante_club).toBe('/club/dashboard');
   });
 
   it('el operador de evento entra a su panel de escaneo; consulta no ve el escaneo del admin', () => {

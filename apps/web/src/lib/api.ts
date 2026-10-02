@@ -211,6 +211,12 @@ api.interceptors.response.use(
       redirectToLogin();
     }
 
+    // E61: contraseña definida por un líder de club → primero se cambia.
+    if (status === 403 && error.response?.data?.codigo === 'debe_cambiar_password'
+      && typeof window !== 'undefined' && window.location.pathname !== '/cambiar-contrasena') {
+      window.location.href = '/cambiar-contrasena';
+    }
+
     // Manejar API Gateway / Circuit Breaker 503
     if (status === 503) {
       console.error('Servicio No Disponible (Gateway/Circuit Breaker):', error.response?.data?.message);

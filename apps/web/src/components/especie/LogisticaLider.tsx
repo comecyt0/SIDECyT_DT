@@ -42,8 +42,10 @@ function BotonSubir({ etiqueta, disabled, onArchivo: alElegir, onNoPdf, children
  * (descargar, firmar, subir; la valida el COMECYT) y, solo en escuelas estatales, transporte y box lunch por convocatoria
  * o por evento, con límites, cupo disponible, fecha límite y confirmación al no querer transporte.
  */
-export default function LogisticaLider({ clubId, folio, logistica, onCambio, onAviso }: {
+export default function LogisticaLider({ clubId, folio, logistica, onCambio, onAviso, soloLectura = false }: {
   clubId: number; folio: string; logistica: LogisticaEstado;
+  /** E61: líder B y director (sin compartir el rol de líder) ven todo, pero no piden ni suben nada. */
+  soloLectura?: boolean;
   onCambio: (l: LogisticaEstado) => void; onAviso: (ok: boolean, texto: string) => void;
 }) {
   const [ocupado, setOcupado] = useState<string | null>(null);
@@ -89,10 +91,17 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
   };
 
   const resguardoVig = vigente(l.resguardo);
+  const abierta = l.abierta && !soloLectura;
 
   return (
     <section className="space-y-4" aria-labelledby="sec-logistica">
       <h2 id="sec-logistica" className="flex flex-wrap items-center gap-2 text-base font-bold text-[var(--app-ink)]"><Package className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Logística<ModalidadChip modalidad={l.modalidad} className="ml-auto" /></h2>
+
+      {soloLectura && (
+        <p className="rounded-[14px] px-4 py-3 text-sm" style={{ backgroundColor: 'var(--tile-sky-bg)', color: 'var(--app-ink)' }}>
+          Aquí ves la logística de tu club. Las solicitudes y los documentos firmados los atiende el líder del club.
+        </p>
+      )}
 
       {/* F4 — QR y credencial */}
       <QrLider clubId={clubId} folio={folio} qr={l.qr} onAviso={onAviso} />
@@ -119,7 +128,7 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
           <Button size="sm" variant="soft" disabled={ocupado === 'res-dl'} onClick={() => void descargar('res-dl', () => descargarResguardo(clubId, folio))}>
             {ocupado === 'res-dl' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileDown className="h-4 w-4" aria-hidden="true" />}Descargar carta
           </Button>
-          {resguardoVig?.estado !== 'aprobado' && (
+          {resguardoVig?.estado !== 'aprobado' && !soloLectura && (
             <BotonSubir onNoPdf={() => onAviso(false, 'Sube el documento escaneado en PDF.')} etiqueta="Subir carta de resguardo firmada" disabled={ocupado === 'res-up'}
               onArchivo={(f) => { if (f.size > 10 * 1024 * 1024) { onAviso(false, 'El archivo no puede pesar más de 10 MB.'); return; } void ejecutar('res-up', () => subir(`/club/clubes/${clubId}/firmados`, f, { tipo: 'resguardo' }), 'Carta subida. El COMECYT la revisará.'); }}>
               {ocupado === 'res-up' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}{resguardoVig ? 'Subir otra versión' : 'Subir firmada'}
@@ -159,19 +168,19 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
                     <div className="grid grid-cols-2 gap-3">
                       <label className="space-y-1.5">
                         <span className={`${labelCls} flex items-center gap-1`}><Bus className="h-3.5 w-3.5" aria-hidden="true" />Personas con transporte</span>
-                        <input type="number" min={0} max={l.limites.transporte ?? 1000} inputMode="numeric" className="auth-input auth-input-static pl-4" disabled={!l.abierta}
+                        <input type="number" min={0} max={l.limites.transporte ?? 1000} inputMode="numeric" className="auth-input auth-input-static pl-4" disabled={!abierta}
                           value={valor(s, 'transporte')} onChange={(e) => setCantidades((c) => ({ ...c, [k]: { transporte: e.target.value, lunch: valor(s, 'lunch') } }))} />
                         <span className="block text-xs text-[var(--app-ink-2)]">{s.cupo.transporte.disponible === null ? 'Cupo sin límite' : `Quedan ${s.cupo.transporte.disponible} lugares`}</span>
                       </label>
                       <label className="space-y-1.5">
                         <span className={`${labelCls} flex items-center gap-1`}><Sandwich className="h-3.5 w-3.5" aria-hidden="true" />Box lunch</span>
-                        <input type="number" min={0} max={l.limites.lunch ?? 1000} inputMode="numeric" className="auth-input auth-input-static pl-4" disabled={!l.abierta}
+                        <input type="number" min={0} max={l.limites.lunch ?? 1000} inputMode="numeric" className="auth-input auth-input-static pl-4" disabled={!abierta}
                           value={valor(s, 'lunch')} onChange={(e) => setCantidades((c) => ({ ...c, [k]: { transporte: valor(s, 'transporte'), lunch: e.target.value } }))} />
                         <span className="block text-xs text-[var(--app-ink-2)]">{s.cupo.lunch.disponible === null ? 'Cupo sin límite' : `Quedan ${s.cupo.lunch.disponible}`}</span>
                       </label>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {l.abierta && (
+                      {abierta && (
                         <Button size="sm" disabled={ocupado === `sol-${k}`} onClick={() => void enviar(s)}>
                           {ocupado === `sol-${k}` ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}{sol ? 'Actualizar solicitud' : 'Enviar solicitud'}
                         </Button>
@@ -181,13 +190,13 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
                           <FileDown className="h-4 w-4" aria-hidden="true" />Descargar formato
                         </Button>
                       )}
-                      {puedeSubir && (
+                      {puedeSubir && !soloLectura && (
                         <BotonSubir onNoPdf={() => onAviso(false, 'Sube el documento escaneado en PDF.')} etiqueta={`Subir formato firmado${s.evento ? ` de ${s.evento.nombre}` : ''}`} disabled={ocupado === `up-${k}`}
                           onArchivo={(f) => { if (f.size > 10 * 1024 * 1024) { onAviso(false, 'El archivo no puede pesar más de 10 MB.'); return; } void ejecutar(`up-${k}`, () => subir(`/club/clubes/${clubId}/firmados`, f, { tipo: 'solicitud', logistica_id: String(sol!.id) }), 'Formato subido. El COMECYT lo revisará.'); }}>
                           {ocupado === `up-${k}` ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}{docVig?.estado === 'pendiente' ? 'Subir otra versión' : 'Subir formato firmado'}
                         </BotonSubir>
                       )}
-                      {sol && l.abierta && (
+                      {sol && abierta && (
                         <Button size="sm" variant="destructive" onClick={() => setBajar(s)} aria-label="Bajar la solicitud"><Trash2 className="h-4 w-4" aria-hidden="true" /></Button>
                       )}
                     </div>

@@ -221,6 +221,8 @@ return [
         'lider_club' => 7,
         // E52 · F4: escanea el QR de los clubes en los eventos de sus convocatorias asignadas.
         'operador_evento' => 8,
+        // E61 (02/10/2026): líder B o director de un club; el líder le da el acceso (no es autoservicio).
+        'acompanante_club' => 9,
     ],
 
     /*

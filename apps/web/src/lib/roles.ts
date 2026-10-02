@@ -15,11 +15,13 @@ export const ROLES = {
   LIDER_CLUB: 7,
   // E52 · F4 (29/09/2026): escanea el QR de los clubes en los eventos de sus convocatorias asignadas.
   OPERADOR_EVENTO: 8,
+  // E61 (02/10/2026): líder B o director de un club (se lo da el líder; no es autoservicio).
+  ACOMPANANTE_CLUB: 9,
 } as const;
 
 export type RoleId = (typeof ROLES)[keyof typeof ROLES];
 
-export type RolSlug = 'admin' | 'revisor' | 'evaluador' | 'solicitante' | 'admin_convocatoria' | 'consulta' | 'lider_club' | 'operador_evento';
+export type RolSlug = 'admin' | 'revisor' | 'evaluador' | 'solicitante' | 'admin_convocatoria' | 'consulta' | 'lider_club' | 'operador_evento' | 'acompanante_club';
 
 export const ROL_ETIQUETA: Record<RolSlug, string> = {
   admin: 'Administrador',
@@ -30,6 +32,7 @@ export const ROL_ETIQUETA: Record<RolSlug, string> = {
   solicitante: 'Participante',
   lider_club: 'Líder de club',
   operador_evento: 'Operador de evento',
+  acompanante_club: 'Acompañante de club',
 };
 
 /** E52: roles que una persona puede pedir por su cuenta (registro general y "Mis roles"). Igual que el backend. */
@@ -46,6 +49,7 @@ export const PANEL_POR_ROL: Record<RolSlug, string> = {
   solicitante: '/solicitante/dashboard',
   lider_club: '/club/dashboard',
   operador_evento: '/operador/escanear',
+  acompanante_club: '/club/dashboard',
 };
 
 /** Roles que usan el panel /admin (E45). */

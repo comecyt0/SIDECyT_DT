@@ -32,6 +32,7 @@ import { formatDate } from '@/lib/format';
 import ModalidadChip from '@/components/especie/ModalidadChip';
 import CelebracionAceptado from '@/components/especie/CelebracionAceptado';
 import Folio from '@/components/ui/folio';
+import AccesosClub, { leerAccesos, type AccesosClubApi } from '@/components/especie/AccesosClub';
 
 interface Detalle {
   club: ClubApi;
@@ -45,7 +46,16 @@ interface Detalle {
   faltantes: string[];
   historial: EntradaHistorial[];
   logistica: LogisticaEstado | null;
+  /** E61: qué es quien mira (lider | lider_b | director | director_colider) y, solo para el líder, sus acompañantes. */
+  acceso: string;
+  accesos: AccesosClubApi | null;
 }
+
+const ACCESO_TEXTO: Record<string, string> = {
+  lider_b: 'Eres líder B de este club: ves su avance, sus datos, el QR y la logística. Los cambios los hace el líder.',
+  director: 'Acompañas a este club como director(a): ves su avance, sus datos, el QR y la logística. Los cambios los hace el líder.',
+  director_colider: 'El líder te compartió su rol: puedes editar, enviar y atender la logística del club mientras esté activo.',
+};
 
 type FormIntegrante = { nombre: string; fecha_nacimiento: string; sexo: string; curp: string; grado_grupo: string; correo: string; telefono: string; datos: Record<string, string> };
 const INT_VACIO: FormIntegrante = { nombre: '', fecha_nacimiento: '', sexo: '', curp: '', grado_grupo: '', correo: '', telefono: '', datos: {} };
@@ -85,6 +95,8 @@ function leerDetalle(data: unknown): Detalle | null {
     faltantes: Array.isArray(d.faltantes) ? d.faltantes.filter((x): x is string => typeof x === 'string') : [],
     historial: Array.isArray(d.historial) ? d.historial : [],
     logistica: leerLogistica(d.logistica),
+    acceso: typeof d.acceso === 'string' ? d.acceso : 'lider',
+    accesos: leerAccesos(d.accesos),
   };
 }
 
@@ -315,8 +327,17 @@ export default function MiClubPage() {
         ? 'Corrige lo que te pidieron (puedes cambiar cualquier dato) y envía tus correcciones antes de que venza el plazo.'
         : editable
           ? 'Completa los datos, agrega a los integrantes y sube los documentos. Cuando todo esté listo, envía tu club a revisión.'
-          : 'Aquí ves lo que registraste, en qué etapa va y el historial de tu club.'} />
+          : d.acceso === 'lider' ? 'Aquí ves lo que registraste, en qué etapa va y el historial de tu club.' : 'Aquí ves el avance del club, sus datos, su QR y su logística.'} />
   );
+  const avisoAcceso = ACCESO_TEXTO[d.acceso] ? (
+    <p className="rounded-[14px] px-4 py-3 text-sm" style={{ backgroundColor: d.acceso === 'director_colider' ? 'var(--tile-gold-bg)' : 'var(--tile-sky-bg)', color: 'var(--app-ink)' }}>
+      {ACCESO_TEXTO[d.acceso]}
+    </p>
+  ) : null;
+  const seccionAccesos = d.accesos ? (
+    <AccesosClub clubId={club.id} accesos={d.accesos} onCambio={(accesos) => setD((x) => (x ? { ...x, accesos } : x))}
+      onAviso={(ok, texto) => { setAviso({ tipo: ok ? 'success' : 'error', texto }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+  ) : null;
 
   // ─────────── Solo lectura (en revisión, aceptado, no aceptado) ───────────
   if (!editable) {
@@ -324,6 +345,7 @@ export default function MiClubPage() {
       <div className="space-y-6">
         {header}
         {aviso && <AlertBox type={aviso.tipo} message={aviso.texto} onClose={() => setAviso(null)} />}
+        {avisoAcceso}
         <section className="app-card space-y-3 p-5" aria-label="Avance">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--app-ink-2)]">Folio <Folio folio={club.folio} corto={club.convocatoria_corto} className="font-mono font-semibold text-[var(--app-ink)]" /><ModalidadChip modalidad={config.modalidad} /></p>
@@ -337,12 +359,13 @@ export default function MiClubPage() {
         )}
         <AvisoEstadoClub estado={club.estado} avance={club} nombreClub={club.nombre} onVence={() => void cargar()} />
         {d.logistica && (
-          <LogisticaLider clubId={club.id} folio={club.folio} logistica={d.logistica}
+          <LogisticaLider clubId={club.id} folio={club.folio} logistica={d.logistica} soloLectura={d.acceso === 'lider_b' || d.acceso === 'director'}
             onCambio={(logistica) => setD((x) => (x ? { ...x, logistica } : x))}
             onAviso={(ok, texto) => { setAviso({ tipo: ok ? 'success' : 'error', texto }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
         )}
         <ClubResumen club={club} integrantes={d.integrantes} documentos={d.documentos} campos={config.campos} camposIntegrante={pi}
           kit={config.kit_nombre} onDescargar={descargarDoc} descargando={ocupado?.startsWith('dl-') ? ocupado.slice(3) : null} />
+        {seccionAccesos}
         <HistorialClub entradas={d.historial} />
       </div>
     );
@@ -353,6 +376,7 @@ export default function MiClubPage() {
     <div className="space-y-6 pb-8">
       {header}
       {aviso && <AlertBox type={aviso.tipo} message={aviso.texto} onClose={() => setAviso(null)} />}
+      {avisoAcceso}
 
       <section className="app-card space-y-3 p-5" aria-label="Avance">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -578,6 +602,7 @@ export default function MiClubPage() {
         </div>
       </section>
 
+      {seccionAccesos}
       <HistorialClub entradas={d.historial} />
 
       <ConfirmDialog open={confirmarEnvio} title={subsanando ? 'Enviar mis correcciones' : 'Enviar mi club a revisión'}

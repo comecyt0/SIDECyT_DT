@@ -1961,6 +1961,42 @@ línea de tiempo, `ClubResumen` con descarga de documentos, historial y «Abrir 
 `/admin/clubes/{id}` o `/revision/clubes/{id}` según el panel, el servidor aplica el alcance). `FichaClubPersonal` exporta
 `leer()` y `documentosDe()` para no duplicar. Botón de cerrar propio (el header fijo tapaba el ✕ del diálogo).
 **Verificado:** navegador 13/13 (`verif_previa.mjs`, 1440 y 390 px).
+
+### E61 — «Acompañante de club»: líder B y director (colíder temporal) [publicado 02-10-2026]
+**Pedidos del usuario:** el líder define a un **líder B** con sus datos de acceso (seguimiento, QR, datos del club y
+logística, solo vista) y, opcional, al **director** con el mismo esquema: no es participante; puede asumir el rol de líder
+cuando el líder se lo asigne. **Decisiones:** el líder define la contraseña; cuenta existente → solo se le da el acceso;
+uno de cada tipo y se puede cambiar; un solo rol «Acompañante de club»; colíder «lo comparte temporalmente», en cualquier
+momento; mientras sea colíder recibe los avisos. La fecha y el lugar del kit también le llegan al líder B.
+- **Datos:** rol 9 `acompanante_club` (`config/comecyt.php`), tabla `club_accesos` (club, user, tipo `lider_b|director`,
+  `colider`, `colider_desde`, `otorgado_por`; únicos por club+tipo y club+user), `users.debe_cambiar_password`
+  (migración `2026_10_02_000005`).
+- **Permisos centralizados en `Club`:** `accesoDe($u)` (`lider|lider_b|director|director_colider`, los acompañantes
+  solo con el rol activo 9), `puedeVer()` (líder y acompañantes) y `puedeOperar()` (líder y director colíder). Los usan
+  `ClubController` (ver/editar), `LogisticaClubController` (descargar = ver; pedir/bajar/subir = operar),
+  `QrClubController` y `ClubArchivoController`. Registrar clubes y solicitar escuelas: solo `lider_club`. La ruta `/club`
+  acepta ambos roles.
+- **`ClubAccesoController`** (solo el líder): alta con nombre/correo/contraseña (`Password::defaults`, confirmada); si el
+  correo ya tiene cuenta **no se toca su contraseña ni su rol activo** y se le otorga el rol 9 (cambia desde «Mis roles»);
+  la respuesta es **la misma exista o no la cuenta** (sin enumeración; la contraseña se pide siempre). Reemplazar retira
+  al anterior; al quitar el último acceso se le quita el rol 9 y, si era su único rol, la cuenta queda inactiva. Colíder
+  con `PUT …/accesos/director/colider`. Throttle por líder, bitácora `club.acceso_*`/`club.colider_*`, avisos
+  `ClubAviso` (`acceso_otorgado`, `acceso_retirado`, `colider_activado`, `colider_retirado`; nunca llevan contraseñas).
+- **Cambio obligatorio de contraseña:** claim JWT `cambiar`; `ApiAuthenticate` responde 403 `debe_cambiar_password` a todo
+  salvo `auth/me|change-password|logout|refresh`; `changePassword` exige una distinta y quita la marca (el hook del modelo
+  la quita en cualquier cambio posterior, p. ej. restablecimiento). Front: `proxy.ts` manda a `/cambiar-contrasena`
+  mientras el JWT traiga `cambiar` y el cliente `api` redirige ante ese 403.
+- **Avisos:** `RevisionClub::avisarLider()` (público) usa `Club::destinatarios()`: líder + director colíder; con
+  `conLiderB` también el líder B (kit asignado/entregado y QR habilitado/revocado).
+- **Front:** `AccesosClub` (tarjetas líder B y director, alta en `StepFrame`, «Cambiar», «Quitar acceso» y el switch
+  «Compartir mi rol de líder», todo con confirmación), aviso del papel en la página del club, `LogisticaLider` con
+  `soloLectura`, panel de inicio «Clubes que acompaño» sin convocatorias abiertas, etiqueta del rol en el panel, roles en
+  `roles.ts`/`proxy.ts`/i18n.
+**Pendiente detectado:** el login compara el correo distinguiendo mayúsculas (PostgreSQL); las cuentas que crea el líder
+se guardan en minúsculas, pero quien escriba su correo con mayúsculas no entra. Conviene normalizar en el login.
+**Verificado:** backend 37/37 (`e2e_acompanante.php`), navegador 14/14 (`verif_e61.mjs`: alta por el líder, colíder con
+confirmación, login → cambio obligatorio sin poder saltarlo, solo lectura del líder B a 390 px, director colíder con
+acciones), F1–F4 sin regresiones (53/57/58/84), vitest 183/183.
 **Verificado:** backend F1 53/53 y F3 58/58 (nuevos: box lunch arriba del máximo de integrantes → 422 para líder y admin),
 navegador 20/20 (`verif_e57.mjs`: límites, 422 del servidor, confeti suave con «reducir movimiento» al cargar / al volver
 con scroll / con el botón, confeti completo en escritorio y en el panel de inicio, modalidad en todos los apartados, sin

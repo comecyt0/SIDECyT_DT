@@ -5,11 +5,14 @@ import RoleTopLayout from '@/components/layout/RoleTopLayout';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useSessionRefresh } from '@/hooks/useSessionRefresh';
 import { useT } from '@/i18n/I18nProvider';
+import { useRol } from '@/hooks/useRol';
 import NotificationToast from '@/components/notifications/NotificationToast';
 
 /** E52 — Panel del líder de club (Apoyo en especie). La línea de avance del club llega en F1/F2. */
 export default function ClubLayout({ children }: { children: React.ReactNode }) {
   const { t } = useT();
+  // E61: el mismo panel lo usa el «Acompañante de club» (líder B / director).
+  const { rol } = useRol();
   const { notifs, count, markAsRead, markAllAsRead, incoming, dismissIncoming } = useNotifications();
   useSessionRefresh();
 
@@ -22,7 +25,7 @@ export default function ClubLayout({ children }: { children: React.ReactNode }) 
   return (
     <RoleTopLayout
       navItems={navItems}
-      roleLabel={t('roles.lider_club')}
+      roleLabel={t(rol === 'acompanante_club' ? 'roles.acompanante_club' : 'roles.lider_club')}
       menuTitle={t('nav.workspace_club')}
       homeHref="/club/dashboard"
       notificationCount={count}

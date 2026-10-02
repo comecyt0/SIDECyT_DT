@@ -17,7 +17,7 @@ class LogisticaClubController extends Controller
 {
     public function solicitar(Request $request, Club $club)
     {
-        $this->propio($request, $club);
+        $this->opera($request, $club);
         $v = $request->validate([
             'evento_id' => 'nullable|integer',
             'transporte' => 'required|integer|min:0|max:1000',
@@ -32,7 +32,7 @@ class LogisticaClubController extends Controller
 
     public function cancelar(Request $request, Club $club, ClubLogistica $logistica)
     {
-        $this->propio($request, $club);
+        $this->opera($request, $club);
         LogisticaClub::cancelar($club, $logistica);
 
         return response()->json(LogisticaClub::estado($club->fresh()));
@@ -63,7 +63,7 @@ class LogisticaClubController extends Controller
 
     public function subirFirmado(Request $request, Club $club)
     {
-        $this->propio($request, $club);
+        $this->opera($request, $club);
         $v = $request->validate([
             'tipo' => 'required|in:resguardo,solicitud',
             'logistica_id' => 'nullable|integer|required_if:tipo,solicitud',
@@ -75,8 +75,16 @@ class LogisticaClubController extends Controller
         return response()->json(LogisticaClub::estado($club->fresh()), 201);
     }
 
+    // E61: ver (descargar formato y carta) = líder o acompañante; fuera de eso, 404.
     private function propio(Request $request, Club $club): void
     {
-        abort_unless((int) $club->lider_id === (int) $request->user()->id, 404);
+        abort_unless($club->puedeVer($request->user()), 404);
+    }
+
+    // E61: pedir, bajar y subir firmados = líder o director colíder; el líder B y el director solo ven.
+    private function opera(Request $request, Club $club): void
+    {
+        $this->propio($request, $club);
+        abort_unless($club->puedeOperar($request->user()), 403, 'Solo el líder del club puede hacer cambios.');
     }
 }

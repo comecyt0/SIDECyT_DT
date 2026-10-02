@@ -67,7 +67,8 @@ class QrClubController extends Controller
 
     private function propioHabilitado(Request $request, Club $club): void
     {
-        abort_unless((int) $club->lider_id === (int) $request->user()->id && QrClub::habilitado($club) && ! QrClub::impedimento($club), 404);
+        // E61: el QR y la credencial también los ven el líder B y el director.
+        abort_unless($club->puedeVer($request->user()) && QrClub::habilitado($club) && ! QrClub::impedimento($club), 404);
     }
 
     /** Foto o logo (WebP privado) → PNG en data URI para DomPDF; null si no hay o no se puede leer. */

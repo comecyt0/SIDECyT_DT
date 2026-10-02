@@ -37,14 +37,18 @@ class ClubController extends Controller
     public function convocatorias(Request $request)
     {
         $user = $request->user();
-        $mios = Club::where('lider_id', $user->id)->get()->keyBy('convocatoria_id');
+        // E61: el acompañante ve solo las convocatorias de los clubes que le compartieron (no registra clubes).
+        $acompanante = $user->tieneRol('acompanante_club');
+        $mios = ($acompanante
+            ? Club::whereHas('accesos', fn ($q) => $q->where('user_id', $user->id))->with('accesos')
+            : Club::where('lider_id', $user->id))->get()->keyBy('convocatoria_id');
         $convs = Convocatoria::with('tipoPrograma:id,tipo_apoyo,nombre')
             ->whereNull('deleted_at')
             ->whereHas('tipoPrograma', fn ($q) => $q->where('tipo_apoyo', Especie::TIPO_APOYO))
-            ->where(fn ($q) => $q->aceptandoSolicitudes()->orWhereIn('id', $mios->keys()->all()))
+            ->where(fn ($q) => $acompanante ? $q->whereIn('id', $mios->keys()->all()) : $q->aceptandoSolicitudes()->orWhereIn('id', $mios->keys()->all()))
             ->orderByDesc('fecha_apertura')->limit(50)->get();
 
-        return response()->json($convs->map(function (Convocatoria $c) use ($mios) {
+        return response()->json($convs->map(function (Convocatoria $c) use ($mios, $user, $acompanante) {
             $club = $mios->get($c->id);
 
             return [
@@ -53,10 +57,11 @@ class ClubController extends Controller
                 'nombre_corto' => $c->nombre_corto,
                 'descripcion' => $c->descripcion ? mb_substr(strip_tags($c->descripcion), 0, 400) : null,
                 'estado_publico' => $c->estado_publico,
-                'acepta' => $c->aceptaSolicitudes(),
+                'acepta' => ! $acompanante && $c->aceptaSolicitudes(),
                 'fecha_limite' => $c->fecha_cierre_efectiva ? substr((string) $c->fecha_cierre_efectiva, 0, 10) : null,
                 'kit' => $c->especieConfig?->kit_nombre,
-                'club' => $club ? ['id' => $club->id, 'folio' => $club->folio, 'convocatoria_corto' => $c->nombre_corto, 'nombre' => $club->nombre, 'estado' => $club->estadoVisible(), 'vence_at' => $club->vence_at] : null,
+                'club' => $club ? ['id' => $club->id, 'folio' => $club->folio, 'convocatoria_corto' => $c->nombre_corto, 'nombre' => $club->nombre, 'estado' => $club->estadoVisible(), 'vence_at' => $club->vence_at,
+                    'acceso' => $club->accesoDe($user)] : null,
             ];
         })->values());
     }
@@ -75,6 +80,8 @@ class ClubController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
+        // E61: solo el líder registra clubes; el acompañante entra a los clubes que le compartieron.
+        abort_unless($user->tieneRol('lider_club'), 403, 'Solo un líder de club puede registrar clubes.');
         $v = $request->validate([
             'convocatoria_id' => 'required|integer',
             // E55: escuela del catálogo, o la solicitud propia de una escuela que está en revisión.
@@ -132,7 +139,8 @@ class ClubController extends Controller
         $cfg = $this->config($club);
         // E55: cambiar a otra escuela del catálogo o a una solicitud propia en revisión.
         if (! empty($v['escuela_solicitud_id']) || (! empty($v['escuela_id']) && (int) $v['escuela_id'] !== (int) $club->escuela_id)) {
-            [$escuelaId, $solicitudId] = $this->escuelaElegida($v, $request->user()->id, (int) $club->convocatoria_id);
+            // E61: las solicitudes de escuela son del líder (también cuando edita el director como colíder).
+            [$escuelaId, $solicitudId] = $this->escuelaElegida($v, (int) $club->lider_id, (int) $club->convocatoria_id);
             if ($escuelaId) $this->exigirCupoEscuela($club->convocatoria, $escuelaId, $club->id);
             $club->escuela_id = $escuelaId;
             $club->forceFill(['escuela_solicitud_id' => $solicitudId]);
@@ -400,14 +408,19 @@ class ClubController extends Controller
 
     // ─────────── Apoyos ───────────
 
+    /** E61: ver el club = líder o acompañante (líder B / director); fuera de eso, 404 (no se revela que existe). */
     private function propio(Request $request, Club $club): void
     {
-        abort_unless((int) $club->lider_id === (int) $request->user()->id, 404);
+        abort_unless($club->puedeVer($request->user()), 404);
     }
 
     private function editable(Request $request, Club $club): void
     {
         $this->propio($request, $club);
+        // E61: el líder B y el director (sin compartir el rol de líder) solo ven.
+        if (! $club->puedeOperar($request->user())) {
+            abort(response()->json(['message' => 'Solo el líder del club puede hacer cambios.'], 403));
+        }
         if (! $club->editable()) {
             abort(response()->json(['message' => $club->vencido()
                 ? 'El plazo para corregir venció. El COMECYT decidirá si te da una prórroga.'
@@ -470,7 +483,8 @@ class ClubController extends Controller
             'club' => [
                 'id' => $club->id, 'folio' => $club->folio, 'nombre' => $club->nombre, 'estado' => $club->estadoVisible(),
                 'logo_url' => $club->logo_url, 'datos' => $club->datos ?? [], 'enviado_at' => $club->enviado_at,
-                'escuela' => $club->escuela, 'editable' => $club->editable(), 'convocatoria_corto' => $club->convocatoria->nombre_corto,
+                // E61: editable solo para quien puede operar (líder o director colíder); el líder B y el director ven.
+                'escuela' => $club->escuela, 'editable' => $club->editable() && $club->puedeOperar(request()->user()), 'convocatoria_corto' => $club->convocatoria->nombre_corto,
                 // E55: escuela solicitada (en revisión o rechazada) mientras el club no tiene una del catálogo.
                 'escuela_solicitud' => ! $club->escuela_id && $club->escuelaSolicitud
                     ? $club->escuelaSolicitud->only(['id', 'cct', 'nombre', 'municipio', 'nivel', 'sistema', 'estado', 'motivo'])
@@ -484,6 +498,9 @@ class ClubController extends Controller
                 'fecha_limite' => $club->convocatoria->fecha_cierre_efectiva ? substr((string) $club->convocatoria->fecha_cierre_efectiva, 0, 10) : null,
             ],
             'faltantes' => $club->editable() ? $this->faltantes($club) : [],
+            // E61: qué es quien mira (lider | lider_b | director | director_colider) y, solo para el líder, sus acompañantes.
+            'acceso' => $club->accesoDe(request()->user()),
+            'accesos' => (int) $club->lider_id === (int) request()->user()?->id ? ClubAccesoController::listado($club) : null,
             // E52 · F3: logística (solo clubes aceptados; se manda siempre para que el panel sepa si aplica).
             'logistica' => \App\Support\LogisticaClub::aplica($club) ? \App\Support\LogisticaClub::estado($club) : null,
             // Historial para el líder: qué pasó y el comentario general; sin datos de quién revisó (lista blanca).

@@ -197,7 +197,12 @@ class AuthController extends Controller
         }
 
         // El hook de User marca password_changed_at: los JWT anteriores (otros equipos) dejan de valer.
+        if (Hash::check($request->new_password, $user->password)) {
+            return response()->json(['error' => 'La nueva contraseña debe ser distinta de la actual.', 'errors' => ['new_password' => ['La nueva contraseña debe ser distinta de la actual.']]], 422);
+        }
         $user->update(['password' => Hash::make($request->new_password)]);
+        // E61: la contraseña que definió el líder de club ya no está en uso.
+        if ($user->debe_cambiar_password) $user->forceFill(['debe_cambiar_password' => false])->save();
         Audit::log('user.password_changed', $user);
 
         // El token de ESTA sesión también es anterior al cambio: se invalida y se entrega uno nuevo en la cookie,

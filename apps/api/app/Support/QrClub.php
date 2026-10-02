@@ -46,7 +46,7 @@ class QrClub
             $c->forceFill(['qr_token' => Crypt::encryptString($token), 'qr_hash' => hash('sha256', $token), 'qr_habilitado_at' => now(), 'qr_habilitado_por' => $u->id])->save();
             Audit::log('club.qr_habilitado', $c, ['folio' => $c->folio]);
             $c->loadMissing('lider');
-            $c->lider?->notify(new ClubAviso($c, 'qr_habilitado'));
+            RevisionClub::avisarLider($c, 'qr_habilitado', [], true);
             $hechos[] = $c->id;
         }
 
@@ -59,7 +59,7 @@ class QrClub
         $club->forceFill(['qr_token' => null, 'qr_hash' => null, 'qr_habilitado_at' => null, 'qr_habilitado_por' => null])->save();
         Audit::log('club.qr_revocado', $club, ['folio' => $club->folio]);
         $club->loadMissing('lider');
-        $club->lider?->notify(new ClubAviso($club, 'qr_revocado'));
+        RevisionClub::avisarLider($club, 'qr_revocado', [], true);
     }
 
     /** Contenido leído por la cámara → club con QR vigente (o null). Acepta el contenido completo o solo el token. */
