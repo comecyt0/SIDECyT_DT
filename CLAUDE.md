@@ -1962,6 +1962,28 @@ línea de tiempo, `ClubResumen` con descarga de documentos, historial y «Abrir 
 `leer()` y `documentosDe()` para no duplicar. Botón de cerrar propio (el header fijo tapaba el ✕ del diálogo).
 **Verificado:** navegador 13/13 (`verif_previa.mjs`, 1440 y 390 px).
 
+### E62 — Vista previa de archivos (antes de subir y en «Ver») y comité con verificación [publicado 02-10-2026]
+**Pedidos del usuario:** «no hay vista previa de PDF, los descargan; los botones de ver no sirven; debe haber vista previa
+de los archivos que suben antes de mandarlos» (dentro de la página; en solicitudes, clubes, firmados/logística, informes)
+y, en el comité de admin/clubes: un check de si el registro está validado por el comité, «¿Estás seguro?» en ambos
+botones y el acta con vista previa.
+- `components/ui/VistaPreviaProvider.tsx` (montado en `app/layout.tsx`): `confirmarSubida(file, {etiqueta})` →
+  `'subir' | 'otro' | 'cancelar'` y `ver({ cargar, nombre })`. PDF en `<iframe>` con URL `blob:` y el Blob **re-tipado**
+  (`application/pdf` / `image/*`, nunca HTML); imágenes en `<img>`; otros tipos, nombre y tamaño. Diálogo accesible
+  (foco atrapado, Escape), pantalla completa en teléfono, «Abrir en otra pestaña» y «Descargar». Sin proveedor (pruebas)
+  sube directo.
+- **CSP:** `frame-src 'self' blob:` (aprobado por el usuario; documentado en `lib/csp.ts`).
+- **Causa de «Ver no sirve» en SIGAE:** `DocumentosAdjuntos` cargaba la URL del API en un `<iframe>` y el API responde
+  con `frame-ancestors 'none'`. Ahora se lee con sesión como Blob.
+- **Dónde:** club (todos los `BotonArchivo`: documentos, logo y fotos; «Ver» en edición y en `ClubResumen`), logística
+  (`BotonSubir` de carta y formatos; «Ver» de `VersionesFirmadas` con `clubId`), SIGAE (`DocumentosAdjuntos`, nueva
+  solicitud con «Adjuntar este archivo» y botón ver, documentos fijos e informe final del detalle) y el acta del comité.
+- **Comité:** `RevisionClubPanel` muestra «Validado por el comité / No validado / Comité: pendiente» y «Ver acta del
+  comité»; las dos decisiones exigen la casilla «Verifiqué en el acta que el comité validó / no validó…» y luego un
+  «¿Estás seguro…?». La bandeja «Comité» marca cada registro (✓ / ✗ / pendiente).
+**Verificado:** navegador 13/13 (`verif_previas.mjs`: vista previa antes de subir, cancelar no sube, ver versión firmada,
+acta con vista previa, casilla obligatoria, confirmación, marca en la bandeja, sin errores de CSP), vitest 183/183.
+
 ### E61 — «Acompañante de club»: líder B y director (colíder temporal) [publicado 02-10-2026]
 **Pedidos del usuario:** el líder define a un **líder B** con sus datos de acceso (seguimiento, QR, datos del club y
 logística, solo vista) y, opcional, al **director** con el mismo esquema: no es participante; puede asumir el rol de líder

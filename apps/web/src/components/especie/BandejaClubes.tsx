@@ -15,6 +15,7 @@ import { ESTADO_CLUB, SISTEMA_ESCUELA, fechaHora } from '@/lib/especie';
 interface FilaBandeja {
   id: number; folio: string; convocatoria_corto?: string | null; nombre: string; estado: string; logo_url: string | null; enviado_at: string | null; vence_at: string | null;
   integrantes_count: number; etapa: { orden: number; nombre: string } | null; visto_bueno_at: string | null;
+  comite_resultado?: 'aceptado' | 'no_aceptado' | null;
   escuela: { nombre: string; municipio: string; sistema: string } | null; convocatoria: { id: number; nombre: string } | null; puede_resolver: boolean;
 }
 
@@ -72,6 +73,12 @@ export default function BandejaClubes({ vista, hrefFicha, convocatoriaId, vacio 
                   <span className="break-words font-semibold text-[var(--app-ink)]">{c.nombre}</span>
                   <span className="pill" data-tone={est.tono}>{est.etiqueta}</span>
                   {c.puede_resolver && <span className="pill" data-tone="vino">Te toca</span>}
+                  {/* 02/10/2026: validación del comité visible en cada registro. */}
+                  {vista === 'comite' && (c.comite_resultado === 'aceptado'
+                    ? <span className="pill" data-tone="emerald">✓ Validado por el comité</span>
+                    : c.comite_resultado === 'no_aceptado'
+                      ? <span className="pill" data-tone="red">✗ No validado</span>
+                      : <span className="pill" data-tone="gold">Comité pendiente</span>)}
                 </span>
                 <span className="block text-xs text-[var(--app-ink-2)]">
                   <Folio folio={c.folio} corto={c.convocatoria_corto} />

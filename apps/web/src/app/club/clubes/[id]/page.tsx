@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   School, Loader2, Save, Upload, Trash2, Pencil, Plus, User, Crown, Camera, FileDown, CheckCircle2, CircleDashed,
-  Send, AlertTriangle, Shapes, ListChecks,
+  Send, AlertTriangle, Shapes, ListChecks, Eye,
 } from 'lucide-react';
 import api from '@/lib/api';
 import PageHeader from '@/components/ui/page-header';
@@ -20,7 +20,7 @@ import ClubResumen from '@/components/especie/ClubResumen';
 import AvisoEstadoClub from '@/components/especie/AvisoEstadoClub';
 import HistorialClub from '@/components/especie/HistorialClub';
 import LogisticaLider from '@/components/especie/LogisticaLider';
-import { descargarCartaEscuela, descargarDocumentoClub } from '@/lib/especie-api';
+import { archivoDocumentoClub, descargarCartaEscuela, descargarDocumentoClub } from '@/lib/especie-api';
 import {
   ACCEPT_FORMATO, ACCEPT_IMAGEN, CAMPOS_INTEGRANTE, CARTA_ESCUELA, ESTADO_CLUB, ETIQUETA_FORMATO, IMAGEN_MAX_MB, SEXO,
   leerCamposApi, normalizarPredef, CAMPOS_CLUB, valorCampo,
@@ -32,6 +32,7 @@ import { formatDate } from '@/lib/format';
 import ModalidadChip from '@/components/especie/ModalidadChip';
 import CelebracionAceptado from '@/components/especie/CelebracionAceptado';
 import Folio from '@/components/ui/folio';
+import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
 import AccesosClub, { leerAccesos, type AccesosClubApi } from '@/components/especie/AccesosClub';
 
 interface Detalle {
@@ -113,11 +114,13 @@ function BotonArchivo({ accept, onArchivo, children, disabled, variant = 'outlin
   accept: string; onArchivo: (f: File) => void; children: React.ReactNode; disabled?: boolean; variant?: 'outline' | 'soft' | 'default'; etiqueta: string;
 }) {
   const ref = useRef<HTMLInputElement>(null);
+  // 02/10/2026: vista previa del archivo antes de subirlo («Subir este archivo» / «Elegir otro»).
+  const { confirmarSubida } = useVistaPrevia();
   return (
     <>
       <Button type="button" size="sm" variant={variant} disabled={disabled} onClick={() => ref.current?.click()} aria-label={etiqueta}>{children}</Button>
       <input ref={ref} type="file" accept={accept} className="sr-only" tabIndex={-1} aria-hidden="true"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) onArchivo(f); e.target.value = ''; }} />
+        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void confirmarSubida(f).then((r) => { if (r === 'subir') onArchivo(f); else if (r === 'otro') ref.current?.click(); }); }} />
     </>
   );
 }
@@ -132,6 +135,7 @@ export default function MiClubPage() {
   const [cargando, setCargando] = useState(true);
   const [aviso, setAviso] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  const { ver: verArchivo } = useVistaPrevia();
 
   // Datos del club
   const [nombre, setNombre] = useState('');
@@ -551,8 +555,9 @@ export default function MiClubPage() {
                   </BotonArchivo>
                   {doc.subido && (
                     <>
-                      <Button size="sm" variant="outline" disabled={ocupado === `dl-${doc.clave}`} onClick={() => void descargarDoc(doc.clave, doc.subido?.nombre_original ?? doc.clave)} aria-label={`Ver ${doc.nombre}`}>
-                        <FileDown className="h-4 w-4" aria-hidden="true" /><span className="max-sm:sr-only">Ver</span>
+                      {/* 02/10/2026: «Ver» muestra el archivo dentro de la página (antes lo descargaba). */}
+                      <Button size="sm" variant="outline" onClick={() => void verArchivo({ nombre: doc.subido?.nombre_original ?? doc.clave, cargar: () => archivoDocumentoClub(club.id, doc.clave) })} aria-label={`Ver ${doc.nombre}`}>
+                        <Eye className="h-4 w-4" aria-hidden="true" /><span className="max-sm:sr-only">Ver</span>
                       </Button>
                       <Button size="sm" variant="destructive" disabled={ocupado === clave} aria-label={`Quitar ${doc.nombre}`}
                         onClick={() => void accion(clave, () => api.delete(`/club/clubes/${club.id}/documentos/${encodeURIComponent(doc.clave)}`), `«${doc.nombre}» quitado.`)}>

@@ -1245,6 +1245,27 @@
   .celebra-club[data-visto] { animation: celebra-entra 520ms var(--auth-ease-out, cubic-bezier(0.23, 1, 0.32, 1)) both, celebra-late 2.4s ease-in-out 520ms infinite; }
   .celebra-club[data-visto] .celebra-club-icono svg, .celebra-club-mini[data-visto] svg { animation: celebra-brinco 1100ms ease-in-out 2; }
 }
+/* 02/10/2026 — Vista previa de archivos (VistaPreviaProvider): diálogo grande, PDF o imagen ocupando el cuerpo. */
+.vp-fondo { position: fixed; inset: 0; z-index: 8000; display: grid; place-items: center; padding: 16px; background: rgba(20, 8, 14, 0.55); backdrop-filter: blur(4px); }
+.vp-dialogo {
+  display: flex; flex-direction: column; width: min(100%, 980px); height: min(90dvh, 900px); overflow: hidden;
+  border-radius: 22px; background: var(--app-card-bg, #fff); box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.55);
+}
+.vp-cabecera { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--app-rule); }
+.vp-icono { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 12px; background: var(--auth-vino-soft); color: var(--auth-vino); }
+.vp-icono svg { width: 19px; height: 19px; }
+.vp-cerrar { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 9999px; color: var(--app-ink-2); }
+.vp-cerrar:hover { background: var(--auth-field); }
+.vp-cuerpo { flex: 1; min-height: 0; overflow: auto; background: var(--auth-field, #f4f1f2); }
+.vp-pie { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--app-rule); }
+.vp-enlace { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--auth-vino); }
+.vp-boton { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 16px; border-radius: 9999px; font-size: 14px; font-weight: 700; white-space: nowrap; transition: transform 160ms ease-out; }
+.vp-boton:active { transform: scale(0.97); }
+.vp-boton-pri { background: var(--auth-vino); color: #fff; }
+.vp-boton-sec { box-shadow: inset 0 0 0 1.5px var(--app-rule); color: var(--app-ink); }
+.vp-cerrar:focus-visible, .vp-boton:focus-visible, .vp-enlace:focus-visible { outline: 2px solid var(--auth-vino); outline-offset: 2px; }
+@media (max-width: 640px) { .vp-fondo { padding: 0; } .vp-dialogo { width: 100%; height: 100dvh; border-radius: 0; } }
+
 /* 02/10/2026 — Interruptor de modo claro / oscuro (ThemeSwitch) en el encabezado de los paneles. */
 .tema-switch {
   position: relative; display: inline-flex; align-items: center; justify-content: space-between; flex: none;

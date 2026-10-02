@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Upload, Check, Loader2, Download, Trash2, Eye, X, FileText, HardDrive, CheckCircle2, Paperclip } from 'lucide-react';
+import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
+import { Upload, Check, Loader2, Download, Trash2, Eye, FileText, HardDrive, CheckCircle2, Paperclip } from 'lucide-react';
 import api from '@/lib/api';
 import { safeUrl } from '@/lib/safe-url';
 import { acceptDe, describirLimites, formatosDe, validarArchivo } from '@/lib/archivos';
@@ -52,7 +52,17 @@ export function DocumentosAdjuntos({
   const [uploading, setUploading] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [previewingDoc, setPreviewingDoc] = useState<Documento | null>(null);
+  // 02/10/2026: la vista previa antes cargaba la URL del API en un <iframe>, que el API bloquea (frame-ancestors 'none'):
+  // «Ver» no mostraba nada. Ahora se lee con sesión como Blob y se muestra en VistaPreviaProvider.
+  const { ver, confirmarSubida } = useVistaPrevia();
+  const verDocumento = (doc: Documento) => {
+    const ruta = safeUrl(doc.url);
+    if (!ruta) return;
+    void ver({ nombre: doc.nombre_original, cargar: async () => {
+      const r = await api.get(ruta.replace(/^\/api(?=\/)/, ''), { responseType: 'blob' });
+      return { data: r.data as BlobPart, tipo: String(r.headers?.['content-type'] ?? '') };
+    } });
+  };
   const [feedback, setFeedback] = useState<{type: 'error'|'success'|'info'|'warning', message: string}|null>(null);
   const [confirmState, setConfirmState] = useState<{open: boolean; title: string; description: string; onConfirm: () => void}>({
     open: false, title: '', description: '', onConfirm: () => {}
@@ -105,6 +115,13 @@ export function DocumentosAdjuntos({
     if (problema) {
       setFeedback({ type: 'error', message: problema });
       event.target.value = '';
+      return;
+    }
+    // 02/10/2026: vista previa antes de subir.
+    event.target.value = '';
+    const decision = await confirmarSubida(file);
+    if (decision !== 'subir') {
+      if (decision === 'otro') fileInputRefs.current[clave]?.click();
       return;
     }
 
@@ -262,7 +279,7 @@ export function DocumentosAdjuntos({
                         <Button
                           variant="soft"
                           size="icon-sm"
-                          onClick={() => setPreviewingDoc(doc)}
+                          onClick={() => verDocumento(doc)}
                           title="Ver el documento"
                           aria-label="Ver el documento"
                         >
@@ -344,31 +361,6 @@ export function DocumentosAdjuntos({
         )}
       </CardContent>
 
-      <Dialog open={!!previewingDoc} onOpenChange={(open) => !open && setPreviewingDoc(null)}>
-        <DialogContent className="max-w-4xl w-full h-[80vh] flex flex-col p-0">
-          <DialogHeader className="px-6 py-4 border-b border-[var(--app-rule)] flex-row items-center justify-between">
-            <DialogTitle className="truncate">{previewingDoc?.nombre_original || 'Vista previa del documento'}</DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setPreviewingDoc(null)}
-              aria-label="Cerrar la vista previa"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </DialogHeader>
-          <div className="flex-1 overflow-hidden">
-            {previewingDoc && (
-              <iframe
-                src={getAbsoluteUrl(previewingDoc.url)}
-                className="w-full h-full"
-                title={previewingDoc.nombre_original}
-                referrerPolicy="no-referrer"
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 }

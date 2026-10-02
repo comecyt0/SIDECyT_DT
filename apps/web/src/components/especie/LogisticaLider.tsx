@@ -12,6 +12,7 @@ import { descargarFirmado, descargarFormatoLogistica, descargarResguardo } from 
 import { ESTADO_SOLICITUD, fechaHora, leerLogistica, vigente, type LogisticaEstado, type SolicitudLogistica } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
 import ModalidadChip from '@/components/especie/ModalidadChip';
+import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
 
 const labelCls = 'text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]';
 
@@ -24,9 +25,13 @@ function subir(url: string, archivo: File, extra: Record<string, string>) {
 }
 
 function BotonSubir({ etiqueta, disabled, onArchivo: alElegir, onNoPdf, children }: { etiqueta: string; disabled?: boolean; onArchivo: (f: File) => void; onNoPdf?: () => void; children: React.ReactNode }) {
-  // Solo PDF (el servidor vuelve a revisar el contenido real del archivo).
-  const onArchivo = (f: File) => (f.type === 'application/pdf' || /\.pdf$/i.test(f.name) ? alElegir(f) : onNoPdf?.());
   const ref = useRef<HTMLInputElement>(null);
+  const { confirmarSubida } = useVistaPrevia();
+  // Solo PDF (el servidor vuelve a revisar el contenido real del archivo); antes de subirlo, vista previa (02/10/2026).
+  const onArchivo = (f: File) => {
+    if (!(f.type === 'application/pdf' || /\.pdf$/i.test(f.name))) { onNoPdf?.(); return; }
+    void confirmarSubida(f).then((r) => { if (r === 'subir') alElegir(f); else if (r === 'otro') ref.current?.click(); });
+  };
   return (
     <>
       <Button size="sm" disabled={disabled} onClick={() => ref.current?.click()} aria-label={etiqueta}>{children}</Button>
@@ -135,7 +140,7 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
             </BotonSubir>
           )}
         </div>
-        <VersionesFirmadas versiones={l.resguardo} onDescargar={(v) => void descargar(`f-${v.id}`, () => descargarFirmado(clubId, v.id, v.nombre_original))} />
+        <VersionesFirmadas clubId={clubId} versiones={l.resguardo} onDescargar={(v) => void descargar(`f-${v.id}`, () => descargarFirmado(clubId, v.id, v.nombre_original))} />
       </div>
 
       {/* Transporte y box lunch */}
@@ -200,7 +205,7 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
                         <Button size="sm" variant="destructive" onClick={() => setBajar(s)} aria-label="Bajar la solicitud"><Trash2 className="h-4 w-4" aria-hidden="true" /></Button>
                       )}
                     </div>
-                    {sol && <VersionesFirmadas versiones={s.versiones} onDescargar={(v) => void descargar(`f-${v.id}`, () => descargarFirmado(clubId, v.id, v.nombre_original))} />}
+                    {sol && <VersionesFirmadas clubId={clubId} versiones={s.versiones} onDescargar={(v) => void descargar(`f-${v.id}`, () => descargarFirmado(clubId, v.id, v.nombre_original))} />}
                   </li>
                 );
               })}

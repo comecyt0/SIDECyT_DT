@@ -13,6 +13,16 @@ function guardarBlob(data: BlobPart, nombre: string) {
   URL.revokeObjectURL(url);
 }
 
+/** 02/10/2026 — Archivo como Blob + tipo, para la vista previa dentro de la página (`useVistaPrevia().ver`). */
+export async function archivoDocumentoClub(clubId: number, clave: string) {
+  const r = await api.get(`/clubes/${clubId}/documentos/${encodeURIComponent(clave)}`, { responseType: 'blob' });
+  return { data: r.data as BlobPart, tipo: String(r.headers?.['content-type'] ?? '') };
+}
+export async function archivoFirmado(clubId: number, firmadoId: number) {
+  const r = await api.get(`/clubes/${clubId}/firmados/${firmadoId}`, { responseType: 'blob' });
+  return { data: r.data as BlobPart, tipo: String(r.headers?.['content-type'] ?? '') };
+}
+
 /** Documento subido de un club (dueño o personal con alcance; el servidor decide). */
 export async function descargarDocumentoClub(clubId: number, clave: string, nombre: string) {
   const r = await api.get(`/clubes/${clubId}/documentos/${encodeURIComponent(clave)}`, { responseType: 'blob' });

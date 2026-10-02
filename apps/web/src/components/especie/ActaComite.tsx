@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Gavel, Upload, FileDown, Loader2, CheckCircle2 } from 'lucide-react';
+import { Gavel, Upload, Eye, Loader2, CheckCircle2 } from 'lucide-react';
+import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { mensajeError } from '@/lib/errores-formulario';
@@ -48,15 +49,17 @@ export default function ActaComite({ convocatoriaId, puedeSubir }: { convocatori
     }
   };
 
-  const ver = async () => {
-    try {
-      const r = await api.get(`/revision/convocatorias/${convocatoriaId}/acta`, { responseType: 'blob' });
-      const url = URL.createObjectURL(new Blob([r.data], { type: 'application/pdf' }));
-      window.open(url, '_blank', 'noopener,noreferrer');
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } catch {
-      setAviso({ ok: false, texto: 'No se pudo abrir el acta.' });
-    }
+  // 02/10/2026: el acta se ve dentro de la página (antes abría otra pestaña) y se revisa antes de subirla.
+  const { ver: verDoc, confirmarSubida } = useVistaPrevia();
+  const ver = () => void verDoc({ nombre: acta?.nombre ?? 'Acta del comité.pdf', cargar: async () => {
+    const r = await api.get(`/revision/convocatorias/${convocatoriaId}/acta`, { responseType: 'blob' });
+    return { data: r.data as BlobPart, tipo: 'application/pdf' };
+  } });
+  const elegir = async (f: File | undefined) => {
+    if (ref.current) ref.current.value = '';
+    if (!f) return;
+    const r = await confirmarSubida(f);
+    if (r === 'subir') void subir(f); else if (r === 'otro') ref.current?.click();
   };
 
   return (
@@ -70,13 +73,13 @@ export default function ActaComite({ convocatoriaId, puedeSubir }: { convocatori
         {aviso && <p className="mt-1 text-sm" role="status" style={{ color: aviso.ok ? 'var(--tile-emerald-fg)' : 'var(--auth-danger)' }}>{aviso.texto}</p>}
       </div>
       <div className="flex flex-wrap gap-2">
-        {acta && <Button variant="outline" size="sm" onClick={ver}><FileDown className="h-4 w-4" aria-hidden="true" />Ver acta</Button>}
+        {acta && <Button variant="outline" size="sm" onClick={ver}><Eye className="h-4 w-4" aria-hidden="true" />Ver acta</Button>}
         {puedeSubir && (
           <>
             <Button size="sm" onClick={() => ref.current?.click()} disabled={subiendo}>
               {subiendo ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}{acta ? 'Reemplazar acta' : 'Subir acta (PDF)'}
             </Button>
-            <input ref={ref} type="file" accept="application/pdf,.pdf" className="sr-only" aria-label="Archivo PDF del acta del comité" onChange={(e) => void subir(e.target.files?.[0])} />
+            <input ref={ref} type="file" accept="application/pdf,.pdf" className="sr-only" aria-label="Archivo PDF del acta del comité" onChange={(e) => void elegir(e.target.files?.[0])} />
           </>
         )}
       </div>

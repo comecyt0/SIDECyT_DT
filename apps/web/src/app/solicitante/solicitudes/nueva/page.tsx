@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { AlertBox } from '@/components/ui/alert-box';
 import PageHeader from '@/components/ui/page-header';
 import StepFrame, { type StepDef } from '@/components/ui/step-frame';
-import { Loader2, AlertCircle, FileText, CheckCircle2, Upload, X, FilePlus2 } from 'lucide-react';
+import { Loader2, AlertCircle, FileText, CheckCircle2, Upload, X, FilePlus2, Eye } from 'lucide-react';
+import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
 import { currencySymbol, formatCurrency } from '@/lib/format';
 import api from '@/lib/api';
 import { useProgramaCatalog } from '@/hooks/useProgramaCatalog';
@@ -50,6 +51,7 @@ export default function NuevaSolicitud() {
   const [documentosFiles, setDocumentosFiles] = useState<Record<string, File | null>>({});
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const { confirmarSubida, ver: verArchivo } = useVistaPrevia();
 
   // Base form data (always required)
   const [formData, setFormData] = useState({
@@ -606,10 +608,20 @@ export default function NuevaSolicitud() {
                           if (problema) n[`doc_${doc.clave}`] = problema; else delete n[`doc_${doc.clave}`];
                           return n;
                         });
-                        if (problema) return;
-                        setDocumentosFiles(prev => ({ ...prev, [doc.clave]: file }));
+                        if (problema || !file) return;
+                        // 02/10/2026: vista previa antes de adjuntarlo (se sube al guardar la solicitud).
+                        void confirmarSubida(file, { etiqueta: 'Adjuntar este archivo' }).then((r) => {
+                          if (r === 'subir') setDocumentosFiles(prev => ({ ...prev, [doc.clave]: file }));
+                          else if (r === 'otro') fileInputRefs.current[doc.clave]?.click();
+                        });
                       }}
                     />
+                    {selectedFile && (
+                      <Button type="button" variant="ghost" size="icon-sm" aria-label={`Ver ${selectedFile.name}`} title="Ver el archivo"
+                        onClick={() => void verArchivo({ nombre: selectedFile.name, cargar: async () => ({ data: selectedFile, tipo: selectedFile.type }) })}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button type="button" variant="soft" size="sm" className="gap-1.5" onClick={() => fileInputRefs.current[doc.clave]?.click()}>
                       <Upload className="h-3.5 w-3.5" />
                       {selectedFile ? 'Cambiar' : 'Adjuntar'}

@@ -40,6 +40,7 @@ import { estadoBadgeClass, estadoLabel } from '@/lib/solicitud-estados';
 import { parseDate } from '@/lib/format';
 import Seguimiento, { type PasoHistorial } from '@/components/perfil/Seguimiento';
 import { acceptDe, describirLimites, formatosDe, validarArchivo } from '@/lib/archivos';
+import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
 
 const estadoIcon: Record<string, React.ElementType> = {
   borrador: FileText,
@@ -118,6 +119,7 @@ export default function DetalleSolicitudPage() {
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
   const [enviarError, setEnviarError] = useState<string | null>(null);
   const [informeFile, setInformeFile] = useState<File | null>(null);
+  const { confirmarSubida } = useVistaPrevia();
   // E45 (punto 6): tipos y tamaño de los documentos fijos (financieros e informe final), definidos por el admin.
   const [fijos, setFijos] = useState<Record<string, { formatos: string[]; mb: number }>>({});
   useEffect(() => {
@@ -236,6 +238,11 @@ export default function DetalleSolicitudPage() {
       event.target.value = '';
       return;
     }
+    // 02/10/2026: vista previa antes de subir.
+    const input = event.target;
+    input.value = '';
+    const decision = await confirmarSubida(file);
+    if (decision !== 'subir') { if (decision === 'otro') input.click(); return; }
 
     setUploadingDoc(tipo);
     const formData = new FormData();
@@ -880,7 +887,10 @@ export default function DetalleSolicitudPage() {
                       accept={acceptDe(limiteFijo('informe_final').formatos)}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) setInformeFile(file);
+                        const input = e.target;
+                        input.value = '';
+                        // 02/10/2026: vista previa del informe antes de usarlo (se sube al enviarlo).
+                        if (file) void confirmarSubida(file, { etiqueta: 'Usar este archivo' }).then((r) => { if (r === 'subir') setInformeFile(file); else if (r === 'otro') input.click(); });
                       }}
                       className="hidden"
                     />

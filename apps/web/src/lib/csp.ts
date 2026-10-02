@@ -59,7 +59,9 @@ export function construirCsp(nonce: string): string {
     `connect-src ${["'self'", api, ...WS_ORIGINS, sentry].filter(Boolean).join(' ')}`,
     `worker-src 'self'`,
     `manifest-src 'self'`,
-    `frame-src 'self'`,
+    // 02/10/2026 (aprobado por el usuario): `blob:` para la vista previa de PDF dentro de la página (VistaPreviaArchivo):
+    // el archivo se lee con sesión, se convierte en Blob tipado application/pdf y se muestra en un <iframe>. Nada externo.
+    `frame-src 'self' blob:`,
     `frame-ancestors 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,

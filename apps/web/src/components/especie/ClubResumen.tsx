@@ -1,6 +1,6 @@
 'use client';
 
-import { Shapes, School, User, FileText, Download, Crown, CheckCircle2, CircleDashed, Package } from 'lucide-react';
+import { Shapes, School, User, FileText, Download, Crown, CheckCircle2, CircleDashed, Package, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import FotoClub from '@/components/especie/FotoClub';
 import {
@@ -9,6 +9,8 @@ import {
 } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
 import Folio from '@/components/ui/folio';
+import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
+import { archivoDocumentoClub } from '@/lib/especie-api';
 
 /**
  * E52 · F1 — Vista de solo lectura de un club: datos, escuela, líder, integrantes con foto, respuestas adicionales y
@@ -24,6 +26,7 @@ export default function ClubResumen({ club, integrantes, documentos, campos, cam
   onDescargar?: (clave: string, nombre: string) => void;
   descargando?: string | null;
 }) {
+  const { ver } = useVistaPrevia();
   const est = ESTADO_CLUB[club.estado] ?? { etiqueta: club.estado, tono: 'neutral' };
   const camposClub = campos.filter((c) => c.ambito === 'club');
   const camposInt = campos.filter((c) => c.ambito === 'integrante');
@@ -138,6 +141,13 @@ export default function ClubResumen({ club, integrantes, documentos, campos, cam
                   {d.subido ? `${d.subido.nombre_original}${d.subido.subido_at ? ` · ${formatDate(d.subido.subido_at)}` : ''}` : 'Sin subir'}
                 </span>
               </span>
+              {d.subido && (
+                // 02/10/2026: «Ver» muestra el archivo dentro de la página (antes solo se podía descargar).
+                <Button size="sm" variant="outline" onClick={() => void ver({ nombre: d.subido?.nombre_original ?? d.clave, cargar: () => archivoDocumentoClub(club.id, d.clave) })}
+                  aria-label={`Ver ${d.nombre}`}>
+                  <Eye className="h-4 w-4" aria-hidden="true" /><span className="max-sm:sr-only">Ver</span>
+                </Button>
+              )}
               {d.subido && onDescargar && (
                 <Button size="sm" variant="soft" onClick={() => onDescargar(d.clave, d.subido?.nombre_original ?? d.clave)} disabled={descargando === d.clave}
                   aria-label={`Descargar ${d.nombre}`}>

@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, MessageSquareWarning, XCircle, TimerReset, BadgeCheck, Gavel, ClipboardCheck, Loader2 } from 'lucide-react';
+import { CheckCircle2, MessageSquareWarning, XCircle, TimerReset, BadgeCheck, Gavel, ClipboardCheck, Loader2, Eye } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import StepFrame from '@/components/ui/step-frame';
@@ -41,7 +43,10 @@ export default function RevisionClubPanel({ clubId, estado, avance, permisos, ha
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<ErroresFormulario | null>(null);
 
-  const abrir = (a: Accion) => { setAccion(a); setComentario(''); setHoras(avance.etapa_actual?.plazo_horas ?? 24); setError(null); };
+  const [seguro, setSeguro] = useState<'comite_aceptado' | 'comite_no_aceptado' | null>(null);
+  const [verificado, setVerificado] = useState(false);
+  const { ver: verDoc } = useVistaPrevia();
+  const abrir = (a: Accion) => { setAccion(a); setComentario(''); setVerificado(false); setHoras(avance.etapa_actual?.plazo_horas ?? 24); setError(null); };
 
   const ejecutar = async (a: Exclude<Accion, null> | 'visto_bueno') => {
     setEnviando(true);
@@ -96,6 +101,23 @@ export default function RevisionClubPanel({ clubId, estado, avance, permisos, ha
             Decisión del comité {hayActa ? '(acta cargada)' : '(falta subir el acta)'}</li>
         </ul>
       )}
+      {/* 02/10/2026 — Validación del comité visible en el registro (✓ validado / ✗ no validado / pendiente) y el acta. */}
+      {['aprobado_revision', 'aceptado', 'kit_entregado', 'rechazado'].includes(estado) && (
+        <div className="flex flex-wrap items-center gap-3 rounded-[14px] border px-4 py-3" style={{ borderColor: 'var(--app-rule)' }}>
+          {avance.comite_resultado === 'aceptado'
+            ? <span className="pill" data-tone="emerald"><CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />Validado por el comité</span>
+            : avance.comite_resultado === 'no_aceptado'
+              ? <span className="pill" data-tone="red"><XCircle className="h-3.5 w-3.5" aria-hidden="true" />No validado por el comité</span>
+              : <span className="pill" data-tone="gold">Comité: pendiente</span>}
+          <span className="flex-1" />
+          {hayActa && (
+            <Button size="sm" variant="outline" onClick={() => void verDoc({ nombre: 'Acta del comité.pdf', cargar: async () => {
+              const r = await api.get(`/revision/convocatorias/${convocatoriaId}/acta`, { responseType: 'blob' });
+              return { data: r.data as BlobPart, tipo: 'application/pdf' };
+            } })}><Eye className="h-4 w-4" aria-hidden="true" />Ver acta del comité</Button>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {permisos.resolver && <Button onClick={() => abrir('aprobar')}><CheckCircle2 className="h-4 w-4" aria-hidden="true" />Aprobar etapa</Button>}
@@ -130,7 +152,12 @@ export default function RevisionClubPanel({ clubId, estado, avance, permisos, ha
         intro={accion === 'observar' ? <>El líder tendrá <strong>{etapa?.plazo_horas ?? 24} horas</strong> para corregir y recibirá tu comentario por aviso y correo.</>
           : accion === 'rechazar' || accion === 'comite_no_aceptado' ? <>El club <strong>no continuará</strong>. El líder recibirá el aviso.</> : undefined}
         onClose={() => setAccion(null)}
-        onSubmit={() => (accion ? ejecutar(accion) : undefined)}
+        onSubmit={() => {
+          if (!accion) return;
+          // 02/10/2026: decisiones del comité con «¿Estás seguro?» antes de registrarlas.
+          if (accion === 'comite_aceptado' || accion === 'comite_no_aceptado') { setSeguro(accion); return; }
+          return ejecutar(accion);
+        }}
         submitting={enviando}
         submitLabel={t?.boton}
         error={error ? <AvisoErrores errores={error} /> : null}
@@ -138,9 +165,27 @@ export default function RevisionClubPanel({ clubId, estado, avance, permisos, ha
           key: 'accion',
           label: t.titulo,
           question: t.pregunta,
-          validate: () => (t.obligatorio && !comentario.trim() ? `Escribe el ${accion === 'observar' ? 'comentario para el líder' : 'motivo'}.` : accion === 'prorroga' && (!Number.isInteger(horas) || horas < 1 || horas > 168) ? 'Las horas van de 1 a 168.' : null),
+          validate: () => (t.obligatorio && !comentario.trim() ? `Escribe el ${accion === 'observar' ? 'comentario para el líder' : 'motivo'}.` : accion === 'prorroga' && (!Number.isInteger(horas) || horas < 1 || horas > 168) ? 'Las horas van de 1 a 168.'
+            : (accion === 'comite_aceptado' || accion === 'comite_no_aceptado') && !verificado ? 'Marca que verificaste la decisión en el acta del comité.' : null),
           content: (
             <div className="space-y-4">
+              {(accion === 'comite_aceptado' || accion === 'comite_no_aceptado') && (
+                <>
+                  {hayActa && (
+                    <Button type="button" size="sm" variant="outline" onClick={() => void verDoc({ nombre: 'Acta del comité.pdf', cargar: async () => {
+                      const r = await api.get(`/revision/convocatorias/${convocatoriaId}/acta`, { responseType: 'blob' });
+                      return { data: r.data as BlobPart, tipo: 'application/pdf' };
+                    } })}><Eye className="h-4 w-4" aria-hidden="true" />Ver acta del comité</Button>
+                  )}
+                  {/* 02/10/2026 (pedido del usuario): check de que el registro está validado por el comité, para evitar errores. */}
+                  <label className="flex cursor-pointer items-start gap-3 rounded-[14px] border px-4 py-3" style={{ borderColor: verificado ? 'var(--tile-emerald-fg)' : 'var(--app-rule)', backgroundColor: verificado ? 'var(--tile-emerald-bg)' : 'transparent' }}>
+                    <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--auth-vino)]" checked={verificado} onChange={(e) => setVerificado(e.target.checked)} />
+                    <span className="text-sm text-[var(--app-ink)]">
+                      Verifiqué en el acta que el comité <strong>{accion === 'comite_aceptado' ? 'validó' : 'no validó'}</strong> el registro de este club.
+                    </span>
+                  </label>
+                </>
+              )}
               {accion === 'prorroga' && (
                 <div className="space-y-1.5">
                   <label htmlFor="rev-horas" className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Horas adicionales *</label>
@@ -159,6 +204,14 @@ export default function RevisionClubPanel({ clubId, estado, avance, permisos, ha
           ),
         }] : []}
       />
+      <ConfirmDialog open={seguro !== null} variant={seguro === 'comite_no_aceptado' ? 'destructive' : undefined}
+        title={seguro === 'comite_aceptado' ? '¿Estás seguro de que el comité aceptó este club?' : '¿Estás seguro de que el comité no aceptó este club?'}
+        description={seguro === 'comite_aceptado'
+          ? 'El club quedará aceptado y el líder recibirá el aviso y el correo. Esta decisión no se puede deshacer desde aquí.'
+          : 'El club no continuará y el líder recibirá el aviso. Esta decisión no se puede deshacer desde aquí.'}
+        confirmLabel={seguro === 'comite_aceptado' ? 'Sí, aceptado' : 'Sí, no aceptado'}
+        onCancel={() => setSeguro(null)}
+        onConfirm={() => { const a = seguro; setSeguro(null); if (a) void ejecutar(a); }} />
     </section>
   );
 }

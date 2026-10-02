@@ -6,6 +6,7 @@ import "./globals.css";
 import "../styles/panel-sigae.css";
 import { switzer, satoshi, montserrat } from "@/lib/fonts";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import VistaPreviaProvider from "@/components/ui/VistaPreviaProvider";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { GlobalLoaderProvider } from "@/components/ui/GlobalLoader";
 import RouteChangeOverlay from "@/components/ui/RouteChangeOverlay";
@@ -117,7 +118,8 @@ export default async function RootLayout({
           <I18nProvider defaultLocale="es">
             <GlobalLoaderProvider>
               <ErrorBoundary>
-                {children}
+                {/* 02/10/2026: vista previa de archivos (antes de subir y en «Ver») para toda la app. */}
+                <VistaPreviaProvider>{children}</VistaPreviaProvider>
               </ErrorBoundary>
               {/* Un solo listener global de clics — ver RouteChangeOverlay.tsx.
                   No toca el menú ni ninguna otra vista. */}

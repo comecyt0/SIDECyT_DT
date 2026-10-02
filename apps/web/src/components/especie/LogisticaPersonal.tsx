@@ -154,7 +154,7 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
 
       <div className="app-card space-y-3 p-5">
         <h3 className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><FileSignature className="h-4 w-4" aria-hidden="true" />Carta de resguardo</h3>
-        <VersionesFirmadas versiones={l.resguardo} onDescargar={descargar} onRevisar={revisarProp} ocupado={enviando} />
+        <VersionesFirmadas clubId={clubId} versiones={l.resguardo} onDescargar={descargar} onRevisar={revisarProp} ocupado={enviando} />
       </div>
 
       <div className="app-card space-y-3 p-5">
@@ -171,7 +171,7 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
                     {sol ? <>Transporte <strong>{sol.transporte}</strong> · box lunch <strong>{sol.lunch}</strong></> : <span className="text-[var(--app-ink-2)]">Sin solicitud</span>}
                     {est && <span className="pill" data-tone={est.tono}>{est.etiqueta}</span>}
                   </p>
-                  {sol && <VersionesFirmadas versiones={s.versiones} onDescargar={descargar} onRevisar={revisarProp} ocupado={enviando} />}
+                  {sol && <VersionesFirmadas clubId={clubId} versiones={s.versiones} onDescargar={descargar} onRevisar={revisarProp} ocupado={enviando} />}
                 </li>
               );
             })}
