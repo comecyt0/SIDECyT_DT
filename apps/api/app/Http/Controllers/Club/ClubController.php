@@ -76,9 +76,11 @@ class ClubController extends Controller
         $user = $request->user();
         $v = $request->validate([
             'convocatoria_id' => 'required|integer',
-            'escuela_id' => 'required|integer',
+            // E55: escuela del catálogo, o la solicitud propia de una escuela que está en revisión.
+            'escuela_id' => 'nullable|integer|required_without:escuela_solicitud_id',
+            'escuela_solicitud_id' => 'nullable|integer',
             'nombre' => 'required|string|min:3|max:255',
-        ]);
+        ], ['escuela_id.required_without' => 'Elige tu escuela del catálogo o solicita su registro.']);
         $conv = Convocatoria::with('tipoPrograma')->whereNull('deleted_at')->find($v['convocatoria_id']);
         if (! Especie::esEspecie($conv) || ! $conv->aceptaSolicitudes()) {
             return response()->json(['message' => 'Esa convocatoria no está recibiendo registros de clubes.'], 422);
@@ -86,17 +88,14 @@ class ClubController extends Controller
         if (Club::where('convocatoria_id', $conv->id)->where('lider_id', $user->id)->exists()) {
             return response()->json(['message' => 'Ya registraste un club en esta convocatoria (uno por líder).'], 422);
         }
-        $escuela = Escuela::where('activo', true)->find($v['escuela_id']);
-        if (! $escuela) {
-            throw ValidationException::withMessages(['escuela_id' => 'Elige una escuela del catálogo.']);
-        }
-        $this->exigirCupoEscuela($conv, $escuela->id, null);
+        [$escuelaId, $solicitudId] = $this->escuelaElegida($v, $user->id, $conv->id);
+        if ($escuelaId) $this->exigirCupoEscuela($conv, $escuelaId, null);
 
-        $club = DB::transaction(function () use ($user, $conv, $escuela, $v) {
-            $club = new Club(['nombre' => trim(strip_tags($v['nombre'])), 'escuela_id' => $escuela->id, 'datos' => []]);
+        $club = DB::transaction(function () use ($user, $conv, $escuelaId, $solicitudId, $v) {
+            $club = new Club(['nombre' => trim(strip_tags($v['nombre'])), 'escuela_id' => $escuelaId, 'datos' => []]);
             for ($i = 0; $i < 5; $i++) {
                 try {
-                    $club->forceFill(['folio' => Especie::nuevoFolio(), 'estado' => 'borrador', 'lider_id' => $user->id, 'convocatoria_id' => $conv->id])->save();
+                    $club->forceFill(['folio' => Especie::nuevoFolio(), 'estado' => 'borrador', 'lider_id' => $user->id, 'convocatoria_id' => $conv->id, 'escuela_solicitud_id' => $solicitudId])->save();
                     break;
                 } catch (\Illuminate\Database\QueryException $e) {
                     if ($i === 4 || ! in_array($e->getCode(), ['23505', '23000'], true)) throw $e;
@@ -125,15 +124,17 @@ class ClubController extends Controller
         $this->editable($request, $club);
         $v = $request->validate([
             'nombre' => 'sometimes|required|string|min:3|max:255',
-            'escuela_id' => 'sometimes|required|integer',
+            'escuela_id' => 'sometimes|nullable|integer',
+            'escuela_solicitud_id' => 'sometimes|nullable|integer',
             'datos' => 'sometimes|nullable|array',
         ]);
         $cfg = $this->config($club);
-        if (isset($v['escuela_id']) && (int) $v['escuela_id'] !== (int) $club->escuela_id) {
-            $escuela = Escuela::where('activo', true)->find($v['escuela_id']);
-            if (! $escuela) throw ValidationException::withMessages(['escuela_id' => 'Elige una escuela del catálogo.']);
-            $this->exigirCupoEscuela($club->convocatoria, $escuela->id, $club->id);
-            $club->escuela_id = $escuela->id;
+        // E55: cambiar a otra escuela del catálogo o a una solicitud propia en revisión.
+        if (! empty($v['escuela_solicitud_id']) || (! empty($v['escuela_id']) && (int) $v['escuela_id'] !== (int) $club->escuela_id)) {
+            [$escuelaId, $solicitudId] = $this->escuelaElegida($v, $request->user()->id, (int) $club->convocatoria_id);
+            if ($escuelaId) $this->exigirCupoEscuela($club->convocatoria, $escuelaId, $club->id);
+            $club->escuela_id = $escuelaId;
+            $club->forceFill(['escuela_solicitud_id' => $solicitudId]);
         }
         if (isset($v['nombre'])) $club->nombre = trim(strip_tags($v['nombre']));
         if (array_key_exists('datos', $v)) {
@@ -304,6 +305,9 @@ class ClubController extends Controller
     public function cartaEscuela(Request $request, Club $club)
     {
         $this->propio($request, $club);
+        if (! $club->escuela_id) {
+            return response()->json(['message' => 'Tu escuela está en revisión: la carta se genera cuando el COMECYT la dé de alta.'], 422);
+        }
         $club->loadMissing(['escuela', 'lider:id,name', 'integrantes', 'convocatoria:id,nombre']);
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.carta_escuela_club', ['club' => $club, 'fecha' => now('America/Mexico_City')]);
 
@@ -349,6 +353,13 @@ class ClubController extends Controller
     {
         $cfg = $this->config($club);
         $f = [];
+        // E55: sin escuela del catálogo no se envía.
+        if (! $club->escuela_id) {
+            $s = $club->escuelaSolicitud;
+            $f[] = $s?->estado === 'rechazada'
+                ? 'La solicitud de tu escuela no fue aceptada. Corrígela y envíala de nuevo, o elige una escuela del catálogo.'
+                : 'Tu escuela está en revisión: podrás enviar tu club cuando el COMECYT la dé de alta.';
+        }
         $pc = Especie::camposClub($cfg);
         if ($pc['logo']['obligatorio'] && ! $club->logo_path) $f[] = 'Sube el logo o foto del club.';
         if ($pc['descripcion']['obligatorio'] && empty($club->datos['descripcion'])) $f[] = 'Escribe la descripción del proyecto del club.';
@@ -412,6 +423,26 @@ class ClubController extends Controller
         return EspecieCampo::where('convocatoria_id', $club->convocatoria_id)->where('ambito', $ambito)->orderBy('orden')->get();
     }
 
+    /**
+     * E55: [escuela_id, escuela_solicitud_id] elegidos. Una escuela del catálogo (activa) o una solicitud PROPIA de esta
+     * convocatoria que siga pendiente (si ya se aceptó, se usa la escuela que se creó). Cualquier otra cosa → 422.
+     */
+    private function escuelaElegida(array $v, int $userId, int $convId): array
+    {
+        if (! empty($v['escuela_solicitud_id'])) {
+            $s = \App\Models\EscuelaSolicitud::where('id', $v['escuela_solicitud_id'])->where('user_id', $userId)->where('convocatoria_id', $convId)->first();
+            if (! $s || $s->estado === 'rechazada') {
+                throw ValidationException::withMessages(['escuela_solicitud_id' => 'Esa solicitud de escuela no es válida para este club.']);
+            }
+
+            return $s->estado === 'aceptada' && $s->escuela_id ? [(int) $s->escuela_id, $s->id] : [null, $s->id];
+        }
+        $escuela = Escuela::where('activo', true)->find($v['escuela_id'] ?? 0);
+        if (! $escuela) throw ValidationException::withMessages(['escuela_id' => 'Elige una escuela del catálogo.']);
+
+        return [$escuela->id, null];
+    }
+
     private function exigirCupoEscuela(Convocatoria $conv, int $escuelaId, ?int $excepto): void
     {
         $limite = $conv->especieConfig?->clubes_por_escuela;
@@ -438,6 +469,10 @@ class ClubController extends Controller
                 'id' => $club->id, 'folio' => $club->folio, 'nombre' => $club->nombre, 'estado' => $club->estadoVisible(),
                 'logo_url' => $club->logo_url, 'datos' => $club->datos ?? [], 'enviado_at' => $club->enviado_at,
                 'escuela' => $club->escuela, 'editable' => $club->editable(),
+                // E55: escuela solicitada (en revisión o rechazada) mientras el club no tiene una del catálogo.
+                'escuela_solicitud' => ! $club->escuela_id && $club->escuelaSolicitud
+                    ? $club->escuelaSolicitud->only(['id', 'cct', 'nombre', 'municipio', 'nivel', 'sistema', 'estado', 'motivo'])
+                    : null,
             ] + self::avance($club),
             'integrantes' => $club->integrantes->values(),
             'documentos' => $requeridos->values(),

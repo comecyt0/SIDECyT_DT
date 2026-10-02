@@ -13,7 +13,7 @@ import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import StepFrame from '@/components/ui/step-frame';
 import FotoClub from '@/components/especie/FotoClub';
-import EscuelaPicker from '@/components/especie/EscuelaPicker';
+import EscuelaPicker, { escuelaDeSolicitud, type EscuelaElegida } from '@/components/especie/EscuelaPicker';
 import CampoDinamico from '@/components/especie/CampoDinamico';
 import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
 import ClubResumen from '@/components/especie/ClubResumen';
@@ -25,7 +25,7 @@ import {
   ACCEPT_FORMATO, ACCEPT_IMAGEN, CAMPOS_INTEGRANTE, CARTA_ESCUELA, ESTADO_CLUB, ETIQUETA_FORMATO, IMAGEN_MAX_MB, SEXO,
   leerCamposApi, normalizarPredef, CAMPOS_CLUB, valorCampo,
   leerLogistica, type LogisticaEstado,
-  type CampoApi, type ClubApi, type DocumentoClub, type EntradaHistorial, type EscuelaApi, type IntegranteApi, type Predef,
+  type CampoApi, type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi, type Predef,
 } from '@/lib/especie';
 import { PATRON_CURP, PATRON_TELEFONO, PATRON_CORREO } from '@/lib/registro';
 import { formatDate } from '@/lib/format';
@@ -119,7 +119,7 @@ export default function MiClubPage() {
 
   // Datos del club
   const [nombre, setNombre] = useState('');
-  const [escuela, setEscuela] = useState<EscuelaApi | null>(null);
+  const [escuela, setEscuela] = useState<EscuelaElegida | null>(null);
   const [datosClub, setDatosClub] = useState<Record<string, string>>({});
   const [erroresClub, setErroresClub] = useState<Record<string, string>>({});
 
@@ -137,7 +137,9 @@ export default function MiClubPage() {
   const aplicar = useCallback((det: Detalle) => {
     setD(det);
     setNombre(det.club.nombre);
-    setEscuela(det.club.escuela);
+    // E55: sin escuela del catálogo, la solicitud en revisión ocupa su lugar (una rechazada deja el campo vacío).
+    const sol = det.club.escuela_solicitud;
+    setEscuela(det.club.escuela ?? (sol && sol.estado === 'pendiente' ? escuelaDeSolicitud(sol) : null));
     const dc: Record<string, string> = {};
     for (const [k, v] of Object.entries(det.club.datos ?? {})) if (v !== null && v !== undefined) dc[k] = String(v);
     setDatosClub(dc);
@@ -196,7 +198,7 @@ export default function MiClubPage() {
   const guardarDatos = async () => {
     const e: Record<string, string> = {};
     if (nombre.trim().length < 3) e.nombre = 'Escribe el nombre del club (al menos 3 letras).';
-    if (!escuela) e.escuela_id = 'Elige la escuela del catálogo.';
+    if (!escuela) e.escuela_id = 'Elige la escuela del catálogo o solicita su registro.';
     setErroresClub(e);
     if (Object.keys(e).length) return;
     const datos: Record<string, string> = {};
@@ -204,7 +206,11 @@ export default function MiClubPage() {
     for (const c of camposClub) datos[c.nombre_campo] = datosClub[c.nombre_campo] ?? '';
     setOcupado('datos');
     try {
-      await api.put(`/club/clubes/${club.id}`, { nombre: nombre.trim(), escuela_id: escuela!.id, datos });
+      await api.put(`/club/clubes/${club.id}`, {
+        nombre: nombre.trim(), datos,
+        // E55: la escuela del catálogo o la solicitud en revisión.
+        ...(escuela!.solicitud ? { escuela_solicitud_id: escuela!.solicitud.id } : { escuela_id: escuela!.id }),
+      });
       setAviso({ tipo: 'success', texto: 'Datos del club guardados.' });
       await cargar();
     } catch (er) {
@@ -386,7 +392,12 @@ export default function MiClubPage() {
           </div>
           <div className="space-y-1.5">
             <label htmlFor="club-escuela" className={labelCls}>Escuela *</label>
-            <EscuelaPicker id="club-escuela" value={escuela} onChange={setEscuela} invalido={Boolean(erroresClub.escuela_id)} />
+            {club.escuela_solicitud?.estado === 'rechazada' && !escuela && (
+              <p role="alert" className="rounded-[12px] px-3 py-2 text-sm" style={{ backgroundColor: 'var(--tile-vino-bg)', color: 'var(--app-ink)' }}>
+                El COMECYT no aceptó la solicitud de «{club.escuela_solicitud.nombre}»{club.escuela_solicitud.motivo ? `: ${club.escuela_solicitud.motivo}` : '.'} Corrígela y envíala de nuevo, o elige una escuela del catálogo.
+              </p>
+            )}
+            <EscuelaPicker id="club-escuela" value={escuela} onChange={setEscuela} invalido={Boolean(erroresClub.escuela_id)} convocatoriaId={d.convocatoria.id} />
             {erroresClub.escuela_id && <p className="text-xs font-medium" style={{ color: 'var(--auth-danger)' }}>{erroresClub.escuela_id}</p>}
           </div>
           {pc.descripcion?.pedir && (

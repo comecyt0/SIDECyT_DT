@@ -32,6 +32,7 @@ class EscuelaController extends Controller
             'nivel' => ['nullable', Rule::in(Escuela::NIVELES)],
             'sistema' => ['nullable', Rule::in(Escuela::SISTEMAS)],
             'activo' => 'nullable|in:0,1',
+            'participo' => 'nullable|in:0,1',
             'per_page' => 'nullable|integer|min:1|max:100',
         ]);
         $q = Escuela::query();
@@ -41,6 +42,8 @@ class EscuelaController extends Controller
         foreach (['nivel', 'sistema'] as $f) {
             if ($request->filled($f)) $q->where($f, $request->input($f));
         }
+        // E55: filtrar por participación previa.
+        if ($request->filled('participo')) $q->where('participo_antes', (bool) $request->input('participo'));
         if ($request->filled('activo')) $q->where('activo', (bool) $request->input('activo'));
 
         return response()->json($q->orderBy('nombre')->paginate((int) $request->input('per_page', 25)));
@@ -74,37 +77,38 @@ class EscuelaController extends Controller
             'nivel' => ['required', Rule::in(Escuela::NIVELES)],
             'sistema' => ['required', Rule::in(Escuela::SISTEMAS)],
             'activo' => 'sometimes|boolean',
-        ], ['cct.regex' => 'La CCT debe ser del Estado de México (p. ej. 15EPR0001A).']);
-        $mun = $this->municipioCanonico($datos['municipio']);
+            // E55: participación previa (identificador que el admin escribe).
+            'participo_antes' => 'sometimes|boolean',
+            'temporadas' => 'sometimes|nullable|array|max:'.Escuela::MAX_TEMPORADAS,
+            'temporadas.*' => 'nullable|string|max:60',
+        ], ['cct.regex' => 'La CCT debe ser del Estado de México (p. ej. 15EPR0001A).'], ['temporadas' => 'temporadas', 'temporadas.*' => 'temporada']);
+        $mun = Escuela::municipioCanonico($datos['municipio']);
         if (! $mun) {
             throw \Illuminate\Validation\ValidationException::withMessages(['municipio' => 'Ese municipio no existe en el Estado de México.']);
         }
         $datos['municipio'] = $mun;
-        $datos['nombre'] = ltrim(trim(strip_tags($datos['nombre'])), "=+-@ \t");
+        $datos['nombre'] = Escuela::textoSeguro($datos['nombre']);
+        if (array_key_exists('participo_antes', $datos) || array_key_exists('temporadas', $datos)) {
+            $participo = (bool) ($datos['participo_antes'] ?? $e?->participo_antes ?? false);
+            $temporadas = Escuela::normalizarTemporadas($datos['temporadas'] ?? ($e?->temporadas ?? []));
+            if ($participo && ! $temporadas) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['temporadas' => 'Escribe al menos una temporada en la que participó la escuela.']);
+            }
+            $datos['participo_antes'] = $participo;
+            $datos['temporadas'] = $participo ? $temporadas : [];
+        }
 
         return $datos;
     }
 
-    /** Municipio oficial del catálogo SEPOMEX, comparando sin acentos ni mayúsculas. */
     private function municipioCanonico(string $texto): ?string
     {
-        static $mapa = null;
-        if ($mapa === null) {
-            $mapa = [];
-            foreach (DB::table('codigos_postales')->distinct()->pluck('municipio') as $m) {
-                $mapa[self::clave($m)] = $m;
-            }
-        }
-
-        return $mapa[self::clave($texto)] ?? null;
+        return Escuela::municipioCanonico($texto);
     }
 
     private static function clave(string $s): string
     {
-        $s = mb_strtolower(trim($s));
-        $s = strtr($s, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n']);
-
-        return preg_replace('/\s+/', ' ', $s);
+        return Escuela::clave($s);
     }
 
     /** Importa un Excel (.xlsx) con columnas CCT, NOMBRE, MUNICIPIO, NIVEL, SISTEMA. Upsert por CCT; informe por fila. */

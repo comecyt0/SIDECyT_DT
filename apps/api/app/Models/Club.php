@@ -22,7 +22,15 @@ class Club extends Model
         'comite_por', 'aceptado_at', 'rechazo_origen', 'rechazo_motivo', 'aviso_privacidad_at',
         'kit_fecha', 'kit_lugar', 'kit_asignado_at', 'kit_entregado_at', 'kit_entregado_lugar', 'kit_entrego', 'kit_recibio', 'kit_registrado_por',
         'qr_token', 'qr_hash', 'qr_habilitado_at', 'qr_habilitado_por',
+        // E55: la escuela en revisión solo la fija el servidor (al crear el club con una solicitud propia).
+        'escuela_solicitud_id',
     ];
+
+    /** E55: solicitud de registro de escuela que espera este club (mientras `escuela_id` es nulo). */
+    public function escuelaSolicitud()
+    {
+        return $this->belongsTo(EscuelaSolicitud::class);
+    }
 
     /** Estados de un club ya aceptado (F3: logística; `kit_entregado` detiene el confeti del líder). */
     public const ACEPTADOS = ['aceptado', 'kit_entregado'];

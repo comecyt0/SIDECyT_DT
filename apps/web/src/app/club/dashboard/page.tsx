@@ -10,9 +10,9 @@ import PageHeader from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { AlertBox } from '@/components/ui/alert-box';
 import StepFrame from '@/components/ui/step-frame';
-import EscuelaPicker from '@/components/especie/EscuelaPicker';
+import EscuelaPicker, { type EscuelaElegida } from '@/components/especie/EscuelaPicker';
 import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
-import { ESTADO_CLUB, type EscuelaApi } from '@/lib/especie';
+import { ESTADO_CLUB } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
 
 interface ConvClub {
@@ -36,7 +36,7 @@ export default function ClubDashboardPage() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [registro, setRegistro] = useState<ConvClub | null>(null);
   const [nombre, setNombre] = useState('');
-  const [escuela, setEscuela] = useState<EscuelaApi | null>(null);
+  const [escuela, setEscuela] = useState<EscuelaElegida | null>(null);
   const [creando, setCreando] = useState(false);
   const [errorRegistro, setErrorRegistro] = useState<string | null>(null);
   const misClubesRef = useRef<HTMLElement>(null);
@@ -58,7 +58,11 @@ export default function ClubDashboardPage() {
     setCreando(true);
     setErrorRegistro(null);
     try {
-      const { data } = await api.post('/club/clubes', { convocatoria_id: registro.id, escuela_id: escuela?.id, nombre: nombre.trim() });
+      // E55: escuela del catálogo, o la solicitud propia en revisión.
+      const { data } = await api.post('/club/clubes', {
+        convocatoria_id: registro.id, nombre: nombre.trim(),
+        ...(escuela?.solicitud ? { escuela_solicitud_id: escuela.solicitud.id } : { escuela_id: escuela?.id }),
+      });
       const id = Number(data?.club?.id);
       if (Number.isInteger(id) && id > 0) router.push(`/club/clubes/${id}`);
       else { setRegistro(null); void cargar(); }
@@ -173,7 +177,7 @@ export default function ClubDashboardPage() {
             key: 'club',
             label: 'Tu club',
             question: '¿Cómo se llama tu club y de qué escuela es?',
-            validate: () => (nombre.trim().length < 3 ? 'Escribe el nombre del club (al menos 3 letras).' : !escuela ? 'Elige la escuela del catálogo.' : null),
+            validate: () => (nombre.trim().length < 3 ? 'Escribe el nombre del club (al menos 3 letras).' : !escuela ? 'Elige la escuela del catálogo o solicita su registro.' : null),
             content: (
               <div className="space-y-4">
                 <div className="space-y-1.5">
@@ -183,7 +187,7 @@ export default function ClubDashboardPage() {
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="club-escuela" className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Escuela *</label>
-                  <EscuelaPicker id="club-escuela" value={escuela} onChange={setEscuela} />
+                  <EscuelaPicker id="club-escuela" value={escuela} onChange={setEscuela} convocatoriaId={registro?.id} />
                 </div>
               </div>
             ),

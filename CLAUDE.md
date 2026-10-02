@@ -1860,3 +1860,16 @@ duplicado al correrse dos veces. Comparar en PHP (`mb_strtolower` + `Str::ascii`
 sin distinguir mayúsculas/acentos se hace en PHP o con `unaccent`, nunca con `LOWER()`/`ILIKE` solos.
 **Verificado:** backend 34/34, navegador 27/27 (1440 y 390 px; se detectaron y corrigieron el nombre partido letra por
 letra en teléfono y avisos viejos que no se iban), vitest 178/178.
+
+### E55 — Solicitud de registro de escuela y participación previa [publicado 02-10-2026]
+Detalle y decisiones del usuario: `docs/APOYO_EN_ESPECIE.md` §15. Para desarrollo:
+- `clubes.escuela_id` **ya puede ser nulo** (club con la escuela «en revisión», `escuela_solicitud_id`). Todo código nuevo
+  que lea `$club->escuela` debe tolerar null; los PDF de resguardo/logística/credencial no corren el riesgo porque un club
+  sin escuela no puede enviarse ni ser aceptado. La carta de la escuela responde 422 mientras no haya escuela.
+- Solicitudes en `EscuelaSolicitudController` (líder y personal); aceptar crea la escuela y la asigna a los clubes que la
+  esperaban, en una transacción con bloqueo. Índice único parcial: una solicitud pendiente por CCT.
+- Funciones de escuela compartidas en el modelo: `Escuela::municipioCanonico()`, `textoSeguro()`, `normalizarTemporadas()`.
+- `/admin/escuelas` entra en `SUBRUTAS_POR_ROL` del admin de convocatoria (solo ve la pestaña de solicitudes; el catálogo
+  sigue siendo solo del admin en el backend).
+- **Regla para pruebas:** los admins tienen correo institucional real; una prueba que dispare avisos con correo al personal
+  debe detener `comecyt-queue` y descartar esos trabajos de correo (ver `e2e_escuelas.php`), nunca enviarlos.

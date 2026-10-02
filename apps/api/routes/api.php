@@ -194,6 +194,11 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::get('convocatorias/{convocatoria}/folios-publicados', [FolioController::class, 'publicacion']);
             Route::post('convocatorias/{convocatoria}/folios-publicados', [FolioController::class, 'publicar'])->middleware('throttle:20,1');
             Route::delete('convocatorias/{convocatoria}/folios-publicados', [FolioController::class, 'despublicar'])->middleware('throttle:20,1');
+            // E55 — solicitudes de registro de escuela (admin y admin de convocatoria; alcance revisado en el controlador).
+            $es = \App\Http\Controllers\Club\EscuelaSolicitudController::class;
+            Route::get('escuelas/solicitudes', [$es, 'index']);
+            Route::post('escuelas/solicitudes/{solicitud}/aceptar', [$es, 'aceptar'])->whereNumber('solicitud')->middleware('throttle:60,1,escuela-solicitud-admin');
+            Route::post('escuelas/solicitudes/{solicitud}/rechazar', [$es, 'rechazar'])->whereNumber('solicitud')->middleware('throttle:60,1,escuela-solicitud-admin');
         });
 
         // (c) SOLO ADMIN GENERAL.
@@ -334,6 +339,9 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             $c = \App\Http\Controllers\Club\ClubController::class;
             Route::get('convocatorias', [$c, 'convocatorias']);
             Route::get('escuelas', [$c, 'escuelas'])->middleware('throttle:60,1,escuelas-buscar');
+            // E55 — solicitar el registro de una escuela que no está en el catálogo
+            Route::get('escuelas/solicitudes', [\App\Http\Controllers\Club\EscuelaSolicitudController::class, 'misSolicitudes']);
+            Route::post('escuelas/solicitudes', [\App\Http\Controllers\Club\EscuelaSolicitudController::class, 'store'])->middleware('throttle:5,10,escuela-solicitud');
             Route::post('clubes', [$c, 'store'])->middleware('throttle:10,1,club-crear');
             Route::get('clubes/{club}', [$c, 'show']);
             Route::put('clubes/{club}', [$c, 'update']);

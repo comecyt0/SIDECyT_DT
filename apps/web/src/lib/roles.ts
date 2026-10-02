@@ -57,6 +57,8 @@ export const SUBRUTAS_POR_ROL: Record<string, string[]> = {
     '/admin/dashboard', '/admin/solicitudes', '/admin/convocatorias', '/admin/folios', '/admin/convenios',
     '/admin/ministraciones', '/admin/informes', '/admin/evaluadores', '/admin/buzon', '/admin/cuenta', '/admin/perfiles',
     '/admin/clubes', '/admin/escanear',
+    // E55: solo la pestaña de solicitudes de registro de escuela (el catálogo lo edita el admin general).
+    '/admin/escuelas',
   ],
   consulta: ['/admin/dashboard', '/admin/solicitudes', '/admin/folios', '/admin/cuenta', '/admin/perfiles', '/admin/clubes'],
 };

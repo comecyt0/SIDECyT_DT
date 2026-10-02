@@ -397,6 +397,51 @@ Clubes aceptados · asistencia por evento · box lunch y transporte (solicitado 
   navegador real **25/25** con **cámara que lee un QR real** (video falso de Edge) a 390 y 1440 px, sin errores de
   consola; vitest **170/170**; regresión F1 53/53, F2 57/57, F3 57/57, registro 46/46, errores 13/13.
 
+## 15. E55 — Solicitud de registro de escuela y participación previa (02/10/2026)
+
+**Pedido del usuario:** si la escuela no está en el catálogo, en lugar de «comunícate con el COMECYT» debe haber un apartado
+«Solicitar registro de escuela» cuyo formulario llegue como solicitud (notificación y correo) al panel, donde se acepta con
+«¿Estás seguro de que quieres aceptar?» o se rechaza con motivo y «¿Estás seguro de que no quieres aceptar?». Además, en
+`/admin/escuelas`, una marca de que la escuela ya participó y en qué temporada(s), como identificador.
+
+| Tema | Decisión |
+|---|---|
+| Datos del formulario | Los del catálogo (CCT, nombre, municipio del Edomex, nivel, sistema) **+ contacto**: dirección, teléfono, directora/director |
+| Mientras se revisa | El líder **avanza con su club** con la escuela «en revisión»; no puede enviarlo ni descargar la carta de la escuela. Al aceptarla, **se asigna sola** |
+| Quién resuelve | **Admin y admin de convocatoria** (este, solo las de sus convocatorias; las demás → 404) |
+| Al aceptar | Puede **corregir** los datos antes; confirma «¿Estás seguro…?» |
+| Al rechazar | Motivo obligatorio y confirmación; el líder **corrige y vuelve a solicitar, o elige otra** escuela |
+| CCT ya en el catálogo o ya solicitada | **Aviso** de que ya se registró y de contactar a la dirección escolar o a un admin del COMECYT (se bloquea) |
+| Avisos | **Campana + correo** al personal (nueva) y al líder (aceptada / rechazada con motivo) |
+| Dónde se revisa | **En Escuelas**, pestaña «Solicitudes de registro» con contador; la campana y el correo llevan ahí |
+| Participación previa | Marca «Ya ha participado» + **varias temporadas** (texto del admin, etiquetas) |
+
+**Implementación**
+- **BD** (`2026_10_02_000002`): `escuela_solicitudes` (datos + contacto, `estado` pendiente/aceptada/rechazada, motivo,
+  quién y cuándo, escuela creada; **índice único parcial: una pendiente por CCT**); `clubes.escuela_id` pasa a nulo +
+  `clubes.escuela_solicitud_id` (en `$guarded`); `escuelas.participo_antes` + `temporadas` (JSON).
+- **API:** líder `GET|POST /club/escuelas/solicitudes` (POST con throttle 5 cada 10 min y máx. 3 pendientes por líder);
+  personal `GET /admin/escuelas/solicitudes?estado=` (con conteo), `POST …/{id}/aceptar` (datos corregibles; transacción
+  con bloqueo; crea la escuela y la asigna a los clubes que esperaban) y `POST …/{id}/rechazar` (motivo ≥10). El alta y la
+  edición del club aceptan `escuela_solicitud_id` (solo una solicitud **propia**, de esa convocatoria, no rechazada).
+- **Validación:** CCT del Edomex (`15` + 3 letras + 4 dígitos + letra), municipio contra el catálogo SEPOMEX, teléfono de
+  10 dígitos, textos sin HTML ni arranque de fórmula (`Escuela::textoSeguro`).
+- **Avisos:** `EscuelaSolicitudAviso` (campana `escuela_solicitud` para el personal → `/admin/escuelas?tab=solicitudes`;
+  `club_escuela_aceptada|rechazada` para el líder → su club). Bitácora: `escuela.solicitud_enviada|aceptada|rechazada`,
+  `escuela.creada` (con «corregida» si el personal cambió datos).
+- **Front:** `EscuelaPicker` ofrece «Solicitar registro de esta escuela» **dentro de la lista** cuando no hay resultados (la
+  lista tapaba el enlace; se detectó en el navegador) y reutilizar una solicitud propia en revisión; `SolicitarEscuela`
+  (formulario en línea, sin modal anidado); ficha del club con el aviso de rechazo y su motivo. Panel: `/admin/escuelas`
+  con pestañas `CatalogoEscuelas` (solo admin; participación previa con `TemporadasInput` y filtro «ya participaron») y
+  `SolicitudesEscuelas` (también admin de convocatoria).
+- **Pruebas sin correos reales:** los admins tienen correo institucional; las pruebas detienen `comecyt-queue`, descartan
+  los trabajos de **correo** de estos avisos, procesan solo los de campana y reinician la cola.
+
+**Verificado:** backend **45/45** (`e2e_escuelas.php`: alta, duplicados, validaciones, 429, club en revisión, envío y carta
+bloqueados, alcance del admin de convocatoria, aceptar con corrección, asignación automática, rechazo y nueva solicitud,
+límite de pendientes, temporadas), navegador **15/15** (líder a 390 px, admin de convocatoria con confirmación, admin con
+temporadas).
+
 ## 8. Modelo de datos (borrador técnico, a validar en F1)
 
 - `escuelas` (cct único, nombre, municipio, nivel, sistema `estatal|federal`, activo).

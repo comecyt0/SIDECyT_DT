@@ -20,6 +20,8 @@ const DESTINOS_ADMIN: Record<string, string> = {
   club_por_revisar: '/admin/clubes',
   club_subsanado: '/admin/clubes',
   club_aprobado_revision: '/admin/clubes',
+  // E55: solicitud de registro de escuela.
+  escuela_solicitud: '/admin/escuelas?tab=solicitudes',
 };
 
 /** E52 · F2: avisos de clubes en los paneles de rol (revisor → su bandeja; líder → su panel). Rutas fijas. */
