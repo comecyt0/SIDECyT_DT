@@ -1962,6 +1962,22 @@ línea de tiempo, `ClubResumen` con descarga de documentos, historial y «Abrir 
 `leer()` y `documentosDe()` para no duplicar. Botón de cerrar propio (el header fijo tapaba el ✕ del diálogo).
 **Verificado:** navegador 13/13 (`verif_previa.mjs`, 1440 y 390 px).
 
+### E66 — Registro con correo o CURP ya existentes: ya no se pierde en silencio [publicado 06-10-2026]
+**Reporte del usuario:** «hice registros desde el login en crear cuenta y no llegan a solicitudes de acceso».
+**Causa (verificada en logs de IIS y base):** los 3 registros respondieron 201, pero ninguno intentó guardar (salieron en
+~120 ms, antes de cifrar la contraseña; un registro nuevo tarda ~850 ms y no consumieron ids de la secuencia): el correo
+o la CURP ya existían en una cuenta o en una solicitud. `RegistroGeneralController` los descarta a propósito para no
+revelar qué datos existen, pero solo lo anotaba en nivel `info` (el log está en `warning`): nadie se enteraba. Un
+registro con datos nuevos sí llega a «Solicitudes de acceso» (verificado).
+**Fix (decisión del usuario: «correo al interesado»):** la pantalla sigue igual (201 y mismo mensaje). Además:
+`avisarDuplicado()` deja la línea en el log de seguridad (nivel `warning`, correo enmascarado `d***@dominio`) y manda
+`RegistroDuplicadoAviso` (plantilla SIGAE, solo correo) **al correo escrito**, con qué hacer (entrar, recuperar contraseña
+o escribir al COMECYT). No dice si chocó el correo o la CURP. Máximo un aviso por correo cada 30 min (`Cache::add`, evita
+usar el registro para bombardear un buzón). Un error de base distinto de llave duplicada ahora queda en el log de errores.
+**Limpieza:** se borraron 6 cuentas `vac.*@example.invalid` que dejaron las pruebas de E61 del 02/10.
+**Verificado:** `e2e_registro_duplicado.php` 8/8 (nuevo llega a la lista del admin; repetido responde igual, no duplica,
+encola un solo aviso, log enmascarado), `e2e_registro.php` 46/46.
+
 ### E65 — Correos de SIGAE con un solo diseño institucional [publicado 02-10-2026]
 **Pedido:** «personaliza los correos con el estilo de la página de SIGAE, con los logos institucionales como en el header,
 unifica el diseño de todos los correos (solo de SIGAE), con colores, llamativo, interactivo y lo más intuitivo posible».

@@ -75,7 +75,9 @@ class RegistroGeneralController extends Controller
             || SolicitudAcceso::whereRaw('LOWER(email) = ?', [$email])->exists()
             || SolicitudAcceso::where('curp', $curp)->where('estado', 'pendiente')->exists();
         if ($duplicado) {
-            Log::channel('security')->info('Registro general duplicado ignorado (correo o CURP)', ['ip' => $request->ip()]);
+            // 06/10/2026: antes solo quedaba en nivel `info` (el log está en `warning`) y nadie se enteraba: la persona veía
+            // «recibido» y no pasaba nada. Ahora queda en el log y le llega un aviso al correo escrito (la pantalla no cambia).
+            $this->avisarDuplicado($request, $email, 'correo o CURP ya registrados');
 
             return response()->json($respuesta, 201);
         }
@@ -104,7 +106,13 @@ class RegistroGeneralController extends Controller
                 'estado' => 'pendiente',
             ])->save();
         } catch (\Illuminate\Database\QueryException $e) {
-            // Dos envíos simultáneos con el mismo correo: mismo trato que un duplicado.
+            // Dos envíos simultáneos con el mismo correo: mismo trato que un duplicado. Si fuera otro error de la base,
+            // queda en el log (sin datos personales) en lugar de perderse.
+            if (! in_array($e->getCode(), ['23505', '23000'], true)) {
+                Log::error('Registro general: no se pudo guardar la solicitud', ['codigo' => $e->getCode(), 'error' => mb_substr($e->getMessage(), 0, 300)]);
+            }
+            $this->avisarDuplicado($request, $email, 'guardado simultáneo o error de base');
+
             return response()->json($respuesta, 201);
         }
 
@@ -113,5 +121,22 @@ class RegistroGeneralController extends Controller
         }
 
         return response()->json($respuesta, 201);
+    }
+
+    /** Registro que no se creó: log de seguridad (correo enmascarado) y aviso al correo escrito, uno cada 30 min por correo. */
+    private function avisarDuplicado(Request $request, string $email, string $motivo): void
+    {
+        [$local, $dominio] = array_pad(explode('@', $email, 2), 2, '');
+        Log::channel('security')->warning('Registro general no creado: '.$motivo, [
+            'email' => mb_substr($local, 0, 1).'***@'.$dominio, 'ip' => $request->ip(),
+        ]);
+        if (! \Illuminate\Support\Facades\Cache::add('registro-duplicado:'.hash('sha256', $email), 1, now()->addMinutes(30))) {
+            return;
+        }
+        try {
+            \Illuminate\Support\Facades\Notification::route('mail', $email)->notify(new \App\Notifications\RegistroDuplicadoAviso());
+        } catch (\Throwable $e) {
+            Log::warning('Registro general: no se pudo encolar el aviso de duplicado', ['error' => $e->getMessage()]);
+        }
     }
 }
