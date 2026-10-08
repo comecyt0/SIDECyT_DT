@@ -7,6 +7,7 @@ import PageHeader from '@/components/ui/page-header';
 import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import IconoPrograma, { ETIQUETA_ICONO } from '@/components/portal/IconoPrograma';
 import { ICONOS, TONOS, enlaceSeguro, type Icono, type Sistema, type Tono } from '@/lib/sitio';
 
@@ -134,7 +135,7 @@ function Programas({ sistema, avisar }: { sistema: Sistema; avisar: Avisar }) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <form onSubmit={guardar} className="perfil-tarjeta space-y-4" noValidate>
           <h2 className="perfil-tarjeta-titulo">{editando ? <Pencil aria-hidden="true" /> : <Plus aria-hidden="true" />}{editando ? 'Editar programa' : `Nuevo programa ${sistema.toUpperCase()}`}</h2>
-          <label className="perfil-campo"><span>Nombre del programa *</span>
+          <label className="perfil-campo"><span>Nombre del programa <Asterisco /></span>
             <input className="auth-input auth-input-static pl-4" maxLength={255} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
           </label>
           <label className="perfil-campo"><span>¿A quién va dirigido?</span>

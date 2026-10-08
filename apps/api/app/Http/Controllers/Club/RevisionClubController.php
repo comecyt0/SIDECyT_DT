@@ -55,6 +55,8 @@ class RevisionClubController extends Controller
         }
         $clubes = $q->orderByRaw("CASE estado WHEN 'subsanado' THEN 0 WHEN 'enviado' THEN 1 WHEN 'observado' THEN 2 ELSE 3 END")
             ->orderBy('enviado_at')->limit(500)->get();
+        // E70: con personas asignadas por etapa, «Por revisar» muestra solo lo que esta persona puede resolver.
+        if ($vista === 'pendientes') $clubes = $clubes->filter(fn (Club $c) => RevisionClub::puedeResolver($u, $c))->values();
 
         return response()->json($clubes->map(fn (Club $c) => [
             'id' => $c->id, 'folio' => $c->folio, 'nombre' => $c->nombre, 'estado' => $c->estadoVisible(), 'logo_url' => $c->logo_url,
@@ -117,7 +119,8 @@ class RevisionClubController extends Controller
     public function subirActa(Request $request, Convocatoria $convocatoria)
     {
         abort_unless(Especie::esEspecie($convocatoria->loadMissing('tipoPrograma')), 404);
-        abort_unless(RevisionClub::puedeAceptar($request->user(), $convocatoria->id), 404);
+        // E70: también la persona asignada a una etapa de la convocatoria (pedido del usuario).
+        abort_unless(RevisionClub::puedeSubirActa($request->user(), $convocatoria->id), 404);
         $request->validate(['archivo' => 'required|file|max:'.(10 * 1024)]);
         $ext = TiposArchivo::validar($request->file('archivo'), ['pdf'], 10, 'archivo');
         $cfg = $convocatoria->especieConfig ?? abort(404);
@@ -186,6 +189,17 @@ class RevisionClubController extends Controller
                 'horas' => $r->horas, 'vence_at' => $r->vence_at, 'fecha' => $r->created_at, 'rol' => $r->rol, 'quien' => $r->usuario?->name,
             ])->values(),
             'logistica' => \App\Support\LogisticaClub::aplica($club) ? \App\Support\LogisticaClub::estado($club) : null,
+            // E70: quién revisa la etapa actual y cuántas aprobaciones van (solo personal; lista blanca de nombres).
+            'aprobaciones' => $club->etapaActual ? (function () use ($club, $u) {
+                $dadas = RevisionClub::aprobacionesActuales($club);
+                $asignados = $club->etapaActual->revisores()->get(['users.id', 'users.name']);
+
+                return [
+                    'requeridas' => max(1, (int) $club->etapaActual->aprobaciones_requeridas), 'dadas' => $dadas->count(),
+                    'ya_aprobe' => $dadas->contains((int) $u->id),
+                    'asignados' => $asignados->map(fn ($x) => ['nombre' => $x->name, 'aprobo' => $dadas->contains((int) $x->id)])->values(),
+                ];
+            })() : null,
             'permisos' => [
                 'logistica' => $puedeAceptar && \App\Support\LogisticaClub::aplica($club),
                 'resolver' => RevisionClub::puedeResolver($u, $club) && ! $club->vencido(),
@@ -194,7 +208,7 @@ class RevisionClubController extends Controller
                 'prorroga' => RevisionClub::puedeResolver($u, $club) && $club->vencido(),
                 'visto_bueno' => $puedeAceptar && $club->estado === 'aprobado_revision' && ! $club->visto_bueno_at,
                 'comite' => $puedeAceptar && $club->estado === 'aprobado_revision' && (bool) $club->visto_bueno_at && (bool) $cfg->acta_comite,
-                'acta' => $puedeAceptar,
+                'acta' => RevisionClub::puedeSubirActa($u, (int) $club->convocatoria_id),
             ],
         ];
     }

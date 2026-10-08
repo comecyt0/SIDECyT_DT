@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Camera, CameraOff, Search, Loader2, CheckCircle2, ScanLine, Users, Sandwich, Package, RotateCcw, ExternalLink, AlertTriangle, CalendarDays, LogIn, LogOut, Bus, BusFront } from 'lucide-react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { mensajeError } from '@/lib/errores-formulario';
 import { fechaHora } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
@@ -314,7 +315,7 @@ export default function EscanerEventos() {
                   <p className="text-sm text-[var(--app-ink)]">Kit ya entregado el {fechaHora(ficha.kit.entregado_at)}{ficha.kit.lugar ? ` en ${ficha.kit.lugar}` : ''}{ficha.kit.recibio ? ` · recibió ${ficha.kit.recibio}` : ''}.</p>
                 ) : (
                   <label className="block space-y-1.5">
-                    <span className={labelCls}>Quién recibe el kit{ficha.kit.nombre ? ` «${ficha.kit.nombre}»` : ''} *</span>
+                    <span className={labelCls}>Quién recibe el kit{ficha.kit.nombre ? ` «${ficha.kit.nombre}»` : ''} <Asterisco /></span>
                     <input className={inputCls} maxLength={150} value={recibio} onChange={(e) => setRecibio(e.target.value)} placeholder="Nombre de quien lo recibe" autoComplete="off" />
                   </label>
                 )

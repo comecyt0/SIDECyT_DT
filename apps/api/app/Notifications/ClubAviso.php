@@ -24,7 +24,7 @@ class ClubAviso extends Notification implements ShouldQueue
     public bool $deleteWhenMissingModels = true;
 
     /** Eventos que además van por correo al líder. */
-    public const CON_CORREO = ['observado', 'prorroga', 'aceptado', 'qr_habilitado', 'kit_asignado', 'acceso_otorgado', 'colider_activado'];
+    public const CON_CORREO = ['observado', 'prorroga', 'aceptado', 'qr_habilitado', 'kit_asignado', 'acceso_otorgado', 'colider_activado', 'lugar_cedido'];
 
     public function __construct(public readonly Club $club, public readonly string $evento, public readonly array $extra = []) {}
 
@@ -59,8 +59,10 @@ class ClubAviso extends Notification implements ShouldQueue
             // E61 — acompañantes del club (líder B y director). Nunca llevan contraseñas.
             'acceso_otorgado' => ['Te dieron acceso a un club', ($x['quien'] ?? 'El líder')." te registró como ".($x['rol'] ?? 'acompañante')." del club «{$c->nombre}» ({$c->folio}). Entra a SIDECyT con tu correo: si ya tenías cuenta, con tu contraseña de siempre; si es nueva, con la que te dio el líder (te pediremos cambiarla)."],
             'acceso_retirado' => ['Ya no tienes acceso a un club', "El líder retiró tu acceso como ".($x['rol'] ?? 'acompañante')." del club «{$c->nombre}»."],
-            'colider_activado' => ['Ahora compartes el rol de líder', "El líder de «{$c->nombre}» te dio el rol de líder del club mientras no pueda asistir: ya puedes editar, enviar y atender la logística."],
-            'colider_retirado' => ['Ya no compartes el rol de líder', "El líder de «{$c->nombre}» retomó el rol de líder. Sigues como acompañante del club."],
+            'colider_activado' => ['Te compartieron el permiso del club', ($x['quien'] ?? 'El líder')." te compartió el permiso de operar «{$c->nombre}»: ya puedes editar, enviar y atender la logística."],
+            'colider_retirado' => ['Ya no compartes el permiso del club', ($x['quien'] ?? 'El líder')." retiró el permiso compartido de «{$c->nombre}». Sigues como acompañante del club."],
+            // 08/10/2026: ceder = intercambiar lugar, rol y permisos.
+            'lugar_cedido' => ['Te cedieron su lugar en el club', ($x['quien'] ?? 'Un responsable')." te cedió su lugar en «{$c->nombre}» ({$c->folio}): intercambiaron rol y permisos. Revisa en tu panel lo que ahora puedes hacer."],
             default => ['Aviso de tu club', "Hay novedades en «{$c->nombre}»."],
         };
     }
@@ -87,14 +89,14 @@ class ClubAviso extends Notification implements ShouldQueue
         $x = $this->extra;
         $ev = $this->evento;
         $tono = match ($ev) {
-            'aceptado', 'qr_habilitado', 'kit_entregado', 'firmado_aprobado', 'colider_activado', 'acceso_otorgado' => 'verde',
+            'aceptado', 'qr_habilitado', 'kit_entregado', 'firmado_aprobado', 'colider_activado', 'acceso_otorgado', 'lugar_cedido' => 'verde',
             'observado', 'prorroga', 'kit_asignado' => 'oro',
             'rechazado', 'firmado_rechazado', 'qr_revocado' => 'rojo',
             default => 'vino',
         };
         $chip = ['observado' => 'Con observaciones', 'prorroga' => 'Plazo ampliado', 'aceptado' => 'Aceptado', 'rechazado' => 'No aceptado',
             'qr_habilitado' => 'QR disponible', 'kit_asignado' => 'Entrega programada', 'acceso_otorgado' => 'Acceso concedido',
-            'colider_activado' => 'Rol de líder compartido'][$ev] ?? null;
+            'colider_activado' => 'Permiso compartido', 'lugar_cedido' => 'Lugar cedido'][$ev] ?? null;
 
         $m = CorreoSigae::nuevo($asunto)->etiqueta('SIGAE · Apoyo en especie')->titulo($asunto, $c->nombre)
             ->preencabezado($mensaje)->saludo($notifiable->name ?? '')->linea($mensaje)

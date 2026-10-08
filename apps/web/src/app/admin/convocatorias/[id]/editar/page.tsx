@@ -14,6 +14,7 @@ import StepFrame from '@/components/ui/step-frame';
 import AvisoErrores from '@/components/ui/aviso-errores';
 import { erroresFormulario, type ErroresFormulario } from '@/lib/errores-formulario';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { PATRON_CORTO, normalizarCorto, sugerirCorto } from '@/lib/asistente-convocatoria';
 
 const labelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
@@ -148,11 +149,11 @@ export default function EditarConvocatoriaPage() {
             content: (
               <>
                 <div className="space-y-1.5">
-                  <Label htmlFor="nombre" className={labelCls}>Nombre *</Label>
+                  <Label htmlFor="nombre" className={labelCls}>Nombre <Asterisco /></Label>
                   <input id="nombre" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} className={inputCls} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="nombre_corto" className={labelCls}>Nombre corto {cortoFijo ? '' : '*'}</Label>
+                  <Label htmlFor="nombre_corto" className={labelCls}>Nombre corto {!cortoFijo && <Asterisco />}</Label>
                   <div className="flex gap-2">
                     <input id="nombre_corto" maxLength={12} autoCapitalize="characters" spellCheck={false} disabled={cortoFijo} placeholder="LEGO26"
                       value={formData.nombre_corto} aria-describedby="nombre_corto_ayuda"
@@ -171,7 +172,7 @@ export default function EditarConvocatoriaPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="ejercicio_fiscal" className={labelCls}>Ejercicio fiscal *</Label>
+                    <Label htmlFor="ejercicio_fiscal" className={labelCls}>Ejercicio fiscal <Asterisco /></Label>
                     <input id="ejercicio_fiscal" inputMode="numeric" maxLength={4} value={formData.ejercicio_fiscal} onChange={(e) => setFormData({ ...formData, ejercicio_fiscal: e.target.value })} className={inputCls} />
                   </div>
                   <div className="space-y-1.5">
@@ -201,11 +202,11 @@ export default function EditarConvocatoriaPage() {
             content: (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="fecha_apertura" className={labelCls}>Abre el *</Label>
+                  <Label htmlFor="fecha_apertura" className={labelCls}>Abre el <Asterisco /></Label>
                   <input id="fecha_apertura" type="date" value={formData.fecha_apertura} onChange={(e) => setFormData({ ...formData, fecha_apertura: e.target.value })} className={inputCls} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="fecha_cierre" className={labelCls}>Cierra el *</Label>
+                  <Label htmlFor="fecha_cierre" className={labelCls}>Cierra el <Asterisco /></Label>
                   <input id="fecha_cierre" type="date" value={formData.fecha_cierre} onChange={(e) => setFormData({ ...formData, fecha_cierre: e.target.value })} className={inputCls} />
                   <p className="text-xs text-[var(--app-ink-2)]">Al llegar esta fecha se cierra sola y ya no recibe solicitudes.</p>
                 </div>

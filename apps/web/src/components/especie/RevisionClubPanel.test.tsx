@@ -33,7 +33,7 @@ describe('RevisionClubPanel (E52 · F2)', () => {
     fireEvent.click(within(dlg).getByRole('button', { name: 'Enviar observaciones' }));
     expect(within(dlg).getByRole('alert')).toHaveTextContent('Escribe el comentario para el líder.');
     expect(post).not.toHaveBeenCalled();
-    fireEvent.change(within(dlg).getByLabelText('Qué debe corregir *'), { target: { value: 'Falta el sello' } });
+    fireEvent.change(within(dlg).getByLabelText(/^Qué debe corregir/), { target: { value: 'Falta el sello' } });
     fireEvent.click(within(dlg).getByRole('button', { name: 'Enviar observaciones' }));
     await waitFor(() => expect(within(dlg).getByRole('alert')).toHaveTextContent('Club: Este club ya no está esperando tu revisión.'));
     expect(post).toHaveBeenCalledWith('/revision/clubes/5/resolver', { resultado: 'observar', comentario: 'Falta el sello' });

@@ -5,6 +5,7 @@ import Cookies from 'js-cookie';
 import { ArrowRightLeft, Check, Clock, Loader2, Plus, ShieldCheck, X } from 'lucide-react';
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { PANEL_POR_ROL, ROL_ETIQUETA, type RolSlug } from '@/lib/roles';
 import { GRADO_ETIQUETA, PATRON_CORREO, PATRON_RFC, ROL_REGISTRO, erroresServidor } from '@/lib/registro';
 
@@ -222,30 +223,30 @@ function PedirRol({ rol, tieneEmpresa, onCancelar, onListo }: { rol: string; tie
       {error && <AlertBox type="error" message={error} onClose={() => setError('')} />}
       {pideEmpresa && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="grid gap-1 text-xs font-semibold sm:col-span-2">Empresa o institución *<input className={campo} value={emp.nombre} maxLength={255} onChange={(e) => setEmp({ ...emp, nombre: e.target.value })} /></label>
+          <label className="grid gap-1 text-xs font-semibold sm:col-span-2"><span>Empresa o institución <Asterisco /></span><input className={campo} value={emp.nombre} maxLength={255} onChange={(e) => setEmp({ ...emp, nombre: e.target.value })} /></label>
           <label className="grid gap-1 text-xs font-semibold">RFC<input className={campo} value={emp.rfc} maxLength={13} onChange={(e) => setEmp({ ...emp, rfc: e.target.value.toUpperCase() })} /></label>
-          <label className="grid gap-1 text-xs font-semibold">Responsable del proyecto *<input className={campo} value={emp.responsable} maxLength={255} onChange={(e) => setEmp({ ...emp, responsable: e.target.value })} /></label>
-          <label className="grid gap-1 text-xs font-semibold sm:col-span-2">Correo del responsable *<input type="email" className={campo} value={emp.correo} maxLength={255} onChange={(e) => setEmp({ ...emp, correo: e.target.value })} /></label>
+          <label className="grid gap-1 text-xs font-semibold"><span>Responsable del proyecto <Asterisco /></span><input className={campo} value={emp.responsable} maxLength={255} onChange={(e) => setEmp({ ...emp, responsable: e.target.value })} /></label>
+          <label className="grid gap-1 text-xs font-semibold sm:col-span-2"><span>Correo del responsable <Asterisco /></span><input type="email" className={campo} value={emp.correo} maxLength={255} onChange={(e) => setEmp({ ...emp, correo: e.target.value })} /></label>
         </div>
       )}
       {rol === 'solicitante' && tieneEmpresa && <p className="text-sm text-[var(--app-ink-2)]">Tu cuenta ya tiene una empresa registrada; no hace falta capturarla otra vez.</p>}
       {rol === 'lider_club' && <p className="text-sm text-[var(--app-ink-2)]">Cuando se apruebe, registrarás tu club desde el panel «Mi club».</p>}
       {rol === 'evaluador' && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="grid gap-1 text-xs font-semibold sm:col-span-2">Área de conocimiento *
+          <label className="grid gap-1 text-xs font-semibold sm:col-span-2"><span>Área de conocimiento <Asterisco /></span>
             <select className={campo} value={ev.area} onChange={(e) => setEv({ ...ev, area: e.target.value })}>
               <option value="">Elige…</option>
               {areas.map((a) => <option key={a.id} value={String(a.id)}>{a.nombre}</option>)}
             </select>
           </label>
-          <label className="grid gap-1 text-xs font-semibold">Institución *<input className={campo} value={ev.institucion} maxLength={255} onChange={(e) => setEv({ ...ev, institucion: e.target.value })} /></label>
-          <label className="grid gap-1 text-xs font-semibold">Grado académico *
+          <label className="grid gap-1 text-xs font-semibold"><span>Institución <Asterisco /></span><input className={campo} value={ev.institucion} maxLength={255} onChange={(e) => setEv({ ...ev, institucion: e.target.value })} /></label>
+          <label className="grid gap-1 text-xs font-semibold"><span>Grado académico <Asterisco /></span>
             <select className={campo} value={ev.grado} onChange={(e) => setEv({ ...ev, grado: e.target.value })}>
               <option value="">Elige…</option>
               {Object.entries(GRADO_ETIQUETA).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </label>
-          <label className="grid gap-1 text-xs font-semibold sm:col-span-2">CV en PDF (máx. 5 MB) *<input type="file" accept="application/pdf,.pdf" className="registro-archivo" onChange={(e) => setCv(e.target.files?.[0] ?? null)} /></label>
+          <label className="grid gap-1 text-xs font-semibold sm:col-span-2"><span>CV en PDF (máx. 5 MB) <Asterisco /></span><input type="file" accept="application/pdf,.pdf" className="registro-archivo" onChange={(e) => setCv(e.target.files?.[0] ?? null)} /></label>
         </div>
       )}
       <div className="flex flex-wrap gap-2">

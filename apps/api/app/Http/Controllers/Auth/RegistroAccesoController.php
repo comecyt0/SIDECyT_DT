@@ -235,6 +235,8 @@ class RegistroAccesoController extends Controller
                     'municipio' => $solicitudAcceso->municipio,
                     'colonia' => $solicitudAcceso->colonia,
                     'datos_registro' => $rol === 'evaluador' ? $solicitudAcceso->datos_rol : null,
+                    // 08/10/2026: se registró como director(a) de la escuela (Club De Robótica).
+                    'es_director' => $rol === 'lider_club' && (($solicitudAcceso->datos_rol['es_director'] ?? false) === true),
                 ])->save();
             } else {
                 Log::warning('RegistroAccesoController::aprobar — cuenta ya existía, se cierra la solicitud sin duplicarla', [

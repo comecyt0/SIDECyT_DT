@@ -3,6 +3,7 @@
 import { useRef, useState, type DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import StepFrame from '@/components/ui/step-frame';
@@ -469,7 +470,7 @@ export default function CarruselClient({ slides }: Props) {
             content: (
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2 space-y-1.5">
-                  <label htmlFor="slide-titulo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Título *</label>
+                  <label htmlFor="slide-titulo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Título <Asterisco /></label>
                   <input id="slide-titulo" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} placeholder="Ej: Gestión de Proyectos Tecnológicos" className={fieldCls} />
                 </div>
                 <div className="space-y-1.5">

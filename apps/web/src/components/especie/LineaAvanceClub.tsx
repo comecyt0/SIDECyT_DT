@@ -19,7 +19,23 @@ function indiceDe(estado: string): number {
   }
 }
 
-export default function LineaAvanceClub({ estado, avance }: { estado: string; avance?: Partial<AvanceClub> | null }) {
+/**
+ * E70 (08/10/2026, pedido del usuario): para el personal, quién hizo el último movimiento de cada paso, sacado del
+ * historial del personal (el del líder no trae nombres). Índices de PASOS.
+ */
+export function quienesDeHistorial(historial: { resultado: string; quien?: string | null }[] | null | undefined): Partial<Record<number, string>> {
+  const r: Partial<Record<number, string>> = {};
+  for (const h of historial ?? []) {
+    if (!h.quien) continue;
+    if (h.resultado === 'enviado' || h.resultado === 'subsanado') r[0] = h.quien;
+    else if (['aprobado', 'aprobacion', 'observado', 'rechazado', 'prorroga'].includes(h.resultado)) r[1] = h.quien;
+    else if (h.resultado === 'visto_bueno' || h.resultado === 'comite_no_aceptado') r[2] = h.quien;
+    else if (h.resultado === 'comite_aceptado') r[3] = h.quien;
+  }
+  return r;
+}
+
+export default function LineaAvanceClub({ estado, avance, quienes }: { estado: string; avance?: Partial<AvanceClub> | null; quienes?: Partial<Record<number, string>> }) {
   const rechazado = estado === 'rechazado';
   const fallo = rechazado ? (avance?.rechazo_origen === 'comite' ? 2 : 1) : -1;
   const actual = rechazado ? fallo : indiceDe(estado);
@@ -57,6 +73,11 @@ export default function LineaAvanceClub({ estado, avance }: { estado: string; av
               <span className="sr-only">{falla ? ' (no aceptado)' : hecho ? ' (completado)' : enCurso ? ' (en curso)' : ''}</span>
             </span>
             {d && <span className="hidden text-[10px] leading-tight text-[var(--app-ink-2)] sm:block">{d}</span>}
+            {quienes?.[i] && (hecho || enCurso || falla) && (
+              <span className="block max-w-full truncate text-[10px] leading-tight text-[var(--app-ink-2)]" title={`Último movimiento: ${quienes[i]}`}>
+                <span className="sr-only">Último movimiento: </span>{quienes[i]}
+              </span>
+            )}
           </li>
         );
       })}

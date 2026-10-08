@@ -3,6 +3,7 @@
 import { useId, useMemo, useState } from 'react';
 import { Search, Plus, ListChecks, EyeOff, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { SISTEMA_ETIQUETA, normalizarNombre, programaRepetido, type ProgramaCatalogo, type SistemaPrograma } from '@/lib/asistente-convocatoria';
 
 export interface ValorPrograma { id: number | null; nuevo: boolean; nombre: string; sistema: SistemaPrograma }
@@ -54,7 +55,7 @@ export default function SelectorPrograma({ catalogo, errorCarga, onReintentar, v
 
       {soloExistentes || !valor.nuevo ? (
         <div className="space-y-2">
-          <label htmlFor={`${idBase}-q`} className={labelCls}>Programa *</label>
+          <label htmlFor={`${idBase}-q`} className={labelCls}>Programa <Asterisco /></label>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--app-ink-2)]" aria-hidden="true" />
             <input id={`${idBase}-q`} type="search" className={`${inputCls} !pl-9`} placeholder="Buscar programa por nombre" value={q} maxLength={120}
@@ -103,14 +104,14 @@ export default function SelectorPrograma({ catalogo, errorCarga, onReintentar, v
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
           <div className="space-y-1.5">
-            <label htmlFor={`${idBase}-sis`} className={labelCls}>Sistema *</label>
+            <label htmlFor={`${idBase}-sis`} className={labelCls}>Sistema <Asterisco /></label>
             <select id={`${idBase}-sis`} className={inputCls} value={valor.sistema} onChange={(e) => onChange({ ...valor, sistema: e.target.value === 'sicei' ? 'sicei' : 'sigae' })}>
               <option value="sigae">SIGAE · Apoyo Empresarial</option>
               <option value="sicei">SICEI · Ciencia y Educación</option>
             </select>
           </div>
           <div className="space-y-1.5">
-            <label htmlFor={`${idBase}-nom`} className={labelCls}>Nombre del programa *</label>
+            <label htmlFor={`${idBase}-nom`} className={labelCls}>Nombre del programa <Asterisco /></label>
             <input id={`${idBase}-nom`} className={inputCls} maxLength={maxNombre} placeholder="Ej. Programa LEGO" value={valor.nombre}
               onChange={(e) => onChange({ ...valor, nombre: e.target.value })} aria-invalid={error ? 'true' : undefined} aria-describedby={error ? `${idBase}-err` : undefined} />
           </div>

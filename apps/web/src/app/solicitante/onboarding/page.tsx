@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Label } from '@/components/ui/label';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { Building, Phone, Briefcase, CheckCircle2 } from 'lucide-react';
 import api from '@/lib/api';
 import { INSTITUTION } from '@/lib/institution';
@@ -106,7 +107,7 @@ export default function SolicitanteOnboardingPage() {
             content: (
               <div className="space-y-1.5">
                 <Label htmlFor="ob-inst" className={`${labelCls} flex items-center gap-1`}>
-                  <Building className="w-3.5 h-3.5" aria-hidden="true" /> Institución *
+                  <Building className="w-3.5 h-3.5" aria-hidden="true" /> Institución <Asterisco />
                 </Label>
                 {loadingCat ? (
                   <div className="skeleton h-12 rounded-[var(--auth-radius-field)]" />

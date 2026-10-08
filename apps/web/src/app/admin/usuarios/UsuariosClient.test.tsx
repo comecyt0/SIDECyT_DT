@@ -28,9 +28,9 @@ async function llenarHastaAlcance() {
   render(<UsuariosClient users={[]} pagination={pagination} />);
   fireEvent.click(screen.getByRole('button', { name: /Nuevo usuario/ }));
   const dlg = screen.getByRole('dialog');
-  fireEvent.change(within(dlg).getByLabelText('Nombre completo *'), { target: { value: 'Ana Pérez' } });
-  fireEvent.change(within(dlg).getByLabelText('Correo electrónico *'), { target: { value: 'ana@comecyt.mx' } });
-  fireEvent.change(within(dlg).getByLabelText('Contraseña inicial *'), { target: { value: 'corta' } });
+  fireEvent.change(within(dlg).getByLabelText(/^Nombre completo \*/), { target: { value: 'Ana Pérez' } });
+  fireEvent.change(within(dlg).getByLabelText(/^Correo electrónico \*/), { target: { value: 'ana@comecyt.mx' } });
+  fireEvent.change(within(dlg).getByLabelText(/^Contraseña inicial \*/), { target: { value: 'corta' } });
   fireEvent.click(within(dlg).getByRole('button', { name: /Siguiente/ }));
   return dlg;
 }
@@ -51,24 +51,24 @@ describe('Crear usuario (reporte 29/09/2026: 422 sin decir qué corregir)', () =
       ? Promise.reject({ response: { status: 422, data: { message: 'x', errors: { email: ['Ya existe una cuenta con este correo.'] } } } })
       : Promise.resolve({ data: null })));
     const dlg = await llenarHastaAlcance();
-    fireEvent.change(within(dlg).getByLabelText('Contraseña inicial *'), { target: { value: 'Comecyt2026Seguro' } });
+    fireEvent.change(within(dlg).getByLabelText(/^Contraseña inicial \*/), { target: { value: 'Comecyt2026Seguro' } });
     fireEvent.click(within(dlg).getByRole('button', { name: /Siguiente/ }));
     await waitFor(() => expect(within(dlg).getByRole('option', { name: 'Revisor Documental' })).toBeInTheDocument());
-    fireEvent.change(within(dlg).getByLabelText('Papel en el sistema *'), { target: { value: '2' } });
+    fireEvent.change(within(dlg).getByLabelText(/^Papel en el sistema \*/), { target: { value: '2' } });
     fireEvent.click(within(dlg).getByRole('button', { name: /Siguiente/ }));
     // Paso 3 (Alcance), como en el reporte.
     expect(within(dlg).getByText('¿Qué periodos puede ver?')).toBeInTheDocument();
     fireEvent.click(within(dlg).getByRole('button', { name: 'Crear usuario' }));
     await waitFor(() => expect(within(dlg).getByRole('alert')).toHaveTextContent('Correo electrónico: Ya existe una cuenta con este correo.'));
     // Regresó al paso 1 y el campo está marcado.
-    expect(within(dlg).getByLabelText('Correo electrónico *')).toHaveAttribute('aria-invalid', 'true');
+    expect(within(dlg).getByLabelText(/^Correo electrónico \*/)).toHaveAttribute('aria-invalid', 'true');
     expect(within(dlg).getByRole('alert')).toHaveTextContent('No se guardó');
 
     // Corregir y seguir: el marco deja avanzar (antes regresaba al paso 1 en cada render) y el aviso viejo se oculta.
     post.mockImplementation(() => Promise.resolve({ data: { message: 'ok' } }));
-    fireEvent.change(within(dlg).getByLabelText('Correo electrónico *'), { target: { value: 'ana.nueva@comecyt.mx' } });
+    fireEvent.change(within(dlg).getByLabelText(/^Correo electrónico \*/), { target: { value: 'ana.nueva@comecyt.mx' } });
     fireEvent.click(within(dlg).getByRole('button', { name: /Siguiente/ }));
-    expect(within(dlg).getByLabelText('Papel en el sistema *')).toBeInTheDocument();
+    expect(within(dlg).getByLabelText(/^Papel en el sistema \*/)).toBeInTheDocument();
     expect(within(dlg).queryByRole('alert')).toBeNull();
     fireEvent.click(within(dlg).getByRole('button', { name: /Siguiente/ }));
     fireEvent.click(within(dlg).getByRole('button', { name: 'Crear usuario' }));
@@ -78,10 +78,10 @@ describe('Crear usuario (reporte 29/09/2026: 422 sin decir qué corregir)', () =
   it('al crear, cierra la ventana y confirma con un aviso visible', async () => {
     post.mockResolvedValue({ data: { message: 'ok' } });
     const dlg = await llenarHastaAlcance();
-    fireEvent.change(within(dlg).getByLabelText('Contraseña inicial *'), { target: { value: 'Comecyt2026Seguro' } });
+    fireEvent.change(within(dlg).getByLabelText(/^Contraseña inicial \*/), { target: { value: 'Comecyt2026Seguro' } });
     fireEvent.click(within(dlg).getByRole('button', { name: /Siguiente/ }));
     await waitFor(() => expect(within(dlg).getByRole('option', { name: 'Solicitante' })).toBeInTheDocument());
-    fireEvent.change(within(dlg).getByLabelText('Papel en el sistema *'), { target: { value: '4' } });
+    fireEvent.change(within(dlg).getByLabelText(/^Papel en el sistema \*/), { target: { value: '4' } });
     fireEvent.click(within(dlg).getByRole('button', { name: 'Crear usuario' }));
     await waitFor(() => expect(screen.getByText(/Usuario Ana Pérez creado/)).toBeInTheDocument());
     expect(screen.queryByRole('dialog')).toBeNull();

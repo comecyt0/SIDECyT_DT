@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -291,7 +292,7 @@ export default function ProgramasClient({ programas }: Props) {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="clave" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Clave corta *</Label>
+                    <Label htmlFor="clave" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Clave corta <Asterisco /></Label>
                     <input
                       id="clave"
                       value={form.clave}
@@ -304,7 +305,7 @@ export default function ProgramasClient({ programas }: Props) {
                     <p className="text-xs text-[var(--app-ink-2)]">{editId ? 'La clave no se cambia una vez creado.' : 'Sirve para identificarlo en folios y reportes.'}</p>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="nombre" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Nombre *</Label>
+                    <Label htmlFor="nombre" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Nombre <Asterisco /></Label>
                     <input id="nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Ej. Vinculación Académica" className="auth-input auth-input-static pl-4" />
                   </div>
                 </div>
@@ -324,7 +325,7 @@ export default function ProgramasClient({ programas }: Props) {
             content: (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="tipo_apoyo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Forma del apoyo *</Label>
+                  <Label htmlFor="tipo_apoyo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Forma del apoyo <Asterisco /></Label>
                   <Select value={form.tipo_apoyo} onValueChange={(v: 'reembolso' | 'concurrente' | 'honorarios' | 'especie' | null) => v && setForm({ ...form, tipo_apoyo: v })}>
                     <SelectTrigger id="tipo_apoyo" className="w-full">
                       <SelectValue />
@@ -343,7 +344,7 @@ export default function ProgramasClient({ programas }: Props) {
                   </p>
                 ) : (
                 <div className="space-y-1.5">
-                  <Label htmlFor="monto_maximo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Monto máximo por proyecto (MXN) *</Label>
+                  <Label htmlFor="monto_maximo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Monto máximo por proyecto (MXN) <Asterisco /></Label>
                   <input
                     id="monto_maximo"
                     type="number"

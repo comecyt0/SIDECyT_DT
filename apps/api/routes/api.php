@@ -212,6 +212,8 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::post('escuelas', [\App\Http\Controllers\Admin\EscuelaController::class, 'store']);
             Route::put('escuelas/{escuela}', [\App\Http\Controllers\Admin\EscuelaController::class, 'update']);
             Route::put('convocatorias/{convocatoria}/especie', [\App\Http\Controllers\Admin\EspecieConfigController::class, 'update']);
+            // E70: personas que se pueden asignar a una fase de revisión (id, nombre, rol).
+            Route::get('especie/revisores-candidatos', fn () => response()->json(\App\Support\EtapasEspecie::candidatos()));
 
             // PROGRAMAS DINÁMICOS CRUD
             Route::get('programas', [TipoProgramaController::class, 'index']);
@@ -339,8 +341,11 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             $ac = \App\Http\Controllers\Club\ClubAccesoController::class;
             Route::get('clubes/{club}/accesos', [$ac, 'index']);
             Route::post('clubes/{club}/accesos', [$ac, 'store'])->middleware('throttle:10,10,club-accesos');
-            Route::delete('clubes/{club}/accesos/{tipo}', [$ac, 'destroy'])->where('tipo', 'lider_b|director')->middleware('throttle:20,10,club-accesos-baja');
+            Route::delete('clubes/{club}/accesos/{tipo}', [$ac, 'destroy'])->where('tipo', 'lider_a|lider_b|director')->middleware('throttle:20,10,club-accesos-baja');
             Route::put('clubes/{club}/accesos/director/colider', [$ac, 'colider'])->middleware('throttle:20,10,club-colider');
+            // 08/10/2026: compartir el permiso de operar y ceder el lugar (cadena director → líder A → líder B).
+            Route::put('clubes/{club}/accesos/{tipo}/compartir', [$ac, 'compartir'])->where('tipo', 'lider_a|lider_b|director')->middleware('throttle:20,10,club-colider');
+            Route::post('clubes/{club}/ceder', [$ac, 'ceder'])->middleware('throttle:10,10,club-ceder');
             Route::get('convocatorias', [$c, 'convocatorias']);
             Route::get('escuelas', [$c, 'escuelas'])->middleware('throttle:60,1,escuelas-buscar');
             // E55 — solicitar el registro de una escuela que no está en el catálogo

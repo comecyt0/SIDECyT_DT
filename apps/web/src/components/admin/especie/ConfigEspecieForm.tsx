@@ -11,9 +11,11 @@ import { useState } from 'react';
 import { Plus, Edit2, Trash2, Lock, Users, Package, ListChecks, MessageSquarePlus, ClipboardCheck, ArrowUp, ArrowDown, Globe2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertBox } from '@/components/ui/alert-box';
 import StepFrame from '@/components/ui/step-frame';
+import RevisoresEtapa from '@/components/admin/especie/RevisoresEtapa';
 import {
   CAMPOS_CLUB, CAMPOS_INTEGRANTE, LIMITES_ESPECIE, MAX_ETAPAS, MODALIDADES, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, slugCampo,
   type Ambito, type Modalidad, type CampoEspecie, type ConfigEspecie, type EtapaEspecie, type Predef, type Revisa, type TipoCampoEspecie,
@@ -128,13 +130,13 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
       <Seccion icon={<Users />} titulo="Integrantes de cada club" ayuda="El líder del club cuenta como integrante: entra en el mínimo y en el máximo.">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="space-y-1.5">
-            <Label htmlFor={`${idBase}-min`} className={labelCls}>Mínimo *</Label>
+            <Label htmlFor={`${idBase}-min`} className={labelCls}>Mínimo <Asterisco /></Label>
             <input id={`${idBase}-min`} type="number" inputMode="numeric" min={1} max={LIMITES_ESPECIE.integrantes} value={Number.isNaN(c.min_integrantes) ? '' : c.min_integrantes}
               onChange={(e) => set({ min_integrantes: numero(e.target.value) })} className={inputCls} aria-invalid={errores.min_integrantes ? 'true' : undefined} />
             {errores.min_integrantes && <p className="text-xs font-medium" style={errStyle}>{errores.min_integrantes}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor={`${idBase}-max`} className={labelCls}>Máximo *</Label>
+            <Label htmlFor={`${idBase}-max`} className={labelCls}>Máximo <Asterisco /></Label>
             <input id={`${idBase}-max`} type="number" inputMode="numeric" min={1} max={LIMITES_ESPECIE.integrantes} value={Number.isNaN(c.max_integrantes) ? '' : c.max_integrantes}
               onChange={(e) => set({ max_integrantes: numero(e.target.value) })} className={inputCls} aria-invalid={errores.max_integrantes ? 'true' : undefined} />
             {errores.max_integrantes && <p className="text-xs font-medium" style={errStyle}>{errores.max_integrantes}</p>}
@@ -160,7 +162,7 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
 
       <Seccion icon={<Package />} titulo="Kit que se entrega" ayuda="Lo ven los líderes al registrar su club. La fecha y el lugar de entrega se asignan después, por club.">
         <div className="space-y-1.5">
-          <Label htmlFor={`${idBase}-kit`} className={labelCls}>Nombre del kit *</Label>
+          <Label htmlFor={`${idBase}-kit`} className={labelCls}>Nombre del kit <Asterisco /></Label>
           <input id={`${idBase}-kit`} maxLength={LIMITES_ESPECIE.kitNombre} value={c.kit_nombre} onChange={(e) => set({ kit_nombre: e.target.value })}
             placeholder="Ej. Kit de robótica educativa" className={inputCls} aria-invalid={errores.kit_nombre ? 'true' : undefined} />
           {errores.kit_nombre && <p className="text-xs font-medium" style={errStyle}>{errores.kit_nombre}</p>}
@@ -218,6 +220,8 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
                     onChange={(ev) => setEtapa(i, { max_subsanaciones: numero(ev.target.value) })} />
                 </div>
               </div>
+              <RevisoresEtapa idBase={`${idBase}-et-${i}`} revisa={e.revisa} revisores={e.revisores ?? []} aprobaciones={e.aprobaciones_requeridas ?? 1}
+                onChange={(p) => setEtapa(i, p)} />
             </li>
           ))}
         </ol>
@@ -228,6 +232,7 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
         )}
         <p className="text-xs text-[var(--app-ink-2)]">
           Después de las revisiones, el admin de convocatoria da su visto bueno y el comité (con su acta) decide; con las dos marcas el club queda aceptado.
+          El acta la suben el admin, el admin de convocatoria o una persona asignada a alguna etapa.
         </p>
       </Seccion>
 
@@ -321,7 +326,7 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
                 </select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor={`${idBase}-q-et`} className={labelCls}>Texto de la pregunta *</Label>
+                <Label htmlFor={`${idBase}-q-et`} className={labelCls}>Texto de la pregunta <Asterisco /></Label>
                 <input id={`${idBase}-q-et`} maxLength={LIMITES_ESPECIE.etiqueta} value={dialogo.campo.etiqueta} className={inputCls} placeholder="Ej. Talla de playera"
                   onChange={(e) => setDialogo({ ...dialogo, campo: { ...dialogo.campo, etiqueta: e.target.value, nombre_campo: dialogo.idx === null ? slugCampo(e.target.value) : dialogo.campo.nombre_campo } })} />
               </div>
@@ -334,7 +339,7 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
               </div>
               {dialogo.campo.tipo_campo === 'select' && (
                 <div className="space-y-1.5">
-                  <Label htmlFor={`${idBase}-q-op`} className={labelCls}>Opciones (una por línea) *</Label>
+                  <Label htmlFor={`${idBase}-q-op`} className={labelCls}>Opciones (una por línea) <Asterisco /></Label>
                   <textarea id={`${idBase}-q-op`} value={dialogo.campo.opciones} placeholder={'Chica\nMediana\nGrande'} className={`${inputCls} !h-auto min-h-[100px] resize-y py-3`}
                     onChange={(e) => setDialogo({ ...dialogo, campo: { ...dialogo.campo, opciones: e.target.value } })} />
                 </div>

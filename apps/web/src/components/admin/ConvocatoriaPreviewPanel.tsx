@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Eye, Calendar, DollarSign, FileText, ListChecks, Award, Layers, Tag, Package } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/format';
+import { Asterisco } from '@/components/ui/obligatorio';
 
 interface PreviewCampo {
   etiqueta: string;
@@ -207,7 +208,7 @@ export default function ConvocatoriaPreviewPanel({
                   <span className="text-neutral-700 dark:text-neutral-200 truncate">{c.etiqueta || `Campo ${i+1}`}</span>
                   <span className="flex items-center gap-1 shrink-0">
                     <span className="text-[9px] uppercase text-neutral-400">{c.tipo_campo}</span>
-                    {c.requerido && <span className="text-red-500 text-[10px]">*</span>}
+                    {c.requerido && <span className="text-[10px]"><Asterisco /></span>}
                   </span>
                 </div>
               ))}

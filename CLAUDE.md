@@ -2024,6 +2024,65 @@ los líderes B existentes se agregaron con un script (1 club). `club_integrantes
 editable (después del envío el padrón revisado no se toca). No se quita desde Integrantes (422: se quita en Acompañantes).
 **Verificado:** `e2e_lider_b_integrante.php` 12/12, E61 37/37, vitest 184/184.
 
+### E69 — «Soy director»: el director registra el club; compartir y ceder en cadena [08-10-2026]
+**Decisiones del usuario (cuestionario):** casilla «Soy director(a) de la escuela» bajo «Cargo u ocupación» en `/registro`
+(solo Club De Robótica): llena el cargo y el club **lo administra el director**, que da de alta al **líder A** y al
+**líder B** (los dos cuentan como integrantes; el director no). Si quien se registra es docente, es el líder A como antes
+(da de alta al líder B y, opcional, al director). Permisos en cadena **director → líder A → líder B**, de dos formas:
+**compartir** (los dos operan; se retira cuando se quiera) y **ceder** (intercambian lugar, rol y permisos).
+- Datos (migración `2026_10_08_000003`): `users.es_director` (de `solicitudes_acceso.datos_rol.es_director` al aprobar),
+  `clubes.dueno_director` (en `$guarded`; lo pone `ClubController::store` si el dueño `es_director`; sin tarjeta de
+  integrante para él). `club_accesos.tipo` admite `lider_a`. `ClubAcceso::tiposDe($club)`: dueño director → `lider_a,
+  lider_b`; docente → `lider_b, director`.
+- Permisos (`Club`): `accesoDe` = `lider` (dueño) o el tipo del acceso con `_colider` si le compartieron el permiso;
+  `puedeOperar` = dueño o cualquier `*_colider`; `destinatarios` incluye a quien tenga el permiso y al líder A.
+- `ClubAccesoController`: `puede($club, $u)` decide **gestionar** (alta/cambio/baja: solo el dueño), **compartir** (el
+  dueño con cualquiera; el líder A de un club del director con el B solo si él opera) y **ceder** (dueño director → líder
+  A; dueño docente → líder B; líder A acompañante → líder B). Rutas: `PUT /club/clubes/{club}/accesos/{tipo}/compartir`,
+  `POST /club/clubes/{club}/ceder` (`confirmar: accepted`, throttle propio); `colider` del director queda por
+  compatibilidad. Ceder: el dueño intercambia `lider_id` con la fila (director → la fila pasa a `director` y el club deja
+  de ser `dueno_director`); entre accesos se intercambian los tipos con un tipo temporal (índices únicos) y los permisos
+  van con el lugar (quien recibe el lugar recibe su permiso compartido); las tarjetas de Integrantes siguen a las personas
+  (`LiderBIntegrante::intercambiarEtiquetas`). Roles: el nuevo dueño recibe `lider_club` (activo) y quien cede
+  `acompanante_club` (activo si ya no es dueño de ningún club). Aviso `ClubAviso('lugar_cedido')`; bitácora
+  `club.lugar_cedido`. No se permite si el nuevo dueño ya tiene otro club en la convocatoria.
+- Front: `AccesosClub` (forma nueva `{dueno_director, tipos, puede, items}`), interruptor «Compartir el permiso de operar»,
+  «Ceder mi lugar» con confirmación (recarga la página), textos por papel en la ficha y el inicio.
+**Verificado:** `e2e_director.php` 20/20 (registro con la casilla, alta de A y B, 403 sin permiso, cadena de compartir,
+ceder A↔B, director→A, docente→B, ajeno 404), E61 37/37, líder B 12/12.
+
+### E70 — Personas por fase de revisión, aprobaciones necesarias, quién hizo cada cambio y acta [08-10-2026]
+**Decisiones del usuario (cuestionario):** en cada fase de revisión (etapas de Apoyo en especie) el admin elige **personas**
+(revisores o admins de convocatoria, según «quién revisa»); solo ellas la resuelven (el admin general siempre puede); sin
+personas, como antes. «Número de revisiones» = **aprobaciones necesarias** para pasar de fase (p. ej. 2 de 3). Sin
+subfases. Las líneas de tiempo muestran quién hizo cada cambio **solo al personal**. El acta del comité la suben el admin,
+el admin de convocatoria o una persona asignada a alguna fase de la convocatoria.
+- Migración `2026_10_08_000004`: `especie_etapas.aprobaciones_requeridas` y `especie_etapa_revisores` (etapa, user).
+- `EtapasEspecie`: reglas `revisores[]`/`aprobaciones_requeridas`; valida persona activa con el rol de la etapa, revisor
+  con el periodo de la convocatoria, aprobaciones ≤ personas (sin personas, solo 1); un admin de convocatoria asignado
+  recibe la convocatoria en `convocatoria_user`; bitácora `especie.etapa_revisores`; `candidatos()` en
+  `GET /admin/especie/revisores-candidatos` (admin; id, nombre, rol).
+- `RevisionClub`: `puedeResolver` exige estar asignado si la etapa tiene personas; aprobar registra `aprobacion` (parcial)
+  hasta completar `aprobaciones_requeridas` (una por persona y ronda; una observación reinicia la cuenta) y luego
+  `aprobado` y avanza; `revisoresDe` avisa solo a las asignadas que faltan; `puedeSubirActa`. Bandeja «Por revisar» filtra
+  por `puedeResolver`. Ficha del personal: `aprobaciones {requeridas, dadas, ya_aprobe, asignados[{nombre, aprobo}]}`.
+- Front: `RevisoresEtapa` (en `ConfigEspecieForm`, asistente y ficha), `AprobacionesEtapa` en la ficha del club,
+  `quienesDeHistorial` → `LineaAvanceClub` muestra el nombre del último movimiento de cada paso (ficha y vista previa),
+  historial con «Aprobación (faltan más revisores)»; solicitudes de acceso con línea de tiempo «Registro recibido →
+  Aprobada/Rechazada por X». Las solicitudes SIGAE ya mostraban quién en el seguimiento de la ficha (E45).
+**Verificado:** `e2e_revisores_etapa.php` 14/14, F1 53/53, F2 57/57, director 20/20, vitest 184/184.
+**Lección (no repetir):** no cortar la salida de una prueba con `Select-Object -First N`: mata el proceso PHP antes de su
+`finally` y deja datos de prueba (pasó hoy; se limpiaron con un script dirigido). Guardar la salida en archivo.
+
+### Contraseñas: ojo y semáforo; asteriscos rojos; CURP → fecha de nacimiento [08-10-2026]
+- `components/ui/campo-contrasena.tsx`: `BotonVerContrasena` (ojo con `aria-pressed`) y `SemaforoContrasena` (rojo débil,
+  amarillo regular, verde segura; checklist de la política, `lib/password-policy.ts` `fuerzaPassword`/`requisitosPassword`).
+  En registro, alta de líderes, cambio obligatorio, restablecer, Mi cuenta y alta de usuarios del admin.
+- `components/ui/obligatorio.tsx`: `Asterisco`, `conAsterisco(label)` y `AvisoObligatorios`; `.req-ast` (rojo) y
+  `.req-aviso` en `globals.css`. Los asteriscos de todo el front pasan por ahí (lectores de pantalla oyen «obligatorio»).
+- `lib/registro.ts` `fechaDeCurp(curp)`: AAMMDD + siglo (posición 17); la usa el alta de integrantes del club para llenar la
+  fecha de nacimiento. (Registro general no pide fecha de nacimiento.)
+
 ### E65 — Correos de SIGAE con un solo diseño institucional [publicado 02-10-2026]
 **Pedido:** «personaliza los correos con el estilo de la página de SIGAE, con los logos institucionales como en el header,
 unifica el diseño de todos los correos (solo de SIGAE), con colores, llamativo, interactivo y lo más intuitivo posible».

@@ -57,6 +57,7 @@ class RegistroGeneralController extends Controller
                 'email' => ['required', 'email', 'max:255'],
                 'password' => ['required', 'string', 'confirmed', Password::defaults()],
                 'terminos_aceptados' => 'required|accepted',
+                'es_director' => 'sometimes|boolean',
             ],
             RegistroRoles::reglasRol($rol),
         ), array_merge(RegistroRoles::mensajes(), [
@@ -116,7 +117,8 @@ class RegistroGeneralController extends Controller
                 'empresa_nombre' => $rol === 'solicitante' ? $datosRol['empresa_nombre'] : null,
                 'empresa_datos' => $rol === 'solicitante' ? $datosRol['empresa_datos'] : null,
                 'contactos' => $rol === 'solicitante' ? $datosRol['contactos'] : null,
-                'datos_rol' => $rol === 'evaluador' ? $datosRol : null,
+                // 08/10/2026: «Soy director» (solo Club De Robótica): su club lo registra él y da de alta a los líderes A y B.
+                'datos_rol' => $rol === 'evaluador' ? $datosRol : ($rol === 'lider_club' && $request->boolean('es_director') ? ['es_director' => true] : null),
                 'terminos_aceptados' => true,
                 'estado' => 'pendiente',
             ])->save();

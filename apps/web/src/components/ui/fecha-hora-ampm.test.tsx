@@ -21,7 +21,7 @@ describe('FechaHoraAmPm (E56)', () => {
       return <FechaHoraAmPm value={v} onChange={(x) => { setV(x); cambio(x); }} />;
     }
     render(<Prueba />);
-    fireEvent.change(screen.getByLabelText('Fecha *'), { target: { value: '2026-10-15' } });
+    fireEvent.change(screen.getByLabelText(/^Fecha/), { target: { value: '2026-10-15' } });
     fireEvent.change(screen.getByLabelText('Hora'), { target: { value: '4' } });
     fireEvent.change(screen.getByLabelText('Minutos'), { target: { value: '15' } });
     expect(cambio).toHaveBeenLastCalledWith('2026-10-15T04:15');

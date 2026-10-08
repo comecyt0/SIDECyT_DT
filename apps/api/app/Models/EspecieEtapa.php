@@ -15,13 +15,19 @@ class EspecieEtapa extends Model
 
     public const REVISA = ['revisor', 'admin_convocatoria', 'ambos'];
 
-    protected $fillable = ['orden', 'nombre', 'revisa', 'plazo_horas', 'max_subsanaciones'];
+    protected $fillable = ['orden', 'nombre', 'revisa', 'plazo_horas', 'max_subsanaciones', 'aprobaciones_requeridas'];
 
-    protected $casts = ['orden' => 'integer', 'plazo_horas' => 'integer', 'max_subsanaciones' => 'integer'];
+    protected $casts = ['orden' => 'integer', 'plazo_horas' => 'integer', 'max_subsanaciones' => 'integer', 'aprobaciones_requeridas' => 'integer'];
 
     public function convocatoria()
     {
         return $this->belongsTo(Convocatoria::class);
+    }
+
+    /** E70: personas asignadas a la fase. Sin asignar, la resuelve cualquiera con el rol de `revisa` (como antes). */
+    public function revisores()
+    {
+        return $this->belongsToMany(User::class, 'especie_etapa_revisores', 'etapa_id', 'user_id')->withTimestamps();
     }
 
     /** ¿Puede este rol resolver la etapa? (el admin general siempre puede). */

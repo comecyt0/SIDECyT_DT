@@ -11,6 +11,7 @@ import { AlertBox } from '@/components/ui/alert-box';
 import { Loader2, Lock, Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react';
 import api from '@/lib/api';
 import { validarPassword, PASSWORD_HINT, PASSWORD_MIN } from '@/lib/password-policy';
+import { SemaforoContrasena } from '@/components/ui/campo-contrasena';
 import { INSTITUTION } from '@/lib/institution';
 
 function ResetPasswordForm() {
@@ -96,25 +97,13 @@ function ResetPasswordForm() {
                   type="button"
                   onClick={() => setShowPass(!showPass)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-primary transition-colors"
-                  tabIndex={-1}
+                  aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showPass}
                 >
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {form.password && (
-                <div className="flex gap-1 mt-1">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-                        form.password.length >= i * 2
-                          ? i <= 2 ? 'bg-amber-400' : 'bg-emerald-500'
-                          : 'bg-neutral-200'
-                      }`}
-                    />
-                  ))}
-                </div>
-              )}
+              {/* 08/10/2026: semáforo con la política real (antes solo medía la longitud). */}
+              <SemaforoContrasena valor={form.password} />
             </div>
 
             <div className="space-y-1.5">

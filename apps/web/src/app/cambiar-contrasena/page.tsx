@@ -5,6 +5,7 @@ import { KeyRound, Loader2, LogOut, Lock } from 'lucide-react';
 import { BandaInstitucional } from '@/components/branding/Logos';
 import api from '@/lib/api';
 import { PASSWORD_HINT, validarPassword } from '@/lib/password-policy';
+import { BotonVerContrasena, SemaforoContrasena } from '@/components/ui/campo-contrasena';
 import { PANEL_POR_ROL, type RolSlug } from '@/lib/roles';
 
 /**
@@ -18,6 +19,7 @@ export default function CambiarContrasenaPage() {
   const [confirmacion, setConfirmacion] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [ver, setVer] = useState({ actual: false, nueva: false, confirmacion: false });
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,10 +70,12 @@ export default function CambiarContrasenaPage() {
                 <label htmlFor={`cc-${id}`} className="text-sm font-semibold">{label}</label>
                 <div className="relative">
                   <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--auth-ink-2)]" aria-hidden="true" />
-                  <input id={`cc-${id}`} type="password" autoComplete={auto} required value={valor} onChange={(e) => set(e.target.value)}
-                    className="auth-input auth-input-static !pl-9" aria-describedby={id === 'nueva' ? 'cc-regla' : undefined} />
+                  <input id={`cc-${id}`} type={ver[id] ? 'text' : 'password'} autoComplete={auto} required value={valor} onChange={(e) => set(e.target.value)}
+                    className="auth-input auth-input-static !pl-9 !pr-12" aria-describedby={id === 'nueva' ? 'cc-regla' : undefined} />
+                  <BotonVerContrasena visible={ver[id]} onToggle={() => setVer((v) => ({ ...v, [id]: !v[id] }))} etiqueta={label.toLowerCase()} />
                 </div>
                 {id === 'nueva' && <p id="cc-regla" className="text-xs text-[var(--auth-ink-2)]">{PASSWORD_HINT}</p>}
+                {id === 'nueva' && <SemaforoContrasena valor={nueva} />}
               </div>
             ))}
             <button type="submit" disabled={guardando || !actual || !nueva || !confirmacion} className="auth-submit w-full">

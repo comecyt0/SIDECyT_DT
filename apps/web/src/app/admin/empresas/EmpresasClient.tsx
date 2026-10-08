@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Building, Plus, Edit, Eye, X, MapPin } from 'lucide-react';
@@ -206,7 +207,7 @@ export default function EmpresasClient({ empresas }: Props) {
             content: (
               <>
                 <div className="space-y-1.5">
-                  <Label htmlFor="inst-nombre" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Nombre oficial *</Label>
+                  <Label htmlFor="inst-nombre" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Nombre oficial <Asterisco /></Label>
                   <input id="inst-nombre" maxLength={255} placeholder="Ej. Universidad Autónoma del Estado de México" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className="auth-input auth-input-static pl-4" />
                 </div>
                 <div className="space-y-1.5">

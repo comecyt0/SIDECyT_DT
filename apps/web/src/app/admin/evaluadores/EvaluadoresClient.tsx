@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import PageHeader from '@/components/ui/page-header';
@@ -175,7 +176,7 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
             validate: () => (!form.solicitud_id ? 'Elige la solicitud.' : null),
             content: (
               <div className="space-y-1.5">
-                <Label htmlFor="asig-solicitud" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Solicitud *</Label>
+                <Label htmlFor="asig-solicitud" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Solicitud <Asterisco /></Label>
                 <select id="asig-solicitud" value={form.solicitud_id} onChange={e => setForm({ ...form, solicitud_id: e.target.value })} className="auth-input auth-input-static pl-4">
                   <option value="">Elige una solicitud…</option>
                   {solicitudes.map((s) => (
@@ -193,7 +194,7 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
             validate: () => (!form.evaluador_id ? 'Elige al evaluador.' : null),
             content: (
               <div className="space-y-1.5">
-                <Label htmlFor="asig-evaluador" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Evaluador *</Label>
+                <Label htmlFor="asig-evaluador" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Evaluador <Asterisco /></Label>
                 <select id="asig-evaluador" value={form.evaluador_id} onChange={e => setForm({ ...form, evaluador_id: e.target.value })} className="auth-input auth-input-static pl-4">
                   <option value="">Elige un evaluador…</option>
                   {evaluadores.map((ev) => (
@@ -210,7 +211,7 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
             validate: () => (!form.fecha_limite ? 'Indica la fecha límite.' : null),
             content: (
               <div className="space-y-1.5">
-                <Label htmlFor="asig-fecha" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Fecha límite *</Label>
+                <Label htmlFor="asig-fecha" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Fecha límite <Asterisco /></Label>
                 <input
                   id="asig-fecha"
                   type="date"

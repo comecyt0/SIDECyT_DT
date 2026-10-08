@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import {
   Loader2,
   Send,
@@ -730,7 +731,7 @@ export default function DetalleSolicitudPage() {
                         content: (
                           <>
                             <div className="space-y-1.5">
-                              <label htmlFor="ben-clabe" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">CLABE interbancaria (18 dígitos) *</label>
+                              <label htmlFor="ben-clabe" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">CLABE interbancaria (18 dígitos) <Asterisco /></label>
                               <input
                                 id="ben-clabe"
                                 type="text"
@@ -765,7 +766,7 @@ export default function DetalleSolicitudPage() {
                         validate: () => (!beneficiarioForm.titular_cuenta.trim() ? 'Escribe el nombre del titular tal como aparece en el banco.' : null),
                         content: (
                           <div className="space-y-1.5">
-                            <label htmlFor="ben-titular" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Titular de la cuenta *</label>
+                            <label htmlFor="ben-titular" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Titular de la cuenta <Asterisco /></label>
                             <input
                               id="ben-titular"
                               type="text"
@@ -872,7 +873,7 @@ export default function DetalleSolicitudPage() {
               <div className="space-y-6 border-t border-[var(--app-rule)] pt-6">
                 <div>
                   <label className="block text-sm font-semibold text-[var(--app-ink)] mb-3">
-                    Archivo del informe *
+                    Archivo del informe <Asterisco />
                   </label>
                   <label className="flex items-center justify-center w-full p-8 border-2 border-dashed border-[var(--app-rule)] rounded-[16px] hover:border-[var(--auth-vino)] transition-colors cursor-pointer bg-[var(--auth-field)]">
                     <div className="text-center">

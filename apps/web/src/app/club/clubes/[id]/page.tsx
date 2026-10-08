@@ -27,7 +27,8 @@ import {
   leerLogistica, type LogisticaEstado,
   type CampoApi, type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi, type Predef,
 } from '@/lib/especie';
-import { PATRON_CURP, PATRON_TELEFONO, PATRON_CORREO } from '@/lib/registro';
+import { PATRON_CURP, PATRON_TELEFONO, PATRON_CORREO, fechaDeCurp } from '@/lib/registro';
+import { conAsterisco } from '@/components/ui/obligatorio';
 import { formatDate } from '@/lib/format';
 import ModalidadChip from '@/components/especie/ModalidadChip';
 import CelebracionAceptado from '@/components/especie/CelebracionAceptado';
@@ -47,16 +48,19 @@ interface Detalle {
   faltantes: string[];
   historial: EntradaHistorial[];
   logistica: LogisticaEstado | null;
-  /** E61: qué es quien mira (lider | lider_b | director | director_colider) y, solo para el líder, sus acompañantes. */
+  /** E61: qué es quien mira (lider | lider_a | lider_b | director, con «_colider» si le compartieron el permiso). */
   acceso: string;
   accesos: AccesosClubApi | null;
+  /** 08/10/2026: el club lo registró el director (da de alta al líder A y al B; no es integrante). */
+  dueno_director: boolean;
 }
 
 const ACCESO_TEXTO: Record<string, string> = {
-  lider_b: 'Eres líder B de este club: ves su avance, sus datos, el QR y la logística. Los cambios los hace el líder.',
+  lider_a: 'Eres líder A de este club: ves su avance, sus datos, el QR y la logística. Operas cuando el director te comparta el permiso; puedes ceder tu lugar al líder B.',
+  lider_b: 'Eres líder B de este club: ves su avance, sus datos, el QR y la logística. Operas cuando te compartan el permiso.',
   director: 'Acompañas a este club como director(a): ves su avance, sus datos, el QR y la logística. Los cambios los hace el líder.',
-  director_colider: 'El líder te compartió su rol: puedes editar, enviar y atender la logística del club mientras esté activo.',
 };
+const COMPARTIDO = 'Te compartieron el permiso: puedes editar, enviar y atender la logística del club mientras esté activo.';
 
 type FormIntegrante = { nombre: string; fecha_nacimiento: string; sexo: string; curp: string; grado_grupo: string; correo: string; telefono: string; datos: Record<string, string> };
 const INT_VACIO: FormIntegrante = { nombre: '', fecha_nacimiento: '', sexo: '', curp: '', grado_grupo: '', correo: '', telefono: '', datos: {} };
@@ -98,6 +102,7 @@ function leerDetalle(data: unknown): Detalle | null {
     logistica: leerLogistica(d.logistica),
     acceso: typeof d.acceso === 'string' ? d.acceso : 'lider',
     accesos: leerAccesos(d.accesos),
+    dueno_director: d.dueno_director === true,
   };
 }
 
@@ -333,14 +338,17 @@ export default function MiClubPage() {
           ? 'Completa los datos, agrega a los integrantes y sube los documentos. Cuando todo esté listo, envía tu club a revisión.'
           : d.acceso === 'lider' ? 'Aquí ves lo que registraste, en qué etapa va y el historial de tu club.' : 'Aquí ves el avance del club, sus datos, su QR y su logística.'} />
   );
-  const avisoAcceso = ACCESO_TEXTO[d.acceso] ? (
-    <p className="rounded-[14px] px-4 py-3 text-sm" style={{ backgroundColor: d.acceso === 'director_colider' ? 'var(--tile-gold-bg)' : 'var(--tile-sky-bg)', color: 'var(--app-ink)' }}>
-      {ACCESO_TEXTO[d.acceso]}
+  const compartido = d.acceso.endsWith('_colider');
+  const textoAcceso = compartido ? COMPARTIDO : ACCESO_TEXTO[d.acceso];
+  const avisoAcceso = textoAcceso ? (
+    <p className="rounded-[14px] px-4 py-3 text-sm" style={{ backgroundColor: compartido ? 'var(--tile-gold-bg)' : 'var(--tile-sky-bg)', color: 'var(--app-ink)' }}>
+      {textoAcceso}
     </p>
   ) : null;
   const seccionAccesos = d.accesos ? (
-    <AccesosClub clubId={club.id} accesos={d.accesos} onCambio={(accesos) => { setD((x) => (x ? { ...x, accesos } : x)); void cargar(); /* el líder B entra o sale de Integrantes */ }}
-      onAviso={(ok, texto) => { setAviso({ tipo: ok ? 'success' : 'error', texto }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+    <AccesosClub clubId={club.id} accesos={d.accesos} onCambio={(accesos) => { setD((x) => (x ? { ...x, accesos } : x)); void cargar(); /* los líderes entran o salen de Integrantes */ }}
+      onAviso={(ok, texto) => { setAviso({ tipo: ok ? 'success' : 'error', texto }); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+      onCedido={() => window.location.reload() /* cambia el rol y lo que puede hacer quien cedió */} />
   ) : null;
 
   // ─────────── Solo lectura (en revisión, aceptado, no aceptado) ───────────
@@ -440,7 +448,7 @@ export default function MiClubPage() {
             <div className="space-y-1.5">
               <label htmlFor="club-desc" className={labelCls}>Descripción del proyecto del club{pc.descripcion.obligatorio ? ' *' : ' (opcional)'}</label>
               <textarea id="club-desc" className={`${inputCls} !h-auto min-h-[110px] resize-y py-3`} maxLength={2000} value={datosClub.descripcion ?? ''}
-                placeholder="Qué hace el club, qué quieren lograr con el kit…" onChange={(e) => setDatosClub({ ...datosClub, descripcion: e.target.value })} />
+                placeholder="Describe el proyecto de tu club" onChange={(e) => setDatosClub({ ...datosClub, descripcion: e.target.value })} />
             </div>
           )}
           {camposClub.map((c) => (
@@ -461,7 +469,7 @@ export default function MiClubPage() {
           <div>
             <h2 id="sec-int" className="flex flex-wrap items-center gap-2 text-base font-bold text-[var(--app-ink)]"><User className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Integrantes<ModalidadChip modalidad={config.modalidad} className="ml-auto" /></h2>
             <p className="text-sm text-[var(--app-ink-2)]">
-              {d.integrantes.length} de {config.max_integrantes} · se necesitan al menos {config.min_integrantes} (tú y tu líder B cuentan como integrantes)
+              {d.integrantes.length} de {config.max_integrantes} · se necesitan al menos {config.min_integrantes} {d.dueno_director ? '(el líder A y el líder B cuentan como integrantes; el director no)' : '(tú y tu líder B cuentan como integrantes)'}
               {!config.participan_menores ? ' · no participan menores de edad' : ''}
             </p>
           </div>
@@ -662,7 +670,12 @@ export default function MiClubPage() {
               {pi.curp?.pedir && (
                 <Campo id="int-curp" etiqueta={`CURP${pi.curp.obligatorio ? ' *' : ''}`} error={erroresInt.curp}>
                   <input id="int-curp" className={`${inputCls} uppercase`} maxLength={18} value={dialogo.form.curp}
-                    onChange={(e) => setDialogo({ ...dialogo, form: { ...dialogo.form, curp: e.target.value.toUpperCase().replace(/\s/g, '') } })} />
+                    onChange={(e) => {
+                      // 08/10/2026: la CURP llena sola la fecha de nacimiento (si se pide).
+                      const curp = e.target.value.toUpperCase().replace(/\s/g, '');
+                      const fn = pi.fecha_nacimiento?.pedir ? fechaDeCurp(curp) : null;
+                      setDialogo({ ...dialogo, form: { ...dialogo.form, curp, ...(fn ? { fecha_nacimiento: fn } : {}) } });
+                    }} />
                 </Campo>
               )}
               {pi.grado_grupo?.pedir && (
@@ -703,7 +716,7 @@ export default function MiClubPage() {
 function Campo({ id, etiqueta, error, children, className = '' }: { id: string; etiqueta: string; error?: string; children: React.ReactNode; className?: string }) {
   return (
     <div className={`space-y-1.5 ${className}`}>
-      <label htmlFor={id} className={labelCls}>{etiqueta}</label>
+      <label htmlFor={id} className={labelCls}>{conAsterisco(etiqueta)}</label>
       {children}
       {error && <p className="text-xs font-medium" style={{ color: 'var(--auth-danger)' }}>{error}</p>}
     </div>

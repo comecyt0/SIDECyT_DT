@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { Badge } from '@/components/ui/badge';
 import StepFrame from '@/components/ui/step-frame';
 import PageHeader from '@/components/ui/page-header';
@@ -383,7 +384,7 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
             validate: () => (!convenioForm.monto_aprobado || parseFloat(convenioForm.monto_aprobado) <= 0 ? 'Indica el monto aprobado.' : null),
             content: (
               <div className="space-y-1.5">
-                <label htmlFor="conv-monto" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Monto aprobado (MXN) *</label>
+                <label htmlFor="conv-monto" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Monto aprobado (MXN) <Asterisco /></label>
                 <input
                   id="conv-monto"
                   type="number"
@@ -409,7 +410,7 @@ export default function SolicitudesClient({ solicitudes, pagination, initialSear
             },
             content: (
               <div className="space-y-1.5">
-                <label htmlFor="conv-entregas" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Número de entregas *</label>
+                <label htmlFor="conv-entregas" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Número de entregas <Asterisco /></label>
                 <select
                   id="conv-entregas"
                   value={convenioForm.num_tranches}

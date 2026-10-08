@@ -1,6 +1,7 @@
 'use client';
 
 import type { CampoApi } from '@/lib/especie';
+import { Asterisco } from '@/components/ui/obligatorio';
 
 const inputCls = 'auth-input auth-input-static pl-4';
 
@@ -14,7 +15,7 @@ export default function CampoDinamico({ campo, valor, onChange, idBase, error }:
   return (
     <div className="space-y-1.5">
       <label htmlFor={id} className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">
-        {campo.etiqueta}{campo.requerido ? ' *' : ' (opcional)'}
+        {campo.etiqueta}{campo.requerido ? <> <Asterisco /></> : ' (opcional)'}
       </label>
       {campo.tipo_campo === 'textarea' ? (
         <textarea {...comun} maxLength={2000} value={v} onChange={(e) => onChange(e.target.value)} className={`${inputCls} !h-auto min-h-[90px] resize-y py-3`} />

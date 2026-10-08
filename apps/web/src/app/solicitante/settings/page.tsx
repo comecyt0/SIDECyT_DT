@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { User, Mail, Building2, ShieldCheck, Phone, Briefcase, KeyRound, Loader2, Info, UserCog } from 'lucide-react';
 import api from '@/lib/api';
 import { validarPassword, PASSWORD_HINT, PASSWORD_MIN } from '@/lib/password-policy';
+import { BotonVerContrasena, SemaforoContrasena } from '@/components/ui/campo-contrasena';
 import { AlertBox } from '@/components/ui/alert-box';
 import PageHeader from '@/components/ui/page-header';
 import TwoFactorSetup from '@/components/auth/TwoFactorSetup';
@@ -31,6 +32,8 @@ export default function SolicitanteSettingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [verNueva, setVerNueva] = useState(false);
+  const [verConf, setVerConf] = useState(false);
   const [pwForm, setPwForm] = useState({
     current_password: '',
     new_password: '',
@@ -250,31 +253,38 @@ export default function SolicitanteSettingsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="new_password" className={pwLabelCls}>Nueva contraseña</Label>
-                  <input
-                    id="new_password"
-                    name="new_password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={pwForm.new_password}
-                    onChange={handlePwChange}
-                    placeholder={`Mínimo ${PASSWORD_MIN} caracteres`}
-                    disabled={pwLoading}
-                    className={pwInputCls}
-                  />
+                  <div className="relative">
+                    <input
+                      id="new_password"
+                      name="new_password"
+                      type={verNueva ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      value={pwForm.new_password}
+                      onChange={handlePwChange}
+                      placeholder={`Mínimo ${PASSWORD_MIN} caracteres`}
+                      disabled={pwLoading}
+                      className={`${pwInputCls} !pr-12`}
+                    />
+                    <BotonVerContrasena visible={verNueva} onToggle={() => setVerNueva(!verNueva)} />
+                  </div>
+                  <SemaforoContrasena valor={pwForm.new_password} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="new_password_confirmation" className={pwLabelCls}>Repítela</Label>
-                  <input
-                    id="new_password_confirmation"
-                    name="new_password_confirmation"
-                    type="password"
-                    autoComplete="new-password"
-                    value={pwForm.new_password_confirmation}
-                    onChange={handlePwChange}
-                    placeholder="Escríbela otra vez"
-                    disabled={pwLoading}
-                    className={pwInputCls}
-                  />
+                  <div className="relative">
+                    <input
+                      id="new_password_confirmation"
+                      name="new_password_confirmation"
+                      type={verConf ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      value={pwForm.new_password_confirmation}
+                      onChange={handlePwChange}
+                      placeholder="Escríbela otra vez"
+                      disabled={pwLoading}
+                      className={`${pwInputCls} !pr-12`}
+                    />
+                    <BotonVerContrasena visible={verConf} onToggle={() => setVerConf(!verConf)} etiqueta="confirmación" />
+                  </div>
                 </div>
               </div>
             ),

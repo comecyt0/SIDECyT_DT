@@ -20,6 +20,8 @@ import UserAvatar from '@/components/ui/user-avatar';
 import AvisoErrores from '@/components/ui/aviso-errores';
 import { erroresFormulario, type ErroresFormulario } from '@/lib/errores-formulario';
 import { PASSWORD_HINT, validarPassword } from '@/lib/password-policy';
+import { BotonVerContrasena, SemaforoContrasena } from '@/components/ui/campo-contrasena';
+import { conAsterisco } from '@/components/ui/obligatorio';
 import { PATRON_CORREO } from '@/lib/registro';
 
 /** Nombre visible y paso de cada campo: los errores del servidor se muestran así y regresan al paso correcto. */
@@ -67,7 +69,7 @@ function FField({
   return (
     <div className="space-y-1.5">
       <label htmlFor={id} className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest flex items-center gap-1.5">
-        {label}
+        {conAsterisco(label)}
       </label>
       <div className="relative">
         <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--app-ink-2)] pointer-events-none" aria-hidden="true" />
@@ -95,6 +97,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
   const [catalogs, setCatalogs] = useState<{ roles: Rol[]; instituciones: Empresa[] }>({ roles: [], instituciones: [] });
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [verPass, setVerPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   // Error al guardar: se muestra DENTRO de la ventana y regresa al paso del campo (antes quedaba detrás del modal).
@@ -411,9 +414,11 @@ export default function UsuariosClient({ users, pagination }: Props) {
                   <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="email" placeholder="nombre@institucion.mx" />
                 </FField>
                 <FField id="usr-password" icon={Lock} label={editingUser ? 'Nueva contraseña (opcional)' : 'Contraseña inicial *'} error={errors.password}>
-                  <input type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="new-password" placeholder={editingUser ? 'Déjala vacía para no cambiarla' : 'Crea una contraseña segura'} />
+                  <input type={verPass ? 'text' : 'password'} value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="auth-input auth-input-static pl-10 !pr-12" autoComplete="new-password" placeholder={editingUser ? 'Déjala vacía para no cambiarla' : 'Crea una contraseña segura'} />
+                  <BotonVerContrasena visible={verPass} onToggle={() => setVerPass(!verPass)} />
                 </FField>
                 <p className="-mt-2 text-xs text-[var(--app-ink-2)]">{PASSWORD_HINT}</p>
+                {formData.password && <SemaforoContrasena valor={formData.password} />}
               </>
             ),
           },

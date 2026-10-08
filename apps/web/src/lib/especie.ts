@@ -28,6 +28,9 @@ export interface EtapaEspecie {
   revisa: Revisa;
   plazo_horas: number;
   max_subsanaciones: number;
+  /** E70: personas asignadas (ids) y aprobaciones necesarias para pasar a la siguiente etapa. */
+  revisores?: number[];
+  aprobaciones_requeridas?: number;
 }
 export const REVISA_ETIQUETA: Record<Revisa, string> = {
   revisor: 'Revisor documental',
@@ -154,6 +157,8 @@ export function leerConfig(datos: unknown): ConfigEspecie {
       revisa: (['revisor', 'admin_convocatoria', 'ambos'].includes(revisa) ? revisa : 'ambos') as Revisa,
       plazo_horas: ent(x.plazo_horas, 24),
       max_subsanaciones: ent(x.max_subsanaciones, 1),
+      revisores: Array.isArray(x.revisores) ? x.revisores.filter((r): r is number => typeof r === 'number' && Number.isInteger(r) && r > 0).slice(0, 20) : [],
+      aprobaciones_requeridas: ent(x.aprobaciones_requeridas, 1),
     };
   });
   return {
@@ -194,7 +199,10 @@ export function payloadConfig(c: ConfigEspecie) {
     kit_descripcion: c.kit_descripcion.trim() || null,
     campos_club: c.campos_club,
     campos_integrante: c.campos_integrante,
-    etapas: c.etapas.map((e) => ({ ...(e.id ? { id: e.id } : {}), nombre: e.nombre.trim(), revisa: e.revisa, plazo_horas: e.plazo_horas, max_subsanaciones: e.max_subsanaciones })),
+    etapas: c.etapas.map((e) => ({
+      ...(e.id ? { id: e.id } : {}), nombre: e.nombre.trim(), revisa: e.revisa, plazo_horas: e.plazo_horas, max_subsanaciones: e.max_subsanaciones,
+      revisores: e.revisores ?? [], aprobaciones_requeridas: Math.max(1, e.aprobaciones_requeridas ?? 1),
+    })),
   };
 }
 
@@ -229,6 +237,9 @@ export function validarConfig(c: ConfigEspecie): Record<string, string> {
     const i = c.etapas.findIndex((x) => !x.nombre.trim() || x.nombre.length > 120 || !Number.isInteger(x.plazo_horas) || x.plazo_horas < 1 || x.plazo_horas > 720
       || !Number.isInteger(x.max_subsanaciones) || x.max_subsanaciones < 0 || x.max_subsanaciones > 5);
     if (i >= 0) e.etapas = `Revisa la etapa ${i + 1}: nombre (hasta 120 caracteres), plazo de 1 a 720 horas y de 0 a 5 correcciones.`;
+    // E70: las aprobaciones no pueden ser más que las personas asignadas (sin personas, solo 1).
+    const j = c.etapas.findIndex((x) => (x.aprobaciones_requeridas ?? 1) > Math.max(1, x.revisores?.length ?? 0));
+    if (i < 0 && j >= 0) e.etapas = `Etapa ${j + 1}: pides más aprobaciones que personas asignadas.`;
   }
   const vistos = new Set<string>();
   c.campos.forEach((x, i) => {
@@ -328,6 +339,7 @@ export function vigente(versiones: VersionFirmada[]): VersionFirmada | null {
 export const RESULTADO_HISTORIAL: Record<string, string> = {
   enviado: 'Enviado a revisión',
   aprobado: 'Etapa aprobada',
+  aprobacion: 'Aprobación (faltan más revisores)', // E70: la etapa pide varias aprobaciones
   observado: 'Observaciones',
   subsanado: 'Correcciones enviadas',
   prorroga: 'Prórroga del plazo',

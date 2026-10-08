@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { Asterisco, conAsterisco } from '@/components/ui/obligatorio';
 import StepFrame from '@/components/ui/step-frame';
 import AvisoErrores from '@/components/ui/aviso-errores';
 import CuentaRegresiva from '@/components/especie/CuentaRegresiva';
@@ -188,14 +189,14 @@ export default function RevisionClubPanel({ clubId, estado, avance, permisos, ha
               )}
               {accion === 'prorroga' && (
                 <div className="space-y-1.5">
-                  <label htmlFor="rev-horas" className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Horas adicionales *</label>
+                  <label htmlFor="rev-horas" className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Horas adicionales <Asterisco /></label>
                   <input id="rev-horas" type="number" min={1} max={168} inputMode="numeric" value={Number.isNaN(horas) ? '' : horas}
                     onChange={(e) => setHoras(Math.trunc(Number(e.target.value)))} className="auth-input auth-input-static pl-4" />
                   <p className="text-xs text-[var(--app-ink-2)]">De 1 a 168 (7 días). Cuentan desde ahora, en horas naturales.</p>
                 </div>
               )}
               <div className="space-y-1.5">
-                <label htmlFor="rev-comentario" className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">{t.comentario}</label>
+                <label htmlFor="rev-comentario" className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">{conAsterisco(t.comentario)}</label>
                 <textarea id="rev-comentario" maxLength={3000} value={comentario} onChange={(e) => setComentario(e.target.value)}
                   className="auth-input auth-input-static !h-auto min-h-[120px] resize-y py-3 pl-4" />
                 <p className="text-xs text-[var(--app-ink-2)]">{comentario.length} / 3000</p>

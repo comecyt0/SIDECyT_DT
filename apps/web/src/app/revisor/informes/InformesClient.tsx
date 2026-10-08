@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StepFrame from '@/components/ui/step-frame';
 import PageHeader from '@/components/ui/page-header';
@@ -284,7 +285,7 @@ export default function InformesClient({ informes }: Props) {
             content: (
               <>
                 <div className="space-y-1.5">
-                  <label htmlFor="inf-estado" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Resultado de la revisión *</label>
+                  <label htmlFor="inf-estado" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Resultado de la revisión <Asterisco /></label>
                   <select
                     id="inf-estado"
                     value={formData.estado}
@@ -299,7 +300,7 @@ export default function InformesClient({ informes }: Props) {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="inf-obs" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Observaciones {formData.estado === 'rechazado' ? '*' : '(opcional)'}</label>
+                  <label htmlFor="inf-obs" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Observaciones {formData.estado === 'rechazado' ? <Asterisco /> : '(opcional)'}</label>
                   <textarea
                     id="inf-obs"
                     value={formData.observaciones}

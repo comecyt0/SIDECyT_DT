@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { ProgramaCampo } from '@/hooks/useProgramaCatalog';
 import { colorMap } from '@/lib/color-mapper';
+import { Asterisco } from '@/components/ui/obligatorio';
 
 interface DynamicFieldRendererProps {
   campo: ProgramaCampo;
@@ -39,7 +40,7 @@ export function DynamicFieldRenderer({
     <div className="space-y-2">
       <Label htmlFor={`field-${campo.id}`}>
         {label}
-        {campo.requerido && <span className={`${colorMap.states.error.text} ml-1`}>*</span>}
+        {campo.requerido && <> <Asterisco /></>}
       </Label>
 
       {campo.tipo_campo === 'text' && (

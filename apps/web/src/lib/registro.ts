@@ -11,6 +11,20 @@ import type { RolAutoservicio } from '@/lib/roles';
 /** CURP oficial (RENAPO). Igual que App\Support\RegistroRoles::PATRON_CURP. */
 export const PATRON_CURP =
   /^[A-Z][AEIOUX][A-Z]{2}\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])[HMX](AS|B[CS]|C[CLMSH]|D[FG]|G[TR]|HG|JC|M[CNS]|N[ETL]|OC|PL|Q[TR]|S[PLR]|T[CSL]|VZ|YN|ZS|NE)[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$/;
+/**
+ * 08/10/2026 (pedido del usuario) — Fecha de nacimiento que trae la CURP ('AAAA-MM-DD'), para autollenar el campo donde
+ * se pida. Posiciones 5-10 = AAMMDD; la 17 dice el siglo (dígito: 1900-1999, letra: 2000 en adelante). null si la CURP
+ * no es válida o la fecha no existe.
+ */
+export function fechaDeCurp(curp: string): string | null {
+  const c = curp.trim().toUpperCase();
+  if (!PATRON_CURP.test(c)) return null;
+  const [aa, mm, dd] = [c.slice(4, 6), c.slice(6, 8), c.slice(8, 10)];
+  const anio = (/\d/.test(c[16]) ? 1900 : 2000) + Number(aa);
+  const f = new Date(Date.UTC(anio, Number(mm) - 1, Number(dd)));
+  if (f.getUTCFullYear() !== anio || f.getUTCMonth() !== Number(mm) - 1 || f.getUTCDate() !== Number(dd)) return null;
+  return `${anio}-${mm}-${dd}`;
+}
 export const PATRON_TELEFONO = /^\d{10}$/;
 export const PATRON_RFC = /^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/i;
 export const PATRON_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;

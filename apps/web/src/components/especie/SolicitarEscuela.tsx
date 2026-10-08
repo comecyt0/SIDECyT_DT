@@ -5,6 +5,7 @@ import { Send, Loader2, X, School } from 'lucide-react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { NIVEL_ESCUELA, SISTEMA_ESCUELA } from '@/lib/especie';
+import { Asterisco } from '@/components/ui/obligatorio';
 
 export interface SolicitudEscuela { id: number; cct: string; nombre: string; municipio: string; nivel: string; sistema: string; estado: 'pendiente' | 'aceptada' | 'rechazada'; motivo?: string | null; escuela_id?: number | null }
 
@@ -68,7 +69,7 @@ export default function SolicitarEscuela({ convocatoriaId, onEnviada, onCancelar
 
   const campo = (k: Campo, etiqueta: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
     <label className="block space-y-1.5" htmlFor={`${id}-${k}`}>
-      <span className={labelCls}>{etiqueta} *</span>
+      <span className={labelCls}>{etiqueta} <Asterisco /></span>
       <input id={`${id}-${k}`} className={inputCls} value={f[k]} onChange={(e) => set(k, e.target.value)} aria-invalid={errores[k] ? 'true' : undefined}
         aria-describedby={errores[k] ? `${id}-${k}-err` : undefined} {...props} />
       {errores[k] && <span id={`${id}-${k}-err`} role="alert" className="block text-xs font-medium" style={{ color: 'var(--auth-danger)' }}>{errores[k]}</span>}
@@ -88,9 +89,9 @@ export default function SolicitarEscuela({ convocatoriaId, onEnviada, onCancelar
         {campo('cct', 'CCT (clave de la escuela)', { maxLength: 10, placeholder: '15EPR0001A', className: `${inputCls} uppercase`, autoCapitalize: 'characters' })}
         {campo('municipio', 'Municipio', { maxLength: 120, placeholder: 'Toluca' })}
         <div className="sm:col-span-2">{campo('nombre', 'Nombre de la escuela', { maxLength: 255 })}</div>
-        <label className="block space-y-1.5"><span className={labelCls}>Nivel *</span>
+        <label className="block space-y-1.5"><span className={labelCls}>Nivel <Asterisco /></span>
           <select className={inputCls} value={f.nivel} onChange={(e) => set('nivel', e.target.value)}>{Object.entries(NIVEL_ESCUELA).map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
-        <label className="block space-y-1.5"><span className={labelCls}>Sistema *</span>
+        <label className="block space-y-1.5"><span className={labelCls}>Sistema <Asterisco /></span>
           <select className={inputCls} value={f.sistema} onChange={(e) => set('sistema', e.target.value)}>{Object.entries(SISTEMA_ESCUELA).map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
         <div className="sm:col-span-2">{campo('direccion', 'Dirección', { maxLength: 300, placeholder: 'Calle, número, colonia' })}</div>
         {campo('telefono', 'Teléfono de la escuela', { maxLength: 10, inputMode: 'numeric', placeholder: '7221234567' })}

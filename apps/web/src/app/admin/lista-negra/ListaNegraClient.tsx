@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -194,7 +195,7 @@ export default function ListaNegraClient({ sanciones, empresas }: Props) {
             content: (
               <>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Empresa *</Label>
+                  <Label className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Empresa <Asterisco /></Label>
                   <Select value={form.empresa_id} onValueChange={v => setForm({...form, empresa_id: v ?? ''})}>
                     <SelectTrigger className="w-full"><SelectValue placeholder="Elige la empresa…" /></SelectTrigger>
                     <SelectContent>
@@ -203,7 +204,7 @@ export default function ListaNegraClient({ sanciones, empresas }: Props) {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Motivo *</Label>
+                  <Label className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Motivo <Asterisco /></Label>
                   <Textarea placeholder="Describe el incumplimiento con tus palabras; la empresa podrá leerlo." value={form.motivo} onChange={e => setForm({...form, motivo: e.target.value})} className="min-h-[100px] rounded-[var(--auth-radius-field)]" style={{ background: 'var(--auth-field)' }} />
                 </div>
               </>
@@ -217,7 +218,7 @@ export default function ListaNegraClient({ sanciones, empresas }: Props) {
             content: (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="ln-inicio" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Desde *</Label>
+                  <Label htmlFor="ln-inicio" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Desde <Asterisco /></Label>
                   <input id="ln-inicio" type="date" value={form.fecha_inicio_sancion} onChange={e => setForm({...form, fecha_inicio_sancion: e.target.value})} className="auth-input auth-input-static pl-4" />
                 </div>
                 <div className="space-y-1.5">

@@ -33,7 +33,7 @@ describe('SelectorPrograma (E54)', () => {
 
   it('el buscador ignora acentos y mayúsculas', () => {
     render(<Prueba onChange={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText('Programa *'), { target: { value: 'robotica' } });
+    fireEvent.change(screen.getByLabelText(/^Programa \*/), { target: { value: 'robotica' } });
     expect(screen.getByRole('radio', { name: /STEAM EDOMEX/ })).toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: /Prototipos/ })).toBeNull();
   });
@@ -43,7 +43,7 @@ describe('SelectorPrograma (E54)', () => {
     render(<Prueba onChange={onChange} />);
     fireEvent.click(screen.getByRole('radio', { name: /Programa nuevo/ }));
     expect(screen.getByText(/aparece en la página pública cuando completes su descripción/)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Nombre del programa *'), { target: { value: 'steam edomex programa estatal de robotica' } });
+    fireEvent.change(screen.getByLabelText(/^Nombre del programa/), { target: { value: 'steam edomex programa estatal de robotica' } });
     expect(screen.getByRole('alert')).toHaveTextContent('Ya existe «STEAM EDOMEX PROGRAMA ESTATAL DE ROBÓTICA» en SIGAE');
     fireEvent.click(screen.getByRole('button', { name: 'Usar el existente' }));
     expect(onChange).toHaveBeenLastCalledWith({ id: 31, nuevo: false, nombre: 'STEAM EDOMEX PROGRAMA ESTATAL DE ROBÓTICA', sistema: 'sigae' });
@@ -51,7 +51,7 @@ describe('SelectorPrograma (E54)', () => {
 
   it('el mismo nombre en otro sistema no es duplicado', () => {
     render(<Prueba onChange={vi.fn()} inicial={{ nuevo: true, sistema: 'sicei' }} />);
-    fireEvent.change(screen.getByLabelText('Nombre del programa *'), { target: { value: 'Programa para el Desarrollo de Prototipos' } });
+    fireEvent.change(screen.getByLabelText(/^Nombre del programa/), { target: { value: 'Programa para el Desarrollo de Prototipos' } });
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

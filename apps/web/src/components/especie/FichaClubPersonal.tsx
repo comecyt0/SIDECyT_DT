@@ -1,12 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Shapes, Loader2, AlertTriangle } from 'lucide-react';
+import { Shapes, Loader2, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import api from '@/lib/api';
 import PageHeader from '@/components/ui/page-header';
 import { AlertBox } from '@/components/ui/alert-box';
 import ClubResumen from '@/components/especie/ClubResumen';
-import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
+import LineaAvanceClub, { quienesDeHistorial } from '@/components/especie/LineaAvanceClub';
 import HistorialClub from '@/components/especie/HistorialClub';
 import RevisionClubPanel, { type PermisosRevision } from '@/components/especie/RevisionClubPanel';
 import LogisticaPersonal from '@/components/especie/LogisticaPersonal';
@@ -26,6 +26,8 @@ export interface DetalleClubPersonal {
   historial: EntradaHistorial[];
   permisos: PermisosRevision & { logistica?: boolean };
   logistica: LogisticaEstado | null;
+  /** E70: personas asignadas a la etapa actual y aprobaciones que lleva (solo personal). */
+  aprobaciones: { requeridas: number; dadas: number; ya_aprobe: boolean; asignados: { nombre: string; aprobo: boolean }[] } | null;
 }
 
 /** Documentos que pide la convocatoria (carta de la escuela + los del programa) con lo que subió el club. */
@@ -54,7 +56,42 @@ export function leer(data: unknown): DetalleClubPersonal | null {
     historial: Array.isArray(d.historial) ? d.historial : [],
     permisos: { ...SIN_PERMISOS, ...(d.permisos ?? {}) },
     logistica: leerLogistica(d.logistica),
+    aprobaciones: leerAprobaciones((d as { aprobaciones?: unknown }).aprobaciones),
   };
+}
+
+function leerAprobaciones(v: unknown): DetalleClubPersonal['aprobaciones'] {
+  if (!v || typeof v !== 'object') return null;
+  const a = v as Record<string, unknown>;
+  const n = (x: unknown) => (typeof x === 'number' && Number.isInteger(x) && x >= 0 ? x : 0);
+  return {
+    requeridas: Math.max(1, n(a.requeridas)), dadas: n(a.dadas), ya_aprobe: a.ya_aprobe === true,
+    asignados: (Array.isArray(a.asignados) ? a.asignados : []).filter((x): x is { nombre: string; aprobo: boolean } => typeof x?.nombre === 'string')
+      .map((x) => ({ nombre: x.nombre.slice(0, 150), aprobo: x.aprobo === true })).slice(0, 20),
+  };
+}
+
+/** E70: quién revisa la etapa actual y cuántas aprobaciones lleva. */
+function AprobacionesEtapa({ a }: { a: NonNullable<DetalleClubPersonal['aprobaciones']> }) {
+  if (a.requeridas <= 1 && a.asignados.length === 0) return null;
+  return (
+    <section className="app-card space-y-2 p-5" aria-labelledby="aprob-etapa">
+      <h3 id="aprob-etapa" className="text-sm font-bold text-[var(--app-ink)]">
+        Revisión de esta etapa · {a.dadas} de {a.requeridas} aprobación{a.requeridas === 1 ? '' : 'es'}
+      </h3>
+      {a.asignados.length > 0 ? (
+        <ul className="flex flex-wrap gap-2">
+          {a.asignados.map((x) => (
+            <li key={x.nombre} className="pill" data-tone={x.aprobo ? 'emerald' : 'neutral'}>
+              {x.aprobo ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> : <Clock className="h-3.5 w-3.5" aria-hidden="true" />}
+              {x.nombre}<span className="sr-only">{x.aprobo ? ': aprobó' : ': pendiente'}</span>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="text-xs text-[var(--app-ink-2)]">Sin personas asignadas: la revisa cualquiera con el rol de la etapa.</p>}
+      {a.ya_aprobe && <p className="text-xs font-semibold" style={{ color: 'var(--tile-emerald-fg)' }}>Ya diste tu aprobación; faltan las demás personas.</p>}
+    </section>
+  );
 }
 
 /**
@@ -103,7 +140,8 @@ export default function FichaClubPersonal({ endpoint, volverHref }: { endpoint: 
         description="Datos que registró el líder, su avance en la revisión y el historial de cada decisión." />
       {aviso && <AlertBox type="success" message={aviso} onClose={() => setAviso(null)} />}
       {error && <AlertBox type="error" message={error} onClose={() => setError(null)} />}
-      <section className="app-card p-5" aria-label="Avance"><LineaAvanceClub estado={d.club.estado} avance={d.club} /></section>
+      <section className="app-card p-5" aria-label="Avance"><LineaAvanceClub estado={d.club.estado} avance={d.club} quienes={quienesDeHistorial(d.historial)} /></section>
+      {d.aprobaciones && <AprobacionesEtapa a={d.aprobaciones} />}
       {d.club.estado === 'borrador' && d.faltantes.length > 0 && (
         <section className="rounded-[16px] border px-5 py-4" style={{ borderColor: 'var(--tile-gold-fg)', backgroundColor: 'var(--tile-gold-bg)' }}>
           <p className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><AlertTriangle className="h-4 w-4" aria-hidden="true" />El líder aún no envía el club. Le falta:</p>

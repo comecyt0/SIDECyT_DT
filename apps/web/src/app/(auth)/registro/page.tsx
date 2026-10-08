@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
-  ArrowLeft, Briefcase, Building2, Check, ClipboardList, Eye, EyeOff, FileText, FlaskConical, GraduationCap, Hash, Loader2,
+  ArrowLeft, Briefcase, Building2, Check, ClipboardList, FileText, FlaskConical, GraduationCap, Hash, Loader2,
   Lock, Mail, MapPin, Phone, School, Shield, ShieldCheck, User, Users, CircleAlert, IdCard, House,
 } from 'lucide-react';
 import api from '@/lib/api';
@@ -14,6 +14,8 @@ import PieAuth from '@/components/branding/PieAuth';
 import { BandaInstitucional, LogoComecyt } from '@/components/branding/Logos';
 import { FField, StaticField, SummaryRow } from '@/components/registro/CamposAuth';
 import { validarPassword } from '@/lib/password-policy';
+import { BotonVerContrasena, SemaforoContrasena } from '@/components/ui/campo-contrasena';
+import { AvisoObligatorios } from '@/components/ui/obligatorio';
 import { ROLES_AUTOSERVICIO, type RolAutoservicio } from '@/lib/roles';
 import {
   GRADO_ETIQUETA, PATRON_CORREO, PATRON_CURP, PATRON_RFC, PATRON_TELEFONO, ROL_REGISTRO, erroresServidor, useCodigoPostal,
@@ -65,6 +67,9 @@ export default function RegistroPage() {
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [verPass, setVerPass] = useState(false);
+  const [verPass2, setVerPass2] = useState(false);
+  // 08/10/2026: «Soy director» (solo Club De Robótica): llena el cargo y su club lo administra él (da de alta a los líderes A y B).
+  const [esDirector, setEsDirector] = useState(false);
 
   const [p, setP] = useState({ nombre: '', email: '', telefono: '', curp: '', cargo: '', cp: '', colonia: '', password: '', password2: '', terminos: false });
   const [emp, setEmp] = useState({ nombre: '', rfc: '', tipo: '' as TipoPersona, supervision: '' });
@@ -167,6 +172,7 @@ export default function RegistroPage() {
     add('nombre', p.nombre.trim()); add('email', p.email.trim()); add('telefono', p.telefono); add('curp', p.curp);
     add('cargo', p.cargo.trim()); add('codigo_postal', p.cp); add('colonia', p.colonia);
     add('password', p.password); add('password_confirmation', p.password2); add('terminos_aceptados', '1');
+    if (rol === 'lider_club' && esDirector) add('es_director', '1');
     if (rol === 'solicitante') {
       add('empresa_nombre', emp.nombre.trim());
       if (emp.rfc) add('empresa_datos[rfc]', emp.rfc.toUpperCase());
@@ -270,6 +276,7 @@ export default function RegistroPage() {
                   </ol>
 
                   {error && <div id="registro-error"><AlertBox type="error" message={error} onClose={() => setError('')} /></div>}
+                  {paso !== 'rol' && paso !== 'confirmar' && paso !== 'club' && <AvisoObligatorios />}
 
                   {paso === 'rol' && (
                     <fieldset className="auth-swap space-y-3">
@@ -310,8 +317,19 @@ export default function RegistroPage() {
                         </FField>
                       </div>
                       <FField id="r-cargo" icon={Briefcase} label="Cargo u ocupación *">
-                        <input value={p.cargo} onChange={(e) => setP({ ...p, cargo: e.target.value })} maxLength={150} autoComplete="organization-title" placeholder=" " className="auth-input" />
+                        <input value={p.cargo} onChange={(e) => setP({ ...p, cargo: e.target.value })} maxLength={150} autoComplete="organization-title" placeholder=" " className="auth-input" readOnly={rol === 'lider_club' && esDirector} />
                       </FField>
+                      {rol === 'lider_club' && (
+                        <label className="flex cursor-pointer items-start gap-3 rounded-[var(--auth-radius-field)] border p-3.5 transition-colors"
+                          style={{ borderColor: esDirector ? 'var(--auth-vino)' : 'var(--auth-rule)', background: esDirector ? 'var(--auth-vino-soft)' : 'var(--auth-field)' }}>
+                          <input type="checkbox" checked={esDirector} className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-[var(--auth-vino)]"
+                            onChange={(e) => { const v = e.target.checked; setEsDirector(v); setP((a) => ({ ...a, cargo: v ? 'Director(a) de la escuela' : (a.cargo === 'Director(a) de la escuela' ? '' : a.cargo) })); }} />
+                          <span className="text-sm leading-relaxed">
+                            <strong>Soy director(a) de la escuela</strong>
+                            <span className="block text-xs text-[var(--auth-ink-2)]">Llenamos tu cargo y tú registras al club: desde tu panel das de alta al líder A y al líder B. No tendrán que registrarte otra vez.</span>
+                          </span>
+                        </label>
+                      )}
                     </div>
                   )}
 
@@ -426,13 +444,18 @@ export default function RegistroPage() {
                     <div className="auth-swap space-y-3">
                       <FField id="r-pass" icon={Lock} label="Contraseña *" ayuda="Mínimo 10 caracteres, con mayúsculas, minúsculas y un número.">
                         <input type={verPass ? 'text' : 'password'} value={p.password} onChange={(e) => setP({ ...p, password: e.target.value })} autoComplete="new-password" placeholder=" " className="auth-input pr-12" />
+                        <BotonVerContrasena visible={verPass} onToggle={() => setVerPass(!verPass)} />
                       </FField>
+                      <SemaforoContrasena valor={p.password} />
                       <FField id="r-pass2" icon={Lock} label="Confirma tu contraseña *">
-                        <input type={verPass ? 'text' : 'password'} value={p.password2} onChange={(e) => setP({ ...p, password2: e.target.value })} autoComplete="new-password" placeholder=" " className="auth-input" />
+                        <input type={verPass2 ? 'text' : 'password'} value={p.password2} onChange={(e) => setP({ ...p, password2: e.target.value })} autoComplete="new-password" placeholder=" " className="auth-input pr-12" />
+                        <BotonVerContrasena visible={verPass2} onToggle={() => setVerPass2(!verPass2)} etiqueta="confirmación" />
                       </FField>
-                      <button type="button" onClick={() => setVerPass(!verPass)} aria-pressed={verPass} className="auth-link inline-flex items-center gap-1.5 text-[13px]">
-                        {verPass ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />} {verPass ? 'Ocultar contraseñas' : 'Mostrar contraseñas'}
-                      </button>
+                      {p.password2 && (
+                        <p className="px-1 text-xs font-semibold" role="status" style={{ color: p.password === p.password2 ? 'var(--tile-emerald-fg)' : 'var(--destructive)' }}>
+                          {p.password === p.password2 ? 'Las contraseñas coinciden.' : 'Las contraseñas no coinciden.'}
+                        </p>
+                      )}
                     </div>
                   )}
 

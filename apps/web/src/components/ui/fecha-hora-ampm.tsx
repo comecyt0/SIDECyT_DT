@@ -1,6 +1,7 @@
 'use client';
 
 import { useId } from 'react';
+import { conAsterisco } from '@/components/ui/obligatorio';
 
 const inputCls = 'auth-input auth-input-static pl-4';
 const labelCls = 'text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]';
@@ -37,11 +38,11 @@ export default function FechaHoraAmPm({ value, onChange, etiquetaFecha = 'Fecha 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="space-y-1.5">
-        <label htmlFor={`${id}-f`} className={labelCls}>{etiquetaFecha}</label>
+        <label htmlFor={`${id}-f`} className={labelCls}>{conAsterisco(etiquetaFecha)}</label>
         <input id={`${id}-f`} type="date" className={inputCls} value={p.fecha} max={max?.slice(0, 10)} onChange={(e) => set({ fecha: e.target.value })} />
       </div>
       <fieldset className="space-y-1.5">
-        <legend className={labelCls}>{etiquetaHora}</legend>
+        <legend className={labelCls}>{conAsterisco(etiquetaHora)}</legend>
         <div className="flex items-center gap-2">
           <select aria-label="Hora" className={`${inputCls} !w-20 !pl-3`} value={p.hora} onChange={(e) => set({ hora: e.target.value })}>
             <option value="">--</option>

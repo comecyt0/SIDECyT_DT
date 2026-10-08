@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Package, FileSignature, Bus, CalendarClock, MapPin, CheckCircle2, Truck, QrCode } from 'lucide-react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { mensajeError } from '@/lib/errores-formulario';
 import FechaHoraAmPm, { fechaHoraCompleta } from '@/components/ui/fecha-hora-ampm';
@@ -204,7 +205,7 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
           },
           content: dialogo.tipo === 'rechazar' ? (
             <div className="space-y-1.5">
-              <label htmlFor="lp-motivo" className={labelCls}>Motivo *</label>
+              <label htmlFor="lp-motivo" className={labelCls}>Motivo <Asterisco /></label>
               <textarea id="lp-motivo" maxLength={2000} value={form.motivo} onChange={(e) => setForm({ ...form, motivo: e.target.value })} className={`${inputCls} !h-auto min-h-[110px] resize-y py-3`} />
             </div>
           ) : (
@@ -215,16 +216,16 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
                   etiquetaFecha={dialogo.tipo === 'asignar' ? 'Fecha de entrega *' : 'Fecha en que se entregó *'} etiquetaHora={dialogo.tipo === 'asignar' ? 'Hora de entrega *' : 'Hora en que se entregó *'} />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <label htmlFor="lp-lugar" className={labelCls}>Lugar *</label>
+                <label htmlFor="lp-lugar" className={labelCls}>Lugar <Asterisco /></label>
                 <input id="lp-lugar" maxLength={255} value={form.lugar} onChange={(e) => setForm({ ...form, lugar: e.target.value })} className={inputCls} placeholder="Ej. Auditorio COMECYT, Toluca" />
               </div>
               {dialogo.tipo === 'entregar' && (<>
                 <div className="space-y-1.5">
-                  <label htmlFor="lp-entrego" className={labelCls}>Quién entregó *</label>
+                  <label htmlFor="lp-entrego" className={labelCls}>Quién entregó <Asterisco /></label>
                   <input id="lp-entrego" maxLength={150} value={form.entrego} onChange={(e) => setForm({ ...form, entrego: e.target.value })} className={inputCls} />
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="lp-recibio" className={labelCls}>Quién recibió *</label>
+                  <label htmlFor="lp-recibio" className={labelCls}>Quién recibió <Asterisco /></label>
                   <input id="lp-recibio" maxLength={150} value={form.recibio} onChange={(e) => setForm({ ...form, recibio: e.target.value })} className={inputCls} />
                 </div>
               </>)}

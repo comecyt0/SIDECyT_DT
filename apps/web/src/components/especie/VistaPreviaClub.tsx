@@ -6,7 +6,7 @@ import { Loader2, ExternalLink, X } from 'lucide-react';
 import api from '@/lib/api';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import ClubResumen from '@/components/especie/ClubResumen';
-import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
+import LineaAvanceClub, { quienesDeHistorial } from '@/components/especie/LineaAvanceClub';
 import HistorialClub from '@/components/especie/HistorialClub';
 import { documentosDe, leer, type DetalleClubPersonal } from '@/components/especie/FichaClubPersonal';
 import { descargarDocumentoClub } from '@/lib/especie-api';
@@ -62,7 +62,7 @@ export default function VistaPreviaClub({ clubId, onClose, hrefFicha, endpoint =
           {!d && !error && <div className="grid place-items-center py-16"><Loader2 className="h-7 w-7 animate-spin" aria-label="Cargando" /></div>}
           {d && (
             <>
-              <section className="app-card p-5" aria-label="Línea de tiempo del club"><LineaAvanceClub estado={d.club.estado} avance={d.club} /></section>
+              <section className="app-card p-5" aria-label="Línea de tiempo del club"><LineaAvanceClub estado={d.club.estado} avance={d.club} quienes={quienesDeHistorial(d.historial)} /></section>
               <ClubResumen club={d.club} integrantes={d.integrantes} documentos={documentosDe(d)} campos={leerCamposApi(d.config.campos)}
                 camposIntegrante={normalizarPredef(d.config.campos_integrante, CAMPOS_INTEGRANTE, {})} kit={d.config.kit_nombre ?? null}
                 onDescargar={descargar} descargando={descargando} />

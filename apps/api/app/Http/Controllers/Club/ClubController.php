@@ -109,9 +109,14 @@ class ClubController extends Controller
                     if ($i === 4 || ! in_array($e->getCode(), ['23505', '23000'], true)) throw $e;
                 }
             }
-            // El líder es el primer integrante (cuenta para el mínimo y el máximo; decisión del usuario).
-            $lider = new ClubIntegrante(['nombre' => $user->name, 'correo' => $user->email, 'telefono' => $user->telefono, 'curp' => $user->curp, 'orden' => 0]);
-            $lider->forceFill(['club_id' => $club->id, 'es_lider' => true])->save();
+            if ($user->es_director) {
+                // 08/10/2026: lo registra el director («Soy director»): no es integrante; da de alta al líder A y al B.
+                $club->forceFill(['dueno_director' => true])->save();
+            } else {
+                // El líder es el primer integrante (cuenta para el mínimo y el máximo; decisión del usuario).
+                $lider = new ClubIntegrante(['nombre' => $user->name, 'correo' => $user->email, 'telefono' => $user->telefono, 'curp' => $user->curp, 'orden' => 0]);
+                $lider->forceFill(['club_id' => $club->id, 'es_lider' => true])->save();
+            }
 
             return $club;
         });
@@ -503,7 +508,9 @@ class ClubController extends Controller
             'faltantes' => $club->editable() ? $this->faltantes($club) : [],
             // E61: qué es quien mira (lider | lider_b | director | director_colider) y, solo para el líder, sus acompañantes.
             'acceso' => $club->accesoDe(request()->user()),
-            'accesos' => (int) $club->lider_id === (int) request()->user()?->id ? ClubAccesoController::listado($club) : null,
+            // 08/10/2026: la ven el dueño y el líder A de un club del director (puede ceder o compartir con el líder B).
+            'accesos' => ($p = ClubAccesoController::puede($club, request()->user()))['gestionar'] || $p['ceder'] !== [] ? ClubAccesoController::listado($club, request()->user()) : null,
+            'dueno_director' => (bool) $club->dueno_director,
             // E52 · F3: logística (solo clubes aceptados; se manda siempre para que el panel sepa si aplica).
             'logistica' => \App\Support\LogisticaClub::aplica($club) ? \App\Support\LogisticaClub::estado($club) : null,
             // Historial para el líder: qué pasó y el comentario general; sin datos de quién revisó (lista blanca).

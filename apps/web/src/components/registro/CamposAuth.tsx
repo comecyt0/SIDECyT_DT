@@ -1,5 +1,6 @@
 'use client';
 
+import { conAsterisco } from '@/components/ui/obligatorio';
 import { Children, cloneElement, isValidElement, type ReactElement, type InputHTMLAttributes, type ComponentType, type ReactNode } from 'react';
 
 /**
@@ -22,7 +23,7 @@ export function FField({ id, icon: Icon, label, children, ayuda }: {
     <div>
       <div className="auth-field">
         {kids}
-        <label htmlFor={id} className="auth-label">{label}</label>
+        <label htmlFor={id} className="auth-label">{conAsterisco(label)}</label>
         <Icon className="auth-field-icon" aria-hidden="true" />
       </div>
       {ayuda && <p id={`${id}-ayuda`} className="mt-1 px-1 text-[11.5px] text-[var(--auth-ink-2)]">{ayuda}</p>}
@@ -45,7 +46,7 @@ export function StaticField({ id, icon: Icon, label, children }: {
   return (
     <div className="space-y-1.5">
       <label htmlFor={id} className="flex items-center gap-1.5 text-xs font-bold text-[var(--auth-ink-2)]">
-        <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {label}
+        <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {conAsterisco(label)}
       </label>
       <div className="relative">{kids}</div>
     </div>

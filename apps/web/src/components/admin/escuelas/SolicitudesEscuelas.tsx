@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Inbox, Loader2, CheckCircle2, XCircle, MapPin, Phone, UserRound, Building2 } from 'lucide-react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import StepFrame from '@/components/ui/step-frame';
 import AvisoErrores from '@/components/ui/aviso-errores';
@@ -185,16 +186,16 @@ export default function SolicitudesEscuelas({ onConteo }: { onConteo?: (pendient
           validate: validar,
           content: dialogo.tipo === 'aceptar' ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="space-y-1.5"><span className={labelCls}>CCT *</span><input className={`${inputCls} uppercase`} maxLength={10} value={form.cct} onChange={(e) => setForm({ ...form, cct: e.target.value.toUpperCase() })} /></label>
-              <label className="space-y-1.5"><span className={labelCls}>Municipio *</span><input className={inputCls} maxLength={120} value={form.municipio} onChange={(e) => setForm({ ...form, municipio: e.target.value })} /></label>
-              <label className="space-y-1.5 sm:col-span-2"><span className={labelCls}>Nombre *</span><input className={inputCls} maxLength={255} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} /></label>
-              <label className="space-y-1.5"><span className={labelCls}>Nivel *</span>
+              <label className="space-y-1.5"><span className={labelCls}>CCT <Asterisco /></span><input className={`${inputCls} uppercase`} maxLength={10} value={form.cct} onChange={(e) => setForm({ ...form, cct: e.target.value.toUpperCase() })} /></label>
+              <label className="space-y-1.5"><span className={labelCls}>Municipio <Asterisco /></span><input className={inputCls} maxLength={120} value={form.municipio} onChange={(e) => setForm({ ...form, municipio: e.target.value })} /></label>
+              <label className="space-y-1.5 sm:col-span-2"><span className={labelCls}>Nombre <Asterisco /></span><input className={inputCls} maxLength={255} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} /></label>
+              <label className="space-y-1.5"><span className={labelCls}>Nivel <Asterisco /></span>
                 <select className={inputCls} value={form.nivel} onChange={(e) => setForm({ ...form, nivel: e.target.value })}>{Object.entries(NIVEL_ESCUELA).map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
-              <label className="space-y-1.5"><span className={labelCls}>Sistema *</span>
+              <label className="space-y-1.5"><span className={labelCls}>Sistema <Asterisco /></span>
                 <select className={inputCls} value={form.sistema} onChange={(e) => setForm({ ...form, sistema: e.target.value })}>{Object.entries(SISTEMA_ESCUELA).map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
             </div>
           ) : (
-            <label className="block space-y-1.5"><span className={labelCls}>Motivo *</span>
+            <label className="block space-y-1.5"><span className={labelCls}>Motivo <Asterisco /></span>
               <textarea className={`${inputCls} !h-auto min-h-[110px] resize-y py-3`} maxLength={1000} value={form.motivo} onChange={(e) => setForm({ ...form, motivo: e.target.value })}
                 placeholder="Ej. La CCT no corresponde a esa escuela; verifica la clave en tu credencial escolar." /></label>
           ),

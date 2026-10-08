@@ -57,7 +57,39 @@ class RevisionClub
 
         return $rol !== null && $etapa !== null && self::veConvocatoria($u, $club->convocatoria_id)
             && (in_array($club->estado, Club::EN_REVISION, true) || $club->vencido())
-            && $etapa->permiteRol($rol);
+            && $etapa->permiteRol($rol)
+            // E70: con personas asignadas a la etapa solo ellas la resuelven (el admin general siempre puede).
+            && ($rol === 'admin' || ! self::tieneAsignados($etapa) || self::asignadoA($u, $etapa));
+    }
+
+    /** E70 — ¿La etapa tiene personas asignadas? */
+    public static function tieneAsignados(EspecieEtapa $etapa): bool
+    {
+        return $etapa->revisores()->exists();
+    }
+
+    public static function asignadoA(User $u, EspecieEtapa $etapa): bool
+    {
+        return $etapa->revisores()->where('users.id', $u->id)->exists();
+    }
+
+    /** E70 — Aprobaciones ya dadas en la etapa y ronda actuales del club (personas distintas). */
+    public static function aprobacionesActuales(Club $c): Collection
+    {
+        if (! $c->etapa_actual_id) return collect();
+
+        return ClubRevision::where('club_id', $c->id)->where('etapa_id', $c->etapa_actual_id)->where('ronda', $c->ronda)
+            // La ronda sube con cada observación y vuelve a 0 al pasar de etapa: una corrección reinicia las aprobaciones.
+            ->where('resultado', 'aprobacion')->pluck('user_id')->map(fn ($x) => (int) $x)->unique()->values();
+    }
+
+    /** E70 — Subir el acta del comité: admin, admin de convocatoria o una persona asignada a alguna etapa de la convocatoria. */
+    public static function puedeSubirActa(User $u, int $convocatoriaId): bool
+    {
+        if (self::puedeAceptar($u, $convocatoriaId)) return true;
+
+        return self::veConvocatoria($u, $convocatoriaId)
+            && EspecieEtapa::where('convocatoria_id', $convocatoriaId)->whereHas('revisores', fn ($q) => $q->where('users.id', $u->id))->exists();
     }
 
     /** ¿Puede dar visto bueno y registrar el comité? (admin o admin de convocatoria con alcance). */
@@ -126,6 +158,16 @@ class RevisionClub
             if ($vencido && $resultado !== 'rechazar') self::falla('El plazo de corrección venció: rechaza el club o da una prórroga.');
 
             if ($resultado === 'aprobar') {
+                // E70: si la etapa pide varias aprobaciones, cada persona aprueba una vez; al completarse avanza.
+                $requeridas = max(1, (int) $etapa->aprobaciones_requeridas);
+                $dadas = self::aprobacionesActuales($c);
+                if ($dadas->contains($u->id)) self::falla('Ya aprobaste este club en esta etapa; faltan las demás personas.');
+                if ($dadas->count() + 1 < $requeridas) {
+                    self::historial($c, $etapa, 'aprobacion', $comentario, $u);
+                    $evento = 'aprobacion_parcial';
+
+                    return $c;
+                }
                 $siguiente = self::etapas($c->convocatoria_id)->first(fn ($e) => $e->orden > $etapa->orden);
                 self::historial($c, $etapa, 'aprobado', $comentario, $u);
                 if ($siguiente) {
@@ -257,6 +299,13 @@ class RevisionClub
     {
         $etapa = $club->etapaActual;
         if (! $etapa) return collect();
+        // E70: con personas asignadas, el aviso va solo a ellas (las que aún no aprueban en esta ronda).
+        if (self::tieneAsignados($etapa)) {
+            $ya = self::aprobacionesActuales($club);
+
+            return $etapa->revisores()->where('activo', true)->get()
+                ->filter(fn (User $u) => ! $ya->contains((int) $u->id) && self::veConvocatoria($u, $club->convocatoria_id))->values();
+        }
         $roles = [config('comecyt.roles.admin')];
         if ($etapa->permiteRol('admin_convocatoria')) $roles[] = config('comecyt.roles.admin_convocatoria');
         if ($etapa->permiteRol('revisor')) $roles[] = config('comecyt.roles.revisor');

@@ -1379,3 +1379,23 @@
   .auth-pantalla .auth-columna .auth-reveal.mb-9 { margin-bottom: 10px; }
   .auth-pantalla .banda-institucional { padding-block: 6px; }
 }
+/* 08/10/2026 (pedido del usuario): asterisco de campo obligatorio en rojo en todo el sistema y aviso visible.
+   Fuera de @layer a propósito: gana a las utilidades de color de las etiquetas. */
+.req-ast {
+  color: var(--destructive, #c0262d);
+  font-weight: 800;
+  margin-left: 0.15em;
+}
+.req-aviso {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in oklch, var(--destructive, #c0262d) 35%, transparent);
+  background: color-mix(in oklch, var(--destructive, #c0262d) 8%, transparent);
+  color: var(--app-ink, var(--auth-ink, inherit));
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.req-aviso .req-ast { font-size: 1.1em; margin-left: 0; }

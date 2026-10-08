@@ -3,6 +3,7 @@
 import { Checkbox } from '@/components/ui/checkbox';
 import StepFrame, { type StepDef } from '@/components/ui/step-frame';
 import { ListPlus } from 'lucide-react';
+import { Asterisco } from '@/components/ui/obligatorio';
 
 interface Field {
   name: string;
@@ -63,7 +64,7 @@ export function NestedCRUDModal({
     return (
       <div key={field.name} className="space-y-1.5">
         <label htmlFor={id} className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">
-          {field.label} {field.required && '*'}
+          {field.label} {field.required && <Asterisco />}
         </label>
         {field.type === 'select' ? (
           <select

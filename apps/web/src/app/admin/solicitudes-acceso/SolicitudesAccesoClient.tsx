@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import PageHeader from '@/components/ui/page-header';
 import StatTile from '@/components/ui/stat-tile';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -300,6 +301,19 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
                   </span>
                 )}
               </div>
+              {/* E70 (08/10/2026): línea de tiempo con quién hizo cada cambio (solo personal). */}
+              <ol className="space-y-1.5 border-l-2 pl-4 text-xs text-[var(--app-ink-2)]" style={{ borderColor: 'var(--app-rule)' }} aria-label="Línea de tiempo de la solicitud">
+                {viewingSolicitud.created_at && (
+                  <li><strong className="text-[var(--app-ink)]">Registro recibido</strong> · {new Date(viewingSolicitud.created_at).toLocaleString('es-MX', { timeZone: 'America/Mexico_City', dateStyle: 'medium', timeStyle: 'short' })} · por la persona interesada</li>
+                )}
+                {viewingSolicitud.revisado_at && viewingSolicitud.estado !== 'pendiente' && (
+                  <li>
+                    <strong className="text-[var(--app-ink)]">{viewingSolicitud.estado === 'aprobada' ? 'Aprobada' : 'Rechazada'}</strong>
+                    {' · '}{new Date(viewingSolicitud.revisado_at).toLocaleString('es-MX', { timeZone: 'America/Mexico_City', dateStyle: 'medium', timeStyle: 'short' })}
+                    {typeof viewingSolicitud.revisado_por === 'object' && viewingSolicitud.revisado_por?.name ? <> · por <strong className="text-[var(--app-ink)]">{viewingSolicitud.revisado_por.name}</strong></> : null}
+                  </li>
+                )}
+              </ol>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <DetailItem icon={ShieldCheck} label="Rol solicitado" value={ROL_SOLICITADO[viewingSolicitud.rol_solicitado ?? 'solicitante']?.label ?? String(viewingSolicitud.rol_solicitado)} />
@@ -400,7 +414,7 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
               </p>
               <div className="space-y-1.5">
                 <label htmlFor="acc-motivo-rechazo" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest block">
-                  Motivo del rechazo *
+                  Motivo del rechazo <Asterisco />
                 </label>
                 <textarea
                   id="acc-motivo-rechazo"
@@ -548,7 +562,7 @@ function SolicitudesRol() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Rechazar solicitud de rol</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <label htmlFor="rol-motivo" className="block text-xs font-bold text-[var(--app-ink-2)]">Motivo (se le envía a la persona) *</label>
+            <label htmlFor="rol-motivo" className="block text-xs font-bold text-[var(--app-ink-2)]">Motivo (se le envía a la persona) <Asterisco /></label>
             <textarea id="rol-motivo" value={motivo} maxLength={1000} onChange={(e) => setMotivo(e.target.value)} className="auth-input auth-input-static !h-auto min-h-[100px] resize-y py-3 pl-4" />
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button variant="outline" className="flex-1" onClick={() => setRechazo(null)}>Cancelar</Button>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Loader2, Save, Plus, Trash2, CalendarClock, Bus, Sandwich, Settings2, Users, AlertTriangle, QrCode, FileSpreadsheet } from 'lucide-react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import StepFrame from '@/components/ui/step-frame';
 import AvisoErrores from '@/components/ui/aviso-errores';
 import { erroresFormulario, mensajeError, type ErroresFormulario } from '@/lib/errores-formulario';
@@ -292,7 +293,7 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
           content: (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2"><FechaHoraAmPm value={kit.fecha} onChange={(v) => setKit({ ...kit, fecha: v })} etiquetaFecha="Fecha de entrega *" etiquetaHora="Hora de entrega *" /></div>
-              <label className="space-y-1.5"><span className={labelCls}>Lugar *</span><input className={inputCls} maxLength={255} value={kit.lugar} placeholder="Ej. Auditorio COMECYT, Toluca" onChange={(e) => setKit({ ...kit, lugar: e.target.value })} /></label>
+              <label className="space-y-1.5"><span className={labelCls}>Lugar <Asterisco /></span><input className={inputCls} maxLength={255} value={kit.lugar} placeholder="Ej. Auditorio COMECYT, Toluca" onChange={(e) => setKit({ ...kit, lugar: e.target.value })} /></label>
             </div>
           ),
         }] : []}

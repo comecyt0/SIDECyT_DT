@@ -37,11 +37,11 @@ describe('RegistroPage', () => {
     render(<RegistroPage />);
     fireEvent.click(screen.getByRole('radio', { name: /Club De Robótica/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
-    fireEvent.change(screen.getByLabelText('Nombre completo *'), { target: { value: 'Ana Pérez López' } });
-    fireEvent.change(screen.getByLabelText('Correo electrónico *'), { target: { value: 'ana@example.com' } });
-    fireEvent.change(screen.getByLabelText('Teléfono (10 dígitos) *'), { target: { value: '7221234567' } });
-    fireEvent.change(screen.getByLabelText('CURP *'), { target: { value: 'XXXX' } });
-    fireEvent.change(screen.getByLabelText('Cargo u ocupación *'), { target: { value: 'Docente' } });
+    fireEvent.change(screen.getByLabelText(/^Nombre completo \*/), { target: { value: 'Ana Pérez López' } });
+    fireEvent.change(screen.getByLabelText(/^Correo electrónico \*/), { target: { value: 'ana@example.com' } });
+    fireEvent.change(screen.getByLabelText(/^Teléfono \(10 dígitos\) \*/), { target: { value: '7221234567' } });
+    fireEvent.change(screen.getByLabelText(/^CURP \*/), { target: { value: 'XXXX' } });
+    fireEvent.change(screen.getByLabelText(/^Cargo u ocupación \*/), { target: { value: 'Docente' } });
     fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
     expect(await screen.findByText(/La CURP no tiene un formato válido/)).toBeInTheDocument();
   });

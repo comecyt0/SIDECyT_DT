@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { CalendarPlus } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -91,7 +92,7 @@ export default function ProrrogaDialog({ convocatoria, open, onClose, onDone }: 
         <div className="space-y-4">
           {error && <AlertBox type="error" message={error} onClose={() => setError(null)} />}
           <div className="space-y-1.5">
-            <Label htmlFor="prorroga-fecha">Nueva fecha límite *</Label>
+            <Label htmlFor="prorroga-fecha">Nueva fecha límite <Asterisco /></Label>
             <input
               id="prorroga-fecha"
               type="date"
@@ -103,7 +104,7 @@ export default function ProrrogaDialog({ convocatoria, open, onClose, onDone }: 
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="prorroga-motivo">Motivo *</Label>
+            <Label htmlFor="prorroga-motivo">Motivo <Asterisco /></Label>
             <Textarea
               id="prorroga-motivo"
               value={motivo}

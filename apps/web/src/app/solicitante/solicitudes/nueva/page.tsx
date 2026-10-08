@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { Label } from '@/components/ui/label';
 import { AlertBox } from '@/components/ui/alert-box';
 import PageHeader from '@/components/ui/page-header';
@@ -325,7 +326,7 @@ export default function NuevaSolicitud() {
             />
           )}
           <div className="space-y-1.5">
-            <Label htmlFor="convocatoria" className={labelCls}>Convocatoria *</Label>
+            <Label htmlFor="convocatoria" className={labelCls}>Convocatoria <Asterisco /></Label>
             <select
               id="convocatoria"
               value={formData.convocatoria_id}
@@ -357,7 +358,7 @@ export default function NuevaSolicitud() {
       content: (
         <>
           <div className="space-y-1.5">
-            <Label htmlFor="titulo" className={labelCls}>Título del proyecto *</Label>
+            <Label htmlFor="titulo" className={labelCls}>Título del proyecto <Asterisco /></Label>
             <input
               id="titulo"
               placeholder="Ej. Congreso Internacional de Inteligencia Artificial"
@@ -371,7 +372,7 @@ export default function NuevaSolicitud() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="area" className={labelCls}>Área de conocimiento *</Label>
+              <Label htmlFor="area" className={labelCls}>Área de conocimiento <Asterisco /></Label>
               <select
                 id="area"
                 value={formData.area_conocimiento_id}
@@ -388,7 +389,7 @@ export default function NuevaSolicitud() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="monto" className={labelCls}>Monto que solicitas *</Label>
+              <Label htmlFor="monto" className={labelCls}>Monto que solicitas <Asterisco /></Label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[var(--app-ink-2)]" aria-hidden="true">{currencySymbol()}</span>
                 <input
@@ -410,7 +411,7 @@ export default function NuevaSolicitud() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="descripcion" className={labelCls}>Resumen del proyecto *</Label>
+            <Label htmlFor="descripcion" className={labelCls}>Resumen del proyecto <Asterisco /></Label>
             <textarea
               id="descripcion"
               placeholder="En pocas líneas: qué quieres lograr, cómo y a quién beneficia."
@@ -438,7 +439,7 @@ export default function NuevaSolicitud() {
       validate: stepValidate(validateModalidad),
       content: (
         <div className="space-y-1.5">
-          <Label htmlFor="program-modalidad" className={labelCls}>Modalidad *</Label>
+          <Label htmlFor="program-modalidad" className={labelCls}>Modalidad <Asterisco /></Label>
           <select id="program-modalidad" value={modalidadId} onChange={(e) => setModalidadId(e.target.value)} className={inputCls}>
             <option value="">Elige una modalidad…</option>
             {modalidades.map((m) => (

@@ -8,6 +8,7 @@ import { School, Loader2, Package, CalendarClock, Plus, ArrowRight, Shapes, Part
 import api from '@/lib/api';
 import PageHeader from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
+import { Asterisco } from '@/components/ui/obligatorio';
 import { AlertBox } from '@/components/ui/alert-box';
 import StepFrame from '@/components/ui/step-frame';
 import EscuelaPicker, { type EscuelaElegida } from '@/components/especie/EscuelaPicker';
@@ -16,7 +17,11 @@ import CelebracionAceptado from '@/components/especie/CelebracionAceptado';
 import Folio from '@/components/ui/folio';
 import { useRol } from '@/hooks/useRol';
 
-const PAPEL: Record<string, string> = { lider_b: 'Eres líder B', director: 'Eres director(a)', director_colider: 'Director(a) con rol de líder' };
+const PAPEL: Record<string, string> = {
+  lider_a: 'Eres líder A', lider_b: 'Eres líder B', director: 'Eres director(a)',
+  // 08/10/2026: con el permiso compartido operan el club.
+  lider_a_colider: 'Líder A con permiso', lider_b_colider: 'Líder B con permiso', director_colider: 'Director(a) con permiso',
+};
 import { ESTADO_CLUB } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
 
@@ -210,12 +215,12 @@ export default function ClubDashboardPage() {
             content: (
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label htmlFor="club-nombre" className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Nombre del club *</label>
+                  <label htmlFor="club-nombre" className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Nombre del club <Asterisco /></label>
                   <input id="club-nombre" className="auth-input auth-input-static pl-4" maxLength={255} value={nombre} placeholder="Ej. Club de Robótica Los Volcanes"
                     onChange={(e) => setNombre(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="club-escuela" className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Escuela *</label>
+                  <label htmlFor="club-escuela" className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Escuela <Asterisco /></label>
                   <EscuelaPicker id="club-escuela" value={escuela} onChange={setEscuela} convocatoriaId={registro?.id} />
                 </div>
               </div>

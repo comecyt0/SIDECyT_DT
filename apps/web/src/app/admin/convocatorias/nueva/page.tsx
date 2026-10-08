@@ -11,6 +11,7 @@ import { AlertBox } from '@/components/ui/alert-box';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import StepFrame from '@/components/ui/step-frame';
 import PageHeader from '@/components/ui/page-header';
+import { Asterisco } from '@/components/ui/obligatorio';
 import {
   ChevronRight,
   ChevronLeft,
@@ -791,7 +792,7 @@ export default function ConvocatoriasNuevaPage() {
             <div className="space-y-5">
               {/* E52: la modalidad se elige primero; cambia los pasos y los datos que se piden. */}
               <fieldset className="space-y-2">
-                <legend className={wizLabelCls}>¿Qué tipo de apoyo entrega esta convocatoria? *</legend>
+                <legend className={wizLabelCls}>¿Qué tipo de apoyo entrega esta convocatoria? <Asterisco /></legend>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {([
                     { v: false, t: 'Apoyo económico', d: 'Dinero para proyectos: monto, conceptos de gasto y evaluación técnica.', icon: <Banknote className="h-5 w-5" aria-hidden="true" /> },
@@ -811,7 +812,7 @@ export default function ConvocatoriasNuevaPage() {
               </fieldset>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="conv_nombre" className={wizLabelCls}>Nombre de la convocatoria *</Label>
+                  <Label htmlFor="conv_nombre" className={wizLabelCls}>Nombre de la convocatoria <Asterisco /></Label>
                   <input
                     id="conv_nombre"
                     maxLength={LIMITES.nombreConvocatoria}
@@ -825,7 +826,7 @@ export default function ConvocatoriasNuevaPage() {
                   <p className="text-xs text-[var(--app-ink-2)]">Así la verán los solicitantes en la lista de convocatorias abiertas.</p>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="conv_nombre_corto" className={wizLabelCls}>Nombre corto *</Label>
+                  <Label htmlFor="conv_nombre_corto" className={wizLabelCls}>Nombre corto <Asterisco /></Label>
                   <div className="flex gap-2">
                     <input
                       id="conv_nombre_corto"
@@ -851,7 +852,7 @@ export default function ConvocatoriasNuevaPage() {
                   </p>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="ejercicio_fiscal" className={wizLabelCls}>Ejercicio fiscal *</Label>
+                  <Label htmlFor="ejercicio_fiscal" className={wizLabelCls}>Ejercicio fiscal <Asterisco /></Label>
                   <input
                     id="ejercicio_fiscal"
                     inputMode="numeric"
@@ -893,7 +894,7 @@ export default function ConvocatoriasNuevaPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="fecha_apertura" className={wizLabelCls}>Fecha de apertura *</Label>
+                  <Label htmlFor="fecha_apertura" className={wizLabelCls}>Fecha de apertura <Asterisco /></Label>
                   <input
                     id="fecha_apertura"
                     type="date"
@@ -905,7 +906,7 @@ export default function ConvocatoriasNuevaPage() {
                   {validationErrors.fecha_apertura && <p className={wizErrCls} style={{ color: 'var(--auth-danger)' }}>{validationErrors.fecha_apertura}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="fecha_cierre" className={wizLabelCls}>Fecha de cierre *</Label>
+                  <Label htmlFor="fecha_cierre" className={wizLabelCls}>Fecha de cierre <Asterisco /></Label>
                   <input
                     id="fecha_cierre"
                     type="date"
@@ -922,7 +923,7 @@ export default function ConvocatoriasNuevaPage() {
               {!esEspecie && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="monto_maximo" className={wizLabelCls}>Monto máximo de apoyo (MXN) *</Label>
+                  <Label htmlFor="monto_maximo" className={wizLabelCls}>Monto máximo de apoyo (MXN) <Asterisco /></Label>
                   <input
                     id="monto_maximo"
                     type="number"
@@ -979,7 +980,7 @@ export default function ConvocatoriasNuevaPage() {
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="prog_clave" className={wizLabelCls}>Clave corta *</Label>
+                  <Label htmlFor="prog_clave" className={wizLabelCls}>Clave corta <Asterisco /></Label>
                   <input
                     id="prog_clave"
                     value={state.programa.clave}
@@ -1007,7 +1008,7 @@ export default function ConvocatoriasNuevaPage() {
               <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="tipo_apoyo" className={wizLabelCls}>Forma del apoyo *</Label>
+                  <Label htmlFor="tipo_apoyo" className={wizLabelCls}>Forma del apoyo <Asterisco /></Label>
                   <select
                     id="tipo_apoyo"
                     value={state.programa.tipo_apoyo}
@@ -1020,7 +1021,7 @@ export default function ConvocatoriasNuevaPage() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="monto_max_prog" className={wizLabelCls}>Monto máximo por proyecto (MXN) *</Label>
+                  <Label htmlFor="monto_max_prog" className={wizLabelCls}>Monto máximo por proyecto (MXN) <Asterisco /></Label>
                   <input
                     id="monto_max_prog"
                     type="number"
@@ -1165,7 +1166,7 @@ export default function ConvocatoriasNuevaPage() {
                     content: (
                       <>
                         <div className="space-y-1.5">
-                          <Label htmlFor="campo_etiqueta" className={wizLabelCls}>Texto de la pregunta *</Label>
+                          <Label htmlFor="campo_etiqueta" className={wizLabelCls}>Texto de la pregunta <Asterisco /></Label>
                           <input
                             id="campo_etiqueta"
                             maxLength={LIMITES.etiquetaPregunta}
@@ -1190,7 +1191,7 @@ export default function ConvocatoriasNuevaPage() {
                     content: (
                       <>
                         <div className="space-y-1.5">
-                          <Label htmlFor="campo_tipo" className={wizLabelCls}>Tipo de respuesta *</Label>
+                          <Label htmlFor="campo_tipo" className={wizLabelCls}>Tipo de respuesta <Asterisco /></Label>
                           <select
                             id="campo_tipo"
                             value={campoForm.tipo_campo}
@@ -1206,7 +1207,7 @@ export default function ConvocatoriasNuevaPage() {
                         </div>
                         {campoForm.tipo_campo === 'select' && (
                           <div className="space-y-1.5">
-                            <Label htmlFor="campo_opciones" className={wizLabelCls}>Opciones (una por línea) *</Label>
+                            <Label htmlFor="campo_opciones" className={wizLabelCls}>Opciones (una por línea) <Asterisco /></Label>
                             <textarea
                               id="campo_opciones"
                               value={campoForm.opciones_json}
@@ -1299,7 +1300,7 @@ export default function ConvocatoriasNuevaPage() {
                     content: (
                       <>
                         <div className="space-y-1.5">
-                          <Label htmlFor="doc_nombre" className={wizLabelCls}>Nombre del documento *</Label>
+                          <Label htmlFor="doc_nombre" className={wizLabelCls}>Nombre del documento <Asterisco /></Label>
                           <input
                             id="doc_nombre"
                             maxLength={LIMITES.nombreDocumento}
@@ -1418,7 +1419,7 @@ export default function ConvocatoriasNuevaPage() {
                     content: (
                       <>
                         <div className="space-y-1.5">
-                          <Label htmlFor="rubro_nombre" className={wizLabelCls}>Nombre del concepto *</Label>
+                          <Label htmlFor="rubro_nombre" className={wizLabelCls}>Nombre del concepto <Asterisco /></Label>
                           <input
                             id="rubro_nombre"
                             maxLength={LIMITES.nombreRubro}
@@ -1553,7 +1554,7 @@ export default function ConvocatoriasNuevaPage() {
                     content: (
                       <>
                         <div className="space-y-1.5">
-                          <Label htmlFor="criterio_nombre" className={wizLabelCls}>Nombre del criterio *</Label>
+                          <Label htmlFor="criterio_nombre" className={wizLabelCls}>Nombre del criterio <Asterisco /></Label>
                           <input
                             id="criterio_nombre"
                             value={criterioForm.nombre}
@@ -1589,7 +1590,7 @@ export default function ConvocatoriasNuevaPage() {
                     content: (
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="space-y-1.5">
-                          <Label htmlFor="criterio_ponderacion" className={wizLabelCls}>Peso (%) *</Label>
+                          <Label htmlFor="criterio_ponderacion" className={wizLabelCls}>Peso (%) <Asterisco /></Label>
                           <input
                             id="criterio_ponderacion"
                             type="number"

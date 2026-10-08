@@ -24,6 +24,8 @@ class Club extends Model
         'qr_token', 'qr_hash', 'qr_habilitado_at', 'qr_habilitado_por',
         // E55: la escuela en revisión solo la fija el servidor (al crear el club con una solicitud propia).
         'escuela_solicitud_id',
+        // 08/10/2026: club registrado por el director (da de alta al líder A y al líder B); solo lo cambia el servidor.
+        'dueno_director',
     ];
 
     /** E55: solicitud de registro de escuela que espera este club (mientras `escuela_id` es nulo). */
@@ -42,7 +44,7 @@ class Club extends Model
         'datos' => 'array', 'enviado_at' => 'datetime', 'vence_at' => 'datetime', 'visto_bueno_at' => 'datetime',
         'comite_at' => 'datetime', 'aceptado_at' => 'datetime', 'aviso_privacidad_at' => 'datetime', 'ronda' => 'integer',
         'kit_fecha' => 'datetime', 'kit_asignado_at' => 'datetime', 'kit_entregado_at' => 'datetime',
-        'qr_habilitado_at' => 'datetime',
+        'qr_habilitado_at' => 'datetime', 'dueno_director' => 'boolean',
     ];
 
     public function registrosEvento()
@@ -92,7 +94,8 @@ class Club extends Model
     }
 
     /**
-     * E61 — Qué es esta persona para el club: 'lider', 'lider_b', 'director', 'director_colider' o null.
+     * E61 — Qué es esta persona para el club: 'lider' (dueño: líder A o, si dueno_director, el director), el tipo de su
+     * acceso ('lider_a', 'lider_b', 'director') con '_colider' si le compartieron el permiso, o null.
      * Los acompañantes solo cuentan con el rol activo `acompanante_club` (así un líder de otro club que también es
      * acompañante aquí opera cada club desde el rol correspondiente).
      */
@@ -104,7 +107,8 @@ class Club extends Model
         $a = $this->relationLoaded('accesos') ? $this->accesos->firstWhere('user_id', $u->id) : $this->accesos()->where('user_id', $u->id)->first();
         if (! $a) return null;
 
-        return $a->tipo === 'director' && $a->colider ? 'director_colider' : $a->tipo;
+        // 08/10/2026: cualquier acompañante con el permiso compartido opera (lider_a_colider, lider_b_colider, director_colider).
+        return $a->colider ? $a->tipo.'_colider' : $a->tipo;
     }
 
     /** E61 — Ver el club (seguimiento, QR, datos, logística): líder y acompañantes. */
@@ -116,7 +120,9 @@ class Club extends Model
     /** E61 — Operar (editar, enviar, logística, subir firmados): el líder y el director mientras sea colíder. */
     public function puedeOperar(?User $u): bool
     {
-        return in_array($this->accesoDe($u), ['lider', 'director_colider'], true);
+        $a = $this->accesoDe($u);
+
+        return $a === 'lider' || ($a !== null && str_ends_with($a, '_colider'));
     }
 
     /**
@@ -127,7 +133,8 @@ class Club extends Model
     {
         $ids = collect([$this->lider_id]);
         foreach ($this->accesos()->get() as $a) {
-            if (($a->tipo === 'director' && $a->colider) || ($conLiderB && $a->tipo === 'lider_b')) $ids->push($a->user_id);
+            // 08/10/2026: con el permiso compartido, y el líder A de un club del director, reciben lo mismo que el líder.
+            if ($a->colider || $a->tipo === 'lider_a' || ($conLiderB && $a->tipo === 'lider_b')) $ids->push($a->user_id);
         }
 
         return User::whereIn('id', $ids->filter()->unique()->all())->where('activo', true)->get();
