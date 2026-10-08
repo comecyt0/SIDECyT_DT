@@ -9,11 +9,12 @@ class ClubIntegrante extends Model
 {
     protected $table = 'club_integrantes';
 
-    protected $guarded = ['id', 'club_id', 'es_lider', 'foto_path', 'created_at', 'updated_at'];
+    // es_lider_b (08/10/2026): tarjeta del líder B; la crean y quitan los accesos del club (App\Support\LiderBIntegrante).
+    protected $guarded = ['id', 'club_id', 'es_lider', 'es_lider_b', 'foto_path', 'created_at', 'updated_at'];
 
     protected $hidden = ['foto_path'];
 
-    protected $casts = ['datos' => 'array', 'es_lider' => 'boolean', 'fecha_nacimiento' => 'date:Y-m-d'];
+    protected $casts = ['datos' => 'array', 'es_lider' => 'boolean', 'es_lider_b' => 'boolean', 'fecha_nacimiento' => 'date:Y-m-d'];
 
     protected $appends = ['foto_url', 'menor_de_edad'];
 

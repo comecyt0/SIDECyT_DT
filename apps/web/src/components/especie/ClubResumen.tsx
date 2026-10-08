@@ -111,6 +111,7 @@ export default function ClubResumen({ club, integrantes, documentos, campos, cam
                 <p className="flex flex-wrap items-center gap-2 font-semibold text-[var(--app-ink)]">
                   <span className="break-words">{i.nombre}</span>
                   {i.es_lider && <span className="pill" data-tone="gold"><Crown className="h-3 w-3" aria-hidden="true" />Líder</span>}
+                  {i.es_lider_b && <span className="pill" data-tone="mint"><Crown className="h-3 w-3" aria-hidden="true" />Líder B</span>}
                   {i.menor_de_edad && <span className="pill" data-tone="sky">Menor de edad</span>}
                 </p>
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-0.5 text-xs sm:grid-cols-2">

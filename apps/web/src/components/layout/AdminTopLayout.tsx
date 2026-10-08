@@ -18,7 +18,7 @@ import {
   LogOut, Bell, Menu, X, ChevronRight,
   LayoutDashboard, FileText, Users, BookOpen, Building,
   Banknote, ShieldAlert, Zap, Images, UserCheck,
-  BarChart3, KeyRound, FileSignature, ClipboardList, BellRing, Activity,
+  BarChart3, FileSignature, ClipboardList, BellRing, Activity,
   MessagesSquare, Award, CalendarRange, FileCog, UserCircle, Globe, Shapes, School, ScanLine,
 } from 'lucide-react';
 import UserAvatar from '@/components/ui/user-avatar';
@@ -101,7 +101,6 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'admin_nav.items.usuarios.name', href: '/admin/usuarios', icon: Users, description: 'admin_nav.items.usuarios.desc' },
       { name: 'admin_nav.items.notificaciones.name', href: '/admin/notificaciones', icon: BellRing, description: 'admin_nav.items.notificaciones.desc' },
       { name: 'admin_nav.items.solicitudes_acceso.name', href: '/admin/solicitudes-acceso', icon: UserCheck, description: 'admin_nav.items.solicitudes_acceso.desc' },
-      { name: 'admin_nav.items.reset_requests.name', href: '/admin/reset-requests', icon: KeyRound, description: 'admin_nav.items.reset_requests.desc' },
       { name: 'admin_nav.items.lista_negra.name', href: '/admin/lista-negra', icon: ShieldAlert, description: 'admin_nav.items.lista_negra.desc' },
       { name: 'admin_nav.items.audit_logs.name', href: '/admin/audit-logs', icon: Activity, description: 'admin_nav.items.audit_logs.desc' },
     ],

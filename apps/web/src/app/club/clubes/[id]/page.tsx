@@ -339,7 +339,7 @@ export default function MiClubPage() {
     </p>
   ) : null;
   const seccionAccesos = d.accesos ? (
-    <AccesosClub clubId={club.id} accesos={d.accesos} onCambio={(accesos) => setD((x) => (x ? { ...x, accesos } : x))}
+    <AccesosClub clubId={club.id} accesos={d.accesos} onCambio={(accesos) => { setD((x) => (x ? { ...x, accesos } : x)); void cargar(); /* el líder B entra o sale de Integrantes */ }}
       onAviso={(ok, texto) => { setAviso({ tipo: ok ? 'success' : 'error', texto }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
   ) : null;
 
@@ -461,7 +461,7 @@ export default function MiClubPage() {
           <div>
             <h2 id="sec-int" className="flex flex-wrap items-center gap-2 text-base font-bold text-[var(--app-ink)]"><User className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Integrantes<ModalidadChip modalidad={config.modalidad} className="ml-auto" /></h2>
             <p className="text-sm text-[var(--app-ink-2)]">
-              {d.integrantes.length} de {config.max_integrantes} · se necesitan al menos {config.min_integrantes} (tú cuentas como integrante)
+              {d.integrantes.length} de {config.max_integrantes} · se necesitan al menos {config.min_integrantes} (tú y tu líder B cuentan como integrantes)
               {!config.participan_menores ? ' · no participan menores de edad' : ''}
             </p>
           </div>
@@ -488,6 +488,7 @@ export default function MiClubPage() {
                   <p className="flex flex-wrap items-center gap-2 font-semibold text-[var(--app-ink)]">
                     <span className="break-words">{i.nombre}</span>
                     {i.es_lider && <span className="pill" data-tone="gold"><Crown className="h-3 w-3" aria-hidden="true" />Líder</span>}
+                    {i.es_lider_b && <span className="pill" data-tone="mint"><Crown className="h-3 w-3" aria-hidden="true" />Líder B</span>}
                     {i.menor_de_edad && <span className="pill" data-tone="sky">Menor</span>}
                   </p>
                   <p className="break-words text-xs text-[var(--app-ink-2)]">
@@ -501,7 +502,8 @@ export default function MiClubPage() {
                   {faltaFoto && <p className="text-xs font-medium" style={{ color: 'var(--tile-gold-fg)' }}>Falta su foto.</p>}
                   <div className="flex gap-1.5 pt-1">
                     <Button size="sm" variant="soft" onClick={() => abrirIntegrante(i)} aria-label={`Editar a ${i.nombre}`}><Pencil className="h-4 w-4" aria-hidden="true" /><span className="max-sm:sr-only">Editar</span></Button>
-                    {!i.es_lider && (
+                    {/* El líder B se quita desde «Acompañantes del club». */}
+                    {!i.es_lider && !i.es_lider_b && (
                       <Button size="sm" variant="destructive" onClick={() => setQuitar(i)} aria-label={`Quitar a ${i.nombre}`}><Trash2 className="h-4 w-4" aria-hidden="true" /></Button>
                     )}
                   </div>
@@ -511,6 +513,9 @@ export default function MiClubPage() {
           })}
         </ul>
       </section>
+
+      {/* 08/10/2026 (pedido del usuario): acompañantes (líder B y director) justo debajo de Integrantes. */}
+      {seccionAccesos}
 
       {/* ── Documentos ── */}
       <section className="space-y-4" aria-labelledby="sec-docs">
@@ -607,7 +612,6 @@ export default function MiClubPage() {
         </div>
       </section>
 
-      {seccionAccesos}
       <HistorialClub entradas={d.historial} />
 
       <ConfirmDialog open={confirmarEnvio} title={subsanando ? 'Enviar mis correcciones' : 'Enviar mi club a revisión'}

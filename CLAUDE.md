@@ -311,12 +311,11 @@ transition: { type: 'spring' as const, damping: 20 }
 ### 9. Validación en 2 capas (Gold Rule)
 Siempre validar en **frontend** (UX, bloquea antes de llamar API) **y** en **backend** (seguridad, rechaza con 422 si el frontend se saltea). Redundancia deliberada.
 
-### 10. Flujo de recuperación de contraseña — es admin-mediated
-No es un reset directo. El flujo es:
-1. Usuario → `/forgot-password` → backend crea `PasswordResetRequest` (pending)
-2. Admin aprueba en `/admin/reset-requests` → Laravel envía enlace al usuario
-
-Esto es intencional: COMECYT requiere control institucional sobre quién puede resetear contraseñas.
+### 10. Flujo de recuperación de contraseña — automático por correo (E68, desde 08/10/2026)
+**Ya no pasa por el admin** (pedido del usuario: «solo debe llegar el correo automáticamente»). `/forgot-password` →
+`PasswordResetController::sendResetLink` → `Password::sendResetLink` → `ResetPasswordNotification` (cola, plantilla SIGAE)
+→ `/reset-password?token=…`. `/admin/reset-requests`, sus rutas y `SolicitudResetPassword` se retiraron; la tabla
+`password_reset_requests` queda solo como historial. Controles: ver E68.
 
 ### 11. UsuariosPruebaSeeder — NUNCA en producción
 `DatabaseSeeder` ejecuta `UsuariosPruebaSeeder` solo si `app()->isLocal() || app()->environment('testing')`. Si se pasa a producción con `APP_ENV=production`, el seeder se omite automáticamente. Nunca remover este guard.
@@ -562,7 +561,7 @@ para `serverFetch`. Documento completo: `docs/DOMINIO_BALANCEADOR.md`.
 ### Auth (público)
 ```
 POST /auth/login
-POST /auth/forgot-password     → crea PasswordResetRequest (requiere aprobación admin)
+POST /auth/forgot-password     → manda el enlace de recuperación por correo, sin aprobación (E68)
 POST /auth/reset-password
 POST /auth/solicitar-acceso    → crea SolicitudAcceso pendiente de aprobación admin
 ```
@@ -668,9 +667,7 @@ GET  /admin/reportes/excel
 GET  /admin/solicitudes-acceso
 POST /admin/solicitudes-acceso/{id}/aprobar
 POST /admin/solicitudes-acceso/{id}/rechazar
-GET  /admin/reset-requests
-POST /admin/reset-requests/{id}/aprobar
-POST /admin/reset-requests/{id}/rechazar
+(/admin/reset-requests retirado el 08/10/2026, E68)
 ```
 
 **Asignación de evaluadores:**
@@ -1977,6 +1974,55 @@ usar el registro para bombardear un buzón). Un error de base distinto de llave 
 **Limpieza:** se borraron 6 cuentas `vac.*@example.invalid` que dejaron las pruebas de E61 del 02/10.
 **Verificado:** `e2e_registro_duplicado.php` 8/8 (nuevo llega a la lista del admin; repetido responde igual, no duplica,
 encola un solo aviso, log enmascarado), `e2e_registro.php` 46/46.
+
+### E67 — Un registro rechazado ya no bloquea volver a registrarse; correos en cada estado [publicado 08-10-2026]
+**Reporte del usuario:** eligió el rol equivocado, el admin lo rechazó y al registrarse otra vez «los datos ya habían sido
+registrados» (índice único `solicitudes_acceso_email_unique` y la regla de duplicados contaban también las rechazadas).
+**Decisiones del usuario:** rechazado nunca bloquea; la rechazada se conserva en el historial; **3 rechazos libres y desde
+el 3.º cada rechazo pausa correo y CURP 24 h**; correos de registro recibido, aprobado/rechazado, pausa y fin de pausa.
+- Migración `2026_10_08_000001`: quita el único de correo; únicos **parciales** solo para `pendiente`
+  (`LOWER(email)` y `curp`); `desbloqueo_avisado_at`.
+- `App\Support\ReintentoRegistro` (`LIBRES=3`, `HORAS=24`, `rechazos`, `pausaHasta`, `intentosRestantes`, `fecha`).
+  `RegistroGeneralController`: duplicado = cuenta existente o solicitud **pendiente**; en pausa responde igual (201, sin
+  enumeración) y manda `RegistroEstadoAviso('pausa')` (1 cada 30 min); registro nuevo → `RegistroEstadoAviso('recibido')`
+  con folio e intento.
+- `AccesoRechazadoMail` dice cuántos intentos quedan o hasta cuándo es la pausa; botón «Registrarme de nuevo».
+- Comando `registro:avisar-desbloqueos` (cada hora): aviso de fin de pausa una sola vez, solo para el último rechazo y si no
+  hubo un registro posterior. **Reiniciar `comecyt-scheduler` al agregar comandos programados.**
+- Admin (`/admin/solicitudes-acceso`): `rechazos_previos` y `motivo_rechazo_previo`; píldora «Reintento» y aviso de que
+  otro rechazo pausará 24 h.
+**Verificado:** `e2e_reintentos.php` (rechazo → reintento, intento 2 en el correo, chip del admin, pausa por correo y por
+CURP, respuesta igual en pausa, aviso de fin de pausa sin repetir, aprobar el reintento crea la cuenta).
+**Nota de pruebas:** `throttle:10,10,registro` por IP: una prueba con más de 10 registros en 10 min recibe 429.
+
+### E68 — Recuperación de contraseña automática; /admin/reset-requests retirado [publicado 08-10-2026]
+**Pedido del usuario:** «no debe mandar solicitud de recuperar contraseña, solo debe llegar el correo automáticamente…
+sin que el admin toque el sistema». Sustituye la regla 10 anterior (aprobación del admin).
+- `PasswordResetController::sendResetLink`: misma respuesta exista o no la cuenta; correo sin distinguir mayúsculas;
+  cuentas inactivas no reciben enlace; tope de **5 enlaces por correo y hora** (`Cache`, además de los 60 s del broker y
+  `throttle:3,1` por IP); el enlace (60 min, un uso) va por la **cola** (`ResetPasswordNotification implements ShouldQueue`,
+  `User::sendPasswordResetNotification`) para que la respuesta dure lo mismo en ambos casos. Restablecer invalida los JWT
+  anteriores (`password_changed_at`, E44).
+- Retirados: rutas `admin/reset-requests*`, métodos `adminIndex/adminApprove/adminReject`, `SolicitudResetPassword`,
+  página `/admin/reset-requests`, entrada del menú, tarjeta «Restablecimientos» del dashboard y `reset_password` en
+  `DESTINOS_ADMIN`. `/forgot-password` explica el flujo nuevo.
+- **Riesgo aceptado (documentado):** quien controle el buzón de una cuenta puede cambiar su contraseña sin que nadie lo
+  revise — es el modelo estándar; lo mitigan el enlace de un solo uso, el vencimiento, los topes y el 2FA (pendiente de
+  reactivar en el admin). El token viaja en la carga del trabajo de la cola (tabla `jobs`) hasta que se envía.
+
+### Registro (`/registro`) — textos pedidos por el usuario [08-10-2026]
+Tarjetas de rol: `solicitante` se muestra como **«Convocatorias»** y `lider_club` como **«Club De Robótica»**
+(`lib/registro.ts`, solo en `/registro`; el rol interno y las etiquetas del panel no cambian). El aviso «un administrador
+debe aceptar tu registro» aparece **solo en el último paso** (Confirmar) y en la pantalla final.
+
+### Líder B como integrante del club [publicado 08-10-2026]
+Pedido del usuario: «Acompañantes del club» va **debajo de Integrantes** y el líder B **cuenta como integrante** (como el
+líder A); el director no. Decisiones: tarjeta automática al darle acceso; con el club lleno no se puede dar de alta (422);
+los líderes B existentes se agregaron con un script (1 club). `club_integrantes.es_lider_b` (migración
+`2026_10_08_000002`, único parcial por club, en `$guarded`); `App\Support\LiderBIntegrante` (`exigirCupo`,
+`sincronizar`, `quitar`) llamado desde `ClubAccesoController::store`/`revocar`. Solo cambia la lista mientras el club es
+editable (después del envío el padrón revisado no se toca). No se quita desde Integrantes (422: se quita en Acompañantes).
+**Verificado:** `e2e_lider_b_integrante.php` 12/12, E61 37/37, vitest 184/184.
 
 ### E65 — Correos de SIGAE con un solo diseño institucional [publicado 02-10-2026]
 **Pedido:** «personaliza los correos con el estilo de la página de SIGAE, con los logos institucionales como en el header,

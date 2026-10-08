@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\UsuarioRol;
 use App\Notifications\ClubAviso;
 use App\Support\Audit;
+use App\Support\LiderBIntegrante;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -60,6 +61,8 @@ class ClubAccesoController extends Controller
             if ($otro) {
                 throw ValidationException::withMessages(['email' => 'Esa persona ya es '.ClubAcceso::ETIQUETAS[$otro->tipo].' de este club.']);
             }
+            // 08/10/2026: el líder B cuenta como integrante; con el club lleno no se puede dar de alta.
+            if ($v['tipo'] === 'lider_b') LiderBIntegrante::exigirCupo($club);
             // Uno por tipo: si ya había otra persona, se le retira el acceso (cambio de líder B o de director).
             $actual = ClubAcceso::where('club_id', $club->id)->where('tipo', $v['tipo'])->lockForUpdate()->first();
             if ($actual && (! $usuario || $actual->user_id !== $usuario->id)) {
@@ -77,6 +80,7 @@ class ClubAccesoController extends Controller
             UsuarioRol::otorgar($usuario->id, self::ROL, $lider->id);
             $acceso = $actual ?? new ClubAcceso();
             $acceso->forceFill(['club_id' => $club->id, 'user_id' => $usuario->id, 'tipo' => $v['tipo'], 'otorgado_por' => $lider->id])->save();
+            if ($v['tipo'] === 'lider_b') LiderBIntegrante::sincronizar($club, $usuario);
         });
 
         Audit::log('club.acceso_otorgado', $club, ['tipo' => $v['tipo'], 'user_id' => $usuario->id, 'cuenta_nueva' => $nuevaCuenta]);
@@ -123,6 +127,8 @@ class ClubAccesoController extends Controller
         $u = $a->usuario;
         $tipo = $a->tipo;
         $a->delete();
+        // Su tarjeta de integrante se va con el acceso (al cambiar de líder B, sincronizar() crea la nueva).
+        if ($tipo === 'lider_b' && $club) LiderBIntegrante::quitar($club);
         if ($u && ! ClubAcceso::where('user_id', $u->id)->exists()) {
             UsuarioRol::where('user_id', $u->id)->where('rol_id', self::ROL)->delete();
             if ((int) $u->rol_id === self::ROL) {

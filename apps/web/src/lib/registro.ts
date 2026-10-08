@@ -17,14 +17,14 @@ export const PATRON_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export const ROL_REGISTRO: Record<RolAutoservicio, { titulo: string; para: string; detalle: string }> = {
   solicitante: {
-    titulo: 'Participante',
+    titulo: 'Convocatorias', // 08/10/2026: nombre pedido por el usuario para la tarjeta de /registro (el rol sigue siendo solicitante)
     para: 'Empresas, emprendedores e instituciones',
     detalle: 'Postula tus proyectos a las convocatorias de Apoyo Empresarial (SIGAE). Al final registras los datos de tu empresa.',
   },
   lider_club: {
-    titulo: 'Líder de club',
+    titulo: 'Club De Robótica', // 08/10/2026: nombre pedido por el usuario para la tarjeta de /registro (el rol sigue siendo lider_club)
     para: 'Docentes y responsables de clubes escolares',
-    detalle: 'Registra a tu club de una escuela estatal o federal en convocatorias de Apoyo en especie (kits). Tu club e integrantes se capturan después de aprobar tu cuenta.',
+    detalle: 'Registra a tu club de una escuela estatal o federal en convocatorias de Apoyo en especie (kits). Tu club e integrantes se capturan después, desde tu panel.',
   },
   evaluador: {
     titulo: 'Evaluador',

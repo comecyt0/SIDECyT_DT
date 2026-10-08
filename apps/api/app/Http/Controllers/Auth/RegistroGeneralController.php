@@ -70,10 +70,12 @@ class RegistroGeneralController extends Controller
 
         $email = (string) $request->input('email');
         $curp = (string) $request->input('curp');
+        // E67 (08/10/2026): una solicitud RECHAZADA ya no bloquea (la persona puede corregir, p. ej. el rol, y volver a
+        // registrarse). Bloquean una cuenta existente o una solicitud pendiente con ese correo o esa CURP.
         $duplicado = User::whereRaw('LOWER(email) = ?', [$email])->exists()
             || User::where('curp', $curp)->exists()
-            || SolicitudAcceso::whereRaw('LOWER(email) = ?', [$email])->exists()
-            || SolicitudAcceso::where('curp', $curp)->where('estado', 'pendiente')->exists();
+            || SolicitudAcceso::where('estado', 'pendiente')
+                ->where(fn ($q) => $q->whereRaw('LOWER(email) = ?', [$email])->orWhere('curp', $curp))->exists();
         if ($duplicado) {
             // 06/10/2026: antes solo quedaba en nivel `info` (el log está en `warning`) y nadie se enteraba: la persona veía
             // «recibido» y no pasaba nada. Ahora queda en el log y le llega un aviso al correo escrito (la pantalla no cambia).
@@ -81,6 +83,19 @@ class RegistroGeneralController extends Controller
 
             return response()->json($respuesta, 201);
         }
+
+        // E67: desde el 3.er rechazo (por correo o CURP), pausa de 24 h. La pantalla responde igual; el aviso va al correo.
+        if ($hasta = \App\Support\ReintentoRegistro::pausaHasta($email, $curp)) {
+            [$local, $dominio] = array_pad(explode('@', $email, 2), 2, '');
+            Log::channel('security')->warning('Registro general en pausa (3 o más rechazos)', ['email' => mb_substr($local, 0, 1).'***@'.$dominio, 'ip' => $request->ip()]);
+            if (\Illuminate\Support\Facades\Cache::add('registro-pausa:'.hash('sha256', $email), 1, now()->addMinutes(30))) {
+                \Illuminate\Support\Facades\Notification::route('mail', $email)
+                    ->notify(new \App\Notifications\RegistroEstadoAviso('pausa', ['hasta' => \App\Support\ReintentoRegistro::fecha($hasta)]));
+            }
+
+            return response()->json($respuesta, 201);
+        }
+        $intento = \App\Support\ReintentoRegistro::rechazos($email, $curp) + 1;
 
         $cv = $rol === 'evaluador' ? RegistroRoles::guardarCv($request->file('cv')) : null;
         $datosRol = RegistroRoles::datosRol($request, $rol, $cv);
@@ -119,6 +134,11 @@ class RegistroGeneralController extends Controller
         foreach (User::where('rol_id', config('comecyt.roles.admin'))->where('activo', true)->get() as $admin) {
             $admin->notify(new NuevaSolicitudAcceso($s));
         }
+        // E67: correo a la persona: registro recibido, con folio, rol y si es un reintento.
+        \Illuminate\Support\Facades\Notification::route('mail', $email)->notify(new \App\Notifications\RegistroEstadoAviso('recibido', [
+            'nombre' => $s->nombre, 'folio' => $s->id, 'intento' => $intento,
+            'rol' => \App\Notifications\RolSolicitudAviso::ETIQUETAS[$rol] ?? $rol,
+        ]));
 
         return response()->json($respuesta, 201);
     }

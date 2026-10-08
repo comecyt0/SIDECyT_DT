@@ -120,7 +120,12 @@ class RegistroAccesoController extends Controller
 
         // E52: nombre del área de conocimiento del evaluador y si trae CV (el archivo solo se descarga por cv()).
         $areas = DB::table('areas_conocimiento')->pluck('nombre', 'id');
-        $solicitudes->each(function ($s) use ($areas) {
+        $solicitudes->each(function ($s) use ($areas, $solicitudes) {
+            // E67: ¿es un reintento? Rechazos anteriores con el mismo correo o la misma CURP (y el último motivo).
+            $previas = $solicitudes->filter(fn ($o) => $o->id < $s->id && $o->estado === 'rechazada'
+                && (mb_strtolower((string) $o->email) === mb_strtolower((string) $s->email) || ($s->curp && $o->curp === $s->curp)))->sortByDesc('id');
+            $s->setAttribute('rechazos_previos', $previas->count());
+            $s->setAttribute('motivo_rechazo_previo', $previas->first()?->motivo_rechazo);
             $d = (array) ($s->datos_rol ?? []);
             $s->setAttribute('area_nombre', isset($d['area_conocimiento_id']) ? ($areas[$d['area_conocimiento_id']] ?? null) : null);
             $s->setAttribute('tiene_cv', \App\Support\RegistroRoles::cvValido($d['cv'] ?? null));

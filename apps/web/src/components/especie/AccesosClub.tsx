@@ -15,7 +15,7 @@ export interface AccesoClub { nombre: string | null; email: string | null; colid
 export type AccesosClubApi = Record<TipoAcceso, AccesoClub | null>;
 
 const INFO: Record<TipoAcceso, { titulo: string; ayuda: string }> = {
-  lider_b: { titulo: 'Líder B', ayuda: 'Sigue el registro, ve los datos del club e integrantes, el QR y la credencial, y la logística. Solo ve: no hace cambios.' },
+  lider_b: { titulo: 'Líder B', ayuda: 'Cuenta como integrante: al darle acceso aparece en Integrantes para que completes sus datos. Sigue el registro, ve los datos del club, el QR y la credencial, y la logística. Solo ve: no hace cambios.' },
   director: { titulo: 'Director(a) de la escuela', ayuda: 'Opcional. Acompaña al club (no cuenta como integrante) y ve lo mismo que el líder B. Puedes compartirle tu rol de líder si no puedes asistir.' },
 };
 
@@ -129,7 +129,7 @@ export default function AccesosClub({ clubId, accesos, onCambio, onAviso }: {
     <section className="app-card space-y-4 p-5" aria-labelledby="sec-accesos">
       <div>
         <h2 id="sec-accesos" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><Users className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Acompañantes del club</h2>
-        <p className="text-sm text-[var(--app-ink-2)]">Dales acceso para que sigan a tu club. No cuentan como integrantes.</p>
+        <p className="text-sm text-[var(--app-ink-2)]">Dales acceso para que sigan a tu club. El líder B cuenta como integrante; el director no.</p>
       </div>
       <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">{tarjeta('lider_b')}{tarjeta('director')}</ul>
 

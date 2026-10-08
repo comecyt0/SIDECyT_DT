@@ -310,10 +310,7 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
         Route::get('usuarios/{user}/roles', [\App\Http\Controllers\Admin\SolicitudRolController::class, 'rolesDeUsuario']);
         Route::delete('usuarios/{user}/roles/{rol}', [\App\Http\Controllers\Admin\SolicitudRolController::class, 'revocar']);
 
-            // Solicitudes de Recuperación de Contraseña
-            Route::get('reset-requests', [PasswordResetController::class, 'adminIndex']);
-            Route::post('reset-requests/{resetRequest}/aprobar', [PasswordResetController::class, 'adminApprove']);
-            Route::post('reset-requests/{resetRequest}/rechazar', [PasswordResetController::class, 'adminReject']);
+            // E68 (08/10/2026): /admin/reset-requests retirado; la recuperación de contraseña es automática por correo.
 
             // Audit log
             Route::get('audit-logs', [AuditLogController::class, 'index']);

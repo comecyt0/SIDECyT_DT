@@ -39,6 +39,9 @@ export interface SolicitudAcceso {
   datos_rol?: { area_conocimiento_id?: number; institucion?: string; grado_academico?: string } | null;
   area_nombre?: string | null;
   tiene_cv?: boolean;
+  /** E67: rechazos anteriores con el mismo correo o CURP (reintento) y el último motivo. */
+  rechazos_previos?: number;
+  motivo_rechazo_previo?: string | null;
 }
 
 const ROL_SOLICITADO: Record<string, { label: string; tone: string }> = {
@@ -240,6 +243,11 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
                           <span className="pill" data-tone={ROL_SOLICITADO[sol.rol_solicitado ?? 'solicitante']?.tone ?? 'mist'}>
                             {ROL_SOLICITADO[sol.rol_solicitado ?? 'solicitante']?.label ?? sol.rol_solicitado}
                           </span>
+                          {(sol.rechazos_previos ?? 0) > 0 && (
+                            <span className="pill" data-tone="butter" title={sol.motivo_rechazo_previo ? `Motivo anterior: ${sol.motivo_rechazo_previo}` : undefined}>
+                              Reintento · {sol.rechazos_previos} rechazo{sol.rechazos_previos === 1 ? '' : 's'} antes
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-[var(--app-ink-2)] flex items-center gap-3 flex-wrap">
                           <span className="flex items-center gap-1 truncate"><Mail className="w-3 h-3 shrink-0" />{sol.email}</span>
@@ -327,6 +335,14 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
                   <p className="text-sm text-[var(--app-ink)] p-3 rounded-[12px] leading-relaxed bg-[var(--auth-field)]">
                     {viewingSolicitud.motivo}
                   </p>
+                </div>
+              )}
+
+              {(viewingSolicitud.rechazos_previos ?? 0) > 0 && (
+                <div className="p-3 rounded-[12px]" style={{ backgroundColor: 'var(--tile-gold-bg)' }}>
+                  <p className="text-xs font-bold mb-1 text-[var(--app-ink)]">Es un reintento: {viewingSolicitud.rechazos_previos} rechazo{viewingSolicitud.rechazos_previos === 1 ? '' : 's'} antes con el mismo correo o CURP</p>
+                  {viewingSolicitud.motivo_rechazo_previo && <p className="text-sm text-[var(--app-ink)]">Motivo anterior: {viewingSolicitud.motivo_rechazo_previo}</p>}
+                  {(viewingSolicitud.rechazos_previos ?? 0) >= 2 && <p className="mt-1 text-xs text-[var(--app-ink-2)]">Si lo rechazas otra vez, su registro quedará en pausa 24 horas.</p>}
                 </div>
               )}
 

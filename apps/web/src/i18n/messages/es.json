@@ -52,10 +52,10 @@
     "back_to_login": "Volver al inicio de sesión",
     "invalid_credentials": "Credenciales inválidas. Por favor verifique.",
     "forgot_title": "Recuperar contraseña",
-    "forgot_subtitle": "Ingresa tu correo institucional. Un administrador revisará la solicitud y, si procede, recibirás un enlace para restablecer la contraseña.",
-    "forgot_submit": "Solicitar enlace",
-    "forgot_sent_title": "Solicitud enviada",
-    "forgot_sent_body": "Si el correo está registrado, recibirás un enlace cuando un administrador apruebe la solicitud.",
+    "forgot_subtitle": "Escribe el correo con el que entras. Te enviaremos al momento un enlace para crear una contraseña nueva.",
+    "forgot_submit": "Enviarme el enlace",
+    "forgot_sent_title": "Revisa tu correo",
+    "forgot_sent_body": "Si el correo está registrado, en unos minutos te llegará el enlace a",
     "reset_title": "Restablecer contraseña",
     "reset_submit": "Cambiar contraseña",
     "back_to_login_link": "← Volver al inicio de sesión"
@@ -262,10 +262,6 @@
       "solicitudes_acceso": {
         "name": "Solicitudes de Acceso",
         "desc": "Nuevos registros pendientes"
-      },
-      "reset_requests": {
-        "name": "Recuperación Contraseñas",
-        "desc": "Solicitudes de restablecimiento"
       },
       "lista_negra": {
         "name": "Lista Negra",

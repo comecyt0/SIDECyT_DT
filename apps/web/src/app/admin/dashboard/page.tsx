@@ -16,7 +16,6 @@ import {
   ArrowUpRight,
   FileSpreadsheet,
   UserCheck,
-  KeyRound,
   Banknote,
   Activity,
   BookOpen,
@@ -156,7 +155,6 @@ export default function AdminDashboard() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [charts, setCharts] = useState<ChartsResponse | null>(null);
   const [accesosPendientes, setAccesosPendientes] = useState<number | null>(null);
-  const [resetsPendientes, setResetsPendientes] = useState<number | null>(null);
   const [actividad, setActividad] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -196,10 +194,9 @@ export default function AdminDashboard() {
       safe(api.get<ChartsResponse | null>('/admin/charts'), null),
       // E45: estas tres son solo del admin general; los demás roles no las piden.
       soloAdmin ? safe(api.get<Array<{ estado?: string }>>('/admin/solicitudes-acceso'), []) : Promise.resolve([]),
-      soloAdmin ? safe(api.get<Array<{ status?: string }>>('/admin/reset-requests'), []) : Promise.resolve([]),
       soloAdmin ? safe(api.get<{ data?: AuditRow[] } | AuditRow[]>('/admin/audit-logs?per_page=6'), { data: [] }) : Promise.resolve({ data: [] as AuditRow[] }),
     ])
-      .then(([statsData, alertsData, convData, chartsData, accesos, resets, audit]) => {
+      .then(([statsData, alertsData, convData, chartsData, accesos, audit]) => {
         setStats(Array.isArray(statsData) ? statsData : []);
         setAlerts(Array.isArray(alertsData) ? alertsData : []);
         setCharts(chartsData ?? null);
@@ -207,7 +204,6 @@ export default function AdminDashboard() {
         const activa = (Array.isArray(convData) ? convData : []).find((c) => c.estado_publico === 'abierta' || c.estado_publico === 'prorroga');
         setConvActiva(activa?.nombre ? { nombre: activa.nombre, cierre: activa.fecha_cierre_efectiva ?? null, prorroga: Boolean(activa.fecha_prorroga) } : null);
         setAccesosPendientes((Array.isArray(accesos) ? accesos : []).filter((a) => a.estado === 'pendiente').length);
-        setResetsPendientes((Array.isArray(resets) ? resets : []).filter((r) => r.status === 'pending').length);
         const rows = Array.isArray(audit) ? audit : (audit?.data ?? []);
         setActividad(rows);
       })
@@ -227,7 +223,6 @@ export default function AdminDashboard() {
     // Accesos y restablecimientos: solo el admin general los atiende.
     ...(esAdmin ? [
       { key: 'accesos', label: 'Solicitudes de acceso', hint: 'Cuentas por aprobar', value: accesosPendientes, href: '/admin/solicitudes-acceso', icon: UserCheck, tone: 'vino' as TileTone },
-      { key: 'resets', label: 'Restablecimientos', hint: 'Contraseñas por autorizar', value: resetsPendientes, href: '/admin/reset-requests', icon: KeyRound, tone: 'sky' as TileTone },
     ] : []),
     { key: 'revision', label: 'Solicitudes en revisión', hint: 'Enviadas u observadas', value: statValue('Solicitudes en Revisión'), href: '/admin/solicitudes', icon: FileText, tone: 'violet' },
     ...(!esConsulta ? [

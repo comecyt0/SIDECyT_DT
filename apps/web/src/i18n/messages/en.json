@@ -52,10 +52,10 @@
     "back_to_login": "Back to sign in",
     "invalid_credentials": "Invalid credentials. Please verify.",
     "forgot_title": "Recover password",
-    "forgot_subtitle": "Enter your institutional email. An administrator will review the request and, if approved, you will receive a reset link.",
-    "forgot_submit": "Request link",
-    "forgot_sent_title": "Request sent",
-    "forgot_sent_body": "If the email is registered, you will receive a link once an administrator approves the request.",
+    "forgot_subtitle": "Enter the email you sign in with. We will send you a link right away to create a new password.",
+    "forgot_submit": "Send me the link",
+    "forgot_sent_title": "Check your email",
+    "forgot_sent_body": "If the email is registered, the link will arrive in a few minutes at",
     "reset_title": "Reset password",
     "reset_submit": "Change password",
     "back_to_login_link": "← Back to sign in"
@@ -262,10 +262,6 @@
       "solicitudes_acceso": {
         "name": "Access requests",
         "desc": "New pending sign-ups"
-      },
-      "reset_requests": {
-        "name": "Password recovery",
-        "desc": "Password reset requests"
       },
       "lista_negra": {
         "name": "Blacklist",

@@ -40,7 +40,7 @@ describe('Mi club (E52 · F1)', () => {
     const { container } = render(<MiClubPage />);
     await waitFor(() => expect(screen.getByText(/necesita al menos 3 integrantes/)).toBeInTheDocument());
     expect(screen.getByRole('button', { name: /Enviar a revisión/ })).toBeDisabled();
-    expect(screen.getByText('1 de 5 · se necesitan al menos 3 (tú cuentas como integrante)')).toBeInTheDocument();
+    expect(screen.getByText('1 de 5 · se necesitan al menos 3 (tú y tu líder B cuentan como integrantes)')).toBeInTheDocument();
     // El nombre con HTML sale como texto y una URL de imagen ajena no se pinta.
     expect(screen.getByDisplayValue('Club <b>Volcanes</b>')).toBeInTheDocument();
     expect(container.querySelector('img[src*="evil.example"]')).toBeNull();

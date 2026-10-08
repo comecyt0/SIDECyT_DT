@@ -24,7 +24,8 @@ describe('hrefBuzon (E45)', () => {
     expect(hrefBuzon({ tipo: 'buzon_mensaje', conversacion_id: -3 }, '/admin/buzon')).toBe('/admin/buzon');
   });
   it('avisos de acción del admin llevan a su página (rutas fijas)', () => {
-    expect(hrefAvisoAdmin({ tipo: 'reset_password' })).toBe('/admin/reset-requests');
+    // E68: la recuperación de contraseña ya no pasa por el admin.
+    expect(hrefAvisoAdmin({ tipo: 'reset_password' })).toBeNull();
     expect(hrefAvisoAdmin({ tipo: 'nueva_solicitud_acceso' })).toBe('/admin/solicitudes-acceso');
     expect(hrefAvisoAdmin({ tipo: 'constructor' })).toBeNull();
     expect(hrefAvisoAdmin({ tipo: 'info' })).toBeNull();

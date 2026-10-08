@@ -27,7 +27,6 @@ export function hrefBuzon(n: { tipo?: string; conversacion_id?: number | null },
  * contraseña, solicitud de acceso). Rutas fijas: nada de la notificación se interpola en la URL.
  */
 const DESTINOS_ADMIN: Record<string, string> = {
-  reset_password: '/admin/reset-requests',
   nueva_solicitud_acceso: '/admin/solicitudes-acceso',
   // E52 · F2: clubes que esperan una acción del personal.
   club_enviado: '/admin/clubes',

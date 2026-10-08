@@ -3,12 +3,10 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\PasswordResetRequest;
 use App\Models\User;
-use App\Notifications\SolicitudResetPassword;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
@@ -16,102 +14,48 @@ use Illuminate\Support\Str;
 
 class PasswordResetController extends Controller
 {
+    /** Enlaces por correo por hora (además de los 60 s del broker y del throttle por IP de la ruta). */
+    private const ENLACES_POR_HORA = 5;
+
     /**
-     * User requests password reset.
-     * Creates a pending request and notifies the admin.
+     * E68 (08/10/2026, pedido del usuario): la persona pide el enlace y le llega solo, sin que un administrador apruebe
+     * nada (antes se creaba un PasswordResetRequest que el admin aprobaba en /admin/reset-requests).
+     *
+     * Seguridad: misma respuesta y misma duración exista o no la cuenta (el correo va por la cola); correo sin distinguir
+     * mayúsculas; cuentas inactivas no reciben enlace; tope de enlaces por correo y hora (evita bombardear un buzón
+     * desde muchas IP); el enlace vence en 60 min, es de un solo uso y al usarlo se invalidan las sesiones anteriores.
      */
     public function sendResetLink(Request $request)
     {
-        $request->validate(['email' => 'required|email']);
+        $request->validate(['email' => 'required|email|max:255']);
 
-        // SEGURIDAD (24/09/2026): misma respuesta exista o no la cuenta. Antes un 404 "no está registrado" permitía
-        // averiguar qué correos tienen cuenta (enumeración). Si no existe, no se crea nada y nadie es notificado.
         $respuesta = [
-            'message' => 'Si el correo está registrado, tu solicitud llegará al administrador. Recibirás el enlace de recuperación cuando la apruebe. Si todavía no tienes cuenta, usa "Solicitar acceso".',
+            'message' => 'Si el correo está registrado, en unos minutos recibirás un enlace para crear una contraseña nueva. Revisa también tu carpeta de spam.',
         ];
 
-        $user = User::where('email', $request->email)->first();
-        if (! $user) {
-            Log::channel('security')->info('Password reset requested for unknown email', ['ip' => $request->ip()]);
+        $email = mb_strtolower(trim((string) $request->input('email')));
+        $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
+        if (! $user || ! $user->activo) {
+            Log::channel('security')->info('Password reset requested for unknown or inactive email', ['ip' => $request->ip()]);
 
             return response()->json($respuesta);
         }
 
-        // Create or replace pending request (only one active at a time per email)
-        PasswordResetRequest::where('email', $request->email)
-            ->where('status', 'pending')
-            ->delete();
+        $clave = 'reset-enlaces:'.hash('sha256', $email);
+        Cache::add($clave, 0, now()->addHour());
+        if (Cache::increment($clave) > self::ENLACES_POR_HORA) {
+            Log::channel('security')->warning('Password reset: tope de enlaces por hora', ['user_id' => $user->id, 'ip' => $request->ip()]);
 
-        $resetRequest = PasswordResetRequest::create([
-            'email' => $request->email,
-            'nombre' => $user->name,
-            'status' => 'pending',
-        ]);
+            return response()->json($respuesta);
+        }
 
-        // Notify all admin users
-        try {
-            $admins = User::where('rol_id', config('comecyt.roles.admin'))->where('activo', true)->get();
-            foreach ($admins as $admin) {
-                $admin->notify(new SolicitudResetPassword($resetRequest));
-            }
-        } catch (\Throwable $e) {
-            Log::warning('SolicitudResetPassword notification failed', ['error' => $e->getMessage()]);
+        // Si se pidió hace menos de 60 s el broker responde "throttled": no se manda otro, la respuesta es la misma.
+        $estado = Password::sendResetLink(['email' => $user->email]);
+        if ($estado !== Password::RESET_LINK_SENT && $estado !== Password::RESET_THROTTLED) {
+            Log::warning('Password reset link not sent', ['user_id' => $user->id, 'status' => $estado]);
         }
 
         return response()->json($respuesta);
-    }
-
-    /**
-     * Admin approves a password reset request.
-     * Uses Laravel's built-in mechanism to send the actual reset link to the user.
-     */
-    public function adminApprove(Request $request, PasswordResetRequest $resetRequest)
-    {
-        if ($resetRequest->status !== 'pending') {
-            return response()->json(['error' => 'Esta solicitud ya fue procesada.'], 422);
-        }
-
-        // Clear any existing throttle so admin approval always goes through
-        DB::table('password_reset_tokens')->where('email', $resetRequest->email)->delete();
-
-        $status = Password::sendResetLink(['email' => $resetRequest->email]);
-
-        if ($status === Password::RESET_LINK_SENT) {
-            $resetRequest->update([
-                'status' => 'approved',
-                'approved_at' => now(),
-            ]);
-
-            return response()->json(['message' => "Solicitud aprobada. Se ha enviado el enlace de recuperación a {$resetRequest->email}."]);
-        }
-
-        return response()->json(['error' => 'No se pudo enviar el enlace. Verifica que el correo esté registrado.'], 500);
-    }
-
-    /**
-     * Admin rejects a password reset request.
-     */
-    public function adminReject(Request $request, PasswordResetRequest $resetRequest)
-    {
-        if ($resetRequest->status !== 'pending') {
-            return response()->json(['error' => 'Esta solicitud ya fue procesada.'], 422);
-        }
-
-        $resetRequest->update(['status' => 'rejected']);
-
-        return response()->json(['message' => 'Solicitud rechazada.']);
-    }
-
-    /**
-     * Admin lists all password reset requests.
-     */
-    public function adminIndex(Request $request)
-    {
-        $requests = PasswordResetRequest::orderBy('created_at', 'desc')
-            ->limit(100)
-            ->get();
-
-        return response()->json($requests);
     }
 
     /**

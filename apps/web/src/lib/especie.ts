@@ -373,7 +373,7 @@ export const SEXO: Record<string, string> = { H: 'Hombre', M: 'Mujer', X: 'Prefi
 
 export interface EscuelaApi { id: number; cct: string; nombre: string; municipio: string; nivel: string; sistema: string }
 export interface IntegranteApi {
-  id: number; es_lider: boolean; nombre: string; fecha_nacimiento: string | null; sexo: string | null; curp: string | null;
+  id: number; es_lider: boolean; es_lider_b?: boolean; nombre: string; fecha_nacimiento: string | null; sexo: string | null; curp: string | null;
   grado_grupo: string | null; correo: string | null; telefono: string | null; datos: Record<string, unknown> | null;
   foto_url: string | null; menor_de_edad: boolean | null;
 }

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { LogoComecyt, BandaInstitucional } from '@/components/branding/Logos';
-import { Check, Loader2, Mail, ArrowLeft, ShieldCheck, Clock, UserCheck } from 'lucide-react';
+import { Check, Loader2, Mail, ArrowLeft, ShieldCheck, Clock } from 'lucide-react';
 import { AlertBox } from '@/components/ui/alert-box';
 import DualBranding from '@/components/branding/DualBranding';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
@@ -61,10 +61,10 @@ export default function ForgotPasswordPage() {
                 <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" /> Recuperación de acceso
               </p>
               <div className="auth-glass p-7 xl:p-8">
-                <h2 className="auth-banner-title">Un administrador revisa cada restablecimiento</h2>
+                <h2 className="auth-banner-title">Recupera tu acceso en minutos</h2>
                 <p className="mt-3 max-w-[42ch] text-[15px] leading-relaxed text-white/80">
-                  Por seguridad institucional, ninguna contraseña se restablece de forma automática:
-                  un administrador aprueba la solicitud antes de enviar el enlace.
+                  El enlace llega solo a tu correo, vence en 60 minutos y sirve una vez. Al usarlo se cierran
+                  las sesiones abiertas con tu contraseña anterior.
                 </p>
               </div>
             </div>
@@ -144,15 +144,15 @@ export default function ForgotPasswordPage() {
                 </p>
                 <div className="space-y-2.5 text-left">
                   <div className="flex items-start gap-3 rounded-[var(--auth-radius-field)] border p-3.5" style={{ borderColor: 'var(--auth-rule)' }}>
-                    <UserCheck className="h-4 w-4 mt-0.5 shrink-0" style={{ color: 'var(--tile-sky-fg)' }} aria-hidden="true" />
+                    <Mail className="h-4 w-4 mt-0.5 shrink-0" style={{ color: 'var(--tile-sky-fg)' }} aria-hidden="true" />
                     <p className="text-xs text-[var(--auth-ink-2)] leading-relaxed">
-                      El administrador revisará tu solicitud y te enviará el enlace. Este proceso puede tomar unos minutos.
+                      Abre el correo «Recupera tu contraseña» y pulsa «Crear contraseña nueva». Si no llega, revisa spam o pídelo otra vez en un minuto.
                     </p>
                   </div>
                   <div className="flex items-start gap-3 rounded-[var(--auth-radius-field)] border p-3.5" style={{ borderColor: 'var(--auth-rule)' }}>
                     <Clock className="h-4 w-4 mt-0.5 shrink-0" style={{ color: 'var(--tile-gold-fg)' }} aria-hidden="true" />
                     <p className="text-xs text-[var(--auth-ink-2)] leading-relaxed">
-                      Una vez que recibas el enlace, tendrás <strong>60 minutos</strong> para usarlo. Revisa también tu carpeta de spam.
+                      Tienes <strong>60 minutos</strong> para usar el enlace. Si no pediste el cambio, ignora el correo: tu contraseña sigue igual.
                     </p>
                   </div>
                 </div>

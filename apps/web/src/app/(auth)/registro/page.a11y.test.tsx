@@ -25,8 +25,8 @@ describe('RegistroPage', () => {
 
   it('ofrece los tres roles de autoservicio y exige elegir uno', async () => {
     render(<RegistroPage />);
-    expect(screen.getByRole('radio', { name: /Participante/ })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /Líder de club/ })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Convocatorias/ })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Club De Robótica/ })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /Evaluador/ })).toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: /Administrador/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
@@ -35,7 +35,7 @@ describe('RegistroPage', () => {
 
   it('valida la CURP antes de avanzar (primera capa)', async () => {
     render(<RegistroPage />);
-    fireEvent.click(screen.getByRole('radio', { name: /Líder de club/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /Club De Robótica/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
     fireEvent.change(screen.getByLabelText('Nombre completo *'), { target: { value: 'Ana Pérez López' } });
     fireEvent.change(screen.getByLabelText('Correo electrónico *'), { target: { value: 'ana@example.com' } });

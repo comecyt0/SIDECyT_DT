@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 're
 import Link from 'next/link';
 import {
   ArrowLeft, Briefcase, Building2, Check, ClipboardList, Eye, EyeOff, FileText, FlaskConical, GraduationCap, Hash, Loader2,
-  Lock, Mail, MapPin, Phone, School, Shield, User, Users, CircleAlert, IdCard, House,
+  Lock, Mail, MapPin, Phone, School, Shield, ShieldCheck, User, Users, CircleAlert, IdCard, House,
 } from 'lucide-react';
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -38,12 +38,12 @@ const ICONO_ROL: Record<RolAutoservicio, ReactNode> = {
 };
 
 const BLURB: Record<Paso, { titulo: string; texto: string }> = {
-  rol: { titulo: '¿Cómo participarás?', texto: 'Elige tu rol. Un administrador del COMECYT revisa y aprueba tu cuenta con ese rol. Después podrás pedir otro rol desde tu panel.' },
+  rol: { titulo: '¿Cómo participarás?', texto: 'Elige cómo participarás en el COMECYT. Después podrás pedir otro rol desde tu panel.' },
   persona: { titulo: 'Tus datos', texto: 'Tu correo será tu usuario para entrar. La CURP evita cuentas duplicadas: una persona, una cuenta.' },
   domicilio: { titulo: 'Tu domicilio', texto: 'Escribe tu código postal y llenamos el municipio. El registro es para el Estado de México.' },
   empresa: { titulo: 'Tu empresa', texto: 'Estos datos vinculan tus proyectos y convenios con tu empresa o institución.' },
   evaluador: { titulo: 'Tu perfil de evaluación', texto: 'Tu área y tu CV ayudan al administrador a asignarte proyectos de tu especialidad.' },
-  club: { titulo: 'Tu club', texto: 'Cuando aprueben tu cuenta, desde tu panel registrarás a tu club, su escuela y sus integrantes.' },
+  club: { titulo: 'Tu club', texto: 'Desde tu panel registrarás a tu club, su escuela y sus integrantes.' },
   seguridad: { titulo: 'Protege tu cuenta', texto: 'Usa una contraseña de al menos 10 caracteres con mayúsculas, minúsculas y números.' },
   confirmar: { titulo: 'Último paso', texto: 'Revisa tu información antes de enviarla. Te avisaremos por correo cuando tu cuenta esté aprobada.' },
 };
@@ -412,7 +412,7 @@ export default function RegistroPage() {
                     <div className="registro-aviso auth-swap">
                       <School className="h-5 w-5 flex-none text-[var(--auth-vino)]" aria-hidden="true" />
                       <div className="space-y-2 text-sm leading-relaxed">
-                        <p><strong>Tu club se registra después.</strong> Cuando un administrador apruebe tu cuenta, entra a tu panel «Mi club» para:</p>
+                        <p><strong>Tu club se registra después.</strong> Cuando entres a tu cuenta, ve a tu panel «Mi club» para:</p>
                         <ul className="list-disc space-y-1 pl-5 text-[var(--auth-ink-2)]">
                           <li>elegir tu escuela (estatal o federal) del catálogo,</li>
                           <li>registrar el nombre y el logo de tu club,</li>
@@ -452,6 +452,14 @@ export default function RegistroPage() {
                         {rol === 'evaluador' && <SummaryRow label="Área" value={opciones.areas.find((a) => String(a.id) === ev.area)?.nombre ?? ''} />}
                         {rol === 'evaluador' && <SummaryRow label="Grado" value={GRADO_ETIQUETA[ev.grado] ?? ev.grado} />}
                         {rol === 'evaluador' && <SummaryRow label="CV" value={cv?.name ?? ''} />}
+                      </div>
+                      {/* 08/10/2026 (pedido del usuario): el aviso de la aceptación va solo aquí, con todo ya llenado. */}
+                      <div className="registro-aviso">
+                        <ShieldCheck className="h-5 w-5 flex-none text-[var(--auth-vino)]" aria-hidden="true" />
+                        <p className="text-sm leading-relaxed">
+                          <strong>Un administrador del COMECYT debe aceptar tu registro</strong> antes de que puedas entrar.
+                          Te avisaremos por correo cuando tu cuenta esté aprobada.
+                        </p>
                       </div>
                       <label className="flex cursor-pointer items-start gap-3 rounded-[var(--auth-radius-field)] border p-4 transition-colors"
                         style={{ borderColor: 'var(--auth-rule)', background: p.terminos ? 'var(--auth-vino-soft)' : 'var(--auth-field)' }}>

@@ -82,7 +82,7 @@ class Club extends Model
 
     public function integrantes()
     {
-        return $this->hasMany(ClubIntegrante::class)->orderByDesc('es_lider')->orderBy('orden')->orderBy('id');
+        return $this->hasMany(ClubIntegrante::class)->orderByDesc('es_lider')->orderByDesc('es_lider_b')->orderBy('orden')->orderBy('id');
     }
 
     /** E61 — líder B y director (acompañantes del club). */

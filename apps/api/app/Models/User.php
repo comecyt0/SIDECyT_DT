@@ -14,6 +14,15 @@ class User extends Authenticatable implements JWTSubject
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    /**
+     * E68 — Recuperación de contraseña sin intervención del admin: el enlace sale por la cola (misma duración de la
+     * respuesta exista o no la cuenta, sin enumeración por tiempo) con la plantilla SIGAE.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\ResetPasswordNotification($token));
+    }
+
     protected $fillable = [
         'name',
         'email',

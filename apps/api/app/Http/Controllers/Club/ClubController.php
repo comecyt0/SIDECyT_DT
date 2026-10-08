@@ -188,7 +188,7 @@ class ClubController extends Controller
         $this->editable($request, $club);
         $cfg = $this->config($club);
         if ($club->integrantes()->count() >= $cfg->max_integrantes) {
-            return response()->json(['message' => "El club ya tiene el máximo de {$cfg->max_integrantes} integrantes (incluido el líder)."], 422);
+            return response()->json(['message' => "El club ya tiene el máximo de {$cfg->max_integrantes} integrantes (incluidos el líder y el líder B)."], 422);
         }
         $datos = $this->datosIntegrante($request, $club, $cfg);
         $i = new ClubIntegrante($datos + ['orden' => (int) $club->integrantes()->max('orden') + 1]);
@@ -212,6 +212,9 @@ class ClubController extends Controller
         abort_unless((int) $integrante->club_id === (int) $club->id, 404);
         if ($integrante->es_lider) {
             return response()->json(['message' => 'El líder del club no se puede quitar.'], 422);
+        }
+        if ($integrante->es_lider_b) {
+            return response()->json(['message' => 'El líder B se quita desde «Acompañantes del club» (Quitar acceso).'], 422);
         }
         ImagenSegura::borrar(Especie::DIR_MEDIA, $integrante->foto_path);
         $integrante->delete();
