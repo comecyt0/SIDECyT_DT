@@ -5,6 +5,7 @@ import { Search, Loader2, School, X, Hourglass, FilePlus2 } from 'lucide-react';
 import api from '@/lib/api';
 import { NIVEL_ESCUELA, SISTEMA_ESCUELA, type EscuelaApi } from '@/lib/especie';
 import SolicitarEscuela, { type SolicitudEscuela } from '@/components/especie/SolicitarEscuela';
+import EtiquetaEscuela from '@/components/especie/EtiquetaEscuela';
 
 /** E55: escuela elegida = una del catálogo, o una solicitud propia en revisión (`solicitud`, con id de escuela 0). */
 export type EscuelaElegida = EscuelaApi & { solicitud?: SolicitudEscuela };
@@ -65,7 +66,7 @@ export default function EscuelaPicker({ value, onChange, invalido, id, convocato
       <div className="flex items-start gap-3 rounded-[14px] border px-4 py-3" style={{ borderColor: pendiente ? 'var(--tile-gold-fg, var(--app-rule))' : 'var(--app-rule)', backgroundColor: pendiente ? 'var(--tile-gold-bg)' : 'var(--auth-field)' }}>
         {pendiente ? <Hourglass className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" /> : <School className="mt-0.5 h-5 w-5 shrink-0" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />}
         <span className="min-w-0 flex-1">
-          <span className="block break-words text-sm font-semibold text-[var(--app-ink)]">{value.nombre}</span>
+          <span className="flex flex-wrap items-center gap-2 break-words text-sm font-semibold text-[var(--app-ink)]">{value.nombre}{!value.solicitud && <EtiquetaEscuela participo={value.participo_antes} />}</span>
           <span className="block text-xs text-[var(--app-ink-2)]">
             <span className="font-mono">{value.cct}</span> · {value.municipio} · {NIVEL_ESCUELA[value.nivel] ?? value.nivel} · {SISTEMA_ESCUELA[value.sistema] ?? value.sistema}
           </span>
@@ -124,7 +125,7 @@ export default function EscuelaPicker({ value, onChange, invalido, id, convocato
               <li key={e.id} id={`${listaId}-${i}`} role="option" aria-selected={i === activo}
                 className={`cursor-pointer px-4 py-2.5 ${i === activo ? 'bg-[var(--auth-field)]' : ''}`}
                 onMouseDown={(ev) => { ev.preventDefault(); elegir(e); }} onMouseEnter={() => setActivo(i)}>
-                <span className="block break-words text-sm font-semibold text-[var(--app-ink)]">{e.nombre}</span>
+                <span className="flex flex-wrap items-center gap-2 break-words text-sm font-semibold text-[var(--app-ink)]">{e.nombre}<EtiquetaEscuela participo={e.participo_antes} /></span>
                 <span className="block text-xs text-[var(--app-ink-2)]"><span className="font-mono">{e.cct}</span> · {e.municipio} · {SISTEMA_ESCUELA[e.sistema] ?? e.sistema}</span>
               </li>
             ))}

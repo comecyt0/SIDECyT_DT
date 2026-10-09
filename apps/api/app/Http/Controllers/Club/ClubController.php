@@ -74,7 +74,7 @@ class ClubController extends Controller
 
         return response()->json(Escuela::where('activo', true)
             ->where(fn ($w) => $w->where('nombre', 'ilike', "%{$t}%")->orWhere('cct', 'ilike', "%{$t}%")->orWhere('municipio', 'ilike', "%{$t}%"))
-            ->orderBy('nombre')->limit(20)->get(['id', 'cct', 'nombre', 'municipio', 'nivel', 'sistema']));
+            ->orderBy('nombre')->limit(20)->get(['id', 'cct', 'nombre', 'municipio', 'nivel', 'sistema', 'participo_antes']));
     }
 
     public function store(Request $request)
@@ -478,7 +478,7 @@ class ClubController extends Controller
 
     private function detalle(Club $club): array
     {
-        $club->loadMissing(['escuela:id,cct,nombre,municipio,nivel,sistema', 'integrantes', 'documentos', 'convocatoria.tipoPrograma']);
+        $club->loadMissing(['escuela:id,cct,nombre,municipio,nivel,sistema,participo_antes', 'integrantes', 'documentos', 'convocatoria.tipoPrograma']);
         $cfg = $this->config($club);
         $docs = $club->documentos->keyBy('clave');
         $requeridos = collect([['clave' => Especie::CARTA_ESCUELA, 'nombre' => 'Carta de consentimiento de la escuela', 'descripcion' => 'Descárgala, que la firme y selle la escuela, y súbela escaneada en PDF.', 'obligatorio' => true, 'formatos' => ['pdf'], 'max_mb' => 10]])

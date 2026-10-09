@@ -93,7 +93,9 @@ function StepFrameBody({
   success,
   inline = false,
   hideCancel = false,
+  size = 'lg',
 }: StepFrameProps) {
+  const rail = size !== 'md'; // columna de pasos a la izquierda solo en ventanas anchas
   const [index, setIndex] = useState(0);
   const [stepError, setStepError] = useState<string | null>(null);
 
@@ -186,9 +188,13 @@ function StepFrameBody({
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-5 md:gap-8">
+            {/* 08/10/2026 (formulario del kit desfasado): con un solo paso no hay lista de pasos, y en las ventanas «md»
+                (576 px) la lista va arriba en horizontal; la columna de 200 px dejaba ~300 px al formulario y las rejillas
+                sm:grid-cols-2 (que miran la pantalla, no la ventana) partían ese espacio en dos y desbordaban. */}
+            <div className={`grid grid-cols-1 gap-5 ${steps.length > 1 && rail ? 'md:grid-cols-[200px_1fr] md:gap-8' : ''}`}>
               {/* Lista de pasos */}
-              <ol className="step-list flex md:flex-col gap-2 overflow-x-auto no-scrollbar md:overflow-visible -mx-1 px-1" aria-label="Pasos">
+              {steps.length > 1 && (
+              <ol className={`step-list flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 ${rail ? 'md:flex-col md:overflow-visible' : ''}`} aria-label="Pasos">
                 {steps.map((s, i) => {
                   const done = i < index;
                   const active = i === index;
@@ -218,15 +224,16 @@ function StepFrameBody({
                         >
                           {done ? <Check className="h-3.5 w-3.5" aria-label="Completado" /> : i + 1}
                         </span>
-                        <span className="whitespace-nowrap md:whitespace-normal">{s.label}</span>
+                        <span className={`whitespace-nowrap ${rail ? 'md:whitespace-normal' : ''}`}>{s.label}</span>
                       </button>
                     </li>
                   );
                 })}
               </ol>
+              )}
 
-              {/* Contenido del paso */}
-              <div className="min-w-0">
+              {/* Contenido del paso (contenedor: los campos pueden acomodarse por su ancho real con @container). */}
+              <div className="@container min-w-0">
                 <p className="step-count text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--auth-vino)' }}>
                   Paso {index + 1} de {steps.length}
                 </p>

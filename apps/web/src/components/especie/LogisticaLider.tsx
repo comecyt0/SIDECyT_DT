@@ -9,7 +9,7 @@ import VersionesFirmadas from '@/components/especie/VersionesFirmadas';
 import QrLider from '@/components/especie/QrLider';
 import { mensajeError } from '@/lib/errores-formulario';
 import { descargarFirmado, descargarFormatoLogistica, descargarResguardo } from '@/lib/especie-api';
-import { ESTADO_SOLICITUD, fechaHora, leerLogistica, vigente, type LogisticaEstado, type SolicitudLogistica } from '@/lib/especie';
+import { ESTADO_SOLICITUD, fechaHora, fechaHoraLocal, leerLogistica, vigente, type LogisticaEstado, type SolicitudLogistica } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
 import ModalidadChip from '@/components/especie/ModalidadChip';
 import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
@@ -58,6 +58,10 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
   const [confirmarSinTransporte, setConfirmarSinTransporte] = useState<SolicitudLogistica | null>(null);
   const [bajar, setBajar] = useState<SolicitudLogistica | null>(null);
   const l = logistica;
+  // E71: apoyos que da la convocatoria.
+  const daT = l.apoyos.incluye_transporte;
+  const daL = l.apoyos.incluye_lunch;
+  const tituloApoyos = daT && daL ? 'Transporte y box lunch' : daT ? 'Transporte' : 'Box lunch';
   const clave = (s: SolicitudLogistica) => String(s.evento?.id ?? 0);
   const valor = (s: SolicitudLogistica, campo: 'transporte' | 'lunch') => cantidades[clave(s)]?.[campo] ?? String(s.solicitud && s.solicitud.estado !== 'cancelada' ? s.solicitud[campo] : 0);
 
@@ -78,8 +82,9 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
   };
 
   const enviar = async (s: SolicitudLogistica, confirmoSinTransporte = false) => {
-    const t = Math.trunc(Number(valor(s, 'transporte')));
-    const lu = Math.trunc(Number(valor(s, 'lunch')));
+    const t = daT ? Math.trunc(Number(valor(s, 'transporte'))) : 0;
+    const lu = daL ? Math.trunc(Number(valor(s, 'lunch'))) : 0;
+    if (!daT) confirmoSinTransporte = true;
     if (!Number.isInteger(t) || !Number.isInteger(lu) || t < 0 || lu < 0) { onAviso(false, 'Escribe cantidades válidas (0 o más).'); return; }
     if (l.limites.transporte !== null && t > l.limites.transporte) { onAviso(false, `El máximo de transporte para tu club es ${l.limites.transporte}.`); return; }
     if (l.limites.lunch !== null && lu > l.limites.lunch) { onAviso(false, `El máximo de box lunch para tu club es ${l.limites.lunch}.`); return; }
@@ -143,19 +148,26 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
         <VersionesFirmadas clubId={clubId} versiones={l.resguardo} onDescargar={(v) => void descargar(`f-${v.id}`, () => descargarFirmado(clubId, v.id, v.nombre_original))} />
       </div>
 
-      {/* Transporte y box lunch */}
+      {/* Transporte y box lunch — E71: solo lo que da la convocatoria; si no da ninguno, el apartado desaparece. */}
+      {(daT || daL) && (
       <div className="app-card space-y-3 p-5">
-        <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><Bus className="h-4 w-4" aria-hidden="true" />Transporte y box lunch<ModalidadChip modalidad={l.modalidad} className="ml-auto" /></h3>
+        <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--app-ink)]">{daT ? <Bus className="h-4 w-4" aria-hidden="true" /> : <Sandwich className="h-4 w-4" aria-hidden="true" />}{tituloApoyos}<ModalidadChip modalidad={l.modalidad} className="ml-auto" /></h3>
         {!l.estatal ? (
-          <p className="text-sm text-[var(--app-ink-2)]">Tu escuela es del sistema federal: tu club recibe el kit, sin transporte ni box lunch.</p>
+          <p className="text-sm text-[var(--app-ink-2)]">Tu escuela es del sistema federal: tu club recibe el kit, sin {tituloApoyos.toLowerCase()}.</p>
         ) : (
           <>
             <p className="text-sm text-[var(--app-ink-2)]">
               {l.fecha_limite ? (l.abierta ? `Puedes pedir o cambiar hasta el ${formatDate(l.fecha_limite)}.` : `La fecha límite fue el ${formatDate(l.fecha_limite)}.`) : 'Sin fecha límite por ahora.'}
-              {' '}Máximo para tu club: transporte {l.limites.transporte ?? 'sin límite'} (lo define el COMECYT) y box lunch {l.limites.lunch ?? l.max_integrantes}
-              {' '}(no pasa del máximo de {l.max_integrantes} integrantes de la convocatoria).
+              {' '}Máximo para tu club:{daT && <> transporte {l.limites.transporte ?? 'sin límite'} (lo define el COMECYT)</>}{daT && daL && ' y'}
+              {daL && <> box lunch {l.limites.lunch ?? l.max_integrantes} (no pasa del máximo de {l.max_integrantes} integrantes de la convocatoria)</>}.
             </p>
-            {l.solicitudes.length === 0 && <p className="text-sm text-[var(--app-ink-2)]">Todavía no hay eventos para pedir transporte y box lunch.</p>}
+            {daT && (l.apoyos.transporte_salida_lugar || l.apoyos.transporte_salida_hora) && (
+              <div className="grid grid-cols-1 gap-2 rounded-[14px] px-4 py-3 text-sm sm:grid-cols-2" style={{ backgroundColor: 'var(--tile-sky-bg)' }}>
+                <p><strong className="block text-[var(--app-ink)]">Salida</strong>{l.apoyos.transporte_salida_lugar ?? 'Por confirmar'}{l.apoyos.transporte_salida_hora ? ` · ${fechaHoraLocal(l.apoyos.transporte_salida_hora)}` : ''}</p>
+                <p><strong className="block text-[var(--app-ink)]">Regreso</strong>{l.apoyos.transporte_regreso_lugar ?? l.apoyos.transporte_salida_lugar ?? 'Por confirmar'}{l.apoyos.transporte_regreso_hora ? ` · ${fechaHoraLocal(l.apoyos.transporte_regreso_hora)}` : ''}</p>
+              </div>
+            )}
+            {l.solicitudes.length === 0 && <p className="text-sm text-[var(--app-ink-2)]">Todavía no hay eventos para pedir {tituloApoyos.toLowerCase()}.</p>}
             <ul className="space-y-3">
               {l.solicitudes.map((s) => {
                 const k = clave(s);
@@ -170,19 +182,23 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
                         <span className="font-normal text-[var(--app-ink-2)]">{s.evento.fecha ? ` · ${formatDate(s.evento.fecha)}` : ''}{s.evento.sede ? ` · ${s.evento.sede}` : ''}</span></p>
                     )}
                     {est && <span className="pill" data-tone={est.tono}>{est.etiqueta}</span>}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className={`grid gap-3 ${daT && daL ? 'grid-cols-2' : 'grid-cols-1 sm:max-w-xs'}`}>
+                      {daT && (
                       <label className="space-y-1.5">
                         <span className={`${labelCls} flex items-center gap-1`}><Bus className="h-3.5 w-3.5" aria-hidden="true" />Personas con transporte</span>
                         <input type="number" min={0} max={l.limites.transporte ?? 1000} inputMode="numeric" className="auth-input auth-input-static pl-4" disabled={!abierta}
                           value={valor(s, 'transporte')} onChange={(e) => setCantidades((c) => ({ ...c, [k]: { transporte: e.target.value, lunch: valor(s, 'lunch') } }))} />
                         <span className="block text-xs text-[var(--app-ink-2)]">{s.cupo.transporte.disponible === null ? 'Cupo sin límite' : `Quedan ${s.cupo.transporte.disponible} lugares`}</span>
                       </label>
+                      )}
+                      {daL && (
                       <label className="space-y-1.5">
                         <span className={`${labelCls} flex items-center gap-1`}><Sandwich className="h-3.5 w-3.5" aria-hidden="true" />Box lunch</span>
                         <input type="number" min={0} max={l.limites.lunch ?? 1000} inputMode="numeric" className="auth-input auth-input-static pl-4" disabled={!abierta}
                           value={valor(s, 'lunch')} onChange={(e) => setCantidades((c) => ({ ...c, [k]: { transporte: valor(s, 'transporte'), lunch: e.target.value } }))} />
                         <span className="block text-xs text-[var(--app-ink-2)]">{s.cupo.lunch.disponible === null ? 'Cupo sin límite' : `Quedan ${s.cupo.lunch.disponible}`}</span>
                       </label>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {abierta && (
@@ -213,13 +229,14 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
           </>
         )}
       </div>
+      )}
 
       <ConfirmDialog open={confirmarSinTransporte !== null} title="¿Estás seguro que no quieres transporte?"
         description="Tu club llegará por su cuenta al evento. Puedes cambiarlo hasta la fecha límite."
         confirmLabel="Sí, sin transporte" onCancel={() => setConfirmarSinTransporte(null)}
         onConfirm={() => { const s = confirmarSinTransporte; setConfirmarSinTransporte(null); if (s) void enviar(s, true); }} />
       <ConfirmDialog open={bajar !== null} title="Bajar la solicitud" variant="destructive" confirmLabel="Bajar"
-        description="Se libera tu lugar de transporte y box lunch. Puedes volver a pedirlo mientras haya cupo y no pase la fecha límite."
+        description={`Se libera tu lugar (${tituloApoyos.toLowerCase()}). Puedes volver a pedirlo mientras haya cupo y no pase la fecha límite.`}
         onCancel={() => setBajar(null)}
         onConfirm={() => { const s = bajar; setBajar(null); if (s?.solicitud) void ejecutar(`sol-${clave(s)}`, () => api.delete(`/club/clubes/${clubId}/logistica/${s.solicitud!.id}`), 'Solicitud bajada; se liberó tu lugar.'); }} />
     </section>

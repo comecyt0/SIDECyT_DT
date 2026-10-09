@@ -50,8 +50,10 @@ class EspecieConfigController extends Controller
             'campos.*.tipo_campo' => 'required|in:'.implode(',', Especie::TIPOS_CAMPO),
             'campos.*.requerido' => 'boolean',
             'campos.*.opciones' => 'nullable|string|max:10000|required_if:campos.*.tipo_campo,select',
-        ] + array_map(fn ($r) => str_replace('required|array', 'sometimes|array', $r), \App\Support\EtapasEspecie::reglas()),
-            ['max_integrantes.gte' => 'El máximo de integrantes no puede ser menor que el mínimo.'], \App\Support\EtapasEspecie::atributos());
+        ] + array_map(fn ($r) => str_replace('required|array', 'sometimes|array', $r), \App\Support\EtapasEspecie::reglas())
+            + \App\Support\ApoyosLogistica::reglas(),
+            ['max_integrantes.gte' => 'El máximo de integrantes no puede ser menor que el mínimo.'],
+            \App\Support\EtapasEspecie::atributos() + \App\Support\ApoyosLogistica::atributos());
 
         $vistos = [];
         foreach ($v['campos'] as $i => $c) {
@@ -62,8 +64,11 @@ class EspecieConfigController extends Controller
             $vistos[$k] = true;
         }
 
-        DB::transaction(function () use ($convocatoria, $v) {
+        $quitado = ['transporte' => false, 'lunch' => false];
+        DB::transaction(function () use ($convocatoria, $v, &$quitado) {
             $cfg = $convocatoria->especieConfig ?? new EspecieConfig();
+            // E71: transporte / box lunch / salida y fecha límite (al quitar un apoyo se ajustan las solicitudes, abajo).
+            $quitado = \App\Support\ApoyosLogistica::aplicar($cfg, $v);
             $cfg->fill([
                 'min_integrantes' => (int) $v['min_integrantes'],
                 'max_integrantes' => (int) $v['max_integrantes'],
@@ -95,6 +100,7 @@ class EspecieConfigController extends Controller
             if (isset($v['etapas'])) {
                 \App\Support\EtapasEspecie::guardar($convocatoria->id, $v['etapas']);
             }
+            \App\Support\ApoyosLogistica::alQuitar($convocatoria->id, $quitado);
         });
         Audit::log('especie.config_actualizada', $convocatoria);
 
@@ -121,7 +127,7 @@ class EspecieConfigController extends Controller
                 ->get(['clave', 'nombre', 'descripcion', 'obligatorio', 'formato_permitido', 'tamaño_maximo_mb']),
             'etapas' => \App\Support\EtapasEspecie::payload($c->id),
             'etapas_fijas' => \App\Support\EtapasEspecie::estructuraFija($c->id),
-        ];
+        ] + \App\Support\ApoyosLogistica::payload($cfg);
     }
 
     /** Para el personal: además del payload común, el estado del acta del comité (nunca el nombre interno del archivo). */

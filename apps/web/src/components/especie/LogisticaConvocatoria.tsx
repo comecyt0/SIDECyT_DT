@@ -12,6 +12,7 @@ import { erroresFormulario, mensajeError, type ErroresFormulario } from '@/lib/e
 import { descargarReporteClubes } from '@/lib/especie-api';
 import FechaHoraAmPm, { fechaHoraCompleta } from '@/components/ui/fecha-hora-ampm';
 import { ESTADO_CLUB, ESTADO_FIRMADO, ESTADO_SOLICITUD, fechaHora, type Cupo } from '@/lib/especie';
+import EtiquetaEscuela from '@/components/especie/EtiquetaEscuela';
 
 interface Evento { id?: number; nombre: string; fecha: string; sede: string; cupo_transporte: string; cupo_lunch: string; con_solicitudes?: boolean }
 interface ConfigForm {
@@ -147,6 +148,10 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
   // El box lunch nunca pasa del máximo de integrantes de la convocatoria (el servidor lo vuelve a revisar).
   const maxIntegrantes = Number(t.config.max_integrantes) || 10;
   const lunchExcede = form.max_lunch_club.trim() !== '' && Number(form.max_lunch_club) > maxIntegrantes;
+  // E71: solo se configuran los apoyos que da la convocatoria (se eligen en Crear / Editar convocatoria).
+  const cfgT = t.config as { incluye_transporte?: unknown; incluye_lunch?: unknown };
+  const daT = cfgT.incluye_transporte !== false;
+  const daL = cfgT.incluye_lunch !== false;
 
   return (
     <div className="space-y-6">
@@ -155,7 +160,11 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
       {/* Configuración */}
       <section className="app-card space-y-5 p-5" aria-labelledby="log-cfg">
         <h2 id="log-cfg" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><Settings2 className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Transporte y box lunch</h2>
-        <p className="text-sm text-[var(--app-ink-2)]">Solo para clubes de escuelas estatales (las federales reciben únicamente el kit). Un campo vacío significa sin tope.</p>
+        <p className="text-sm text-[var(--app-ink-2)]">
+          {daT || daL
+            ? <>Solo para clubes de escuelas estatales (las federales reciben únicamente el kit). Un campo vacío significa sin tope.{!(daT && daL) && <> Esta convocatoria da solo <strong>{daT ? 'transporte' : 'box lunch'}</strong> (se cambia en «Editar convocatoria»).</>}</>
+            : <>Esta convocatoria <strong>no da transporte ni box lunch</strong> (se cambia en «Editar convocatoria»). Los eventos siguen sirviendo para el QR y la asistencia.</>}
+        </p>
         {errores && <div role="alert" className="rounded-[14px] px-4 py-3 text-sm" style={{ backgroundColor: 'var(--tile-vino-bg)', color: 'var(--auth-danger)' }}><AvisoErrores errores={errores} /></div>}
         <fieldset className="space-y-2">
           <legend className={labelCls}>Los cupos totales son…</legend>
@@ -171,24 +180,26 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
           </div>
           {t.hay_solicitudes && <p className="text-xs text-[var(--app-ink-2)]">Ya hay solicitudes: el modo no se puede cambiar.</p>}
         </fieldset>
+        {(daT || daL) && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {form.logistica_modo === 'convocatoria' && (<>
-            <label className="space-y-1.5"><span className={labelCls}>Cupo total de transporte</span>
-              <input type="number" min={0} inputMode="numeric" className={inputCls} placeholder="Sin tope" value={form.cupo_transporte} onChange={(e) => setF({ cupo_transporte: e.target.value })} /></label>
-            <label className="space-y-1.5"><span className={labelCls}>Cupo total de box lunch</span>
-              <input type="number" min={0} inputMode="numeric" className={inputCls} placeholder="Sin tope" value={form.cupo_lunch} onChange={(e) => setF({ cupo_lunch: e.target.value })} /></label>
+            {daT && <label className="space-y-1.5"><span className={labelCls}>Cupo total de transporte</span>
+              <input type="number" min={0} inputMode="numeric" className={inputCls} placeholder="Sin tope" value={form.cupo_transporte} onChange={(e) => setF({ cupo_transporte: e.target.value })} /></label>}
+            {daL && <label className="space-y-1.5"><span className={labelCls}>Cupo total de box lunch</span>
+              <input type="number" min={0} inputMode="numeric" className={inputCls} placeholder="Sin tope" value={form.cupo_lunch} onChange={(e) => setF({ cupo_lunch: e.target.value })} /></label>}
           </>)}
-          <label className="space-y-1.5"><span className={labelCls}>Lugares de transporte por club</span>
+          {daT && <label className="space-y-1.5"><span className={labelCls}>Lugares de transporte por club</span>
             <input type="number" min={0} inputMode="numeric" className={inputCls} placeholder="Sin tope" value={form.max_transporte_club} onChange={(e) => setF({ max_transporte_club: e.target.value })} />
-            <span className="block text-xs text-[var(--app-ink-2)]">Tú decides cuántos lugares puede pedir cada club.</span></label>
-          <label className="space-y-1.5"><span className={labelCls}>Máx. box lunch por club</span>
+            <span className="block text-xs text-[var(--app-ink-2)]">Tú decides cuántos lugares puede pedir cada club.</span></label>}
+          {daL && <label className="space-y-1.5"><span className={labelCls}>Máx. box lunch por club</span>
             <input type="number" min={0} max={maxIntegrantes} inputMode="numeric" className={inputCls} placeholder={String(maxIntegrantes)} value={form.max_lunch_club}
               aria-invalid={lunchExcede ? 'true' : undefined} onChange={(e) => setF({ max_lunch_club: e.target.value })} />
             <span className="block text-xs" style={{ color: lunchExcede ? 'var(--auth-danger)' : 'var(--app-ink-2)' }}>
-              {lunchExcede ? `No puede pasar de ${maxIntegrantes}` : `Hasta ${maxIntegrantes}`} (máximo de integrantes de la convocatoria).</span></label>
+              {lunchExcede ? `No puede pasar de ${maxIntegrantes}` : `Hasta ${maxIntegrantes}`} (máximo de integrantes de la convocatoria).</span></label>}
           <label className="space-y-1.5"><span className={labelCls}>Fecha límite para pedir</span>
             <input type="date" className={inputCls} value={form.fecha_limite_logistica} onChange={(e) => setF({ fecha_limite_logistica: e.target.value })} /></label>
         </div>
+        )}
 
         {/* Eventos */}
         <div className="space-y-3">
@@ -201,8 +212,8 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
                 <label className="space-y-1"><span className={labelCls}>Fecha</span><input type="date" className={inputCls} value={e.fecha} onChange={(x) => setEventos(eventos.map((y, j) => (j === i ? { ...y, fecha: x.target.value } : y)))} /></label>
                 <label className="space-y-1"><span className={labelCls}>Sede</span><input className={inputCls} maxLength={255} value={e.sede} onChange={(x) => setEventos(eventos.map((y, j) => (j === i ? { ...y, sede: x.target.value } : y)))} /></label>
                 {form.logistica_modo === 'evento' ? (<>
-                  <label className="space-y-1"><span className={labelCls}>Cupo transp.</span><input type="number" min={0} className={inputCls} placeholder="Sin tope" value={e.cupo_transporte} onChange={(x) => setEventos(eventos.map((y, j) => (j === i ? { ...y, cupo_transporte: x.target.value } : y)))} /></label>
-                  <label className="space-y-1"><span className={labelCls}>Cupo lunch</span><input type="number" min={0} className={inputCls} placeholder="Sin tope" value={e.cupo_lunch} onChange={(x) => setEventos(eventos.map((y, j) => (j === i ? { ...y, cupo_lunch: x.target.value } : y)))} /></label>
+                  {daT ? <label className="space-y-1"><span className={labelCls}>Cupo transp.</span><input type="number" min={0} className={inputCls} placeholder="Sin tope" value={e.cupo_transporte} onChange={(x) => setEventos(eventos.map((y, j) => (j === i ? { ...y, cupo_transporte: x.target.value } : y)))} /></label> : <span className="hidden lg:block" />}
+                  {daL ? <label className="space-y-1"><span className={labelCls}>Cupo lunch</span><input type="number" min={0} className={inputCls} placeholder="Sin tope" value={e.cupo_lunch} onChange={(x) => setEventos(eventos.map((y, j) => (j === i ? { ...y, cupo_lunch: x.target.value } : y)))} /></label> : <span className="hidden lg:block" />}
                 </>) : <><span className="hidden lg:block" /><span className="hidden lg:block" /></>}
                 <div className="flex items-end">
                   <Button variant="destructive" size="icon-sm" disabled={e.con_solicitudes} aria-label={`Quitar el evento ${e.nombre || i + 1}`} title={e.con_solicitudes ? 'Tiene solicitudes: no se puede quitar' : 'Quitar'}
@@ -263,7 +274,8 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
                       <span className="pill" data-tone={est.tono}>{est.etiqueta}</span>
                       {c.pendientes_validar > 0 && <span className="pill" data-tone="vino"><AlertTriangle className="h-3 w-3" aria-hidden="true" />{c.pendientes_validar} por validar</span>}
                     </p>
-                    <p className="text-xs text-[var(--app-ink-2)]"><span className="font-mono">{c.folio}</span>{c.escuela ? ` · ${c.escuela.nombre}` : ''} · {c.estatal ? 'Estatal' : 'Federal (solo kit)'}</p>
+                    <p className="text-xs text-[var(--app-ink-2)]"><span className="font-mono">{c.folio}</span>{c.escuela ? ` · ${c.escuela.nombre}` : ''} · {c.estatal ? 'Estatal' : 'Federal (solo kit)'}
+                      {c.escuela && <> <EtiquetaEscuela participo={(c.escuela as { participo_antes?: boolean }).participo_antes} /></>}</p>
                     <p className="text-xs text-[var(--app-ink)]">Kit: {c.kit.entregado_at ? `entregado ${fechaHora(c.kit.entregado_at)}` : c.kit.fecha ? `${fechaHora(c.kit.fecha)} · ${c.kit.lugar ?? ''}` : 'sin fecha asignada'}</p>
                     <p className="text-xs text-[var(--app-ink)]">Resguardo: {res ? res.etiqueta : 'sin subir'} · QR: {c.qr ? 'habilitado' : c.resguardo === 'aprobado' ? 'listo para habilitar' : 'falta resguardo aprobado'}</p>
                     {c.estatal && c.solicitudes.map((x) => (
@@ -282,7 +294,7 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
         size="md"
         title="Fecha y lugar de entrega del kit"
         icon={<CalendarClock className="h-5 w-5" />}
-        intro={<>Se asigna a <strong>{selKit.length} club(es)</strong>; cada líder recibirá un correo.</>}
+        intro={<>Se asigna a <strong>{selKit.length} club(es)</strong>; en cada club reciben el correo el líder, el líder B y el director (los que estén registrados).</>}
         onClose={() => setAsignar(false)}
         onSubmit={asignarKit}
         submitLabel="Asignar"

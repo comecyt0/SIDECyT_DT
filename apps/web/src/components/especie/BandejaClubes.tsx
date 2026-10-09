@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
 import VistaPreviaClub from '@/components/especie/VistaPreviaClub';
 import { ESTADO_CLUB, SISTEMA_ESCUELA, fechaHora } from '@/lib/especie';
+import EtiquetaEscuela from '@/components/especie/EtiquetaEscuela';
 
 interface FilaBandeja {
   id: number; folio: string; convocatoria_corto?: string | null; nombre: string; estado: string; logo_url: string | null; enviado_at: string | null; vence_at: string | null;
@@ -90,6 +91,7 @@ export default function BandejaClubes({ vista, hrefFicha, convocatoriaId, vacio 
                   <span className="mt-0.5 flex items-center gap-1 text-xs text-[var(--app-ink-2)]">
                     <School className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                     <span className="truncate">{c.escuela.nombre} · {c.escuela.municipio} · {SISTEMA_ESCUELA[c.escuela.sistema] ?? c.escuela.sistema}</span>
+                    <EtiquetaEscuela participo={(c.escuela as { participo_antes?: boolean }).participo_antes} />
                   </span>
                 )}
                 {(c.estado === 'observado' || c.estado === 'vencido') && c.vence_at && (

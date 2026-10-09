@@ -235,6 +235,7 @@ class AsistenteConvocatoriaController extends Controller
                     'campos_integrante' => \App\Support\Especie::normalizarPredefinidos($e['campos_integrante'] ?? null, \App\Support\Especie::CAMPOS_INTEGRANTE, \App\Support\Especie::DEFAULT_INTEGRANTE),
                 ]);
                 $cfg->convocatoria_id = $convocatoria->id;
+                \App\Support\ApoyosLogistica::aplicar($cfg, $e); // E71: transporte / box lunch, salida y fecha límite
                 $cfg->save();
                 foreach (($v['campos'] ?? []) as $i => $c) {
                     $campo = new \App\Models\EspecieCampo([
@@ -324,6 +325,7 @@ class AsistenteConvocatoriaController extends Controller
         $r['especie.campos_club'] = 'nullable|array';
         $r['especie.campos_integrante'] = 'nullable|array';
         $r += array_map(fn ($x) => str_replace('required|array', 'sometimes|array', $x), \App\Support\EtapasEspecie::reglas('especie.etapas'));
+        $r += \App\Support\ApoyosLogistica::reglas('especie');
 
         return $r;
     }
@@ -512,6 +514,6 @@ class AsistenteConvocatoriaController extends Controller
             'criterios.*.descripcion' => 'descripción del criterio',
             'criterios.*.ponderacion' => 'ponderación del criterio',
             'criterios.*.puntaje_maximo' => 'puntaje máximo del criterio',
-        ] + \App\Support\EtapasEspecie::atributos('especie.etapas');
+        ] + \App\Support\EtapasEspecie::atributos('especie.etapas') + \App\Support\ApoyosLogistica::atributos('especie');
     }
 }

@@ -24,7 +24,7 @@ class ClubAviso extends Notification implements ShouldQueue
     public bool $deleteWhenMissingModels = true;
 
     /** Eventos que además van por correo al líder. */
-    public const CON_CORREO = ['observado', 'prorroga', 'aceptado', 'qr_habilitado', 'kit_asignado', 'acceso_otorgado', 'colider_activado', 'lugar_cedido'];
+    public const CON_CORREO = ['observado', 'prorroga', 'aceptado', 'qr_habilitado', 'kit_asignado', 'acceso_otorgado', 'colider_activado', 'lugar_cedido', 'logistica_ajustada'];
 
     public function __construct(public readonly Club $club, public readonly string $evento, public readonly array $extra = []) {}
 
@@ -61,6 +61,8 @@ class ClubAviso extends Notification implements ShouldQueue
             'acceso_retirado' => ['Ya no tienes acceso a un club', "El líder retiró tu acceso como ".($x['rol'] ?? 'acompañante')." del club «{$c->nombre}»."],
             'colider_activado' => ['Te compartieron el permiso del club', ($x['quien'] ?? 'El líder')." te compartió el permiso de operar «{$c->nombre}»: ya puedes editar, enviar y atender la logística."],
             'colider_retirado' => ['Ya no compartes el permiso del club', ($x['quien'] ?? 'El líder')." retiró el permiso compartido de «{$c->nombre}». Sigues como acompañante del club."],
+            // E71: la convocatoria dejó de dar transporte o box lunch.
+            'logistica_ajustada' => ['Cambió la logística de tu club', "La convocatoria de «{$c->nombre}» ya no incluye ".($x['que'] ?? 'uno de los apoyos').'. Ajustamos tu solicitud; si queda algo pendiente, vuelve a firmar el formato desde la logística de tu club.'],
             // 08/10/2026: ceder = intercambiar lugar, rol y permisos.
             'lugar_cedido' => ['Te cedieron su lugar en el club', ($x['quien'] ?? 'Un responsable')." te cedió su lugar en «{$c->nombre}» ({$c->folio}): intercambiaron rol y permisos. Revisa en tu panel lo que ahora puedes hacer."],
             default => ['Aviso de tu club', "Hay novedades en «{$c->nombre}»."],

@@ -131,11 +131,10 @@ class Club extends Model
      */
     public function destinatarios(bool $conLiderB = false): \Illuminate\Support\Collection
     {
-        $ids = collect([$this->lider_id]);
-        foreach ($this->accesos()->get() as $a) {
-            // 08/10/2026: con el permiso compartido, y el líder A de un club del director, reciben lo mismo que el líder.
-            if ($a->colider || $a->tipo === 'lider_a' || ($conLiderB && $a->tipo === 'lider_b')) $ids->push($a->user_id);
-        }
+        // 08/10/2026 (pedido del usuario): todo aviso y correo que recibe el líder A llega también al líder B y al director
+        // (y al líder A de un club del director), siempre que estén dados de alta en este club. `$conLiderB` queda por
+        // compatibilidad con quien lo llama: ya no restringe nada.
+        $ids = collect([$this->lider_id])->merge($this->accesos()->pluck('user_id'));
 
         return User::whereIn('id', $ids->filter()->unique()->all())->where('activo', true)->get();
     }

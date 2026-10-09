@@ -18,13 +18,20 @@ export const MODOS: { valor: ModoEscaneo; etiqueta: string; ayuda: string }[] = 
 ];
 
 export interface EventoEscaneo { id: number; nombre: string; fecha: string | null; sede: string | null }
-export interface ConvocatoriaEscaneo { id: number; nombre: string; eventos: EventoEscaneo[] }
+export interface ConvocatoriaEscaneo { id: number; nombre: string; eventos: EventoEscaneo[]; incluye_transporte: boolean; incluye_lunch: boolean }
+
+/** E71: modos que aplican a la convocatoria (sin transporte no hay llegada/regreso; sin box lunch, no hay box lunch). */
+export function modosDe(c: ConvocatoriaEscaneo | null | undefined) {
+  return MODOS.filter((m) => !c
+    || (c.incluye_transporte || (m.valor !== 'tr_llegada' && m.valor !== 'tr_regreso'))
+    && (c.incluye_lunch || m.valor !== 'lunch'));
+}
 
 export interface Registro { cantidad: number; metodo: 'qr' | 'manual'; hora: string | null; quien: string | null }
 export interface FichaEscaneo {
   club: {
     id: number; folio: string; nombre: string; estado: string; logo_url: string | null;
-    escuela: { nombre: string; municipio: string; sistema: string } | null;
+    escuela: { nombre: string; municipio: string; sistema: string; participo_antes?: boolean } | null;
     lider: { name: string; email?: string; telefono?: string | null } | null;
   };
   integrantes: { nombre: string; es_lider: boolean; foto_url: string | null; grado_grupo?: string | null; correo?: string | null; telefono?: string | null }[];
@@ -63,7 +70,7 @@ export function leerConvocatorias(v: unknown): ConvocatoriaEscaneo[] {
   return v.slice(0, 50).flatMap((c) => {
     const x = c as Record<string, unknown>;
     if (!x || typeof x.id !== 'number') return [];
-    return [{ id: x.id, nombre: txt(x.nombre), eventos: Array.isArray(x.eventos) ? x.eventos.map(evento).filter((e): e is EventoEscaneo => e !== null) : [] }];
+    return [{ id: x.id, nombre: txt(x.nombre), incluye_transporte: x.incluye_transporte !== false, incluye_lunch: x.incluye_lunch !== false, eventos: Array.isArray(x.eventos) ? x.eventos.map(evento).filter((e): e is EventoEscaneo => e !== null) : [] }];
   });
 }
 
@@ -77,7 +84,8 @@ export function leerFicha(v: unknown): FichaEscaneo | null {
   return {
     club: {
       id: c.id, folio: txt(c.folio, 30), nombre: txt(c.nombre), estado: txt(c.estado, 30), logo_url: mediaClubSegura(c.logo_url),
-      escuela: esc && typeof esc === 'object' ? { nombre: txt(esc.nombre), municipio: txt(esc.municipio, 120), sistema: txt(esc.sistema, 10) } : null,
+      escuela: esc && typeof esc === 'object' ? { nombre: txt(esc.nombre), municipio: txt(esc.municipio, 120), sistema: txt(esc.sistema, 10),
+        participo_antes: typeof esc.participo_antes === 'boolean' ? esc.participo_antes : undefined } : null,
       lider: lid && typeof lid === 'object' ? { name: txt(lid.name), email: txtN(lid.email) ?? undefined, telefono: txtN(lid.telefono, 20) } : null,
     },
     integrantes: Array.isArray(d.integrantes) ? d.integrantes.slice(0, 200).map((i) => {

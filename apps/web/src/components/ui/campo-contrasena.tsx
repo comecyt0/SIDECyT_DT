@@ -21,7 +21,7 @@ export function BotonVerContrasena({ visible, onToggle, etiqueta = 'contraseña'
 
 const NIVEL = [
   { texto: '', color: 'transparent', luces: 0 },
-  { texto: 'Débil', color: 'var(--destructive)', luces: 1 },
+  { texto: 'Débil', color: 'var(--color-destructive)', luces: 1 },
   { texto: 'Regular', color: 'var(--tile-gold-fg)', luces: 2 },
   { texto: 'Segura', color: 'var(--tile-emerald-fg)', luces: 3 },
   { texto: 'Muy segura', color: 'var(--tile-emerald-fg)', luces: 3 },
@@ -31,7 +31,7 @@ export function SemaforoContrasena({ valor }: { valor: string }) {
   const id = useId();
   const nivel = fuerzaPassword(valor);
   const n = NIVEL[nivel];
-  const luces = ['var(--destructive)', 'var(--tile-gold-fg)', 'var(--tile-emerald-fg)'];
+  const luces = ['var(--color-destructive)', 'var(--tile-gold-fg)', 'var(--tile-emerald-fg)'];
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">

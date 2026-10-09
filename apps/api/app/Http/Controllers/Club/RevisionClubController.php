@@ -37,7 +37,7 @@ class RevisionClubController extends Controller
         ]);
         $u = $request->user();
         $rol = RevisionClub::rolDe($u);
-        $q = Club::query()->with(['escuela:id,cct,nombre,municipio,sistema', 'etapaActual', 'convocatoria:id,nombre'])->withCount('integrantes')
+        $q = Club::query()->with(['escuela:id,cct,nombre,municipio,sistema,participo_antes', 'etapaActual', 'convocatoria:id,nombre'])->withCount('integrantes')
             ->whereHas('convocatoria', fn ($c) => $c->whereNull('deleted_at'))->where('estado', '!=', 'borrador');
         Alcance::aplicar($q, $u);
         if (! empty($v['convocatoria_id'])) $q->where('convocatoria_id', (int) $v['convocatoria_id']);

@@ -151,7 +151,7 @@ export default function RevisionClubPanel({ clubId, estado, avance, permisos, ha
         title={t?.titulo ?? ''}
         icon={<ClipboardCheck className="h-5 w-5" />}
         intro={accion === 'observar' ? <>El líder tendrá <strong>{etapa?.plazo_horas ?? 24} horas</strong> para corregir y recibirá tu comentario por aviso y correo.</>
-          : accion === 'rechazar' || accion === 'comite_no_aceptado' ? <>El club <strong>no continuará</strong>. El líder recibirá el aviso.</> : undefined}
+          : accion === 'rechazar' || accion === 'comite_no_aceptado' ? <>El club <strong>no continuará</strong>. El líder, el líder B y el director (si están registrados) recibirán el aviso.</> : undefined}
         onClose={() => setAccion(null)}
         onSubmit={() => {
           if (!accion) return;
@@ -208,8 +208,8 @@ export default function RevisionClubPanel({ clubId, estado, avance, permisos, ha
       <ConfirmDialog open={seguro !== null} variant={seguro === 'comite_no_aceptado' ? 'destructive' : undefined}
         title={seguro === 'comite_aceptado' ? '¿Estás seguro de que el comité aceptó este club?' : '¿Estás seguro de que el comité no aceptó este club?'}
         description={seguro === 'comite_aceptado'
-          ? 'El club quedará aceptado y el líder recibirá el aviso y el correo. Esta decisión no se puede deshacer desde aquí.'
-          : 'El club no continuará y el líder recibirá el aviso. Esta decisión no se puede deshacer desde aquí.'}
+          ? 'El club quedará aceptado y el líder, el líder B y el director (si están registrados) recibirán el aviso y el correo. Esta decisión no se puede deshacer desde aquí.'
+          : 'El club no continuará y el líder, el líder B y el director recibirán el aviso. Esta decisión no se puede deshacer desde aquí.'}
         confirmLabel={seguro === 'comite_aceptado' ? 'Sí, aceptado' : 'Sí, no aceptado'}
         onCancel={() => setSeguro(null)}
         onConfirm={() => { const a = seguro; setSeguro(null); if (a) void ejecutar(a); }} />

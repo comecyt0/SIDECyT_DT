@@ -36,14 +36,17 @@ export default function FechaHoraAmPm({ value, onChange, etiquetaFecha = 'Fecha 
   const p = partesDe(value);
   const set = (c: Partial<typeof p>) => { const n = { ...p, ...c }; onChange(valorDe(n.fecha, n.hora, n.minuto, n.ampm)); };
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <div className="space-y-1.5">
-        <label htmlFor={`${id}-f`} className={labelCls}>{conAsterisco(etiquetaFecha)}</label>
+    // 08/10/2026 (formulario del kit desfasado): dos columnas solo si el CONTENEDOR mide 34rem o más (no la pantalla), etiquetas
+    // en bloque y de una línea, y el fieldset con min-w-0 (por defecto mide su contenido y se salía de la ventana).
+    <div className="@container">
+      <div className="grid grid-cols-1 items-start gap-3 @[34rem]:grid-cols-2">
+      <div className="min-w-0 space-y-1.5">
+        <label htmlFor={`${id}-f`} className={`${labelCls} block truncate`}>{conAsterisco(etiquetaFecha)}</label>
         <input id={`${id}-f`} type="date" className={inputCls} value={p.fecha} max={max?.slice(0, 10)} onChange={(e) => set({ fecha: e.target.value })} />
       </div>
-      <fieldset className="space-y-1.5">
-        <legend className={labelCls}>{conAsterisco(etiquetaHora)}</legend>
-        <div className="flex items-center gap-2">
+      <fieldset className="m-0 min-w-0 space-y-1.5 border-0 p-0">
+        <legend className={`${labelCls} block truncate p-0`}>{conAsterisco(etiquetaHora)}</legend>
+        <div className="flex flex-wrap items-center gap-2">
           <select aria-label="Hora" className={`${inputCls} !w-20 !pl-3`} value={p.hora} onChange={(e) => set({ hora: e.target.value })}>
             <option value="">--</option>
             {HORAS.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -63,6 +66,7 @@ export default function FechaHoraAmPm({ value, onChange, etiquetaFecha = 'Fecha 
           </div>
         </div>
       </fieldset>
+      </div>
     </div>
   );
 }

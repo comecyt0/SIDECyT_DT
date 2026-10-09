@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Lock, Users, Package, ListChecks, MessageSquarePlus, ClipboardCheck, ArrowUp, ArrowDown, Globe2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Lock, Users, Package, ListChecks, MessageSquarePlus, ClipboardCheck, ArrowUp, ArrowDown, Globe2, Bus, Sandwich } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Asterisco } from '@/components/ui/obligatorio';
@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertBox } from '@/components/ui/alert-box';
 import StepFrame from '@/components/ui/step-frame';
 import RevisoresEtapa from '@/components/admin/especie/RevisoresEtapa';
+import FechaHoraAmPm from '@/components/ui/fecha-hora-ampm';
 import {
   CAMPOS_CLUB, CAMPOS_INTEGRANTE, LIMITES_ESPECIE, MAX_ETAPAS, MODALIDADES, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, slugCampo,
   type Ambito, type Modalidad, type CampoEspecie, type ConfigEspecie, type EtapaEspecie, type Predef, type Revisa, type TipoCampoEspecie,
@@ -173,6 +174,46 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
             placeholder="Contenido del kit, para qué sirve, cuidados…" className={`${inputCls} !h-auto min-h-[96px] resize-y py-3`} />
           {errores.kit_descripcion && <p className="text-xs font-medium" style={errStyle}>{errores.kit_descripcion}</p>}
         </div>
+      </Seccion>
+
+      {/* E71 (pedido del usuario): qué apoyos de logística da la convocatoria. Lo que no da desaparece para el líder. */}
+      <Seccion icon={<Bus />} titulo="Transporte y box lunch"
+        ayuda="Elige qué apoyos da esta convocatoria a los clubes aceptados (escuelas estatales). Si quitas uno que ya pidieron, se quita de sus solicitudes y avisamos por correo a los líderes.">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {([['incluye_transporte', 'Transporte', 'Lugares en autobús para ir al evento y regresar.', <Bus key="b" />], ['incluye_lunch', 'Box lunch', 'Comida para los integrantes durante el evento.', <Sandwich key="s" />]] as const).map(([k, t, d, ic]) => (
+            <label key={k} className="flex cursor-pointer items-start gap-3 rounded-[14px] border px-4 py-3" style={{ borderColor: c[k] ? 'var(--auth-vino)' : 'var(--app-rule)', backgroundColor: c[k] ? 'var(--auth-vino-soft)' : 'var(--auth-field)' }}>
+              <Checkbox id={`${idBase}-${k}`} checked={c[k]} onCheckedChange={(v) => set({ [k]: v === true } as Partial<ConfigEspecie>)} />
+              <span className="flex-1">
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-[var(--app-ink)]"><span className="h-4 w-4 [&>svg]:h-4 [&>svg]:w-4" aria-hidden="true">{ic}</span>{t}</span>
+                <span className="block text-xs text-[var(--app-ink-2)]">{d}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        {!c.incluye_transporte && !c.incluye_lunch && <p className="text-xs font-semibold text-[var(--app-ink-2)]">Sin transporte ni box lunch: los clubes aceptados solo reciben el kit.</p>}
+        {c.incluye_transporte && (
+          <div className="space-y-3 rounded-[16px] border p-4" style={{ borderColor: 'var(--app-rule)' }}>
+            <p className="text-sm font-semibold text-[var(--app-ink)]">Salida y regreso del transporte <span className="font-normal text-[var(--app-ink-2)]">(los ven los líderes)</span></p>
+            <div className="space-y-1.5">
+              <Label htmlFor={`${idBase}-sal-l`} className={labelCls}>Punto de salida</Label>
+              <input id={`${idBase}-sal-l`} maxLength={300} value={c.transporte_salida_lugar} onChange={(e) => set({ transporte_salida_lugar: e.target.value })} className={inputCls} placeholder="Ej. Explanada del COMECYT, Toluca" />
+            </div>
+            <FechaHoraAmPm value={c.transporte_salida_hora} onChange={(v) => set({ transporte_salida_hora: v })} etiquetaFecha="Fecha de salida" etiquetaHora="Hora de salida" />
+            <div className="space-y-1.5">
+              <Label htmlFor={`${idBase}-reg-l`} className={labelCls}>Punto de regreso</Label>
+              <input id={`${idBase}-reg-l`} maxLength={300} value={c.transporte_regreso_lugar} onChange={(e) => set({ transporte_regreso_lugar: e.target.value })} className={inputCls} placeholder="Si es el mismo, déjalo vacío" />
+            </div>
+            <FechaHoraAmPm value={c.transporte_regreso_hora} onChange={(v) => set({ transporte_regreso_hora: v })} etiquetaFecha="Fecha de regreso" etiquetaHora="Hora de regreso" />
+            {errores.transporte_regreso_hora && <p className="text-xs font-medium" style={errStyle}>{errores.transporte_regreso_hora}</p>}
+          </div>
+        )}
+        {(c.incluye_transporte || c.incluye_lunch) && (
+          <div className="space-y-1.5 sm:max-w-xs">
+            <Label htmlFor={`${idBase}-flog`} className={labelCls}>Fecha límite para pedir</Label>
+            <input id={`${idBase}-flog`} type="date" value={c.fecha_limite_logistica} onChange={(e) => set({ fecha_limite_logistica: e.target.value })} className={inputCls} />
+            <p className="text-xs text-[var(--app-ink-2)]">Vacío = sin fecha límite. Es la misma del panel de logística.</p>
+          </div>
+        )}
       </Seccion>
 
       <Seccion icon={<ClipboardCheck />} titulo="Etapas de revisión"

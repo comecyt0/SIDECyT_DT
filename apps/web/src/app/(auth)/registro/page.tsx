@@ -452,7 +452,7 @@ export default function RegistroPage() {
                         <BotonVerContrasena visible={verPass2} onToggle={() => setVerPass2(!verPass2)} etiqueta="confirmación" />
                       </FField>
                       {p.password2 && (
-                        <p className="px-1 text-xs font-semibold" role="status" style={{ color: p.password === p.password2 ? 'var(--tile-emerald-fg)' : 'var(--destructive)' }}>
+                        <p className="px-1 text-xs font-semibold" role="status" style={{ color: p.password === p.password2 ? 'var(--tile-emerald-fg)' : 'var(--color-destructive)' }}>
                           {p.password === p.password2 ? 'Las contraseñas coinciden.' : 'Las contraseñas no coinciden.'}
                         </p>
                       )}

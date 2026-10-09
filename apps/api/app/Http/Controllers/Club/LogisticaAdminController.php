@@ -176,7 +176,7 @@ class LogisticaAdminController extends Controller
             ? $eventos->map(fn ($e) => ['evento_id' => $e->id, 'nombre' => $e->nombre, 'transporte' => LogisticaClub::cupo($cfg, $e, 'transporte'), 'lunch' => LogisticaClub::cupo($cfg, $e, 'lunch')])->values()
             : [['evento_id' => null, 'nombre' => 'Convocatoria', 'transporte' => LogisticaClub::cupo($cfg, null, 'transporte'), 'lunch' => LogisticaClub::cupo($cfg, null, 'lunch')]];
         $clubes = Club::where('convocatoria_id', $c->id)->whereIn('estado', Club::ACEPTADOS)
-            ->with(['escuela:id,cct,nombre,municipio,sistema', 'logisticas.evento:id,nombre', 'firmados'])->orderBy('nombre')->get();
+            ->with(['escuela:id,cct,nombre,municipio,sistema,participo_antes', 'logisticas.evento:id,nombre', 'firmados'])->orderBy('nombre')->get();
 
         return [
             'config' => [
@@ -185,6 +185,8 @@ class LogisticaAdminController extends Controller
                 'tope_integrantes' => (bool) $cfg->tope_integrantes, 'acompanantes' => (int) $cfg->acompanantes,
                 'max_integrantes' => (int) $cfg->max_integrantes, 'modalidad' => $cfg->modalidad ?? 'estatal',
                 'fecha_limite_logistica' => $cfg->fecha_limite_logistica?->format('Y-m-d'), 'kit_nombre' => $cfg->kit_nombre,
+                // E71: qué apoyos da la convocatoria (se eligen al crear o editar la convocatoria).
+                'incluye_transporte' => (bool) ($cfg->incluye_transporte ?? true), 'incluye_lunch' => (bool) ($cfg->incluye_lunch ?? true),
             ],
             'eventos' => $eventos->map(fn ($e) => ['id' => $e->id, 'nombre' => $e->nombre, 'fecha' => $e->fecha?->format('Y-m-d'), 'sede' => $e->sede,
                 'cupo_transporte' => $e->cupo_transporte, 'cupo_lunch' => $e->cupo_lunch, 'con_solicitudes' => ClubLogistica::where('evento_id', $e->id)->where('estado', '!=', 'cancelada')->exists()])->values(),

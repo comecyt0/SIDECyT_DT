@@ -10,8 +10,9 @@ import { mensajeError } from '@/lib/errores-formulario';
 import { fechaHora } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
 import { useLectorQr } from '@/hooks/useLectorQr';
+import EtiquetaEscuela from '@/components/especie/EtiquetaEscuela';
 import {
-  MODOS, bloqueoModo, cantidadSugerida, esModo, etiquetaCantidad, leerBusqueda, leerConvocatorias, leerFicha, registroDe,
+  MODOS, modosDe, bloqueoModo, cantidadSugerida, esModo, etiquetaCantidad, leerBusqueda, leerConvocatorias, leerFicha, registroDe,
   type ConvocatoriaEscaneo, type FichaEscaneo, type ModoEscaneo, type ResultadoBusqueda,
 } from '@/lib/escaneo';
 
@@ -58,6 +59,11 @@ export default function EscanerEventos() {
   const convSel = convs?.find((c) => c.id === convId) ?? null;
   const eventoSel = convSel?.eventos.find((e) => e.id === eventoId) ?? null;
   const necesitaEvento = modo !== 'kit';
+  // E71: solo los modos que aplican a la convocatoria elegida (sin transporte o sin box lunch, desaparecen).
+  const modos = modosDe(convSel);
+  useEffect(() => {
+    if (!modos.some((m) => m.valor === modo)) setModo('asistencia');
+  }, [modos, modo]);
 
   useEffect(() => {
     api.get('/escaneo/eventos')
@@ -203,7 +209,7 @@ export default function EscanerEventos() {
           </select>
         </label>
         <div role="radiogroup" aria-label="Qué registras" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {MODOS.map((m) => {
+          {modos.map((m) => {
             const Icono = ICONO[m.valor];
             const activo = modo === m.valor;
             return (
@@ -277,6 +283,7 @@ export default function EscanerEventos() {
             <div className="min-w-0 flex-1">
               <h2 id="esc-club" className="break-words text-lg font-bold text-[var(--app-ink)]">{ficha.club.nombre}</h2>
               <p className="text-xs text-[var(--app-ink-2)]"><span className="font-mono">{ficha.club.folio}</span>{ficha.club.escuela ? ` · ${ficha.club.escuela.nombre}, ${ficha.club.escuela.municipio}` : ''}</p>
+              {ficha.club.escuela && <EtiquetaEscuela participo={ficha.club.escuela.participo_antes} className="mt-1" />}
               {ficha.club.lider && <p className="text-xs text-[var(--app-ink-2)]">Líder: {ficha.club.lider.name}{ficha.club.lider.email ? ` · ${ficha.club.lider.email}` : ''}{ficha.club.lider.telefono ? ` · ${ficha.club.lider.telefono}` : ''}</p>}
               <p className="mt-1 text-xs text-[var(--app-ink-2)]">{metodo === 'qr' ? 'Leído con QR' : 'Buscado a mano'}</p>
             </div>

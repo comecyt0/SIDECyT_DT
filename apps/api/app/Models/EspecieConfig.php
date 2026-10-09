@@ -28,6 +28,9 @@ class EspecieConfig extends Model
         // F3 · logística (solo los escribe su endpoint con forceFill)
         'cupo_transporte' => 'integer', 'cupo_lunch' => 'integer', 'max_transporte_club' => 'integer', 'max_lunch_club' => 'integer',
         'tope_integrantes' => 'boolean', 'acompanantes' => 'integer', 'fecha_limite_logistica' => 'date:Y-m-d',
+        // E71: apoyos que da la convocatoria y salida del transporte (solo los escribe ApoyosLogistica con forceFill).
+        'incluye_transporte' => 'boolean', 'incluye_lunch' => 'boolean',
+        'transporte_salida_hora' => 'datetime', 'transporte_regreso_hora' => 'datetime',
     ];
 
     public function eventos()

@@ -65,6 +65,15 @@ export interface ConfigEspecie {
   campos_club: Record<string, Predef>;
   campos_integrante: Record<string, Predef>;
   campos: CampoEspecie[];
+  /** E71: apoyos de logística de la convocatoria y salida del transporte ('AAAA-MM-DDTHH:mm', hora del centro). */
+  incluye_transporte: boolean;
+  incluye_lunch: boolean;
+  transporte_salida_lugar: string;
+  transporte_salida_hora: string;
+  transporte_regreso_lugar: string;
+  transporte_regreso_hora: string;
+  /** 'AAAA-MM-DD' o '' (sin límite). */
+  fecha_limite_logistica: string;
 }
 
 /** Predefinidos (mismas claves y etiquetas que `App\Support\Especie`). */
@@ -115,6 +124,13 @@ export function configVacia(): ConfigEspecie {
     campos_club: structuredClone(DEFAULT_CLUB),
     campos_integrante: structuredClone(DEFAULT_INTEGRANTE),
     campos: [],
+    incluye_transporte: true,
+    incluye_lunch: true,
+    transporte_salida_lugar: '',
+    transporte_salida_hora: '',
+    transporte_regreso_lugar: '',
+    transporte_regreso_hora: '',
+    fecha_limite_logistica: '',
   };
 }
 
@@ -184,6 +200,13 @@ export function leerConfig(datos: unknown): ConfigEspecie {
         opciones: opcionesATexto(x.opciones ?? x.opciones_json),
       };
     }),
+    incluye_transporte: d.incluye_transporte !== false,
+    incluye_lunch: d.incluye_lunch !== false,
+    transporte_salida_lugar: txt(d.transporte_salida_lugar),
+    transporte_salida_hora: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(txt(d.transporte_salida_hora)) ? txt(d.transporte_salida_hora) : '',
+    transporte_regreso_lugar: txt(d.transporte_regreso_lugar),
+    transporte_regreso_hora: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(txt(d.transporte_regreso_hora)) ? txt(d.transporte_regreso_hora) : '',
+    fecha_limite_logistica: /^\d{4}-\d{2}-\d{2}$/.test(txt(d.fecha_limite_logistica)) ? txt(d.fecha_limite_logistica) : '',
   };
 }
 
@@ -199,6 +222,14 @@ export function payloadConfig(c: ConfigEspecie) {
     kit_descripcion: c.kit_descripcion.trim() || null,
     campos_club: c.campos_club,
     campos_integrante: c.campos_integrante,
+    // E71: apoyos (con transporte apagado el servidor borra la salida).
+    incluye_transporte: c.incluye_transporte,
+    incluye_lunch: c.incluye_lunch,
+    transporte_salida_lugar: c.incluye_transporte ? c.transporte_salida_lugar.trim() || null : null,
+    transporte_salida_hora: c.incluye_transporte && /T\d{2}:\d{2}$/.test(c.transporte_salida_hora) ? c.transporte_salida_hora : null,
+    transporte_regreso_lugar: c.incluye_transporte ? c.transporte_regreso_lugar.trim() || null : null,
+    transporte_regreso_hora: c.incluye_transporte && /T\d{2}:\d{2}$/.test(c.transporte_regreso_hora) ? c.transporte_regreso_hora : null,
+    fecha_limite_logistica: c.fecha_limite_logistica || null,
     etapas: c.etapas.map((e) => ({
       ...(e.id ? { id: e.id } : {}), nombre: e.nombre.trim(), revisa: e.revisa, plazo_horas: e.plazo_horas, max_subsanaciones: e.max_subsanaciones,
       revisores: e.revisores ?? [], aprobaciones_requeridas: Math.max(1, e.aprobaciones_requeridas ?? 1),
@@ -231,6 +262,10 @@ export function validarConfig(c: ConfigEspecie): Record<string, string> {
   if (!c.kit_nombre.trim()) e.kit_nombre = 'Escribe el nombre del kit.';
   else if (c.kit_nombre.length > L.kitNombre) e.kit_nombre = `Máximo ${L.kitNombre} caracteres.`;
   if (c.kit_descripcion.length > L.kitDescripcion) e.kit_descripcion = `Máximo ${L.kitDescripcion} caracteres.`;
+  // E71: el regreso no puede ser antes de la salida (las dos en hora del centro, mismo formato → se comparan como texto).
+  if (c.incluye_transporte && c.transporte_salida_hora && c.transporte_regreso_hora && c.transporte_regreso_hora < c.transporte_salida_hora) {
+    e.transporte_regreso_hora = 'El regreso no puede ser antes de la salida.';
+  }
   if (c.etapas.length < 1) e.etapas = 'Agrega al menos una etapa de revisión.';
   else if (c.etapas.length > MAX_ETAPAS) e.etapas = `Máximo ${MAX_ETAPAS} etapas.`;
   else {
@@ -301,6 +336,9 @@ export interface LogisticaEstado {
   aplica: boolean; estatal: boolean; modo: 'convocatoria' | 'evento'; abierta: boolean; fecha_limite: string | null;
   limites: { transporte: number | null; lunch: number | null }; tope_integrantes: boolean; acompanantes: number;
   max_integrantes: number; modalidad: Modalidad;
+  /** E71: qué apoyos da la convocatoria y la salida/regreso del transporte ('AAAA-MM-DDTHH:mm' hora del centro o null). */
+  apoyos: { incluye_transporte: boolean; incluye_lunch: boolean; transporte_salida_lugar: string | null; transporte_salida_hora: string | null;
+    transporte_regreso_lugar: string | null; transporte_regreso_hora: string | null };
   solicitudes: SolicitudLogistica[];
   resguardo: VersionFirmada[];
   kit: { nombre: string | null; fecha: string | null; lugar: string | null; asignado_at: string | null; entregado_at: string | null;
@@ -319,6 +357,14 @@ export function leerLogistica(v: unknown): LogisticaEstado | null {
     limites: { transporte: typeof d.limites?.transporte === 'number' ? d.limites.transporte : null, lunch: typeof d.limites?.lunch === 'number' ? d.limites.lunch : null },
     tope_integrantes: d.tope_integrantes === true, acompanantes: Number(d.acompanantes) || 0,
     max_integrantes: Number(d.max_integrantes) || 10, modalidad: leerModalidad(d.modalidad),
+    apoyos: (() => {
+      const a = (d.apoyos && typeof d.apoyos === 'object' ? d.apoyos : {}) as Record<string, unknown>;
+      const s = (x: unknown, n = 300) => (typeof x === 'string' && x.trim() ? x.slice(0, n) : null);
+      const h = (x: unknown) => (typeof x === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(x) ? x : null);
+      return { incluye_transporte: a.incluye_transporte !== false, incluye_lunch: a.incluye_lunch !== false,
+        transporte_salida_lugar: s(a.transporte_salida_lugar), transporte_salida_hora: h(a.transporte_salida_hora),
+        transporte_regreso_lugar: s(a.transporte_regreso_lugar), transporte_regreso_hora: h(a.transporte_regreso_hora) };
+    })(),
     solicitudes: Array.isArray(d.solicitudes) ? d.solicitudes : [],
     resguardo: Array.isArray(d.resguardo) ? d.resguardo : [],
     kit: d.kit ?? { nombre: null, fecha: null, lugar: null, asignado_at: null, entregado_at: null, entregado_lugar: null, entrego: null, recibio: null },
@@ -368,6 +414,14 @@ export interface EntradaHistorial {
   ronda?: number; rol?: string | null; quien?: string | null;
 }
 
+/** E71: 'AAAA-MM-DDTHH:mm' que ya viene en hora del centro → «15/10/2026, 3:30 p. m.» (sin convertir zonas). */
+export function fechaHoraLocal(v: string | null | undefined): string {
+  const m = v ? /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(v) : null;
+  if (!m) return '—';
+  const h = Number(m[4]);
+  return `${m[3]}/${m[2]}/${m[1]}, ${h % 12 === 0 ? 12 : h % 12}:${m[5]} ${h >= 12 ? 'p. m.' : 'a. m.'}`;
+}
+
 /** Fecha y hora en la zona del negocio (Toluca), para plazos. */
 export function fechaHora(v: string | null | undefined): string {
   if (!v) return '—';
@@ -383,7 +437,7 @@ export const NIVEL_ESCUELA: Record<string, string> = {
 export const SISTEMA_ESCUELA: Record<string, string> = { estatal: 'Estatal', federal: 'Federal' };
 export const SEXO: Record<string, string> = { H: 'Hombre', M: 'Mujer', X: 'Prefiere no decir' };
 
-export interface EscuelaApi { id: number; cct: string; nombre: string; municipio: string; nivel: string; sistema: string }
+export interface EscuelaApi { id: number; cct: string; nombre: string; municipio: string; nivel: string; sistema: string; /** «Ya participó» / «Nueva escuela» (08/10/2026). */ participo_antes?: boolean }
 export interface IntegranteApi {
   id: number; es_lider: boolean; es_lider_b?: boolean; nombre: string; fecha_nacimiento: string | null; sexo: string | null; curp: string | null;
   grado_grupo: string | null; correo: string | null; telefono: string | null; datos: Record<string, unknown> | null;

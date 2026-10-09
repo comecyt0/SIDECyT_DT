@@ -16,6 +16,7 @@ vi.mock('@/lib/especie-api', () => ({
 const base: LogisticaEstado = {
   aplica: true, estatal: true, modo: 'convocatoria', abierta: true, fecha_limite: '2026-10-15',
   limites: { transporte: 3, lunch: 4 }, tope_integrantes: true, acompanantes: 1, max_integrantes: 4, modalidad: 'nacional',
+  apoyos: { incluye_transporte: true, incluye_lunch: true, transporte_salida_lugar: null, transporte_salida_hora: null, transporte_regreso_lugar: null, transporte_regreso_hora: null },
   solicitudes: [{ evento: null, solicitud: null, versiones: [], cupo: { transporte: { total: 10, usado: 2, disponible: 8 }, lunch: { total: null, usado: 0, disponible: null } } }],
   resguardo: [],
   kit: { nombre: 'Kit de robótica', fecha: null, lugar: null, asignado_at: null, entregado_at: null, entregado_lugar: null, entrego: null, recibio: null },

@@ -111,7 +111,7 @@ class EscuelaSolicitudController extends Controller
         $solicitud->refresh();
         Audit::log('escuela.solicitud_aceptada', $solicitud, ['escuela_id' => $escuela->id, 'cct' => $escuela->cct, 'corregida' => $this->corregida($solicitud, $v)]);
         Audit::log('escuela.creada', $escuela, ['cct' => $escuela->cct, 'origen' => 'solicitud '.$solicitud->id]);
-        $solicitud->lider?->notify(new EscuelaSolicitudAviso($solicitud, 'aceptada'));
+        $this->avisar($solicitud, 'aceptada');
 
         return response()->json(['solicitud' => $solicitud->fresh(['escuela:id,cct,nombre']), 'escuela' => $escuela]);
     }
@@ -128,9 +128,24 @@ class EscuelaSolicitudController extends Controller
         });
         $solicitud->refresh();
         Audit::log('escuela.solicitud_rechazada', $solicitud, ['cct' => $solicitud->cct]);
-        $solicitud->lider?->notify(new EscuelaSolicitudAviso($solicitud, 'rechazada'));
+        $this->avisar($solicitud, 'rechazada');
 
         return response()->json(['solicitud' => $solicitud]);
+    }
+
+    /**
+     * 08/10/2026 (pedido del usuario): el aviso al líder llega también a los acompañantes (líder A/B, director) de los
+     * clubes que esperaban esta escuela, si están dados de alta.
+     */
+    private function avisar(EscuelaSolicitud $s, string $evento): void
+    {
+        $ids = collect([$s->user_id]);
+        foreach (Club::where('escuela_solicitud_id', $s->id)->get() as $club) {
+            $ids = $ids->merge($club->destinatarios()->pluck('id'));
+        }
+        foreach (\App\Models\User::whereIn('id', $ids->filter()->unique()->all())->where('activo', true)->get() as $u) {
+            $u->notify(new EscuelaSolicitudAviso($s, $evento));
+        }
     }
 
     // ─────────────────────────── Apoyos ───────────────────────────

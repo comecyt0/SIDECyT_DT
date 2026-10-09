@@ -31,7 +31,7 @@ class ClubAdminController extends Controller
         abort_unless(Especie::esEspecie($convocatoria->loadMissing('tipoPrograma')), 404);
         Alcance::exigirConvocatoria($request->user(), $convocatoria->id);
         $request->validate(['estado' => 'nullable|string|max:30', 'q' => 'nullable|string|max:120']);
-        $q = Club::where('convocatoria_id', $convocatoria->id)->with(['escuela:id,cct,nombre,municipio,sistema,nivel', 'lider:id,name,email,telefono'])->withCount('integrantes');
+        $q = Club::where('convocatoria_id', $convocatoria->id)->with(['escuela:id,cct,nombre,municipio,sistema,nivel,participo_antes', 'lider:id,name,email,telefono'])->withCount('integrantes');
         // "vencido" no se guarda: es observado con el plazo pasado (E52 · F2).
         match ($request->input('estado')) {
             null, '' => null,

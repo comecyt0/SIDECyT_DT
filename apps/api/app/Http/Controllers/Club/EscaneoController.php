@@ -25,6 +25,9 @@ class EscaneoController extends Controller
 
         return response()->json($q->orderByDesc('fecha_apertura')->limit(50)->get()->map(fn (Convocatoria $c) => [
             'id' => $c->id, 'nombre' => $c->nombre,
+            // E71: modos del escáner que aplican a la convocatoria.
+            'incluye_transporte' => (bool) ($c->especieConfig?->incluye_transporte ?? true),
+            'incluye_lunch' => (bool) ($c->especieConfig?->incluye_lunch ?? true),
             'eventos' => ($c->especieConfig?->eventos ?? collect())->map(fn ($e) => ['id' => $e->id, 'nombre' => $e->nombre, 'fecha' => $e->fecha?->format('Y-m-d'), 'sede' => $e->sede])->values(),
         ])->values());
     }

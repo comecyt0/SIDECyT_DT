@@ -17,6 +17,7 @@ import Folio from '@/components/ui/folio';
 import { Button } from '@/components/ui/button';
 import LineaAvanceClub from '@/components/especie/LineaAvanceClub';
 import VistaPreviaClub from '@/components/especie/VistaPreviaClub';
+import EtiquetaEscuela from '@/components/especie/EtiquetaEscuela';
 
 interface ConvEspecie { id: number; nombre: string; fecha_apertura: string | null; fecha_cierre: string | null; clubes_count: number; enviados_count: number }
 interface ClubFila {
@@ -213,6 +214,7 @@ export default function ClubesAdminPage() {
                             <span className="mt-0.5 flex items-center gap-1 text-xs text-[var(--app-ink-2)]">
                               <School className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                               <span className="truncate">{c.escuela.nombre} · {c.escuela.municipio} · {SISTEMA_ESCUELA[c.escuela.sistema] ?? c.escuela.sistema}</span>
+                              <EtiquetaEscuela participo={(c.escuela as { participo_antes?: boolean }).participo_antes} />
                             </span>
                           )}
                         </span>

@@ -202,7 +202,7 @@ export default function AccesosClub({ clubId, accesos, onCambio, onAviso, onCedi
                     </div>
                     {k === 'password' && <SemaforoContrasena valor={f.password} />}
                     {k === 'confirmacion' && f.confirmacion && (
-                      <p className="text-xs font-semibold" style={{ color: f.password === f.confirmacion ? 'var(--tile-emerald-fg)' : 'var(--destructive)' }}>
+                      <p className="text-xs font-semibold" style={{ color: f.password === f.confirmacion ? 'var(--tile-emerald-fg)' : 'var(--color-destructive)' }}>
                         {f.password === f.confirmacion ? 'Las contraseñas coinciden.' : 'Las contraseñas no coinciden.'}
                       </p>
                     )}

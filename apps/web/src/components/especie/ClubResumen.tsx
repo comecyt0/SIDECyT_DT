@@ -11,6 +11,7 @@ import { formatDate } from '@/lib/format';
 import Folio from '@/components/ui/folio';
 import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
 import { archivoDocumentoClub } from '@/lib/especie-api';
+import EtiquetaEscuela from '@/components/especie/EtiquetaEscuela';
 
 /**
  * E52 · F1 — Vista de solo lectura de un club: datos, escuela, líder, integrantes con foto, respuestas adicionales y
@@ -65,7 +66,8 @@ export default function ClubResumen({ club, integrantes, documentos, campos, cam
           <h3 id="cr-escuela" className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><School className="h-4 w-4" aria-hidden="true" />Escuela</h3>
           {club.escuela ? (
             <>
-              <p className="break-words font-semibold text-[var(--app-ink)]">{club.escuela.nombre}</p>
+              <p className="flex flex-wrap items-center gap-2 break-words font-semibold text-[var(--app-ink)]">{club.escuela.nombre}
+                <EtiquetaEscuela participo={(club.escuela as { participo_antes?: boolean }).participo_antes} /></p>
               <p className="text-sm text-[var(--app-ink-2)]">
                 <span className="font-mono">{club.escuela.cct}</span> · {club.escuela.municipio} · {NIVEL_ESCUELA[club.escuela.nivel] ?? club.escuela.nivel} · {SISTEMA_ESCUELA[club.escuela.sistema] ?? club.escuela.sistema}
               </p>

@@ -62,7 +62,7 @@ export default function RevisoresEtapa({ idBase, revisa, revisores, aprobaciones
         </ul>
       )}
       {revisores.some((id) => candidatos && !admitidos.some((c) => c.id === id)) && (
-        <p className="text-xs font-semibold" style={{ color: 'var(--destructive)' }}>Hay personas asignadas que ya no corresponden al rol elegido: quítalas o cambia «Quién revisa».</p>
+        <p className="text-xs font-semibold" style={{ color: 'var(--color-destructive)' }}>Hay personas asignadas que ya no corresponden al rol elegido: quítalas o cambia «Quién revisa».</p>
       )}
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <label htmlFor={`${idBase}-apr`} className="font-semibold text-[var(--app-ink)]">Aprobaciones necesarias</label>

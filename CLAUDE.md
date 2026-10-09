@@ -2074,6 +2074,42 @@ el admin de convocatoria o una persona asignada a alguna fase de la convocatoria
 **Lección (no repetir):** no cortar la salida de una prueba con `Select-Object -First N`: mata el proceso PHP antes de su
 `finally` y deja datos de prueba (pasó hoy; se limpiaron con un script dirigido). Guardar la salida en archivo.
 
+### E71 — Transporte y box lunch por convocatoria (uno, otro, ambos o ninguno) [08-10-2026]
+**Decisiones del usuario (cuestionario):** al crear o editar la convocatoria (sección «Transporte y box lunch» de
+`ConfigEspecieForm`) se elige qué apoyos da; lo que no da **desaparece** (líder, cupos del panel de logística, modos del
+escáner, columnas y hojas del reporte); se puede cambiar **siempre** — al quitar un apoyo, las solicitudes vigentes lo
+pierden (si no queda nada, `cancelada`), su formato firmado pasa a `reemplazado` y se avisa por correo (`ClubAviso
+'logistica_ajustada'`); existentes = los dos activos. El **admin** define en la convocatoria el punto y la hora de salida y
+de regreso del transporte (iguales para todos) y la fecha límite para pedir (`fecha_limite_logistica`, la misma del panel).
+- Migración `2026_10_08_000005`: `especie_config.incluye_transporte/incluye_lunch` (default true) y
+  `transporte_salida_lugar/hora`, `transporte_regreso_lugar/hora` (UTC; entran y salen como 'AAAA-MM-DDTHH:mm' hora del
+  centro). `App\Support\ApoyosLogistica` (`reglas`, `aplicar`, `alQuitar`, `payload`), usado por `EspecieConfigController`
+  y el asistente. `LogisticaClub::solicitar` rechaza lo que no se da; `estado()` trae `apoyos`; `EventoClub` no registra
+  `lunch`/`tr_*` sin el apoyo; `GET /escaneo/eventos` trae los indicadores (`modosDe()` en el front); reporte sin columnas.
+**Verificado:** `e2e_apoyos.php` 11/11, F3 58/58, F4 84/84, escaneo 11/11, vitest 184/184.
+
+### Correos del líder también al líder B y al director [08-10-2026]
+Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de
+un club del director) **si están dados de alta en ese club**. `Club::destinatarios()` = dueño + todos sus accesos activos
+(el parámetro `$conLiderB` ya no restringe); la resolución de una solicitud de escuela avisa también a los acompañantes de
+los clubes que la esperaban. Textos del panel actualizados («El líder, el líder B y el director… recibirán…»).
+
+### Formularios desfasados (kit) y rojo de los asteriscos [08-10-2026]
+**Síntoma:** en «Fecha y lugar de entrega del kit» los minutos y a. m./p. m. se salían de la ventana y la fecha bajaba.
+**Causa:** el `StepFrame` mediano (576 px) dejaba ~300 px al formulario por su columna de pasos; las rejillas
+`sm:grid-cols-2` miran la **pantalla**, no la ventana, y partían ese espacio en dos; el `fieldset` de la hora medía su
+contenido (`min-inline-size: min-content`) y se desbordaba; la etiqueta de la fecha se partía en dos líneas.
+**Fix general:** `StepFrame` sin lista de pasos cuando hay uno solo y, en `size="md"`, lista arriba en horizontal; el
+contenido del paso es `@container`; `FechaHoraAmPm` usa `@[34rem]:grid-cols-2`, etiquetas en bloque y `fieldset` con
+`min-w-0`; regla global `fieldset { min-inline-size: 0 }`. Verificado con Edge a 1440/768/390 (nada fuera de la ventana).
+**Rojo:** `--destructive` guarda componentes HSL («0 84% 60%»), no un color; usar `--color-destructive`. Los asteriscos
+salían grises por eso; corregido y verificado (`rgb(239, 67, 67)`).
+
+### Escuelas: «Ya participó» / «Nueva escuela» en todos lados [08-10-2026]
+`components/especie/EtiquetaEscuela.tsx` (de `escuelas.participo_antes`) en el listado y la bandeja de clubes, la ficha y la
+vista previa (`ClubResumen`), el escáner, la logística del admin y el buscador de escuelas del líder; columna
+«Participación» en el reporte de clubes. Las consultas que devuelven la escuela incluyen `participo_antes`.
+
 ### Contraseñas: ojo y semáforo; asteriscos rojos; CURP → fecha de nacimiento [08-10-2026]
 - `components/ui/campo-contrasena.tsx`: `BotonVerContrasena` (ojo con `aria-pressed`) y `SemaforoContrasena` (rojo débil,
   amarillo regular, verde segura; checklist de la política, `lib/password-policy.ts` `fuerzaPassword`/`requisitosPassword`).

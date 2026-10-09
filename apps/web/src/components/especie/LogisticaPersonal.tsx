@@ -186,7 +186,7 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
         size="md"
         title={dialogo?.tipo === 'asignar' ? 'Fecha y lugar de entrega del kit' : dialogo?.tipo === 'entregar' ? 'Registrar entrega del kit' : 'Rechazar documento'}
         icon={<Package className="h-5 w-5" />}
-        intro={dialogo?.tipo === 'asignar' ? <>El líder recibirá un <strong>correo</strong> con la fecha y el lugar.</> : dialogo?.tipo === 'rechazar' ? <>El líder verá el motivo y subirá una versión nueva.</> : undefined}
+        intro={dialogo?.tipo === 'asignar' ? <>El líder, el líder B y el director (los que estén registrados) recibirán un <strong>correo</strong> con la fecha y el lugar.</> : dialogo?.tipo === 'rechazar' ? <>El líder verá el motivo y subirá una versión nueva.</> : undefined}
         onClose={() => setDialogo(null)}
         onSubmit={guardar}
         submitting={enviando}
@@ -234,7 +234,7 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
         }] : []}
       />
       <ConfirmDialog open={revocar} variant="destructive" title="Revocar el QR del club" confirmLabel="Revocar"
-        description="El QR actual dejará de funcionar de inmediato en los eventos y el líder recibirá un aviso. Si lo vuelves a habilitar, se genera uno nuevo."
+        description="El QR actual dejará de funcionar de inmediato en los eventos y el líder, el líder B y el director recibirán un aviso. Si lo vuelves a habilitar, se genera uno nuevo."
         onCancel={() => setRevocar(false)} onConfirm={() => void revocarQr()} />
     </section>
   );

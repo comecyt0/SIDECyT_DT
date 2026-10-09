@@ -88,6 +88,10 @@ class EventoClub
         if ($cantidad === null || $cantidad < 1) self::falla('Escribe una cantidad de 1 o más.', 'cantidad');
         if ($cantidad > 500) self::falla('La cantidad no puede pasar de 500.', 'cantidad');
         $aviso = null;
+        // E71: lo que la convocatoria no da no se registra.
+        $cfgA = LogisticaClub::config($club);
+        if ($tipo === 'lunch' && ! ($cfgA->incluye_lunch ?? true)) self::falla('Esta convocatoria no incluye box lunch.');
+        if (in_array($tipo, ['tr_llegada', 'tr_regreso'], true) && ! ($cfgA->incluye_transporte ?? true)) self::falla('Esta convocatoria no incluye transporte.');
         if ($tipo === 'lunch') {
             $max = self::lunchAprobado($club, $evento);
             if ($max === null || $max === 0) self::falla('Este club no tiene box lunch aprobado para este evento.');
@@ -118,7 +122,7 @@ class EventoClub
     /** Lo que ve el operador al escanear: datos para identificar al club y el estado del evento. */
     public static function ficha(Club $club, User $u, ?EspecieEvento $evento): array
     {
-        $club->loadMissing(['escuela:id,cct,nombre,municipio,sistema', 'lider:id,name,email,telefono', 'integrantes']);
+        $club->loadMissing(['escuela:id,cct,nombre,municipio,sistema,participo_antes', 'lider:id,name,email,telefono', 'integrantes']);
         $cfg = LogisticaClub::config($club);
         $regs = $evento ? ClubRegistroEvento::where('club_id', $club->id)->where('evento_id', $evento->id)->with('registrador:id,name')->get()->keyBy('tipo') : collect();
         $reg = fn ($t) => ($x = $regs->get($t)) ? ['cantidad' => $x->cantidad, 'metodo' => $x->metodo, 'hora' => $x->updated_at, 'quien' => $x->registrador?->name] : null;
@@ -127,7 +131,7 @@ class EventoClub
         return [
             'club' => [
                 'id' => $club->id, 'folio' => $club->folio, 'nombre' => $club->nombre, 'estado' => $club->estado, 'logo_url' => $club->logo_url,
-                'escuela' => $club->escuela ? ['nombre' => $club->escuela->nombre, 'municipio' => $club->escuela->municipio, 'sistema' => $club->escuela->sistema] : null,
+                'escuela' => $club->escuela ? ['nombre' => $club->escuela->nombre, 'municipio' => $club->escuela->municipio, 'sistema' => $club->escuela->sistema, 'participo_antes' => (bool) $club->escuela->participo_antes] : null,
                 'lider' => $club->lider ? ($todo ? $club->lider->only(['name', 'email', 'telefono']) : ['name' => $club->lider->name]) : null,
                 'qr_habilitado' => QrClub::habilitado($club),
             ],
@@ -143,6 +147,9 @@ class EventoClub
             'tr_llegada' => $reg('tr_llegada'),
             'tr_regreso' => $reg('tr_regreso'),
             'transporte_aprobado' => $evento ? self::transporteAprobado($club, $evento) : null,
+            // E71: modos que se muestran en el escáner.
+            'incluye_transporte' => (bool) ($cfg->incluye_transporte ?? true),
+            'incluye_lunch' => (bool) ($cfg->incluye_lunch ?? true),
             'kit' => ['nombre' => $cfg->kit_nombre, 'entregado_at' => $club->kit_entregado_at, 'recibio' => $club->kit_recibio, 'entrego' => $club->kit_entrego, 'lugar' => $club->kit_entregado_lugar ?: $club->kit_lugar],
             'ficha_completa' => $todo ? '/admin/clubes/'.$club->id : null,
         ];

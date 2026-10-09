@@ -96,6 +96,13 @@ class LogisticaClub
             // Bloqueo de la configuración: serializa a los líderes de la convocatoria mientras se revisa el cupo.
             $cfg = EspecieConfig::where('convocatoria_id', $club->convocatoria_id)->lockForUpdate()->first() ?? self::falla('La convocatoria no tiene logística configurada.');
             if (! self::abierta($cfg)) self::falla('Ya pasó la fecha límite para solicitar transporte y box lunch.');
+            // E71: solo lo que da la convocatoria.
+            $daT = (bool) ($cfg->incluye_transporte ?? true);
+            $daL = (bool) ($cfg->incluye_lunch ?? true);
+            if (! $daT && ! $daL) self::falla('Esta convocatoria no incluye transporte ni box lunch.');
+            if (! $daT && $transporte > 0) self::falla('Esta convocatoria no incluye transporte.', 'transporte');
+            if (! $daL && $lunch > 0) self::falla('Esta convocatoria no incluye box lunch.', 'lunch');
+            if (! $daT) $confirmoSinTransporte = true;
             $evento = null;
             if (self::modo($cfg) === 'evento') {
                 $evento = EspecieEvento::where('convocatoria_id', $club->convocatoria_id)->find($eventoId) ?? self::falla('Elige un evento de esta convocatoria.', 'evento_id');
@@ -269,6 +276,8 @@ class LogisticaClub
             'modalidad' => $cfg->modalidad ?? 'estatal',
             'tope_integrantes' => (bool) $cfg->tope_integrantes,
             'acompanantes' => (int) $cfg->acompanantes,
+            // E71: qué apoyos da la convocatoria y la salida del transporte.
+            'apoyos' => ApoyosLogistica::payload($cfg),
             'solicitudes' => $modo === 'evento' ? $eventos->map(fn ($e) => $solicitud($e))->values() : [$solicitud(null)],
             'resguardo' => $firmados->where('tipo', 'resguardo')->values()->map($version),
             'kit' => [

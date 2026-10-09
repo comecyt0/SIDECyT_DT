@@ -207,7 +207,7 @@ export default function SolicitudesEscuelas({ onConteo }: { onConteo?: (pendient
         title={dialogo?.tipo === 'aceptar' ? '¿Estás seguro de que quieres aceptar esta escuela?' : '¿Estás seguro de que no quieres aceptar esta escuela?'}
         description={dialogo?.tipo === 'aceptar'
           ? `«${form.nombre.trim()}» (${form.cct.trim().toUpperCase()}) se agrega al catálogo y el líder podrá continuar con su club.`
-          : 'El líder recibirá el motivo por campana y correo.'}
+          : 'El líder y sus acompañantes recibirán el motivo por campana y correo.'}
         confirmLabel={dialogo?.tipo === 'aceptar' ? 'Sí, aceptar' : 'Sí, no aceptar'}
         onCancel={() => setConfirmar(false)}
         onConfirm={() => void ejecutar()}

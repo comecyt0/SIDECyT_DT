@@ -33,10 +33,11 @@ class ClubesEspecieExport implements WithMultipleSheets
         $f = fn ($d) => $d ? \Carbon\Carbon::parse($d)->setTimezone(self::TZ)->format('d/m/Y H:i') : '';
         $s = fn ($v) => SolicitudesExport::celda($v === null ? '' : (string) $v);
 
-        $hClubes = ['Folio', 'Club', 'Estado', 'Escuela', 'CCT', 'Municipio', 'Sistema', 'Líder', 'Correo del líder', 'Teléfono del líder', 'Integrantes', 'QR habilitado', 'Kit entregado'];
+        // 08/10/2026: «Ya participó» / «Nueva escuela» en todo lugar donde aparece la escuela (pedido del usuario).
+        $hClubes = ['Folio', 'Club', 'Estado', 'Escuela', 'CCT', 'Municipio', 'Sistema', 'Participación', 'Líder', 'Correo del líder', 'Teléfono del líder', 'Integrantes', 'QR habilitado', 'Kit entregado'];
         $rClubes = $clubes->map(fn (Club $x) => [
             $s($x->folio), $s($x->nombre), $x->estado === 'kit_entregado' ? 'Kit entregado' : 'Aceptado', $s($x->escuela?->nombre), $s($x->escuela?->cct),
-            $s($x->escuela?->municipio), $s($x->escuela?->sistema), $s($x->lider?->name), $s($x->lider?->email), $s($x->lider?->telefono),
+            $s($x->escuela?->municipio), $s($x->escuela?->sistema), $x->escuela ? ($x->escuela->participo_antes ? 'Ya participó' : 'Nueva escuela') : '', $s($x->lider?->name), $s($x->lider?->email), $s($x->lider?->telefono),
             $x->integrantes->count(), QrClub::habilitado($x) ? 'Sí' : 'No', $x->kit_entregado_at ? 'Sí' : 'No',
         ])->all();
 
@@ -90,13 +91,26 @@ class ClubesEspecieExport implements WithMultipleSheets
             $s($x->kit_entrego), $s($x->kit_recibio), $s($x->kitRegistrador?->name),
         ])->values()->all();
 
-        return [
+        // E71: lo que la convocatoria no da no aparece en el reporte (columnas y, si no da nada, la hoja de logística).
+        $daT = (bool) ($cfg->incluye_transporte ?? true);
+        $daL = (bool) ($cfg->incluye_lunch ?? true);
+        $quitar = function (array $h, array $rows, array $idx): array {
+            $fuera = array_flip($idx);
+            $f = fn (array $fila) => array_values(array_diff_key($fila, $fuera));
+
+            return [$f($h), array_map($f, $rows)];
+        };
+        if (! $daT) [$hAsis, $rAsis] = $quitar($hAsis, $rAsis, [9, 10, 11, 12]);
+        $fueraLog = array_merge($daT ? [] : [3, 7, 8], $daL ? [] : [4, 6, 9, 10]);
+        if ($fueraLog) [$hLog, $rLog] = $quitar($hLog, $rLog, $fueraLog);
+
+        return array_values(array_filter([
             new HojaReporte('Clubes aceptados', $hClubes, $rClubes),
             new HojaReporte('Integrantes', $hInt, $rInt),
-            new HojaReporte('Entrada, salida y transporte', $hAsis, $rAsis),
-            new HojaReporte('Transporte y box lunch', $hLog, $rLog),
+            new HojaReporte($daT ? 'Entrada, salida y transporte' : 'Entrada y salida', $hAsis, $rAsis),
+            ($daT || $daL) ? new HojaReporte($daT && $daL ? 'Transporte y box lunch' : ($daT ? 'Transporte' : 'Box lunch'), $hLog, $rLog) : null,
             new HojaReporte('Kits entregados', $hKit, $rKit),
-        ];
+        ]));
     }
 }
 
