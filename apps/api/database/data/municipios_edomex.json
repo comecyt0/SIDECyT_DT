@@ -1,0 +1,502 @@
+[
+ {
+  "cvegeo": "15001",
+  "nombre": "Acambay de Ruíz Castañeda"
+ },
+ {
+  "cvegeo": "15002",
+  "nombre": "Acolman"
+ },
+ {
+  "cvegeo": "15003",
+  "nombre": "Aculco"
+ },
+ {
+  "cvegeo": "15004",
+  "nombre": "Almoloya de Alquisiras"
+ },
+ {
+  "cvegeo": "15005",
+  "nombre": "Almoloya de Juárez"
+ },
+ {
+  "cvegeo": "15006",
+  "nombre": "Almoloya del Río"
+ },
+ {
+  "cvegeo": "15007",
+  "nombre": "Amanalco"
+ },
+ {
+  "cvegeo": "15008",
+  "nombre": "Amatepec"
+ },
+ {
+  "cvegeo": "15009",
+  "nombre": "Amecameca"
+ },
+ {
+  "cvegeo": "15010",
+  "nombre": "Apaxco"
+ },
+ {
+  "cvegeo": "15011",
+  "nombre": "Atenco"
+ },
+ {
+  "cvegeo": "15012",
+  "nombre": "Atizapán"
+ },
+ {
+  "cvegeo": "15013",
+  "nombre": "Atizapán de Zaragoza"
+ },
+ {
+  "cvegeo": "15014",
+  "nombre": "Atlacomulco"
+ },
+ {
+  "cvegeo": "15015",
+  "nombre": "Atlautla"
+ },
+ {
+  "cvegeo": "15016",
+  "nombre": "Axapusco"
+ },
+ {
+  "cvegeo": "15017",
+  "nombre": "Ayapango"
+ },
+ {
+  "cvegeo": "15018",
+  "nombre": "Calimaya"
+ },
+ {
+  "cvegeo": "15019",
+  "nombre": "Capulhuac"
+ },
+ {
+  "cvegeo": "15020",
+  "nombre": "Coacalco de Berriozábal"
+ },
+ {
+  "cvegeo": "15021",
+  "nombre": "Coatepec Harinas"
+ },
+ {
+  "cvegeo": "15022",
+  "nombre": "Cocotitlán"
+ },
+ {
+  "cvegeo": "15023",
+  "nombre": "Coyotepec"
+ },
+ {
+  "cvegeo": "15024",
+  "nombre": "Cuautitlán"
+ },
+ {
+  "cvegeo": "15025",
+  "nombre": "Chalco"
+ },
+ {
+  "cvegeo": "15026",
+  "nombre": "Chapa de Mota"
+ },
+ {
+  "cvegeo": "15027",
+  "nombre": "Chapultepec"
+ },
+ {
+  "cvegeo": "15028",
+  "nombre": "Chiautla"
+ },
+ {
+  "cvegeo": "15029",
+  "nombre": "Chicoloapan"
+ },
+ {
+  "cvegeo": "15030",
+  "nombre": "Chiconcuac"
+ },
+ {
+  "cvegeo": "15031",
+  "nombre": "Chimalhuacán"
+ },
+ {
+  "cvegeo": "15032",
+  "nombre": "Donato Guerra"
+ },
+ {
+  "cvegeo": "15033",
+  "nombre": "Ecatepec de Morelos"
+ },
+ {
+  "cvegeo": "15034",
+  "nombre": "Ecatzingo"
+ },
+ {
+  "cvegeo": "15035",
+  "nombre": "Huehuetoca"
+ },
+ {
+  "cvegeo": "15036",
+  "nombre": "Hueypoxtla"
+ },
+ {
+  "cvegeo": "15037",
+  "nombre": "Huixquilucan"
+ },
+ {
+  "cvegeo": "15038",
+  "nombre": "Isidro Fabela"
+ },
+ {
+  "cvegeo": "15039",
+  "nombre": "Ixtapaluca"
+ },
+ {
+  "cvegeo": "15040",
+  "nombre": "Ixtapan de la Sal"
+ },
+ {
+  "cvegeo": "15041",
+  "nombre": "Ixtapan del Oro"
+ },
+ {
+  "cvegeo": "15042",
+  "nombre": "Ixtlahuaca"
+ },
+ {
+  "cvegeo": "15043",
+  "nombre": "Xalatlaco"
+ },
+ {
+  "cvegeo": "15044",
+  "nombre": "Jaltenco"
+ },
+ {
+  "cvegeo": "15045",
+  "nombre": "Jilotepec"
+ },
+ {
+  "cvegeo": "15046",
+  "nombre": "Jilotzingo"
+ },
+ {
+  "cvegeo": "15047",
+  "nombre": "Jiquipilco"
+ },
+ {
+  "cvegeo": "15048",
+  "nombre": "Jocotitlán"
+ },
+ {
+  "cvegeo": "15049",
+  "nombre": "Joquicingo"
+ },
+ {
+  "cvegeo": "15050",
+  "nombre": "Juchitepec"
+ },
+ {
+  "cvegeo": "15051",
+  "nombre": "Lerma"
+ },
+ {
+  "cvegeo": "15052",
+  "nombre": "Malinalco"
+ },
+ {
+  "cvegeo": "15053",
+  "nombre": "Melchor Ocampo"
+ },
+ {
+  "cvegeo": "15054",
+  "nombre": "Metepec"
+ },
+ {
+  "cvegeo": "15055",
+  "nombre": "Mexicaltzingo"
+ },
+ {
+  "cvegeo": "15056",
+  "nombre": "Morelos"
+ },
+ {
+  "cvegeo": "15057",
+  "nombre": "Naucalpan de Juárez"
+ },
+ {
+  "cvegeo": "15058",
+  "nombre": "Nezahualcóyotl"
+ },
+ {
+  "cvegeo": "15059",
+  "nombre": "Nextlalpan"
+ },
+ {
+  "cvegeo": "15060",
+  "nombre": "Nicolás Romero"
+ },
+ {
+  "cvegeo": "15061",
+  "nombre": "Nopaltepec"
+ },
+ {
+  "cvegeo": "15062",
+  "nombre": "Ocoyoacac"
+ },
+ {
+  "cvegeo": "15063",
+  "nombre": "Ocuilan"
+ },
+ {
+  "cvegeo": "15064",
+  "nombre": "El Oro"
+ },
+ {
+  "cvegeo": "15065",
+  "nombre": "Otumba"
+ },
+ {
+  "cvegeo": "15066",
+  "nombre": "Otzoloapan"
+ },
+ {
+  "cvegeo": "15067",
+  "nombre": "Otzolotepec"
+ },
+ {
+  "cvegeo": "15068",
+  "nombre": "Ozumba"
+ },
+ {
+  "cvegeo": "15069",
+  "nombre": "Papalotla"
+ },
+ {
+  "cvegeo": "15070",
+  "nombre": "La Paz"
+ },
+ {
+  "cvegeo": "15071",
+  "nombre": "Polotitlán"
+ },
+ {
+  "cvegeo": "15072",
+  "nombre": "Rayón"
+ },
+ {
+  "cvegeo": "15073",
+  "nombre": "San Antonio la Isla"
+ },
+ {
+  "cvegeo": "15074",
+  "nombre": "San Felipe del Progreso"
+ },
+ {
+  "cvegeo": "15075",
+  "nombre": "San Martín de las Pirámides"
+ },
+ {
+  "cvegeo": "15076",
+  "nombre": "San Mateo Atenco"
+ },
+ {
+  "cvegeo": "15077",
+  "nombre": "San Simón de Guerrero"
+ },
+ {
+  "cvegeo": "15078",
+  "nombre": "Santo Tomás"
+ },
+ {
+  "cvegeo": "15079",
+  "nombre": "Soyaniquilpan de Juárez"
+ },
+ {
+  "cvegeo": "15080",
+  "nombre": "Sultepec"
+ },
+ {
+  "cvegeo": "15081",
+  "nombre": "Tecámac"
+ },
+ {
+  "cvegeo": "15082",
+  "nombre": "Tejupilco"
+ },
+ {
+  "cvegeo": "15083",
+  "nombre": "Temamatla"
+ },
+ {
+  "cvegeo": "15084",
+  "nombre": "Temascalapa"
+ },
+ {
+  "cvegeo": "15085",
+  "nombre": "Temascalcingo"
+ },
+ {
+  "cvegeo": "15086",
+  "nombre": "Temascaltepec"
+ },
+ {
+  "cvegeo": "15087",
+  "nombre": "Temoaya"
+ },
+ {
+  "cvegeo": "15088",
+  "nombre": "Tenancingo"
+ },
+ {
+  "cvegeo": "15089",
+  "nombre": "Tenango del Aire"
+ },
+ {
+  "cvegeo": "15090",
+  "nombre": "Tenango del Valle"
+ },
+ {
+  "cvegeo": "15091",
+  "nombre": "Teoloyucan"
+ },
+ {
+  "cvegeo": "15092",
+  "nombre": "Teotihuacán"
+ },
+ {
+  "cvegeo": "15093",
+  "nombre": "Tepetlaoxtoc"
+ },
+ {
+  "cvegeo": "15094",
+  "nombre": "Tepetlixpa"
+ },
+ {
+  "cvegeo": "15095",
+  "nombre": "Tepotzotlán"
+ },
+ {
+  "cvegeo": "15096",
+  "nombre": "Tequixquiac"
+ },
+ {
+  "cvegeo": "15097",
+  "nombre": "Texcaltitlán"
+ },
+ {
+  "cvegeo": "15098",
+  "nombre": "Texcalyacac"
+ },
+ {
+  "cvegeo": "15099",
+  "nombre": "Texcoco"
+ },
+ {
+  "cvegeo": "15100",
+  "nombre": "Tezoyuca"
+ },
+ {
+  "cvegeo": "15101",
+  "nombre": "Tianguistenco"
+ },
+ {
+  "cvegeo": "15102",
+  "nombre": "Timilpan"
+ },
+ {
+  "cvegeo": "15103",
+  "nombre": "Tlalmanalco"
+ },
+ {
+  "cvegeo": "15104",
+  "nombre": "Tlalnepantla de Baz"
+ },
+ {
+  "cvegeo": "15105",
+  "nombre": "Tlatlaya"
+ },
+ {
+  "cvegeo": "15106",
+  "nombre": "Toluca"
+ },
+ {
+  "cvegeo": "15107",
+  "nombre": "Tonatico"
+ },
+ {
+  "cvegeo": "15108",
+  "nombre": "Tultepec"
+ },
+ {
+  "cvegeo": "15109",
+  "nombre": "Tultitlán"
+ },
+ {
+  "cvegeo": "15110",
+  "nombre": "Valle de Bravo"
+ },
+ {
+  "cvegeo": "15111",
+  "nombre": "Villa de Allende"
+ },
+ {
+  "cvegeo": "15112",
+  "nombre": "Villa del Carbón"
+ },
+ {
+  "cvegeo": "15113",
+  "nombre": "Villa Guerrero"
+ },
+ {
+  "cvegeo": "15114",
+  "nombre": "Villa Victoria"
+ },
+ {
+  "cvegeo": "15115",
+  "nombre": "Xonacatlán"
+ },
+ {
+  "cvegeo": "15116",
+  "nombre": "Zacazonapan"
+ },
+ {
+  "cvegeo": "15117",
+  "nombre": "Zacualpan"
+ },
+ {
+  "cvegeo": "15118",
+  "nombre": "Zinacantepec"
+ },
+ {
+  "cvegeo": "15119",
+  "nombre": "Zumpahuacán"
+ },
+ {
+  "cvegeo": "15120",
+  "nombre": "Zumpango"
+ },
+ {
+  "cvegeo": "15121",
+  "nombre": "Cuautitlán Izcalli"
+ },
+ {
+  "cvegeo": "15122",
+  "nombre": "Valle de Chalco Solidaridad"
+ },
+ {
+  "cvegeo": "15123",
+  "nombre": "Luvianos"
+ },
+ {
+  "cvegeo": "15124",
+  "nombre": "San José del Rincón"
+ },
+ {
+  "cvegeo": "15125",
+  "nombre": "Tonanitla"
+ }
+]

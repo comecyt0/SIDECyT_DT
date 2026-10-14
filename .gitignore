@@ -42,3 +42,8 @@ pgpass.conf
 /logs/
 .DS_Store
 Thumbs.db
+
+# E72 (14/10/2026): archivos que suben las personas (documentos de clubes/solicitudes, carrusel, banners). Nunca al repo público.
+/apps/api/storage/app/private/
+/apps/api/storage/app/public/*
+!/apps/api/storage/app/public/.gitignore

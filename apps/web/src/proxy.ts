@@ -8,10 +8,11 @@ import { PANEL_POR_ROL, subrutaPermitida } from '@/lib/roles';
 
 // `/sigae` es la landing pública (23/09/2026). `/privacidad` y `/terminos` se abren a quien no tiene
 // sesión porque la landing los enlaza desde el pie: antes redirigían al login.
-// 25/09/2026: `/` es el portal de los sistemas del COMECYT (SIGAE y SICEI) y `/sicei` la página del nuevo sistema.
+// 25/09/2026: `/` es el portal de los sistemas del COMECYT (SIGAE y SICEI).
+// 14/10/2026 (E72): `/sicei` ya no es de esta app: IIS lo manda al Next de SICEI (basePath /sicei). Se quitó su página.
 // 29/09/2026 (E52): `/registro` es el registro general (elige rol); `/solicitar-acceso` redirige ahí (308).
 const PUBLIC_PATHS = [
-  '/', '/sicei',
+  '/',
   '/sigae', '/login', '/forgot-password', '/reset-password', '/registro', '/privacidad', '/terminos',
 ];
 
@@ -122,6 +123,17 @@ export function proxy(request: NextRequest) {
     // Con sesión válida, las pantallas de acceso llevan a su panel (la landing y las legales no).
     if (sesion && rol && ['/login', '/forgot-password', '/reset-password', '/registro'].includes(path)) {
       return NextResponse.redirect(new URL(DASHBOARD_BY_ROLE[rol], request.url));
+    }
+    return seguir(request);
+  }
+
+  // E72 paso 5: panel de evaluación compartido SIGAE/SICEI. Funciona con la sesión de CUALQUIERA de los dos sistemas
+  // (quien solo evalúa en SICEI no tiene sesión de SIGAE); cada API valida la suya y la página decide qué mostrar.
+  // No expone datos: todo viene de /api y /sicei/api con su propia autorización.
+  const esPanelEvaluacion = path === '/evaluador' || /^\/evaluador\/(sigae|sicei)\/\d{1,10}$/.test(path);
+  if (esPanelEvaluacion) {
+    if (sesion && payload?.cambiar === true) {
+      return NextResponse.redirect(new URL('/cambiar-contrasena', request.url));
     }
     return seguir(request);
   }

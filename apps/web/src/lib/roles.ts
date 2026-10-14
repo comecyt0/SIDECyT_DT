@@ -45,7 +45,7 @@ export const PANEL_POR_ROL: Record<RolSlug, string> = {
   admin_convocatoria: '/admin/dashboard',
   consulta: '/admin/dashboard',
   revisor: '/revisor/solicitudes',
-  evaluador: '/evaluador/evaluaciones',
+  evaluador: '/evaluador', // E72 paso 5: panel de evaluación compartido SIGAE/SICEI
   solicitante: '/solicitante/dashboard',
   lider_club: '/club/dashboard',
   operador_evento: '/operador/escanear',

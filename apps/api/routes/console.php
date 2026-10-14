@@ -15,6 +15,8 @@ Schedule::command('convocatorias:close-expired')->hourly();
 Schedule::command('convocatorias:notificar-cierre')->dailyAt('08:00');
 // E67: aviso de fin de la pausa de 24 h del registro general (desde el 3.er rechazo).
 Schedule::command('registro:avisar-desbloqueos')->hourly();
+// E72 paso 5: avisos de fecha límite de las evaluaciones (2 días antes y el día que vence), 08:15 hora del centro.
+Schedule::command('evaluacion:recordatorios')->dailyAt('08:15')->timezone('America/Mexico_City');
 
 // Respaldo de la BD: lo hace cada noche a las 02:00 la tarea de Windows COMECYT-Backup-Diario (backup.ps1, formato
 // custom, 14 días en F:\Desarrollo Tecnologico\backups). `comecyt:backup-db` queda solo para respaldos manuales: estaba

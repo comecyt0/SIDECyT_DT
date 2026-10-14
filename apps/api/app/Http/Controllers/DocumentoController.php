@@ -7,6 +7,7 @@ use App\Models\Dictamen;
 use App\Models\Solicitud;
 use App\Support\Alcance;
 use App\Support\DocumentSignature;
+use App\Support\RubricaSigae;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
@@ -39,7 +40,13 @@ class DocumentoController extends Controller
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
-        $dictamen->load(['asignacion.solicitud.empresa', 'asignacion.solicitud.convocatoria', 'asignacion.evaluador']);
+        $dictamen->load(['asignacion.solicitud.empresa', 'asignacion.solicitud.convocatoria.tipoPrograma', 'asignacion.evaluador']);
+
+        // E72 paso 5: los criterios que calificó ESTE dictamen (los de la convocatoria o, si no tiene, los 4 legacy)
+        $detalle = RubricaSigae::detalleDictamen($dictamen);
+        $solicitud = $dictamen->asignacion->solicitud;
+        $minimo = RubricaSigae::minimoPorcentaje($solicitud);
+        $porcentaje = $detalle['maximo'] > 0 ? round((float) $dictamen->puntaje_total * 100 / $detalle['maximo'], 1) : null;
 
         // Generamos el contenido base SIN sello para hashearlo
         $contentForHash = json_encode([
@@ -47,13 +54,14 @@ class DocumentoController extends Controller
             'puntaje_total' => $dictamen->puntaje_total,
             'sujeto_apoyo' => (bool) $dictamen->sujeto_apoyo,
             'evaluador_id' => $dictamen->asignacion->evaluador_id,
-            'solicitud_folio' => $dictamen->asignacion->solicitud->folio,
+            'solicitud_folio' => $solicitud->folio,
             'comentarios' => $dictamen->comentarios_justificacion,
+            'criterios' => $detalle['renglones'],
         ], JSON_UNESCAPED_UNICODE);
 
         $firma = DocumentSignature::sign($contentForHash, 'dictamen', $dictamen->id);
 
-        $pdf = Pdf::loadView('pdfs.dictamen', compact('dictamen', 'firma'));
+        $pdf = Pdf::loadView('pdfs.dictamen', compact('dictamen', 'firma', 'detalle', 'minimo', 'porcentaje'));
 
         return $pdf->download("Dictamen_{$dictamen->asignacion->solicitud->folio}.pdf");
     }

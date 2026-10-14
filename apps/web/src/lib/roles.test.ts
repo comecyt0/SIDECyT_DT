@@ -25,6 +25,10 @@ describe('ROLES', () => {
     expect(subrutaPermitida('consulta', '/admin/escanear')).toBe(false);
   });
 
+  it('el evaluador entra al panel de evaluación compartido SIGAE/SICEI (E72)', () => {
+    expect(PANEL_POR_ROL.evaluador).toBe('/evaluador');
+  });
+
   it('produce IDs únicos para cada rol', () => {
     const values = Object.values(ROLES);
     expect(new Set(values).size).toBe(values.length);

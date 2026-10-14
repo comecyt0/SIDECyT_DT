@@ -37,7 +37,7 @@
             </tr>
             <tr>
                 <th>Institución:</th>
-                <td>{{ $dictamen->asignacion->solicitud->institucion->nombre }}</td>
+                <td>{{ $dictamen->asignacion->solicitud->institucion?->nombre ?? '—' }}</td>
             </tr>
             <tr>
                 <th>Convocatoria:</th>
@@ -52,29 +52,23 @@
             <thead>
                 <tr>
                     <th>Criterio de Evaluación</th>
-                    <th width="20%" style="text-align: center;">Puntaje (máx. 25)</th>
+                    <th width="16%" style="text-align: center;">Máximo</th>
+                    <th width="16%" style="text-align: center;">Puntaje</th>
                 </tr>
             </thead>
             <tbody>
+                {{-- E72 paso 5: criterios de la convocatoria (o los 4 legacy), tal como se calificaron en este dictamen --}}
+                @foreach ($detalle['renglones'] as $r)
                 <tr>
-                    <td>Relevancia Científica / Tecnológica</td>
-                    <td style="text-align: center;">{{ $dictamen->criterio_1_puntaje }}</td>
+                    <td>{{ $r['nombre'] }}</td>
+                    <td style="text-align: center;">{{ rtrim(rtrim(number_format($r['max'], 2, '.', ''), '0'), '.') }}</td>
+                    <td style="text-align: center;">{{ rtrim(rtrim(number_format($r['puntaje'], 2, '.', ''), '0'), '.') }}</td>
                 </tr>
-                <tr>
-                    <td>Metodología y Diseño del Proyecto</td>
-                    <td style="text-align: center;">{{ $dictamen->criterio_2_puntaje }}</td>
-                </tr>
-                <tr>
-                    <td>Impacto Regional y Social</td>
-                    <td style="text-align: center;">{{ $dictamen->criterio_3_puntaje }}</td>
-                </tr>
-                <tr>
-                    <td>Viabilidad Técnica y Financiera</td>
-                    <td style="text-align: center;">{{ $dictamen->criterio_4_puntaje }}</td>
-                </tr>
+                @endforeach
                 <tr style="font-weight: bold; background: #eee;">
                     <td>PUNTAJE TOTAL</td>
-                    <td style="text-align: center;">{{ $dictamen->puntaje_total }} / 100</td>
+                    <td style="text-align: center;">{{ rtrim(rtrim(number_format($detalle['maximo'], 2, '.', ''), '0'), '.') }}</td>
+                    <td style="text-align: center;">{{ rtrim(rtrim(number_format((float) $dictamen->puntaje_total, 2, '.', ''), '0'), '.') }}@if ($porcentaje !== null) ({{ $porcentaje }} %)@endif</td>
                 </tr>
             </tbody>
         </table>
@@ -87,11 +81,15 @@
         </div>
     </div>
 
+    {{-- E72 paso 5: un dictamen no decide el resultado; la administración decide con el promedio de todos --}}
     <div style="text-align: center; margin-top: 30px;">
-        <p>RESULTADO FINAL DE LA EVALUACIÓN:</p>
+        <p>ESTE DICTAMEN, FRENTE AL MÍNIMO APROBATORIO DE LA CONVOCATORIA ({{ rtrim(rtrim(number_format($minimo, 1, '.', ''), '0'), '.') }} %):</p>
         <div class="status-badge {{ $dictamen->sujeto_apoyo ? 'aprobado' : 'rechazado' }}">
-            {{ $dictamen->sujeto_apoyo ? 'SUCEPTIBLE DE APOYO' : 'NO SUCEPTIBLE DE APOYO' }}
+            {{ $dictamen->sujeto_apoyo ? 'ALCANZA EL MÍNIMO' : 'NO ALCANZA EL MÍNIMO' }}
         </div>
+        <p style="font-size: 10px; color: #666; margin-top: 10px;">
+            El resultado de la solicitud lo decide la administración con el promedio de todas las evaluaciones.
+        </p>
     </div>
 
     <div class="section" style="margin-top: 40px; border: 1px solid #800020; padding: 12px; background: #fdf8f9;">

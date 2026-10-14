@@ -18,7 +18,7 @@ export default function FichaPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Ficha" description="Foto, portada, datos completos, solicitudes y seguimiento." icon={<IdCard className="h-5 w-5" />} backHref="/evaluador/asignaciones" />
+      <PageHeader title="Ficha" description="Foto, portada, datos completos, solicitudes y seguimiento." icon={<IdCard className="h-5 w-5" />} backHref="/evaluador" />
       {Number.isInteger(id) && id > 0 ? <FichaUsuario userId={id} folioId={folio} /> : <p className="text-sm">Ficha no válida.</p>}
     </div>
   );

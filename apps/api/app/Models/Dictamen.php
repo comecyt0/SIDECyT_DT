@@ -59,8 +59,12 @@ class Dictamen extends Model
                                            ($dictamen->criterio_4_puntaje ?? 0);
             }
 
-            $umbral = $dictamen->puntaje_minimo_aprobatorio ?? 80;
-            $dictamen->sujeto_apoyo = $dictamen->puntaje_total >= $umbral;
+            // E72 paso 5: `sujeto_apoyo` es informativo (si el dictamen alcanza el mínimo en % de la rúbrica) y lo fija
+            // el controlador con App\Support\RubricaSigae. Ningún dictamen decide la solicitud: decide el admin con el
+            // promedio. Solo si no viene (datos antiguos) se calcula como antes.
+            if ($dictamen->sujeto_apoyo === null) {
+                $dictamen->sujeto_apoyo = $dictamen->puntaje_total >= 80;
+            }
         });
     }
 }

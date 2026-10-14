@@ -8,7 +8,7 @@
 |---|---|---|---|
 | **SIDECyT** | **Sistema Digital de Emprendimiento, Ciencia y Talento Mexiquense** — el paraguas y el nombre del dominio | `https://sidecyt-comecyt.edomex.gob.mx/` (portal de sistemas) | Publicado (E48/E49) |
 | **SIGAE** | **Sistema de Gestión de Apoyo Empresarial** (antes SIGAC) — convocatorias de Apoyo Empresarial: solicitud, revisión, evaluación, convenio, ministración, cierre | `/sigae` (landing) y `/login` → paneles | En operación |
-| **SICEI** | **Sistema de Impulso a la Ciencia, Educación e Innovación** — becas a estudiantes e impulso a la investigación | `/sicei` | **PENDIENTE** (página "Próximamente") |
+| **SICEI** | **Sistema de Impulso a la Ciencia, Educación e Innovación** — becas a estudiantes e impulso a la investigación | `/sicei` | **PUBLICADO 14/10/2026** — app propia (`C:\SICEI`, Next con basePath `/sicei` + Laravel), comparte `comecyt_prod` (esquema `sicei`); guía `docs/SICEI_BD_COMPARTIDA.md` |
 
 Relación con el sitio oficial del COMECYT:
 
@@ -28,7 +28,7 @@ proyectos de Apoyo Empresarial (indicado por el usuario): proyectos.comecyt@edom
 | `/` | Portal SIDECyT: tarjetas SIGAE (con sus programas vigentes, en vivo) y SICEI, "¿Cuál es para mí?", accesos rápidos, pie COMECYT | `components/portal/Portal.tsx`, `portal.css` |
 | `/sigae` | Landing de SIGAE (convocatorias en vivo, folios aprobados, programas, sectores, recorrido, documentos, acceso) | `app/sigae/*`, `docs/LANDING_SIGAE.md` |
 | `/sigac` | Redirección 308 a `/sigae` (nombre anterior) | `proxy.ts` |
-| `/sicei` | "Próximamente": qué será SICEI + enlaces a las dos páginas oficiales + programas SICEI **solo si el admin los activa** | `app/sicei/page.tsx`, `components/portal/ProgramasSistema.tsx` |
+| `/sicei` | La sirve **la app de SICEI** (IIS → `sicei-web`), no este Next. Desde SIGAE se enlaza con `<a>` (navegación completa), nunca `<Link>` | (14/10/2026: se borraron `app/sicei/page.tsx` y `ProgramasSistema.tsx`) |
 
 **Identidad (E50, 28/09/2026):** todas las páginas públicas de SIDECyT (`/`, `/sigae`, `/sicei`, acceso y legales) llevan
 arriba la **franja institucional** oficial del Gobierno del Estado de México y el logo COMECYT 2026; el favicon de todo el
@@ -143,7 +143,7 @@ Sectores estratégicos (30) y documentos (6) + 3 notas: los de las convocatorias
 ## 7. SICEI — información reunida (PENDIENTE de definir)
 
 El usuario indicará después cómo será SICEI. Mientras tanto:
-- `/sicei` muestra "Próximamente", qué será y enlaces a las dos páginas oficiales.
+- `/sicei` es SICEI en operación (desde el 14/10/2026); su encabezado tiene «Regresar a SIDECyT» junto a «Mi portal».
 - Sus programas están **cargados como inactivos** en `programas_publicos` (`sistema = 'sicei'`): no aparecen en ninguna
   página hasta que el admin active cada uno en `/admin/sitio` → "Programas SICEI". Al activarlos, `/sicei` los lista solo.
 - Faltan por completar en cada uno: a quién va dirigido, descripción y contacto específico (las páginas de listado
@@ -180,7 +180,7 @@ investigación para ampliar el conocimiento y el desarrollo tecnológico en el E
 | Mujeres Científicas EDOMÉX | /mujeres-cientificas |
 | Fortalecimiento de Laboratorios Científicos de Instituciones Públicas de Nivel Medio Superior | /beca-ciencia-aplicada |
 
-**Preguntas abiertas para cuando se defina SICEI:** ¿mismo login y paneles que SIGAE o separados? ¿mismos roles
-(revisor, evaluador) o flujo distinto (becas: postulación → validación → asignación)? ¿convocatorias en la misma tabla
-con un campo `sistema`? ¿qué datos pide una beca (CURP, promedio, institución, programa de posgrado)? Anotarlas aquí
-con la respuesta del usuario antes de implementar.
+**Respondidas el 14/10/2026 (ver `docs/SICEI_BD_COMPARTIDA.md`):** SICEI es un sistema propio (repo `comecyt0/SICEI`,
+en `C:\SICEI`) que comparte la base `comecyt_prod` en el esquema `sicei`; una CURP = una cuenta, login separado por
+sistema; solo el rol evaluador es compartido, con un panel `/evaluador` común; convocatorias en tablas propias de SICEI
+(no en la de SIGAE con un campo `sistema`); se publica en `/sicei`. Sigue abierta: qué datos pide cada beca.

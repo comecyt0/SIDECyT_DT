@@ -12,6 +12,7 @@ import PageTransition from '@/components/ui/PageTransition';
 import GlobalSearch from '@/components/admin/GlobalSearch';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import ThemeSwitch from '@/components/ui/ThemeSwitch';
+import BotonPanelEvaluacion from '@/components/layout/BotonPanelEvaluacion';
 import NotificationDetailModal, { type NotificationDetail } from '@/components/notifications/NotificationDetailModal';
 import PanelFooter from '@/components/layout/PanelFooter';
 import { LogOut, Bell, Menu, X, ChevronRight } from 'lucide-react';
@@ -301,6 +302,7 @@ export default function RoleTopLayout({
           {/* Right side */}
           <div className="ml-auto flex items-center gap-1 sm:gap-3">
 
+            <BotonPanelEvaluacion />
             <ThemeSwitch />
             <LanguageSwitcher />
 

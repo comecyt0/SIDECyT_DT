@@ -53,7 +53,7 @@ class EnlaceAviso
             '/solicitante' => '/solicitante/solicitudes/'.$solicitudId,
             '/revisor' => '/revisor/solicitudes/'.$solicitudId,
             '/admin' => $folio && preg_match('/^[A-Za-z0-9-]{3,60}$/', $folio) ? '/admin/solicitudes?search='.$folio : '/admin/solicitudes',
-            '/evaluador' => '/evaluador/asignaciones',
+            '/evaluador' => '/evaluador?sistema=sigae',
             default => null,
         };
     }

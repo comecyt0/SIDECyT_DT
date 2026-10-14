@@ -202,6 +202,13 @@ return [
     // 🌐 ESTADOS Y ENUM VALORES
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+    // E72: canal interno con SICEI (2FA único). Secreto de al menos 32 caracteres, el mismo en el .env de SICEI
+    // (SIGAE_INTERNO_SECRETO); IPs de la conexión TCP permitidas: loopback y la IP propia del servidor.
+    'interno_sicei' => [
+        'secreto' => env('SICEI_INTERNO_SECRETO'),
+        'ips' => array_values(array_filter(array_map('trim', explode(',', (string) env('SICEI_INTERNO_IPS', '127.0.0.1,::1,10.250.36.241'))))),
+    ],
+
     'estados' => [
         'solicitud' => ['borrador', 'enviada', 'observada', 'en_evaluacion', 'aprobada', 'rechazada', 'convenio', 'ministracion', 'seguimiento', 'cerrada', 'cancelada'],
         'convocatoria' => ['borrador', 'activa', 'cerrada'],

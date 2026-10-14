@@ -16,7 +16,8 @@ import OrbitaSistemas, { type SistemaOrbita } from './OrbitaSistemas';
  * Portal de sistemas del COMECYT — https://sidecyt-comecyt.edomex.gob.mx/ (25/09/2026).
  * Puerta común a SIGAE (Apoyo Empresarial, /sigae) y SICEI (Ciencia, Educación e Innovación, /sicei).
  * Estilos: ./portal.css (prefijo .pt-*, tokens dentro de .pt-root). Contenido honesto: sin cifras inventadas; SICEI se
- * anuncia como "Próximamente" hasta que exista.
+ * anunció como "Próximamente" hasta que se publicó (14/10/2026, E72). /sicei lo sirve OTRA app (Next de SICEI, basePath
+ * /sicei, vía IIS): sus enlaces son <a> con navegación completa, nunca <Link> (el router de SIGAE la resolvería en su app).
  */
 
 const COMECYT_SITE = 'https://comecyt.edomex.gob.mx';
@@ -55,10 +56,10 @@ const SISTEMAS: Sistema[] = [
     sigla: 'SICEI',
     nombre: 'Sistema de Impulso a la Ciencia, Educación e Innovación',
     para: 'Para estudiantes, docentes, investigadoras e investigadores del Estado de México: becas y estímulos a la investigación.',
-    puntos: ['Becas COMECYT para estudiantes mexiquenses', 'Estímulos e impulso a la investigación científica y tecnológica', 'Muy pronto: te avisaremos aquí cuando abra'],
-    estado: 'proximamente',
+    puntos: ['Becas COMECYT para estudiantes mexiquenses', 'Estímulos e impulso a la investigación científica y tecnológica', 'Regístrate, postula y da seguimiento en línea'],
+    estado: 'disponible',
     href: '/sicei',
-    cta: 'Conocer SICEI',
+    cta: 'Entrar a SICEI',
     icono: <FlaskConical aria-hidden="true" />,
   },
 ];
@@ -67,9 +68,15 @@ const SISTEMAS: Sistema[] = [
 const PERFILES: { id: string; etiqueta: string; icono: ReactNode; sistema: SistemaId; motivo: string }[] = [
   { id: 'empresa', etiqueta: 'Tengo una empresa', icono: <Building2 aria-hidden="true" />, sistema: 'sigae', motivo: 'Los programas de Apoyo Empresarial del COMECYT se consultan y postulan en SIGAE.' },
   { id: 'emprendo', etiqueta: 'Emprendo un proyecto', icono: <Lightbulb aria-hidden="true" />, sistema: 'sigae', motivo: 'Los apoyos para emprender un proyecto de innovación son parte del Apoyo Empresarial: entra por SIGAE.' },
-  { id: 'investigo', etiqueta: 'Investigo o doy clases', icono: <FlaskConical aria-hidden="true" />, sistema: 'sicei', motivo: 'Los estímulos e impulso a la investigación estarán en SICEI, el sistema de ciencia, educación e innovación.' },
-  { id: 'estudio', etiqueta: 'Estudio', icono: <GraduationCap aria-hidden="true" />, sistema: 'sicei', motivo: 'Las becas COMECYT para estudiantes estarán en SICEI.' },
+  { id: 'investigo', etiqueta: 'Investigo o doy clases', icono: <FlaskConical aria-hidden="true" />, sistema: 'sicei', motivo: 'Los estímulos e impulso a la investigación están en SICEI, el sistema de ciencia, educación e innovación.' },
+  { id: 'estudio', etiqueta: 'Estudio', icono: <GraduationCap aria-hidden="true" />, sistema: 'sicei', motivo: 'Las becas COMECYT para estudiantes están en SICEI.' },
 ];
+
+/** SICEI vive en otra app bajo /sicei: navegación completa (<a>); lo demás, <Link> del router de SIGAE. */
+function EnlaceSistema({ href, children, ...resto }: { href: string; children: ReactNode; className?: string; 'data-variante'?: string }) {
+  if (href === '/sicei' || href.startsWith('/sicei/') || href.startsWith('/sicei#')) return <a href={href} {...resto}>{children}</a>;
+  return <Link href={href} {...resto}>{children}</Link>;
+}
 
 const ACCESOS: { href: string; etiqueta: string; detalle: string; icono: ReactNode }[] = [
   { href: '/sigae#convocatorias', etiqueta: 'Convocatorias abiertas', detalle: 'Qué puedes postular hoy en SIGAE', icono: <Megaphone aria-hidden="true" /> },
@@ -80,7 +87,7 @@ const ACCESOS: { href: string; etiqueta: string; detalle: string; icono: ReactNo
 /** Nodos de la órbita del héroe (posiciones calculadas sobre sus anillos; ver OrbitaSistemas). */
 const NODOS = [
   { id: 'sigae' as const, sigla: 'SIGAE', detalle: 'Apoyo Empresarial', estado: 'disponible' as const, icono: <Briefcase />, x: 87.2, y: 23.9 },
-  { id: 'sicei' as const, sigla: 'SICEI', detalle: 'Ciencia, Educación e Innovación', estado: 'proximamente' as const, icono: <FlaskConical />, x: 22.1, y: 69.5 },
+  { id: 'sicei' as const, sigla: 'SICEI', detalle: 'Ciencia, Educación e Innovación', estado: 'disponible' as const, icono: <FlaskConical />, x: 22.1, y: 69.5 },
 ];
 
 /** "Cómo funciona": secuencia real del sistema (por eso va numerada). Sin datos inventados. */
@@ -220,15 +227,15 @@ function TarjetaSistema({ s, destacado, atenuado, animar, enFoco = false, progra
             {/* Llegan de la API después del primer pintado: entran escalonados, no de golpe. */}
             {programas.slice(0, 4).map((n, i) => <li key={n} className="pt-programa-chip" style={{ '--j': i } as CSSProperties}>{n}</li>)}
             {programas.length > 4 && (
-              <li><Link href={`${s.href}#programas`} className="pt-programas-mas">y {programas.length - 4} más</Link></li>
+              <li><EnlaceSistema href={`${s.href}#programas`} className="pt-programas-mas">y {programas.length - 4} más</EnlaceSistema></li>
             )}
           </ul>
         </div>
       )}
-      <Link href={s.href} className="pt-cta" data-variante={s.estado === 'disponible' ? 'principal' : 'secundario'}>
+      <EnlaceSistema href={s.href} className="pt-cta" data-variante={s.estado === 'disponible' ? 'principal' : 'secundario'}>
         <span className="pt-cta-texto">{s.cta}</span>
         <ArrowRight className="pt-cta-flecha" aria-hidden="true" />
-      </Link>
+      </EnlaceSistema>
     </motion.article>
   );
 }
@@ -460,9 +467,9 @@ export default function Portal() {
               {elegido ? (
                 <>
                   <strong>Te corresponde {elegido.sistema.toUpperCase()}.</strong> {elegido.motivo}{' '}
-                  <Link href={elegido.sistema === 'sigae' ? '/sigae' : '/sicei'} className="pt-enlace">
+                  <EnlaceSistema href={elegido.sistema === 'sigae' ? '/sigae' : '/sicei'} className="pt-enlace">
                     Ir a {elegido.sistema.toUpperCase()} <ArrowRight aria-hidden="true" />
-                  </Link>
+                  </EnlaceSistema>
                 </>
               ) : (
                 <span className="pt-guia-vacio">Toca una opción para ver la recomendación.</span>
@@ -527,7 +534,7 @@ export function PiePortal() {
         <nav className="pt-pie-col" aria-label="Sistemas">
           <p className="pt-pie-titulo">Sistemas</p>
           <Link href="/sigae">SIGAE · Apoyo Empresarial</Link>
-          <Link href="/sicei">SICEI · Ciencia, Educación e Innovación</Link>
+          <a href="/sicei">SICEI · Ciencia, Educación e Innovación</a>
           <Link href="/login">Iniciar sesión</Link>
         </nav>
         <div className="pt-pie-col">

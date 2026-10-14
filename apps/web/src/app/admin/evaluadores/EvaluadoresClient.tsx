@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,9 @@ import { Asterisco } from '@/components/ui/obligatorio';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import PageHeader from '@/components/ui/page-header';
-import { Users, UserPlus, Link2, ClipboardCheck } from 'lucide-react';
+import { Users, UserPlus, Link2, ClipboardCheck, AlertTriangle, Ban } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { mensajeError } from '@/lib/errores-formulario';
 import StepFrame from '@/components/ui/step-frame';
 import api from '@/lib/api';
 import type { User, Solicitud } from '@/types/api';
@@ -26,6 +28,39 @@ interface Props {
 
 const emptyForm = { solicitud_id: '', evaluador_id: '', fecha_limite: '' };
 
+/** E72 paso 5: indicadores de conflicto de interés (los calcula el servidor: GET /admin/solicitudes/{id}/candidatos-evaluador). */
+interface Conflicto { tipo: string; bloqueante: boolean; detalle: string }
+interface Candidato { id: number; name: string; ya_asignado: boolean; bloqueante: boolean; conflictos: Conflicto[] }
+
+const ETIQUETA_CONFLICTO: Record<string, string> = {
+  propia: 'Su propia solicitud', bloqueado: 'Bloqueado', misma_empresa: 'Misma empresa',
+  misma_institucion: 'Misma institución', participa_convocatoria: 'Participa en la convocatoria', evaluo_antes: 'Ya evaluó al solicitante',
+};
+
+function leerCandidatos(data: unknown): Candidato[] {
+  if (!Array.isArray(data)) return [];
+  return data.filter((c) => typeof c?.id === 'number' && typeof c?.name === 'string').map((c) => ({
+    id: c.id, name: c.name, ya_asignado: Boolean(c.ya_asignado), bloqueante: Boolean(c.bloqueante),
+    conflictos: Array.isArray(c.conflictos) ? c.conflictos.filter((x: Conflicto) => typeof x?.tipo === 'string').map((x: Conflicto) => ({
+      tipo: x.tipo, bloqueante: Boolean(x.bloqueante), detalle: String(x.detalle ?? ''),
+    })) : [],
+  }));
+}
+
+export function ChipsConflicto({ conflictos }: { conflictos: Conflicto[] }) {
+  if (conflictos.length === 0) return <span className="pill" data-tone="emerald">Sin conflictos</span>;
+  return (
+    <span className="flex flex-wrap gap-1">
+      {conflictos.map((c) => (
+        <span key={c.tipo} className="pill" data-tone={c.bloqueante ? 'red' : 'gold'} title={c.detalle}>
+          {c.bloqueante ? <Ban className="h-3 w-3" aria-hidden="true" /> : <AlertTriangle className="h-3 w-3" aria-hidden="true" />}
+          {ETIQUETA_CONFLICTO[c.tipo] ?? c.tipo}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export default function EvaluadoresClient({ evaluadores, revisores, solicitudes }: Props) {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
@@ -35,8 +70,28 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
   // Error al guardar: dentro de la ventana y en el paso del campo (antes quedaba detrás del modal, sin verse).
   const [errorGuardar, setErrorGuardar] = useState<ErroresFormulario | null>(null);
   const abrir = (f: typeof emptyForm) => { setForm(f); setErrorGuardar(null); setShowModal(true); };
+  // Solo se asignan solicitudes que ya pasaron la revisión documental (el servidor lo vuelve a exigir).
+  const enEvaluacion = solicitudes.filter((s) => s.estado === 'en_evaluacion');
 
-  const handleAsignar = async () => {
+  // Candidatos con sus conflictos para la solicitud elegida
+  const [candidatos, setCandidatos] = useState<Candidato[] | null>(null);
+  useEffect(() => {
+    if (!form.solicitud_id) { setCandidatos(null); return; }
+    let vivo = true;
+    setCandidatos(null);
+    api.get(`/admin/solicitudes/${Number(form.solicitud_id)}/candidatos-evaluador`)
+      .then(({ data }) => { if (vivo) setCandidatos(leerCandidatos(data)); })
+      .catch(() => { if (vivo) setCandidatos([]); });
+    return () => { vivo = false; };
+  }, [form.solicitud_id]);
+  const candidatoElegido = candidatos?.find((c) => String(c.id) === form.evaluador_id);
+
+  // Conflictos que devolvió el servidor (409): el admin decide asignar de todos modos o bloquear
+  const [conflictos, setConflictos] = useState<Conflicto[] | null>(null);
+  const [bloqueo, setBloqueo] = useState<{ alcance: 'solicitud' | 'convocatoria'; motivo: string } | null>(null);
+  const [errorConflicto, setErrorConflicto] = useState('');
+
+  const handleAsignar = async (aceptoConflictos = false) => {
     if (!form.solicitud_id || !form.evaluador_id || !form.fecha_limite) {
       setErrorGuardar({ titulo: 'Elige la solicitud, el evaluador y la fecha límite.', lineas: [], campos: {}, paso: !form.solicitud_id ? 'solicitud' : !form.evaluador_id ? 'evaluador' : 'fecha' });
       return;
@@ -48,15 +103,43 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
         solicitud_id: Number(form.solicitud_id),
         evaluador_id: Number(form.evaluador_id),
         fecha_limite: form.fecha_limite,
+        ...(aceptoConflictos ? { acepto_conflictos: true } : {}),
       });
       setShowModal(false);
+      setConflictos(null);
       setForm(emptyForm);
-      setFeedback({ type: 'success', message: 'Evaluador asignado. Ya ve la solicitud en su bandeja.' });
+      setFeedback({ type: 'success', message: 'Evaluador asignado. Ya ve la solicitud en su panel de evaluación.' });
       router.refresh();
     } catch (err: unknown) {
-      setErrorGuardar(erroresFormulario(err,
-        { solicitud_id: 'Solicitud', evaluador_id: 'Evaluador', fecha_limite: 'Fecha límite' },
-        { solicitud_id: 'solicitud', evaluador_id: 'evaluador', fecha_limite: 'fecha' }));
+      const r = (err as { response?: { status?: number; data?: { conflictos?: unknown } } })?.response;
+      if (r?.status === 409 && Array.isArray(r.data?.conflictos)) {
+        setConflictos(leerCandidatos([{ id: 0, name: '-', conflictos: r.data.conflictos }])[0].conflictos);
+        setBloqueo(null);
+        setErrorConflicto('');
+      } else {
+        setErrorGuardar(erroresFormulario(err,
+          { solicitud_id: 'Solicitud', evaluador_id: 'Evaluador', fecha_limite: 'Fecha límite' },
+          { solicitud_id: 'solicitud', evaluador_id: 'evaluador', fecha_limite: 'fecha' }));
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const bloquear = async () => {
+    if (!bloqueo) return;
+    if (bloqueo.motivo.trim().length < 5) { setErrorConflicto('Escribe el motivo (al menos 5 caracteres).'); return; }
+    setSaving(true);
+    try {
+      const { data } = await api.post(`/admin/solicitudes/${Number(form.solicitud_id)}/bloquear-evaluador`, {
+        evaluador_id: Number(form.evaluador_id), alcance: bloqueo.alcance, motivo: bloqueo.motivo.trim(),
+      });
+      setConflictos(null);
+      setShowModal(false);
+      setForm(emptyForm);
+      setFeedback({ type: 'info', message: typeof data?.message === 'string' ? data.message : 'Evaluador bloqueado.' });
+    } catch (err) {
+      setErrorConflicto(mensajeError(err, 'No se pudo bloquear.'));
     } finally {
       setSaving(false);
     }
@@ -179,7 +262,7 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
                 <Label htmlFor="asig-solicitud" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Solicitud <Asterisco /></Label>
                 <select id="asig-solicitud" value={form.solicitud_id} onChange={e => setForm({ ...form, solicitud_id: e.target.value })} className="auth-input auth-input-static pl-4">
                   <option value="">Elige una solicitud…</option>
-                  {solicitudes.map((s) => (
+                  {enEvaluacion.map((s) => (
                     <option key={s.id} value={s.id}>{s.folio} — {s.titulo_proyecto?.substring(0, 60)}</option>
                   ))}
                 </select>
@@ -197,10 +280,33 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
                 <Label htmlFor="asig-evaluador" className="text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest">Evaluador <Asterisco /></Label>
                 <select id="asig-evaluador" value={form.evaluador_id} onChange={e => setForm({ ...form, evaluador_id: e.target.value })} className="auth-input auth-input-static pl-4">
                   <option value="">Elige un evaluador…</option>
-                  {evaluadores.map((ev) => (
-                    <option key={ev.id} value={ev.id}>{ev.name}</option>
+                  {(candidatos ?? evaluadores.map((ev) => ({ id: ev.id, name: ev.name, ya_asignado: false, bloqueante: false, conflictos: [] as Conflicto[] }))).map((ev) => (
+                    <option key={ev.id} value={ev.id} disabled={ev.ya_asignado || ev.bloqueante}>
+                      {ev.name}{ev.ya_asignado ? ' (ya asignado)' : ev.bloqueante ? ' (no se puede asignar)' : ev.conflictos.length ? ' (con avisos)' : ''}
+                    </option>
                   ))}
                 </select>
+                {candidatos === null && form.solicitud_id && <p className="text-xs text-[var(--app-ink-2)]">Revisando conflictos de interés…</p>}
+                {candidatoElegido && (
+                  <div className="rounded-xl border border-[var(--app-line,#e5e5e5)] p-3 text-sm space-y-2">
+                    <p className="font-semibold">Conflictos de interés</p>
+                    <ChipsConflicto conflictos={candidatoElegido.conflictos} />
+                    {candidatoElegido.conflictos.map((c) => <p key={c.tipo} className="text-xs text-[var(--app-ink-2)]">{c.detalle}</p>)}
+                    {candidatoElegido.conflictos.length > 0 && !candidatoElegido.bloqueante && (
+                      <p className="text-xs text-[var(--app-ink-2)]">Al asignar te pediremos confirmar si deseas continuar o bloquearlo.</p>
+                    )}
+                  </div>
+                )}
+                {candidatos && candidatos.length > 0 && (
+                  <details className="text-xs">
+                    <summary className="cursor-pointer font-semibold text-[var(--app-ink-2)]">Ver avisos de todos los evaluadores</summary>
+                    <ul className="mt-2 grid gap-2">
+                      {candidatos.map((c) => (
+                        <li key={c.id} className="flex flex-wrap items-center justify-between gap-2"><span>{c.name}{c.ya_asignado ? ' · ya asignado' : ''}</span><ChipsConflicto conflictos={c.conflictos} /></li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
               </div>
             ),
           },
@@ -226,12 +332,53 @@ export default function EvaluadoresClient({ evaluadores, revisores, solicitudes 
           },
         ]}
         onClose={() => setShowModal(false)}
-        onSubmit={handleAsignar}
+        onSubmit={() => handleAsignar(false)}
         error={errorGuardar ? <AvisoErrores errores={errorGuardar} /> : null}
         errorStep={errorGuardar?.paso ?? null}
         submitting={saving}
         submitLabel="Asignar"
       />
+
+      {/* 409: hay conflictos que no bloquean por sí solos; el admin decide */}
+      <Dialog open={conflictos !== null} onOpenChange={(o) => { if (!o) setConflictos(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Posibles conflictos de interés</DialogTitle>
+            <DialogDescription>Revisa los avisos y decide si asignas de todos modos o bloqueas a esta persona.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <ChipsConflicto conflictos={conflictos ?? []} />
+            <ul className="list-disc pl-5 text-[var(--app-ink-2)]">{(conflictos ?? []).map((c) => <li key={c.tipo}>{c.detalle}</li>)}</ul>
+            {bloqueo && (
+              <div className="space-y-2 rounded-xl border border-[var(--app-line,#e5e5e5)] p-3">
+                <fieldset className="flex flex-wrap gap-4">
+                  <legend className="mb-1 text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Bloquear para</legend>
+                  <label className="flex items-center gap-2"><input type="radio" name="alcance" checked={bloqueo.alcance === 'solicitud'} onChange={() => setBloqueo({ ...bloqueo, alcance: 'solicitud' })} />Esta solicitud</label>
+                  <label className="flex items-center gap-2"><input type="radio" name="alcance" checked={bloqueo.alcance === 'convocatoria'} onChange={() => setBloqueo({ ...bloqueo, alcance: 'convocatoria' })} />Toda la convocatoria</label>
+                </fieldset>
+                <label className="grid gap-1">
+                  <span className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Motivo <Asterisco /></span>
+                  <textarea rows={3} maxLength={500} value={bloqueo.motivo} onChange={(e) => setBloqueo({ ...bloqueo, motivo: e.target.value })} className="auth-input auth-input-static pl-4" />
+                </label>
+              </div>
+            )}
+            {errorConflicto && <p role="alert" className="text-sm text-red-700">{errorConflicto}</p>}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            {bloqueo ? (
+              <>
+                <Button variant="outline" onClick={() => setBloqueo(null)}>Volver</Button>
+                <Button variant="destructive" onClick={bloquear} disabled={saving}><Ban className="h-4 w-4" /> Bloquear</Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setBloqueo({ alcance: 'solicitud', motivo: '' })}><Ban className="h-4 w-4" /> No asignar y bloquear</Button>
+                <Button onClick={() => handleAsignar(true)} disabled={saving}>Asignar de todos modos</Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

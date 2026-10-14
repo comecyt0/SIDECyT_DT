@@ -13,7 +13,7 @@ Tecnología). **Documento guía: `docs/SIDECYT.md`** (definido por el usuario el
 |---|---|---|---|
 | Portal SIDECyT | Accesos a los dos sistemas + datos del COMECYT | `/` | Publicado (E48/E49) |
 | **SIGAE — Sistema de Gestión de Apoyo Empresarial** (antes SIGAC) | Ciclo completo de las convocatorias de Apoyo Empresarial (este código) | `/sigae` + paneles | En operación |
-| **SICEI — Sistema de Impulso a la Ciencia, Educación e Innovación** | Becas a estudiantes e impulso a la investigación | `/sicei` | **Pendiente** ("Próximamente") |
+| **SICEI — Sistema de Impulso a la Ciencia, Educación e Innovación** | Becas a estudiantes e impulso a la investigación (repo propio `comecyt0/SICEI` en `C:\SICEI`) | `/sicei` | **En integración** (E72): comparte `comecyt_prod` en el esquema `sicei` — guía `docs/SICEI_BD_COMPARTIDA.md` |
 
 **GRAN DESARROLLO EN CURSO (definido 28/09/2026): modalidad "Apoyo en especie"** — **F5 (registro general), F1 (base:
 escuelas, asistente, clubes, panel del líder) y F2 (etapas de revisión, correcciones con plazo, visto bueno, comité con
@@ -2087,6 +2087,77 @@ de regreso del transporte (iguales para todos) y la fecha límite para pedir (`f
   y el asistente. `LogisticaClub::solicitar` rechaza lo que no se da; `estado()` trae `apoyos`; `EventoClub` no registra
   `lunch`/`tr_*` sin el apoyo; `GET /escaneo/eventos` trae los indicadores (`modosDe()` en el front); reporte sin columnas.
 **Verificado:** `e2e_apoyos.php` 11/11, F3 58/58, F4 84/84, escaneo 11/11, vitest 184/184.
+
+### E72 — SICEI comparte la base de SIGAE (esquema `sicei`) [en curso desde 14-10-2026]
+Guía completa (decisiones del usuario, arquitectura, regla de nombres, pasos y bitácora): **`docs/SICEI_BD_COMPARTIDA.md`**.
+- **SIGAE no cambia:** solo migraciones que agregan. SICEI se adapta y **toma los nombres de SIGAE** (tablas y columnas).
+- `comecyt_prod`: SIGAE en `public`; SICEI en `sicei` con el rol `sicei_app` (`search_path = sicei, public`), que solo
+  lee `users`/catálogos y escribe columnas de identidad de `users`. `comecyt_app` no ve `sicei`. Rol `respaldo`
+  (`pg_read_all_data`) para `pg_dump`. Una CURP = una cuenta en `public.users`; login separado por sistema; evaluador
+  único compartido con panel `/evaluador`.
+- **Paso 1 (14/10):** respaldo previo `backups\comecyt_pre-sicei_2026-10-14_1311.dump`; scripts en `docs/sql/`. La
+  contraseña de `postgres` no estaba documentada: se restablece con un script que corre el usuario como administrador
+  (Claude Code no lo permite desde la sesión); las contraseñas nuevas quedan en
+  `C:\ProgramData\COMECYT\postgres-superusuario.txt` (solo Administradores/SYSTEM), nunca en el repo.
+- **Paso 1 terminado y verificado (13/13):** roles y esquema creados, permisos aplicados, `pg_hba.conf` restaurado,
+  `backup.ps1` usa `-U respaldo` (el dump incluye `sicei`). `pgpass.conf` tiene `comecyt_app`, `respaldo` y `sicei_app`.
+  Siguiente: paso 2.
+- **Paso 2 terminado (9/9):** migraciones `2026_10_14_000001` (`municipios.cvegeo` + 125 municipios INEGI desde
+  `database/data/municipios_edomex.json`; `areas_conocimiento.clave`, 8 áreas, sin filas nuevas) y `2026_10_14_000002`
+  (`users.puede_ver_cruce`, fuera de `$fillable`; vista `v_participaciones_sigae` con `security_barrier`, que es lo único
+  que `sicei_app` puede leer del cruce). Siguiente: paso 3, adaptar SICEI.
+- **Paso 3 hecho en código:**
+  - **SICEI** (D77) quedó con los nombres de SIGAE, la cuenta compartida (argon2id) y el 2FA por el canal interno.
+    Pruebas en la base aislada `sicei_test`: 110/110.
+  - **SIGAE** recibió solo agregados:
+    - Canal interno `POST /api/interno/sicei/2fa/*`. `InternoSiceiMiddleware` revisa: IP TCP del propio servidor,
+      firma HMAC, fecha a ±60 s y que la firma no se repita. Ante cualquier falla, 404.
+    - `SICEI_INTERNO_SECRETO` en `.env` (respaldo `.env.bak-20261014-sicei`).
+    - Permisos de catálogos sin DELETE (`docs/sql/sicei_paso3_permisos.sql`).
+    - Canal verificado 10/10 contra producción.
+  - Las tablas de SICEI se crean en `comecyt_prod` en el paso 4.
+  - **No relajar el middleware:** nunca usar `$request->ip()` en él (confía en `X-Forwarded-For`).
+- **Paso 4: SICEI PUBLICADO en `/sicei` (14/10/2026).** Detalle en §6.3 de la guía.
+  - **Rutas en el `web.config` de SIGAE:** cuatro reglas `Sicei*`, antes de Reverb.
+    - `/sicei/(api|sanctum|storage)` va al sitio IIS `sicei-api` (127.0.0.1:8100, app pool `sicei`) con
+      `X-Forwarded-Prefix=/sicei`.
+    - El resto de `/sicei` va a `sicei-web` (NSSM, Next en 127.0.0.1:3100, LocalService).
+    - `/sicei/revalidar` desde fuera responde 404.
+  - **Antivirus:** ClamAV en `F:\ClamAV`, con los servicios `clamd` (127.0.0.1:3310) y `freshclam`.
+  - **Al tocar SICEI:** después de cambiar código PHP de SICEI hay que **reciclar el app pool `sicei`**.
+  - **Faltan:** los servicios `sicei-queue`/`sicei-scheduler` (Claude Code los bloquea), el correo propio de SICEI y su
+    superadmin.
+- **Paso 5: panel de evaluación compartido `/evaluador`** (detalle en §6.4 de la guía).
+  - Lo que ya está publicado:
+    - 5A: backend de SICEI.
+    - 5B: backend de SIGAE.
+    - 5C: front de SIGAE, publicado el 14/10.
+  - **Reglas:**
+    - El resultado lo decide el admin con el promedio, en la ficha de la solicitud.
+    - El dictamen no se edita: solo el admin lo reabre.
+    - Los conflictos de interés se muestran como indicadores al asignar, y el admin decide si asigna o bloquea.
+    - Quien evalúa tiene el rol de evaluador activo **u otorgado** (`usuario_roles`). En los demás paneles, el botón
+      «Panel de evaluación» le cambia el rol.
+    - `/evaluador` y `/evaluador/(sigae|sicei)/<id>` se abren sin sesión de SIGAE (`proxy.ts`). Cada API valida su
+      propia sesión.
+  - **5D (front de SICEI) publicado el 14/10:**
+    - Quien evalúa sale de `/sicei` a `/evaluador?sistema=sicei`.
+    - Comité en el panel del admin con fecha límite, conflictos, ampliar fecha y reabrir.
+    - Mínimo aprobatorio en el asistente.
+  - **Al compilar SICEI:** las variables públicas están en `C:\SICEI\web\.env.production`. Sin ellas el front llama a
+    `localhost:8000`; pasó el 14/10 y SICEI estuvo unos minutos sin datos.
+  - **La portada `/sicei` salía en blanco desde el paso 4.** El `matcher` de su `proxy.ts` no cubría la raíz del
+    basePath, así que IIS le ponía `default-src 'none'`. Corregido con `"/"` en el `matcher`.
+    - **Siempre probar en navegador `/sicei`, no solo las subpáginas.**
+  - **PDF del dictamen (14/10):** lista los criterios de la convocatoria con `RubricaSigae::detalleDictamen()` y ya no
+    presenta un solo dictamen como resultado final. Se descarga desde el panel del evaluador y desde la ficha.
+  - **Cierre del 14/10:**
+    - Servicios `sicei-queue` y `sicei-scheduler` creados (NSSM, LocalService, arranque automático, bitácoras en
+      `C:\SICEI\api\storage\logs`). Tras cambiar el PHP de SICEI: `Restart-Service sicei-queue`.
+    - Portal: SICEI en «Disponible». **Los enlaces a `/sicei` desde el Next de SIGAE son `<a>`, nunca `<Link>`**: el
+      router los resolvería dentro de SIGAE. Se borró la página vieja `app/sicei`.
+    - SICEI: lint en 0 errores, campana con `<a>` para `/evaluador` y botón «Regresar a SIDECyT».
+    - `.gitignore` excluye `apps/api/storage/app/{private,public}` (archivos de personas; el repo es público).
 
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de

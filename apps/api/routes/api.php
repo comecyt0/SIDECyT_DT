@@ -59,6 +59,19 @@ use Illuminate\Support\Facades\Route;
 // evitar abuso. Auth por X-Health-Token (shared secret timing-safe).
 Route::get('health', [HealthController::class, 'check'])->middleware('throttle:60,1');
 
+// E72 — Canal interno con SICEI (2FA único). Fuera del ApiGateway: solo lo llama la API de SICEI desde el propio
+// servidor, con firma HMAC, fecha a ±60 s y sin repetir (InternoSiceiMiddleware). Cualquier otra petición recibe 404.
+Route::prefix('interno/sicei/2fa')
+    ->middleware([\App\Http\Middleware\InternoSiceiMiddleware::class, 'throttle:120,1,interno-sicei'])
+    ->group(function () {
+        Route::post('verificar', [\App\Http\Controllers\Interno\DosFactoresSiceiController::class, 'verificar']);
+        Route::post('configurar', [\App\Http\Controllers\Interno\DosFactoresSiceiController::class, 'configurar']);
+        Route::post('confirmar', [\App\Http\Controllers\Interno\DosFactoresSiceiController::class, 'confirmar']);
+        // Otros métodos: 404 (un 405 confirmaría que la ruta existe)
+        Route::match(['get', 'put', 'patch', 'delete'], '{accion}', fn () => response('', 404))
+            ->where('accion', 'verificar|configurar|confirmar');
+    });
+
 // Middleware Global de Seguridad para todas las APIS
 Route::middleware([
     ApiGatewayMiddleware::class,
@@ -185,6 +198,13 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::get('evaluadores-disponibles', [EvaluadorController::class, 'disponibles']);
             Route::post('asignaciones-evaluador', [EvaluadorController::class, 'asignar']);
             Route::delete('asignaciones-evaluador/{asignacion}', [EvaluadorController::class, 'desasignar']);
+            // E72 paso 5: conflictos de interés, fecha límite, reabrir dictamen y decisión del admin con el promedio
+            Route::get('solicitudes/{solicitud}/candidatos-evaluador', [EvaluadorController::class, 'candidatos']);
+            Route::post('solicitudes/{solicitud}/bloquear-evaluador', [EvaluadorController::class, 'bloquear']);
+            Route::put('asignaciones-evaluador/{asignacion}/fecha', [EvaluadorController::class, 'ampliarFecha']);
+            Route::post('asignaciones-evaluador/{asignacion}/reabrir', [EvaluadorController::class, 'reabrir']);
+            Route::get('solicitudes/{solicitud}/evaluacion', [EvaluadorController::class, 'resultado']);
+            Route::post('solicitudes/{solicitud}/evaluacion/decidir', [EvaluadorController::class, 'decidir']);
             Route::post('solicitudes/{solicitud}/generar-convenio', [ConvenioController::class, 'generate']);
             Route::post('solicitudes/{solicitud}/cerrar', [SolicitudController::class, 'cerrar']);
             Route::post('solicitudes/{solicitud}/seguimiento', [SolicitudController::class, 'iniciarSeguimiento']);

@@ -98,6 +98,7 @@ class User extends Authenticatable implements JWTSubject
             'password' => 'hashed',
             'activo' => 'boolean',
             'es_director' => 'boolean',
+            'puede_ver_cruce' => 'boolean',
             'ultimo_acceso' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
             'password_changed_at' => 'datetime',
