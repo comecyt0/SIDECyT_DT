@@ -2158,6 +2158,8 @@ Guía completa (decisiones del usuario, arquitectura, regla de nombres, pasos y 
       router los resolvería dentro de SIGAE. Se borró la página vieja `app/sicei`.
     - SICEI: lint en 0 errores, campana con `<a>` para `/evaluador` y botón «Regresar a SIDECyT».
     - `.gitignore` excluye `apps/api/storage/app/{private,public}` (archivos de personas; el repo es público).
+    - Commits SIGAE `a9fb618` y SICEI `dd3fe9d`. **El push lo hace el usuario:** Git Credential Manager pide iniciar
+      sesión de forma interactiva. El remoto de SIGAE estaba vacío; se revisó que la historia no tuviera secretos.
 
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de

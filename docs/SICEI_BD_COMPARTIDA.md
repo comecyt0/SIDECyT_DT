@@ -432,6 +432,16 @@ pendientes, en orden:
   - En teléfono (menos de 640 px) va dentro del menú, porque la barra no tiene espacio.
   - Verificado en navegador 14/14 a 1440 y 390 px: tarjeta, clic hacia SICEI, botón, regreso al portal, sin scroll
     horizontal y sin errores.
+- **Commits del 14/10/2026:** SIGAE `a9fb618` y SICEI `dd3fe9d` (identidad del repo SICEI igual a la de SIGAE, solo
+  local).
+  - **Push pendiente del usuario:** el servidor usa el Git Credential Manager, que pide iniciar sesión de forma
+    interactiva; Claude Code no puede hacerlo.
+  - El remoto de SIGAE (`comecyt0/SIDECyT_DT`, **público**) estaba **vacío**: el primer push sube los 61 commits. Antes
+    se revisó la historia: sin `.env`, sin claves de aplicación, JWT, correo, base de datos, canal interno, VAPID ni
+    llaves privadas.
+  - Comandos, en una PowerShell del usuario:
+    - `git -C "F:\Desarrollo Tecnologico" push -u origin main`
+    - `git -C C:\SICEI push origin main`
 - **Archivos subidos fuera del repo:** `/apps/api/storage/app/private/` y `public/*` quedaron en el `.gitignore` de
   SIGAE. Hay 25 archivos reales de personas y el repo es público.
 - **Despliegues futuros de SICEI:** los pasos de compilación quedan en el apartado siguiente.
