@@ -441,11 +441,13 @@
      La franja es ≈13:1: se limita por ancho (máx. ~50 px de alto). */
   .banda-institucional {
     display: flex;
-    justify-content: center;
+    /* 15/10/2026 (usuario): logos a la IZQUIERDA en SIDECyT, SIGAE y SICEI, alineados con el contenedor de 1200 px. */
+    justify-content: flex-start;
     padding: 10px 16px;
     background: #ffffff;
     border-bottom: 2px solid #bc955b;
   }
+  @media (min-width: 640px) { .banda-institucional { padding-inline: max(32px, calc((100% - 1200px) / 2 + 32px)); } }
   .banda-institucional-marco { width: 100%; max-width: 680px; }
   .banda-institucional-marco img { display: block; }
 

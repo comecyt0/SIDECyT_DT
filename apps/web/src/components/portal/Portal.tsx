@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AnimatePresence, animate, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowDown, ArrowRight, ArrowUpRight, BookOpen, Briefcase, Building2, Check, CircleCheck, FlaskConical, Globe, GraduationCap, Lightbulb,
-  LogIn, Mail, MapPin, Megaphone, Phone, Sparkles, UserPlus,
+  LogIn, MapPin, Megaphone, Phone, Sparkles, UserPlus,
 } from 'lucide-react';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
 import { useSitio } from '@/lib/sitio';
@@ -23,7 +23,6 @@ import { AparecerScroll, BarraProgreso, PasosSecuencia, TextoScroll, useSalidaHe
  */
 
 const COMECYT_SITE = 'https://comecyt.edomex.gob.mx';
-const CORREO_PROYECTOS = 'proyectos.comecyt@edomex.gob.mx';
 /** Mismo mínimo que la pantalla de carga: la entrada arranca cuando se va el splash. */
 const BOOT_MS = 1100;
 
@@ -472,8 +471,6 @@ export default function Portal() {
                     exit={{ opacity: 0, transition: { duration: 0.14 } }}
                     transition={{ duration: 0.3 }}
                   >
-                    <Sparkles aria-hidden="true" />
-                    <strong>Tu sistema aparecerá aquí</strong>
                     <span>Toca una de las opciones para ver la recomendación.</span>
                   </motion.div>
                 )}
@@ -550,8 +547,6 @@ export function PiePortal() {
             <span><MapPin aria-hidden="true" />Paseo Colón 112-A, col. Ciprés, C.P. 50120, Toluca, {INSTITUTION.state}</span>
             <a href="tel:+527223190009"><Phone aria-hidden="true" />(722) 319 00 09 al 15</a>
             <a href="tel:8002632628"><Phone aria-hidden="true" />800 2632 628</a>
-            {/* El correo se corta en la @ si no cabe (nunca a mitad del dominio). */}
-            <a href={`mailto:${CORREO_PROYECTOS}`}><Mail aria-hidden="true" /><span>{CORREO_PROYECTOS.split('@')[0]}<wbr />@{CORREO_PROYECTOS.split('@')[1]}</span></a>
           </address>
         </div>
         <nav className="pt-pie-col" aria-label="Enlaces">

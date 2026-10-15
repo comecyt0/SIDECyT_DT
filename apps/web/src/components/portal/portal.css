@@ -35,7 +35,7 @@
   /* Acentos derivados del vino (decisión del usuario 15/10/2026) */
   --pt-azul: #2a4673;
   /* Pasteles de detalle (15/10: sin verdes y sin saturar de vino): fondo de círculos, filas y señales. */
-  --pt-pastel-cielo: #e6edf7;
+  --pt-pastel-cielo: #efe7da; /* 15/10 (usuario): el azul pastel se cambió por arena cálida; el nombre se conserva */
   --pt-pastel-lavanda: #eee7f3;
   --pt-pastel-durazno: #fbe8de;
   --pt-pastel-mantequilla: #faf0d9;

@@ -804,3 +804,20 @@ reducido: sin scroll horizontal, nada fuera de la ventana, ningún botón ni eti
 consola/CSP; secuencia: paso activo 1→2→3 con el scroll en 1440 y 390 px; héroe con opacidad 0.22 a 500 px de scroll;
 tarjeta de resultado SIGAE→SICEI al cambiar de opción. Destinos `/sicei`, `/sicei/portal`, `/sigae`, `/login`,
 `/registro` → 200. Scripts en el scratchpad de la sesión (`verif_portal.mjs`, `verif_scroll.mjs`).
+
+**Ajustes posteriores del mismo día (pedidos del usuario):**
+- Pie del portal sin el correo de proyectos (se quitó también la constante `CORREO_PROYECTOS`).
+- El pastel **cielo se cambió por arena cálida `#efe7da`** (la variable `--pt-pastel-cielo` conserva el nombre).
+- «¿Cuál es para mí?» sin el texto «Tu sistema aparecerá aquí» ni la estrella; queda solo «Toca una de las opciones…».
+- **Franja institucional a la izquierda en todo SIGAE/SIDECyT** (regla global `.banda-institucional` en `globals.css`):
+  mismo margen que el contenedor de 1200 px. Verificado en `/`, `/sigae`, `/login` y `/privacidad` (152 px en
+  escritorio, 16 px en teléfono). SICEI la alinea con su propio contenedor (D79 en el repo de SICEI).
+
+## 22. SICEI con la referencia superr.ai en vino oficial — D79 (repo SICEI), 15/10/2026
+
+El rediseño de la landing y la homologación de los paneles de SICEI viven en `C:\SICEI\docs\plan\09-landing-superr-vino.md`.
+Lo que comparte con SIGAE:
+- Vino oficial **`#56212F`**: SICEI usaba `#8A1622`.
+- Logos oficiales en `web/public/identidad/` con los mismos nombres y favicons copiados de SIGAE.
+- Franja institucional en el encabezado público, alineada a la izquierda.
+- Regla 60-30-10 con blanco predominante.

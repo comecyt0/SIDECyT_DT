@@ -2183,8 +2183,11 @@ Detalle de diseño y decisiones del usuario: **`docs/DISENO_UI.md` §21**. Para 
   (pista de 260vh).
 - Enlaces a SICEI desde el portal siempre `<a>` (`EnlaceSistema`), nunca `<Link>` (E72).
 - Sin mouse en los personajes del héroe (el usuario pidió quitar el paralaje con el puntero).
-- Franja institucional alineada a la izquierda **solo en el portal** (.pt-root .banda-institucional); en las demás
-  páginas sigue centrada (globals.css).
+- **Franja institucional a la izquierda en todas las páginas** (regla global .banda-institucional, globals.css),
+  alineada al contenedor de 1200 px (pedido del usuario: logos a la izquierda en SIDECyT, SIGAE y SICEI).
+- Portal: pie sin correo, pastel cielo → arena #efe7da, «¿Cuál es para mí?» sin texto ni estrella en el estado vacío.
+- **SICEI (repo aparte) se rediseñó el mismo día (D79):** vino oficial #56212F, logos oficiales, franja, landing estilo
+  superr.ai y botones homologados. Detalle en C:\SICEI\docs\plan\09-landing-superr-vino.md.
 - `OrbitaSistemas.tsx` quedó sin uso; no se borró sin confirmación del usuario.
 **Verificado:** tsc/eslint 0 errores; Edge por dominio en 7 anchos + movimiento reducido (sin desbordes, sin texto partido,
 0 errores de consola/CSP); secuencia 1→2→3, héroe desvanecido y tarjeta de resultado con desvanecido comprobados.
