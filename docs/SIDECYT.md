@@ -140,9 +140,9 @@ Fuente: https://comecyt.edomex.gob.mx/apoyo-empresarial y la página de cada pro
 
 Sectores estratégicos (30) y documentos (6) + 3 notas: los de las convocatorias 2026 (ver `/admin/sitio`).
 
-## 7. SICEI — información reunida (PENDIENTE de definir)
+## 7. SICEI — información reunida (publicado el 14/10/2026)
 
-El usuario indicará después cómo será SICEI. Mientras tanto:
+SICEI ya está definido y publicado; el diseño completo está en `docs/SICEI_BD_COMPARTIDA.md`. En SIDECyT:
 - `/sicei` es SICEI en operación (desde el 14/10/2026); su encabezado tiene «Regresar a SIDECyT» junto a «Mi portal».
 - Sus programas están **cargados como inactivos** en `programas_publicos` (`sistema = 'sicei'`): no aparecen en ninguna
   página hasta que el admin active cada uno en `/admin/sitio` → "Programas SICEI". Al activarlos, `/sicei` los lista solo.

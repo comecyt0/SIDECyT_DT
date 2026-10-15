@@ -434,14 +434,13 @@ pendientes, en orden:
     horizontal y sin errores.
 - **Commits del 14/10/2026:** SIGAE `a9fb618` y SICEI `dd3fe9d` (identidad del repo SICEI igual a la de SIGAE, solo
   local).
-  - **Push pendiente del usuario:** el servidor usa el Git Credential Manager, que pide iniciar sesión de forma
-    interactiva; Claude Code no puede hacerlo.
-  - El remoto de SIGAE (`comecyt0/SIDECyT_DT`, **público**) estaba **vacío**: el primer push sube los 61 commits. Antes
-    se revisó la historia: sin `.env`, sin claves de aplicación, JWT, correo, base de datos, canal interno, VAPID ni
-    llaves privadas.
-  - Comandos, en una PowerShell del usuario:
-    - `git -C "F:\Desarrollo Tecnologico" push -u origin main`
-    - `git -C C:\SICEI push origin main`
+  - **Push hecho por el usuario el 15/10/2026 a las 13:07.** Verificado: `ls-remote` de SIGAE da `bf4e445` en `main`
+    (62 commits). SICEI es privado y no se puede leer sin credenciales; el reflog de `origin/main` registra
+    «update by push» a `dd3fe9d`.
+  - El servidor usa el Git Credential Manager, que pide iniciar sesión de forma interactiva. **Los pushes los sigue
+    haciendo el usuario** desde su PowerShell (`git -C "F:\Desarrollo Tecnologico" push` y `git -C C:\SICEI push`).
+  - El remoto de SIGAE (`comecyt0/SIDECyT_DT`, **público**) estaba **vacío** antes de ese primer push. Antes se revisó la
+    historia: sin `.env`, sin claves de aplicación, JWT, correo, base de datos, canal interno, VAPID ni llaves privadas.
 - **Archivos subidos fuera del repo:** `/apps/api/storage/app/private/` y `public/*` quedaron en el `.gitignore` de
   SIGAE. Hay 25 archivos reales de personas y el repo es público.
 - **Despliegues futuros de SICEI:** los pasos de compilación quedan en el apartado siguiente.

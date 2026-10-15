@@ -13,7 +13,7 @@ Tecnología). **Documento guía: `docs/SIDECYT.md`** (definido por el usuario el
 |---|---|---|---|
 | Portal SIDECyT | Accesos a los dos sistemas + datos del COMECYT | `/` | Publicado (E48/E49) |
 | **SIGAE — Sistema de Gestión de Apoyo Empresarial** (antes SIGAC) | Ciclo completo de las convocatorias de Apoyo Empresarial (este código) | `/sigae` + paneles | En operación |
-| **SICEI — Sistema de Impulso a la Ciencia, Educación e Innovación** | Becas a estudiantes e impulso a la investigación (repo propio `comecyt0/SICEI` en `C:\SICEI`) | `/sicei` | **En integración** (E72): comparte `comecyt_prod` en el esquema `sicei` — guía `docs/SICEI_BD_COMPARTIDA.md` |
+| **SICEI — Sistema de Impulso a la Ciencia, Educación e Innovación** | Becas a estudiantes e impulso a la investigación (repo propio `comecyt0/SICEI` en `C:\SICEI`) | `/sicei` | **Publicado** (E72, 14/10/2026): comparte `comecyt_prod` en el esquema `sicei` — guía `docs/SICEI_BD_COMPARTIDA.md` |
 
 **GRAN DESARROLLO EN CURSO (definido 28/09/2026): modalidad "Apoyo en especie"** — **F5 (registro general), F1 (base:
 escuelas, asistente, clubes, panel del líder) y F2 (etapas de revisión, correcciones con plazo, visto bueno, comité con
@@ -2158,8 +2158,16 @@ Guía completa (decisiones del usuario, arquitectura, regla de nombres, pasos y 
       router los resolvería dentro de SIGAE. Se borró la página vieja `app/sicei`.
     - SICEI: lint en 0 errores, campana con `<a>` para `/evaluador` y botón «Regresar a SIDECyT».
     - `.gitignore` excluye `apps/api/storage/app/{private,public}` (archivos de personas; el repo es público).
-    - Commits SIGAE `a9fb618` y SICEI `dd3fe9d`. **El push lo hace el usuario:** Git Credential Manager pide iniciar
-      sesión de forma interactiva. El remoto de SIGAE estaba vacío; se revisó que la historia no tuviera secretos.
+    - Commits SIGAE `a9fb618` y `bf4e445`, y SICEI `dd3fe9d`. **El push lo hace el usuario:** Git Credential Manager
+      pide iniciar sesión de forma interactiva. El remoto de SIGAE estaba vacío; se revisó que la historia no tuviera
+      secretos.
+    - **15/10/2026: push hecho por el usuario y verificado.** SIGAE `main` = `bf4e445` en GitHub (por `ls-remote`).
+      SICEI `dd3fe9d`, por el reflog («update by push»), porque es privado.
+    - **Pendientes de E72:**
+      - Prueba de punta a punta con sesión real.
+      - Credenciales del correo de SICEI (hoy `MAIL_MAILER=log`).
+      - Superadmin de SICEI (`php artisan sicei:crear-admin <correo>`).
+      - Rotar el `REVALIDATE_SECRET` de `sicei-web`.
 
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de
