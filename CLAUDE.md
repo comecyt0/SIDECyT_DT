@@ -2165,8 +2165,10 @@ Guía completa (decisiones del usuario, arquitectura, regla de nombres, pasos y 
       SICEI `dd3fe9d`, por el reflog («update by push»), porque es privado.
     - **Pendientes de E72:**
       - Prueba de punta a punta con sesión real.
-      - Credenciales del correo de SICEI (hoy `MAIL_MAILER=log`).
-      - Superadmin de SICEI (`php artisan sicei:crear-admin <correo>`).
+      - Credenciales del correo de SICEI (hoy `MAIL_MAILER=log`). **Desde el 15/10 es más urgente:** el cambio de
+        contraseña del perfil y los avisos de cambios de datos de SICEI van por correo y hoy no salen.
+      - ~~Superadmin de SICEI~~ **creado el 15/10/2026:** `dir.invyfrh.comecyt@edomex.gob.mx` (contraseña temporal en
+        `C:\ProgramData\COMECYT\sicei-superadmin.txt`, solo Administradores).
       - Rotar el `REVALIDATE_SECRET` de `sicei-web`.
 
 ### E73 — Portal SIDECyT rediseñado con la referencia "Family" + efectos de scroll [publicado 15-10-2026]
@@ -2212,6 +2214,17 @@ elimine el metadato». Mismo cambio en SICEI (D80, `C:\SICEI\docs\plan\10-imagen
 - **Verificado:** prueba con un JPEG con EXIF `Orientation=6` y un texto oculto en el APP1 → sale WebP 100×200 enderezado,
   sin `Exif`/`XMP` ni el texto; reducción a 2400 px; PNG de paleta; HTML disfrazado → 422; documento imagen → `.webp` y PDF
   intacto (`scratchpad/prueba_webp*.php`); carrusel por dominio con `image/webp` y cabeceras de seguridad.
+
+### E75 — `/sigae` sin «Lo que vas a preparar» ni «¿Cómo obtengo acceso?» [publicado 15-10-2026]
+Pedido del usuario. Se quitaron las dos secciones de `app/sigae/Landing.tsx`, la constante `ACCESS` y el CSS muerto
+(`.lp-docs`, `.lp-doc-notes`, `.lp-access`). La tarjeta final «Entra a SIGAE» se conserva sola (`.lp-cierre`, sin el
+espacio que dejaban los pasos).
+- Documentos y notas siguen en `/admin/sitio` y en `GET /api/sitio/sigae`, pero ya no se pintan.
+- Verificado en Edge a 1440 y 390 px: sin las secciones, sin scroll horizontal y sin errores. Detalle en
+  `docs/LANDING_SIGAE.md`.
+- **Mismo día, en SICEI** (repo aparte, D80–D82): imágenes WebP, semáforo de contraseñas, perfil con aprobación y rol
+  admin de convocatoria. Contraseñas: auditoría de `public.users` con 11 de 11 en argon2id y `solicitudes_acceso` con 6
+  de 6 con hash; no hay contraseñas en texto plano en ninguno de los dos sistemas.
 
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de

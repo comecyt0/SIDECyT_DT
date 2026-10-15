@@ -75,12 +75,6 @@ const ROLES: { title: string; body: string; icon: ReactNode; tone: Tone | 'mist'
   { title: 'Administración del COMECYT', body: 'Publica convocatorias, asigna evaluadores, genera convenios y registra las ministraciones.', icon: <Settings2 />, tone: 'mist' },
 ];
 
-const ACCESS: { title: string; body: string }[] = [
-  { title: 'Crea tu cuenta', body: 'Registra tus datos y elige «Participante»; al final agregas los datos de tu empresa o institución.' },
-  { title: 'Se valida tu cuenta', body: 'La administración del COMECYT revisa tus datos y aprueba tu cuenta.' },
-  { title: 'Entra a SIGAE', body: 'Inicia sesión con tu correo y tu contraseña, y registra tu proyecto.' },
-];
-
 /**
  * Sitio oficial del COMECYT (enlace del pie). Los programas ya no viven aquí: ver E49 abajo.
  */
@@ -825,35 +819,6 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ── Documentos que se preparan ── */}
-        <section className="lp-section" aria-labelledby="lp-documentos">
-          <div className="lp-wrap lp-roles">
-            <div className="lp-roles-head">
-              <h2 id="lp-documentos" className="lp-h2">Lo que vas a preparar</h2>
-              <p className="lp-h2-sub">
-                Cada convocatoria publica sus formatos para descargar y llenar. En general piden estos documentos,
-                que después adjuntas a tu solicitud en SIGAE.
-              </p>
-              {sitio.documentos_notas.length > 0 && (
-                <ul className="lp-doc-notes">
-                  {sitio.documentos_notas.map((n) => <li key={n}>{n}</li>)}
-                </ul>
-              )}
-            </div>
-            <ul className="lp-docs">
-              {sitio.documentos.map((d) => (
-                <li key={d.titulo} className="lp-doc">
-                  <FileText aria-hidden="true" />
-                  <div>
-                    <h3>{d.titulo}</h3>
-                    {d.detalle && <p>{d.detalle}</p>}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
         {/* ── Roles ── */}
         <section className="lp-section" aria-labelledby="lp-roles">
           <div className="lp-wrap lp-roles">
@@ -878,23 +843,9 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ── Acceso ── */}
-        <section className="lp-section" aria-labelledby="lp-acceso">
+        {/* ── Cierre: entrar a SIGAE ── (se quitaron «Lo que vas a preparar» y «¿Cómo obtengo acceso?», pedido del usuario 15/10/2026) */}
+        <section className="lp-section lp-cierre" aria-label="Entrar a SIGAE">
           <div className="lp-wrap">
-            <div className="lp-head">
-              <h2 id="lp-acceso" className="lp-h2">¿Cómo obtengo acceso?</h2>
-              <p className="lp-h2-sub">Las cuentas se aprueban una por una para proteger la información de cada proyecto.</p>
-            </div>
-            <ol className="lp-access">
-              {ACCESS.map((a, i) => (
-                <li key={a.title}>
-                  <span className="lp-access-num" aria-hidden="true">{i + 1}</span>
-                  <h3><span className="sr-only">Paso {i + 1}: </span>{a.title}</h3>
-                  <p>{a.body}</p>
-                </li>
-              ))}
-            </ol>
-
             <div className="lp-final">
               <span className="lp-final-mark">
                 <LogoComecyt decorativo />

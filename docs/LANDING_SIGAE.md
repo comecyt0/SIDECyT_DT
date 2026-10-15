@@ -4,9 +4,15 @@
 (también por VPN: `https://10.250.36.241/sigae`)
 
 Página de presentación del sistema **antes del login** y **puerta de entrada a todas las convocatorias de
-Apoyo Empresarial del COMECYT**. Muestra las convocatorias abiertas en vivo, los 4 programas, los sectores,
-los documentos que se preparan, el recorrido de una solicitud y cómo obtener acceso; lleva a `/login` o a
-`/solicitar-acceso`. En la landing el sistema se llama **SIGAE — Sistema de Gestión de Apoyo Empresarial**
+Apoyo Empresarial del COMECYT**. Muestra las convocatorias abiertas en vivo, los programas, los sectores, el
+recorrido de una solicitud y los roles, y cierra con la tarjeta «Entra a SIGAE», que lleva a `/registro` o a
+`/login`.
+
+> **15/10/2026, pedido del usuario:** se quitaron las secciones **«Lo que vas a preparar»** (documentos y notas de
+> `contenido_sitio`) y **«¿Cómo obtengo acceso?»** (los 3 pasos). La tarjeta final se conservó sola (`.lp-cierre`), y
+> el CSS de `.lp-docs`, `.lp-doc-notes` y `.lp-access` se borró.
+> - Los documentos y las notas **se siguen editando** en `/admin/sitio`, pero ya no se muestran en la landing.
+> - Si el usuario los quiere de vuelta, el código está en git (commit de este día). En la landing el sistema se llama **SIGAE — Sistema de Gestión de Apoyo Empresarial**
 (nombre y significado confirmados por el usuario; antes decía SIDECyT). El nombre completo aparece en el texto
 del hero, en la tarjeta final, en el `title` del logo del nav y en los metadatos de la página.
 

@@ -784,28 +784,10 @@
 .lp-role h3 { font-size: var(--text-subheading); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
 .lp-role p { margin-top: 4px; color: var(--color-graphite-body); font-size: 15px; line-height: 1.5; }
 
-/* Acceso: tres pasos + tarjeta final */
-.lp-access { display: grid; gap: var(--spacing-16); max-width: 960px; margin-inline: auto; }
-@media (min-width: 800px) { .lp-access { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.lp-access li {
-  padding: var(--spacing-20);
-  border-radius: var(--radius-cards);
-  background: var(--color-white-canvas);
-  box-shadow: var(--shadow-subtle-5);
-}
-.lp-access-num {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--color-vino-wash);
-  color: var(--color-vino);
-  font-weight: 600;
-  font-size: var(--text-sm);
-}
-.lp-access h3 { margin-top: var(--spacing-12); font-size: 17px; font-weight: 600; line-height: 1.3; }
-.lp-access p { margin-top: 4px; color: var(--color-graphite-body); font-size: 15px; line-height: 1.5; }
+/* Tarjeta final «Entra a SIGAE». 15/10/2026: se quitaron los pasos de «¿Cómo obtengo acceso?» (pedido del usuario);
+   la tarjeta queda sola, pegada a la sección anterior (sin el espacio que dejaban los pasos). */
+.lp-cierre { padding-top: 0; }
+@media (min-width: 1024px) { .lp-cierre { padding-top: 0; } }
 
 .lp-final {
   display: flex;
@@ -813,7 +795,7 @@
   align-items: center;
   gap: var(--spacing-20);
   max-width: 760px;
-  margin: var(--spacing-64) auto 0;
+  margin: 0 auto;
   padding: var(--spacing-24);
   border-radius: 28px;
   background: var(--color-white-canvas);
@@ -1149,49 +1131,6 @@
 .lp-sector[data-tone='peach'] { background: var(--color-peach-wash); color: var(--color-peach-ink); }
 .lp-sector:nth-child(4n + 1) { rotate: -1.5deg; }
 .lp-sector:nth-child(4n + 3) { rotate: 1.5deg; }
-
-/* Documentos */
-.lp-doc-notes { display: grid; gap: var(--spacing-8); margin-top: var(--spacing-24); }
-.lp-doc-notes li {
-  position: relative;
-  padding-left: 18px;
-  color: var(--color-graphite-body);
-  font-size: 15px;
-  line-height: 1.5;
-}
-.lp-doc-notes li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.6em;
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: var(--color-vino);
-}
-.lp-doc-notes strong { font-weight: 600; color: var(--color-vino); }
-.lp-docs { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--spacing-12); }
-@media (min-width: 560px) { .lp-docs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.lp-doc {
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
-  gap: var(--spacing-12);
-  padding: var(--spacing-16);
-  border-radius: 20px;
-  background: var(--color-white-canvas);
-  box-shadow: var(--shadow-subtle-2);
-}
-.lp-doc > svg {
-  width: 40px;
-  height: 40px;
-  padding: 9px;
-  border-radius: 12px;
-  background: var(--color-sky-wash);
-  color: var(--color-sky-ink);
-  stroke-width: 1.5;
-}
-.lp-doc h3 { font-size: 16px; font-weight: 600; line-height: 1.3; }
-.lp-doc p { margin-top: 2px; color: var(--color-graphite-body); font-size: var(--text-sm); line-height: 1.45; }
 
 /* ─────────────────────────── Pie ─────────────────────────── */
 

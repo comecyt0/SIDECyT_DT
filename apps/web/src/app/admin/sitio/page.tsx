@@ -262,7 +262,7 @@ function Documentos({ avisar }: { avisar: Avisar }) {
   return (
     <section className="perfil-tarjeta space-y-3" aria-busy={cargando}>
       <h2 className="perfil-tarjeta-titulo">Documentos que se preparan (SIGAE)</h2>
-      <p className="text-sm text-[var(--app-ink-2)]">Aparecen en la landing, en «Lo que vas a preparar».</p>
+      <p className="text-sm text-[var(--app-ink-2)]">Desde el 15/10/2026 ya no se muestran en la landing (se quitó el apartado «Lo que vas a preparar»); se conservan aquí por si se vuelven a publicar.</p>
       <ul className="space-y-2">
         {docs.map((d, i) => (
           <li key={i} className="grid gap-2 rounded-2xl bg-[var(--app-card-bg)] p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]">

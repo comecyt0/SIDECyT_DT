@@ -247,7 +247,9 @@ El mapeo columna por columna se registrará como decisión **D77** en `C:\SICEI\
 - **Antivirus:** instalar ClamAV ya.
 - **Correo:** SICEI tendrá su propia cuenta. Queda configurado con `MAIL_MAILER=log` y el bloque SMTP comentado;
   **faltan las credenciales**.
-- **Superadmin de SICEI:** ninguno todavía.
+- **Superadmin de SICEI:** ninguno todavía. **15/10/2026:** creado `dir.invyfrh.comecyt@edomex.gob.mx` (contraseña
+  temporal en `C:\ProgramData\COMECYT\sicei-superadmin.txt`, solo Administradores; el usuario la cambia). Ese día se
+  agregó además el rol `admin_convocatoria` en SICEI (D82, `C:\SICEI\docs\plan\10-imagenes-contrasenas-perfil.md`).
 
 ### Hecho
 
