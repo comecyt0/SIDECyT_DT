@@ -2192,6 +2192,27 @@ Detalle de diseño y decisiones del usuario: **`docs/DISENO_UI.md` §21**. Para 
 **Verificado:** tsc/eslint 0 errores; Edge por dominio en 7 anchos + movimiento reducido (sin desbordes, sin texto partido,
 0 errores de consola/CSP); secuencia 1→2→3, héroe desvanecido y tarjeta de resultado con desvanecido comprobados.
 
+### E74 — Toda imagen subida se guarda en WebP y sin metadatos [publicado 15-10-2026]
+**Pedido del usuario:** «en cualquiera de los 2 sistemas donde se carguen fotos o imágenes la cargue en formato webp y
+elimine el metadato». Mismo cambio en SICEI (D80, `C:\SICEI\docs\plan\10-imagenes-contrasenas-perfil.md`).
+- **`App\Support\ImagenSegura`** es el único camino: `abrir()` (MIME real con finfo, tope de 40 MP **antes** de decodificar,
+  PNG de paleta → truecolor, **orientación EXIF aplicada** para que la foto del teléfono no quede girada al quitarle los
+  metadatos), `limitar()`, `cubrir()`, `codificar()` (WebP con GD, que nunca escribe EXIF/GPS/XMP/ICC) y `aWebp()`.
+- **Dónde:** carrusel (`CarouselController::upload`, ≤ 2400 px), banners de convocatorias y programas
+  (`BannerController`, ≤ 2400 px), documentos de solicitudes y de clubes con formato «imagen»
+  (`TiposArchivo::contenidoSeguro()` desde `ArchivoSolicitudController::guardar` y `ClubController::subirDocumento`,
+  ≤ 3000 px y calidad 85 para que se lean), foto/portada de perfil y logo/fotos de clubes (ya eran WebP; ahora también
+  se enderezan). PDF, Office y ZIP se guardan sin cambios.
+- **Existentes:** las 10 imágenes PNG del carrusel se convirtieron con un script auditado (`carrusel.imagen_convertida_webp`
+  en la bitácora; respaldo de los originales en `backups\20261015-webp\carousel`). No había otras JPG/PNG subidas.
+- **Trampa (no repetir):** IIS devuelve **404 a extensiones sin tipo MIME** y `.webp` no lo tenía: el carrusel del login
+  estuvo ~3 min sin imágenes tras la conversión. `public/web.config` declara ahora `<mimeMap .webp image/webp>` (y el
+  `web.config` del sitio `sicei-api`). **Antes de servir un tipo de archivo nuevo desde `/storage`, comprobarlo con
+  `curl.exe`.**
+- **Verificado:** prueba con un JPEG con EXIF `Orientation=6` y un texto oculto en el APP1 → sale WebP 100×200 enderezado,
+  sin `Exif`/`XMP` ni el texto; reducción a 2400 px; PNG de paleta; HTML disfrazado → 422; documento imagen → `.webp` y PDF
+  intacto (`scratchpad/prueba_webp*.php`); carrusel por dominio con `image/webp` y cabeceras de seguridad.
+
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de
 un club del director) **si están dados de alta en ese club**. `Club::destinatarios()` = dueño + todos sus accesos activos

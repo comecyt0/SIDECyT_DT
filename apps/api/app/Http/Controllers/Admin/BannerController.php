@@ -7,6 +7,7 @@ use App\Http\Traits\ValidatesBinaryMimeTypes;
 use App\Models\Convocatoria;
 use App\Models\TipoPrograma;
 use App\Support\Audit;
+use App\Support\ImagenSegura;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -98,7 +99,7 @@ class BannerController extends Controller
         if ($request->hasFile('banner')) {
             $file = $request->file('banner');
             // getPathname(): en este IIS realpath() del temporal puede ser false (E28).
-            $mime = $this->validateBinaryMimeType($file->getPathname(), array_keys(self::MIMES));
+            $this->validateBinaryMimeType($file->getPathname(), array_keys(self::MIMES));
 
             $dims = @getimagesize($file->getPathname());
             if (! $dims) {
@@ -112,11 +113,9 @@ class BannerController extends Controller
                 return response()->json(['message' => "La imagen es demasiado grande ({$w}×{$h}). Máximo {$cfg['max_side']} px por lado."], 422);
             }
 
-            $contenido = file_get_contents($file->getPathname());
-            if ($contenido === false || $contenido === '') {
-                return response()->json(['message' => 'No se pudo leer el archivo subido.'], 422);
-            }
-            $name = Str::lower(Str::random(32)).'.'.self::MIMES[$mime];
+            // E74: siempre WebP re-codificado (sin EXIF/GPS ni metadatos), lado mayor ≤ 2400 px.
+            $contenido = ImagenSegura::aWebp($file, 2400, 82, 'banner');
+            $name = Str::lower(Str::random(32)).'.webp';
             Storage::disk('public')->put("banners/{$dir}/{$name}", $contenido);
             $nuevo = "/storage/banners/{$dir}/{$name}";
             $origen = 'archivo';

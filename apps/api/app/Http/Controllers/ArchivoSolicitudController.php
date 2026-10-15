@@ -34,8 +34,10 @@ class ArchivoSolicitudController extends Controller
     public static function guardar(UploadedFile $file, Solicitud $solicitud, string $extension = 'pdf'): string
     {
         abort_unless(in_array($extension, TiposArchivo::EXTENSIONES, true), 422, 'Tipo de archivo no permitido');
+        // E74: imágenes → WebP sin metadatos; el resto tal cual.
+        [$extension, $contenido] = TiposArchivo::contenidoSeguro($file, $extension);
         $nombre = Str::random(40).'.'.$extension;
-        Storage::disk('local')->put(self::rutaInterna($solicitud->id, $nombre), file_get_contents($file->getPathname()));
+        Storage::disk('local')->put(self::rutaInterna($solicitud->id, $nombre), $contenido);
 
         return "/api/archivos/solicitudes/{$solicitud->id}/{$nombre}";
     }

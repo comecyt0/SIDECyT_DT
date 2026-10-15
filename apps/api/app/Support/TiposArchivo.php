@@ -105,6 +105,21 @@ class TiposArchivo
         return $ext;
     }
 
+    /**
+     * E74 — Contenido que se guarda para un archivo YA validado. Las imágenes (jpg/png/webp) se re-codifican SIEMPRE a
+     * WebP sin metadatos (EXIF/GPS/XMP), enderezadas y con el lado mayor ≤ 3000 px (legible para documentos escaneados).
+     *
+     * @return array{0: string, 1: string} [extensión final, bytes]
+     */
+    public static function contenidoSeguro(UploadedFile $file, string $ext, string $campo = 'file'): array
+    {
+        if (in_array($ext, ['jpg', 'png', 'webp'], true)) {
+            return ['webp', ImagenSegura::aWebp($file, 3000, 85, $campo)];
+        }
+
+        return [$ext, (string) file_get_contents($file->getPathname())];
+    }
+
     /** 'docx' | 'xlsx' | null. Rechaza documentos con macros (vbaProject.bin) aunque vengan con extensión x. */
     private static function tipoOffice(string $ruta): ?string
     {

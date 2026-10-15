@@ -277,8 +277,10 @@ class ClubController extends Controller
         $clave = (string) $request->input('clave');
         [$formatos, $maxMb, $nombreDoc] = $this->limitesDocumento($club, $clave);
         $ext = TiposArchivo::validar($request->file('archivo'), $formatos, $maxMb, 'archivo');
+        // E74: imágenes → WebP sin metadatos; el resto tal cual.
+        [$ext, $contenido] = TiposArchivo::contenidoSeguro($request->file('archivo'), $ext, 'archivo');
         $interno = Str::random(40).'.'.$ext;
-        Storage::disk('local')->put(Especie::DIR_DOCS.'/'.$club->id.'/'.$interno, file_get_contents($request->file('archivo')->getPathname()));
+        Storage::disk('local')->put(Especie::DIR_DOCS.'/'.$club->id.'/'.$interno, $contenido);
 
         $previo = ClubDocumento::where('club_id', $club->id)->where('clave', $clave)->first();
         $doc = $previo ?? new ClubDocumento();

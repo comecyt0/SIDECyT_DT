@@ -8,10 +8,10 @@ use App\Models\User;
 use App\Support\Alcance;
 use App\Support\Audit;
 use App\Support\Enmascarar;
+use App\Support\ImagenSegura;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 
 /**
  * E45 (punto 3) — Perfil con foto y portada para todos los roles, y ficha completa de un usuario según alcance.
@@ -25,9 +25,6 @@ class PerfilController extends Controller
     private const DIR = 'perfiles';
 
     private const MAX_MB = 5;
-
-    /** Tope de píxeles ANTES de decodificar (bomba de descompresión: 5 MB pueden ser 20 000 × 20 000 px). */
-    private const MAX_PIXELES = 40_000_000;
 
     private const MEDIDAS = [
         'avatar' => ['ancho' => 512, 'alto' => 512, 'min' => 100],
@@ -85,49 +82,12 @@ class PerfilController extends Controller
         $request->validate(['imagen' => ['required', 'file', 'max:'.(self::MAX_MB * 1024)]]);
         $file = $request->file('imagen');
         $ruta = $file->getPathname(); // no getRealPath(): falla en este IIS (E28)
-        $falla = fn (string $m) => throw ValidationException::withMessages(['imagen' => $m]);
-
-        $mime = (string) (new \finfo(FILEINFO_MIME_TYPE))->file($ruta);
-        if (! in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
-            $falla('La imagen debe ser JPG, PNG o WebP.');
-        }
-        $info = @getimagesize($ruta);
-        if (! $info) {
-            $falla('No se pudo leer la imagen.');
-        }
-        [$w, $h] = $info;
         $m = self::MEDIDAS[$tipo];
-        if ($w * $h > self::MAX_PIXELES) {
-            $falla('La imagen es demasiado grande en píxeles.');
-        }
-        if ($w < $m['min'] || $h < ($tipo === 'banner' ? 120 : $m['min'])) {
-            $falla($tipo === 'avatar' ? 'La foto debe medir al menos 100 × 100 px.' : 'La portada debe medir al menos 400 × 120 px.');
-        }
-
-        $origen = @imagecreatefromstring((string) file_get_contents($ruta));
-        if (! $origen) {
-            $falla('No se pudo procesar la imagen.');
-        }
+        // ImagenSegura: MIME real, tope de píxeles, orientación EXIF y WebP sin metadatos (E74).
+        [$origen] = ImagenSegura::abrir($ruta, 'imagen', $m['min'], $tipo === 'banner' ? 120 : $m['min'],
+            $tipo === 'avatar' ? 'La foto debe medir al menos 100 × 100 px.' : 'La portada debe medir al menos 400 × 120 px.');
         // Recorte centrado a la proporción destino ("cover") y re-codificación a WebP.
-        $destinoW = $m['ancho'];
-        $destinoH = $m['alto'];
-        $escala = max($destinoW / $w, $destinoH / $h);
-        $cropW = (int) round($destinoW / $escala);
-        $cropH = (int) round($destinoH / $escala);
-        $x = (int) max(0, ($w - $cropW) / 2);
-        $y = (int) max(0, ($h - $cropH) / 2);
-        $lienzo = imagecreatetruecolor($destinoW, $destinoH);
-        imagealphablending($lienzo, false);
-        imagesavealpha($lienzo, true);
-        imagecopyresampled($lienzo, $origen, 0, 0, $x, $y, $destinoW, $destinoH, $cropW, $cropH);
-        ob_start();
-        imagewebp($lienzo, null, 82);
-        $webp = (string) ob_get_clean();
-        imagedestroy($origen);
-        imagedestroy($lienzo);
-        if ($webp === '') {
-            $falla('No se pudo convertir la imagen.');
-        }
+        $webp = ImagenSegura::codificar(ImagenSegura::cubrir($origen, $m['ancho'], $m['alto']));
 
         $nombre = Str::random(40).'.webp';
         Storage::disk('local')->put(self::DIR.'/'.$nombre, $webp);

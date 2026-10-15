@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Traits\ValidatesBinaryMimeTypes;
 use App\Models\CarouselSlide;
+use App\Support\ImagenSegura;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -33,28 +34,21 @@ class CarouselController extends Controller
 
         $file = $request->file('imagen');
         // getPathname(), no getRealPath(): en Windows/IIS realpath del temporal puede devolver false.
-        $mime = $this->validateBinaryMimeType($file->getPathname(), ['image/jpeg', 'image/png', 'image/webp']);
+        $this->validateBinaryMimeType($file->getPathname(), ['image/jpeg', 'image/png', 'image/webp']);
 
-        $ext = match ($mime) {
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            'image/webp' => 'webp',
-        };
-        $name = Str::lower(Str::random(24)).'.'.$ext;
+        // E74: siempre WebP re-codificado (sin EXIF/GPS ni metadatos), lado mayor ≤ 2400 px. Es pública en /storage.
+        $contenido = ImagenSegura::aWebp($file, 2400, 82);
+        $name = Str::lower(Str::random(24)).'.webp';
 
         // No usar putFileAs(): por dentro hace fopen($file->getRealPath()) y en este IIS realpath()
         // del temporal devuelve false → "Path must not be empty" (E28). Se escribe el contenido directo.
-        $contenido = file_get_contents($file->getPathname());
-        if ($contenido === false || $contenido === '') {
-            return response()->json(['message' => 'No se pudo leer el archivo subido.'], 422);
-        }
         Storage::disk('public')->put(self::UPLOAD_DIR.'/'.$name, $contenido);
 
         return response()->json([
             'message' => 'Imagen subida.',
             'imagen_url' => '/storage/'.self::UPLOAD_DIR.'/'.$name,
-            'mime' => $mime,
-            'size' => $file->getSize(),
+            'mime' => 'image/webp',
+            'size' => strlen($contenido),
         ], 201);
     }
 
