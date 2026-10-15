@@ -1,23 +1,25 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type ReactNode, type RefObject, type KeyboardEvent as RKeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject, type KeyboardEvent as RKeyboardEvent } from 'react';
 import Link from 'next/link';
-import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
+import { AnimatePresence, animate, motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowDown, ArrowRight, ArrowUpRight, Briefcase, Building2, FlaskConical, Globe, GraduationCap, Lightbulb, LogIn, Mail, MapPin,
-  Megaphone, Phone, Sparkles, UserPlus,
+  ArrowDown, ArrowRight, ArrowUpRight, BookOpen, Briefcase, Building2, Check, CircleCheck, FlaskConical, Globe, GraduationCap, Lightbulb,
+  LogIn, Mail, MapPin, Megaphone, Phone, Sparkles, UserPlus,
 } from 'lucide-react';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
 import { useSitio } from '@/lib/sitio';
 import { LogoComecyt, BandaInstitucional } from '@/components/branding/Logos';
-import OrbitaSistemas, { type SistemaOrbita } from './OrbitaSistemas';
+import { GrupoCompacto, GrupoDerecho, GrupoIzquierdo } from './IlustracionesCiencia';
+import { AparecerScroll, BarraProgreso, PasosSecuencia, TextoScroll, useSalidaHeroe, type PasoSecuencia } from './ScrollPortal';
 
 /**
  * Portal de sistemas del COMECYT — https://sidecyt-comecyt.edomex.gob.mx/ (25/09/2026).
  * Puerta común a SIGAE (Apoyo Empresarial, /sigae) y SICEI (Ciencia, Educación e Innovación, /sicei).
- * Estilos: ./portal.css (prefijo .pt-*, tokens dentro de .pt-root). Contenido honesto: sin cifras inventadas; SICEI se
- * anunció como "Próximamente" hasta que se publicó (14/10/2026, E72). /sicei lo sirve OTRA app (Next de SICEI, basePath
- * /sicei, vía IIS): sus enlaces son <a> con navegación completa, nunca <Link> (el router de SIGAE la resolvería en su app).
+ * 15/10/2026: rediseño con la referencia "Family" (design.md del usuario) — lienzo crema, contorno fino, vino como
+ * botón principal, acentos derivados del vino, personajes de ciencia en SVG. Estilos: ./portal.css (prefijo .pt-*,
+ * ilustraciones .il-*). Contenido honesto: sin cifras inventadas. /sicei lo sirve OTRA app (Next de SICEI, basePath
+ * /sicei, vía IIS): sus enlaces son <a> con navegación completa, nunca <Link> (el router de SIGAE la resolvería aquí).
  */
 
 const COMECYT_SITE = 'https://comecyt.edomex.gob.mx';
@@ -26,6 +28,7 @@ const CORREO_PROYECTOS = 'proyectos.comecyt@edomex.gob.mx';
 const BOOT_MS = 1100;
 
 type SistemaId = 'sigae' | 'sicei';
+type Tono = 'azul' | 'terracota' | 'ciruela' | 'ocre';
 
 interface Sistema {
   id: SistemaId;
@@ -64,12 +67,12 @@ const SISTEMAS: Sistema[] = [
   },
 ];
 
-/** "¿Cuál es para mí?": perfil → sistema recomendado. */
-const PERFILES: { id: string; etiqueta: string; icono: ReactNode; sistema: SistemaId; motivo: string }[] = [
-  { id: 'empresa', etiqueta: 'Tengo una empresa', icono: <Building2 aria-hidden="true" />, sistema: 'sigae', motivo: 'Los programas de Apoyo Empresarial del COMECYT se consultan y postulan en SIGAE.' },
-  { id: 'emprendo', etiqueta: 'Emprendo un proyecto', icono: <Lightbulb aria-hidden="true" />, sistema: 'sigae', motivo: 'Los apoyos para emprender un proyecto de innovación son parte del Apoyo Empresarial: entra por SIGAE.' },
-  { id: 'investigo', etiqueta: 'Investigo o doy clases', icono: <FlaskConical aria-hidden="true" />, sistema: 'sicei', motivo: 'Los estímulos e impulso a la investigación están en SICEI, el sistema de ciencia, educación e innovación.' },
-  { id: 'estudio', etiqueta: 'Estudio', icono: <GraduationCap aria-hidden="true" />, sistema: 'sicei', motivo: 'Las becas COMECYT para estudiantes están en SICEI.' },
+/** "¿Cuál es para mí?": perfil → sistema recomendado. Cada fila lleva su círculo de color (Family "Action Row"). */
+const PERFILES: { id: string; etiqueta: string; ayuda: string; tono: Tono; icono: ReactNode; sistema: SistemaId; motivo: string }[] = [
+  { id: 'empresa', etiqueta: 'Tengo una empresa', ayuda: 'Programas de Apoyo Empresarial', tono: 'azul', icono: <Building2 aria-hidden="true" />, sistema: 'sigae', motivo: 'Los programas de Apoyo Empresarial del COMECYT se consultan y postulan en SIGAE.' },
+  { id: 'emprendo', etiqueta: 'Emprendo un proyecto', ayuda: 'Apoyos para innovar', tono: 'terracota', icono: <Lightbulb aria-hidden="true" />, sistema: 'sigae', motivo: 'Los apoyos para emprender un proyecto de innovación son parte del Apoyo Empresarial: entra por SIGAE.' },
+  { id: 'investigo', etiqueta: 'Investigo o doy clases', ayuda: 'Estímulos a la investigación', tono: 'ciruela', icono: <FlaskConical aria-hidden="true" />, sistema: 'sicei', motivo: 'Los estímulos e impulso a la investigación están en SICEI, el sistema de ciencia, educación e innovación.' },
+  { id: 'estudio', etiqueta: 'Estudio', ayuda: 'Becas COMECYT', tono: 'ocre', icono: <GraduationCap aria-hidden="true" />, sistema: 'sicei', motivo: 'Las becas COMECYT para estudiantes están en SICEI.' },
 ];
 
 /** SICEI vive en otra app bajo /sicei: navegación completa (<a>); lo demás, <Link> del router de SIGAE. */
@@ -78,23 +81,35 @@ function EnlaceSistema({ href, children, ...resto }: { href: string; children: R
   return <Link href={href} {...resto}>{children}</Link>;
 }
 
-const ACCESOS: { href: string; etiqueta: string; detalle: string; icono: ReactNode }[] = [
-  { href: '/sigae#convocatorias', etiqueta: 'Convocatorias abiertas', detalle: 'Qué puedes postular hoy en SIGAE', icono: <Megaphone aria-hidden="true" /> },
-  { href: '/login', etiqueta: 'Iniciar sesión', detalle: 'Si ya tienes cuenta en SIGAE', icono: <LogIn aria-hidden="true" /> },
-  { href: '/registro', etiqueta: 'Crear cuenta', detalle: 'Participante, líder de club o evaluador', icono: <UserPlus aria-hidden="true" /> },
-];
-
-/** Nodos de la órbita del héroe (posiciones calculadas sobre sus anillos; ver OrbitaSistemas). */
-const NODOS = [
-  { id: 'sigae' as const, sigla: 'SIGAE', detalle: 'Apoyo Empresarial', estado: 'disponible' as const, icono: <Briefcase />, x: 87.2, y: 23.9 },
-  { id: 'sicei' as const, sigla: 'SICEI', detalle: 'Ciencia, Educación e Innovación', estado: 'disponible' as const, icono: <FlaskConical />, x: 22.1, y: 69.5 },
+/**
+ * Accesos rápidos por sistema (pedido del usuario 15/10/2026): solo botones a apartados que existen.
+ * SIGAE: secciones de /sigae, /login y /registro. SICEI (otra app): secciones de su landing (#convocatorias,
+ * #programas) y /sicei/portal, donde se entra o se crea la cuenta.
+ */
+const ACCESOS: { sistema: SistemaId; sigla: string; detalle: string; icono: ReactNode; items: { href: string; etiqueta: string; detalle: string; icono: ReactNode }[] }[] = [
+  {
+    sistema: 'sigae', sigla: 'SIGAE', detalle: 'Apoyo Empresarial', icono: <Briefcase aria-hidden="true" />,
+    items: [
+      { href: '/sigae#convocatorias', etiqueta: 'Convocatorias abiertas', detalle: 'Qué puedes postular hoy', icono: <Megaphone aria-hidden="true" /> },
+      { href: '/login', etiqueta: 'Iniciar sesión', detalle: 'Si ya tienes cuenta en SIGAE', icono: <LogIn aria-hidden="true" /> },
+      { href: '/registro', etiqueta: 'Crear cuenta', detalle: 'Participante, líder de club o evaluador', icono: <UserPlus aria-hidden="true" /> },
+    ],
+  },
+  {
+    sistema: 'sicei', sigla: 'SICEI', detalle: 'Ciencia, Educación e Innovación', icono: <FlaskConical aria-hidden="true" />,
+    items: [
+      { href: '/sicei#convocatorias', etiqueta: 'Convocatorias', detalle: 'Becas y estímulos vigentes', icono: <Megaphone aria-hidden="true" /> },
+      { href: '/sicei#programas', etiqueta: 'Programas', detalle: 'Becas a estudiantes e impulso a la investigación', icono: <BookOpen aria-hidden="true" /> },
+      { href: '/sicei/portal', etiqueta: 'Entrar o crear cuenta', detalle: 'Tu registro y el seguimiento de tus solicitudes', icono: <LogIn aria-hidden="true" /> },
+    ],
+  },
 ];
 
 /** "Cómo funciona": secuencia real del sistema (por eso va numerada). Sin datos inventados. */
-const PASOS: { titulo: string; texto: string; icono: ReactNode }[] = [
-  { titulo: 'Elige tu sistema', texto: 'SIGAE si tienes una empresa o emprendes; SICEI si estudias, investigas o das clases.', icono: <Sparkles aria-hidden="true" /> },
-  { titulo: 'Crea tu cuenta', texto: 'Registra tus datos y elige tu rol: participante, líder de club o evaluador. Un administrador la aprueba y te avisa por correo.', icono: <UserPlus aria-hidden="true" /> },
-  { titulo: 'Postula y da seguimiento', texto: 'Registra tu proyecto, adjunta tus documentos y mira en qué etapa va, hasta el convenio.', icono: <Megaphone aria-hidden="true" /> },
+const PASOS: PasoSecuencia[] = [
+  { titulo: 'Elige tu sistema', texto: 'SIGAE si tienes una empresa o emprendes; SICEI si estudias, investigas o das clases.', tono: 'azul', icono: <Sparkles aria-hidden="true" /> },
+  { titulo: 'Crea tu cuenta', texto: 'Registra tus datos y elige tu rol: participante, líder de club o evaluador. Un administrador la aprueba y te avisa por correo.', tono: 'ciruela', icono: <UserPlus aria-hidden="true" /> },
+  { titulo: 'Postula y da seguimiento', texto: 'Registra tu proyecto, adjunta tus documentos y mira en qué etapa va, hasta el convenio.', tono: 'terracota', icono: <Megaphone aria-hidden="true" /> },
 ];
 
 /**
@@ -145,54 +160,15 @@ function Contador({ valor, animar }: { valor: number; animar: boolean }) {
   return <span className="pt-contador">{n}</span>;
 }
 
-/** ¿Se puede animar con el puntero? (no en táctil ni con movimiento reducido). */
-function usePunteroFino(): boolean {
-  const [fino, setFino] = useState(false);
-  useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return;
-    const mq = window.matchMedia('(hover: hover) and (pointer: fine)');
-    const act = () => setFino(mq.matches);
-    act();
-    mq.addEventListener?.('change', act);
-    return () => mq.removeEventListener?.('change', act);
-  }, []);
-  return fino;
-}
-
-function TarjetaSistema({ s, destacado, atenuado, animar, enFoco = false, programas = [] }: { s: Sistema; destacado: boolean; atenuado: boolean; animar: boolean; enFoco?: boolean; programas?: string[] }) {
-  const ref = useRef<HTMLElement>(null);
-  const rx = useMotionValue(0);
-  const ry = useMotionValue(0);
-  const srx = useSpring(rx, { stiffness: 160, damping: 18 });
-  const sry = useSpring(ry, { stiffness: 160, damping: 18 });
-
-  const mover = (e: RPointerEvent<HTMLElement>) => {
-    const el = ref.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width;
-    const y = (e.clientY - r.top) / r.height;
-    // Foco de luz que sigue al puntero (variables CSS, sin re-render).
-    el.style.setProperty('--mx', `${(x * 100).toFixed(1)}%`);
-    el.style.setProperty('--my', `${(y * 100).toFixed(1)}%`);
-    if (animar) { ry.set((x - 0.5) * 6); rx.set((0.5 - y) * 5); }
-  };
-  const salir = () => { rx.set(0); ry.set(0); };
-
+function TarjetaSistema({ s, destacado, atenuado, programas = [] }: { s: Sistema; destacado: boolean; atenuado: boolean; programas?: string[] }) {
   return (
-    <motion.article
-      ref={ref}
+    <article
       className="pt-sistema"
       data-sistema={s.id}
       data-destacado={destacado || undefined}
-      data-foco={enFoco || undefined}
       data-atenuado={atenuado || undefined}
-      onPointerMove={mover}
-      onPointerLeave={salir}
-      style={animar ? { rotateX: srx, rotateY: sry, transformPerspective: 900 } : undefined}
       aria-labelledby={`pt-${s.id}-titulo`}
     >
-      <span className="pt-sistema-luz" aria-hidden="true" />
       <div className="pt-sistema-cabeza">
         <span className="pt-sistema-icono">{s.icono}</span>
         <span className="pt-estado" data-estado={s.estado}>
@@ -213,11 +189,11 @@ function TarjetaSistema({ s, destacado, atenuado, animar, enFoco = false, progra
           </motion.span>
         )}
       </AnimatePresence>
-      <h2 id={`pt-${s.id}-titulo`} className="pt-sigla">{s.sigla}</h2>
+      <h3 id={`pt-${s.id}-titulo`} className="pt-sigla">{s.sigla}</h3>
       <p className="pt-nombre">{s.nombre}</p>
       <p className="pt-para">{s.para}</p>
       <ul className="pt-puntos">
-        {s.puntos.map((p) => <li key={p}>{p}</li>)}
+        {s.puntos.map((p) => <li key={p}><CircleCheck aria-hidden="true" />{p}</li>)}
       </ul>
       {/* E49: programas vigentes, en vivo desde el panel (/admin/sitio); nada escrito en el código. */}
       {programas.length > 0 && (
@@ -233,58 +209,33 @@ function TarjetaSistema({ s, destacado, atenuado, animar, enFoco = false, progra
         </div>
       )}
       <EnlaceSistema href={s.href} className="pt-cta" data-variante={s.estado === 'disponible' ? 'principal' : 'secundario'}>
-        <span className="pt-cta-texto">{s.cta}</span>
+        <span>{s.cta}</span>
         <ArrowRight className="pt-cta-flecha" aria-hidden="true" />
       </EnlaceSistema>
-    </motion.article>
+    </article>
   );
 }
 
 export default function Portal() {
   const reducir = useReducedMotion();
-  const fino = usePunteroFino();
   const [listo, setListo] = useState(false);
   const [perfil, setPerfil] = useState<string | null>(null);
-  const fondo = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const t = window.setTimeout(() => setListo(true), BOOT_MS);
     return () => window.clearTimeout(t);
   }, []);
 
-  // `fino` empieza en false (servidor y primer render): no hay diferencia de hidratación (E7).
-  const animar = fino && !reducir;
-
-  // Fondo: la retícula y el halo responden al puntero (una variable por cuadro, con requestAnimationFrame).
-  useEffect(() => {
-    if (!animar) return;
-    let raf = 0;
-    const mover = (e: PointerEvent) => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const el = fondo.current;
-        if (!el) return;
-        el.style.setProperty('--px', `${e.clientX}px`);
-        el.style.setProperty('--py', `${e.clientY}px`);
-      });
-    };
-    window.addEventListener('pointermove', mover, { passive: true });
-    return () => { window.removeEventListener('pointermove', mover); cancelAnimationFrame(raf); };
-  }, [animar]);
-
   const elegido = PERFILES.find((p) => p.id === perfil) ?? null;
-  // E49: programas activos de SIGAE (administrables). SICEI queda pendiente: sin programas publicados aún.
+  // E49: programas activos de SIGAE (administrables). SICEI: sin programas publicados en el portal.
   const { datos: sigae } = useSitio('sigae');
   const resumen = useResumenConvocatorias();
   const [js, setJs] = useState(false);
   useEffect(() => { setJs(true); }, []);
   const [guiaRef, guiaVisible] = useRevela<HTMLElement>();
-  const [pasosRef, pasosVisible] = useRevela<HTMLElement>();
-  const [accesosRef, accesosVisible] = useRevela<HTMLElement>();
+  const { ref: heroeRef, texto: estiloTexto, ilustracion: estiloIlus } = useSalidaHeroe();
   const chipsRef = useRef<HTMLDivElement>(null);
-  // Nodo de la órbita ↔ tarjeta: el que tiene el cursor o el foco se resalta en ambos lados.
-  const [foco, setFoco] = useState<SistemaOrbita | null>(null);
-  // La barra se compacta al desplazarse (más sombra, menos alto).
+  // La barra se compacta al desplazarse.
   const [desplazado, setDesplazado] = useState(false);
   useEffect(() => {
     const alDesplazar = () => setDesplazado(window.scrollY > 90);
@@ -293,16 +244,14 @@ export default function Portal() {
     return () => window.removeEventListener('scroll', alDesplazar);
   }, []);
 
-  /** Elige un perfil; en teléfono lleva la vista a la tarjeta recomendada (la respuesta queda arriba, fuera de vista). */
+  /** Elige un perfil; en teléfono lleva la vista a la tarjeta de resultado (queda debajo de las opciones). */
   const elegir = (id: string, alternar = true) => {
     const nuevo = alternar && perfil === id ? null : id;
     setPerfil(nuevo);
-    const p = PERFILES.find((x) => x.id === nuevo);
-    if (p && window.innerWidth < 880) {
+    if (nuevo && window.innerWidth < 960) {
       window.setTimeout(() => {
-        document.getElementById(`pt-${p.sistema}-titulo`)?.closest('article')
-          ?.scrollIntoView({ behavior: reducir ? 'auto' : 'smooth', block: 'center' });
-      }, 120);
+        document.getElementById('pt-guia-resultado')?.scrollIntoView({ behavior: reducir ? 'auto' : 'smooth', block: 'nearest' });
+      }, 260);
     }
   };
 
@@ -322,195 +271,253 @@ export default function Portal() {
   return (
     <div className="pt-root" data-listo={listo || reducir ? 'true' : undefined} data-js={js || undefined}>
       <a href="#pt-contenido" className="pt-saltar">Saltar al contenido</a>
-      <div ref={fondo} className="pt-fondo" data-vivo={animar || undefined} aria-hidden="true">
-        <span className="pt-fondo-reticula" />
-        <span className="pt-fondo-halo pt-fondo-halo-a" />
-        <span className="pt-fondo-halo pt-fondo-halo-b" />
-        <span className="pt-fondo-puntero" />
-      </div>
 
       {/* Convivencia oficial de logos en el encabezado (E50, regla del usuario) */}
       <BandaInstitucional />
       <header className="pt-barra" data-desplazado={desplazado || undefined}>
-        <div className="pt-wrap pt-barra-fila">
-          <Link href="/" className="pt-marca" aria-label={`SIDECyT, portal de sistemas del ${INSTITUTION.name} — inicio`}>
-            <LogoComecyt decorativo />
-            <span className="pt-marca-texto">
-              <strong>SIDECyT</strong>
-              <span className="pt-marca-sub">Portal de sistemas del COMECYT</span>
-            </span>
-          </Link>
-          {/* Secciones de la página (escritorio). En teléfono sobra: todo está a un desplazamiento. */}
-          <nav className="pt-barra-nav" aria-label="Secciones">
-            <a href="#pt-sistemas">Sistemas</a>
-            <a href="#pt-guia">¿Cuál es para mí?</a>
-            <a href="#pt-pasos">Cómo funciona</a>
-          </nav>
-          {/* Botón (no un enlace suelto con la URL): sitio oficial del COMECYT en otra pestaña. */}
-          <a href={COMECYT_SITE} target="_blank" rel="noopener noreferrer" className="pt-boton-sitio" aria-label="Sitio del COMECYT (abre en otra pestaña)">
-            <Globe className="pt-boton-sitio-icono" aria-hidden="true" />
-            <span className="pt-boton-sitio-texto">Sitio COMECYT</span>
-            <ArrowUpRight className="pt-boton-sitio-flecha" aria-hidden="true" />
-          </a>
+        <BarraProgreso />
+        <div className="pt-wrap">
+          <div className="pt-barra-fila">
+            <Link href="/" className="pt-marca" aria-label={`SIDECyT, portal de sistemas del ${INSTITUTION.name} — inicio`}>
+              <LogoComecyt decorativo />
+              <span className="pt-marca-texto">
+                <strong>SIDECyT</strong>
+                <span className="pt-marca-sub">Portal de sistemas del COMECYT</span>
+              </span>
+            </Link>
+            {/* Secciones de la página (escritorio). En teléfono sobra: todo está a un desplazamiento. */}
+            <nav className="pt-barra-nav" aria-label="Secciones">
+              <a href="#pt-sistemas">Sistemas</a>
+              <a href="#pt-guia">¿Cuál es para mí?</a>
+              <a href="#pt-pasos">Cómo funciona</a>
+            </nav>
+            {/* Family: botón fantasma + una sola píldora de acción (en vino). */}
+            <div className="pt-barra-acciones">
+              <a href={COMECYT_SITE} target="_blank" rel="noopener noreferrer" className="pt-boton-fantasma" aria-label="Sitio del COMECYT (abre en otra pestaña)">
+                <Globe aria-hidden="true" />
+                <span className="pt-boton-fantasma-texto">Sitio COMECYT</span>
+                <ArrowUpRight className="pt-boton-fantasma-flecha" aria-hidden="true" />
+              </a>
+              <a href="#pt-sistemas" className="pt-boton-barra">
+                <span>Entrar</span><ArrowDown aria-hidden="true" />
+              </a>
+            </div>
+          </div>
         </div>
       </header>
 
       <main id="pt-contenido">
-        <section className="pt-wrap pt-heroe" aria-labelledby="pt-titulo">
-          <div className="pt-heroe-texto-col">
-          {/* Sello de dos partes: sigla en bloque vino + nombre completo. En teléfono se apila limpio (no una píldora
-              que se parte a la mitad). */}
-          <p className="pt-sello pt-entra" style={{ '--i': 0 } as CSSProperties}>
-            <span className="pt-sello-sigla"><Sparkles aria-hidden="true" />SIDECyT</span>
-            <span className="pt-sello-nombre">Sistema Digital de Emprendimiento, Ciencia y Talento Mexiquense</span>
-          </p>
-          <h1 id="pt-titulo" className="pt-titulo pt-entra" style={{ '--i': 1 } as CSSProperties}>
-            ¿A qué sistema <span className="pt-subrayado">quieres entrar</span>?
-          </h1>
-          <p className="pt-heroe-texto pt-entra" style={{ '--i': 2 } as CSSProperties}>
-            SIDECyT es la puerta digital del {INSTITUTION.fullName}: reúne <strong>SIGAE</strong>, para el apoyo a
-            empresas y emprendedores, y <strong>SICEI</strong>, para las becas a estudiantes y el impulso a la
-            investigación. Elige el tuyo; si no sabes cuál, te ayudamos abajo.
-          </p>
-          {/* Señal en vivo: solo aparece si hay convocatorias reales (abiertas o por abrir). Nunca una cifra inventada. */}
-          <AnimatePresence>
-            {resumen && (resumen.abiertas > 0 || resumen.proximas > 0) && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-              >
-                <Link href="/sigae#convocatorias" className="pt-senal" data-tipo={resumen.abiertas > 0 ? 'abiertas' : 'proximas'}>
-                  <span className="pt-senal-punto" aria-hidden="true" />
-                  {resumen.abiertas > 0 ? (
-                    <><Contador valor={resumen.abiertas} animar={!reducir} /> {resumen.abiertas === 1 ? 'convocatoria abierta' : 'convocatorias abiertas'} en SIGAE</>
-                  ) : (
-                    <><Contador valor={resumen.proximas} animar={!reducir} /> {resumen.proximas === 1 ? 'convocatoria próxima a abrir' : 'convocatorias próximas a abrir'}</>
-                  )}
-                  <ArrowRight className="pt-senal-flecha" aria-hidden="true" />
-                </Link>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <div className="pt-heroe-acciones pt-entra" style={{ '--i': 3 } as CSSProperties}>
-            <a href="#pt-sistemas" className="pt-cta" data-variante="principal">
-              <span className="pt-cta-texto">Ver los sistemas</span><ArrowDown className="pt-cta-flecha pt-cta-flecha-abajo" aria-hidden="true" />
-            </a>
-            <a href="#pt-guia" className="pt-cta" data-variante="secundario">
-              <span className="pt-cta-texto">¿No sabes cuál? Te ayudamos</span>
-            </a>
+        <section ref={heroeRef} className="pt-wrap pt-heroe" aria-labelledby="pt-titulo">
+          {/* Personajes de ciencia a los lados (escritorio ancho); en teléfono y tableta, una fila compacta arriba.
+              Al bajar, el héroe se desvanece (los personajes un poco antes que el texto). */}
+          <div className="pt-heroe-lado pt-heroe-lado-izq pt-ilus-entra" style={{ '--i': 1 } as CSSProperties}>
+            <motion.div style={estiloIlus}><GrupoIzquierdo /></motion.div>
           </div>
-          </div>
-          <div className="pt-heroe-visual pt-entra" style={{ '--i': 2 } as CSSProperties}>
-            <OrbitaSistemas nodos={NODOS} foco={foco} onFoco={setFoco} />
-          </div>
-        </section>
-
-        <section id="pt-sistemas" className="pt-wrap pt-sistemas" aria-label="Sistemas del COMECYT">
-          {SISTEMAS.map((s, i) => (
-            <div
-              key={s.id}
-              id={`pt-sistema-${s.id}`}
-              className="pt-entra pt-sistema-marco"
-              style={{ '--i': 4 + i } as CSSProperties}
-              onPointerEnter={() => setFoco(s.id)}
-              onPointerLeave={() => setFoco(null)}
-            >
-              <TarjetaSistema
-                s={s}
-                animar={animar}
-                enFoco={foco === s.id}
-                destacado={elegido?.sistema === s.id}
-                atenuado={Boolean(elegido) && elegido?.sistema !== s.id}
-                programas={s.id === 'sigae' ? sigae.programas.map((p) => p.nombre) : []}
-              />
-            </div>
-          ))}
-        </section>
-
-        <section id="pt-guia" ref={guiaRef} className="pt-wrap pt-guia pt-revela" data-visible={guiaVisible || undefined} aria-labelledby="pt-guia-titulo">
-          <div className="pt-guia-caja">
-            <div>
-              <h2 id="pt-guia-titulo" className="pt-h2">¿Cuál es para mí?</h2>
-              <p className="pt-guia-sub">Elige lo que mejor te describe y marcamos el sistema que te corresponde.</p>
-            </div>
-            <div ref={chipsRef} className="pt-chips" role="radiogroup" aria-label="¿Quién eres?" onKeyDown={teclaChips}>
-              {PERFILES.map((p, i) => {
-                const activo = perfil === p.id;
-                // Foco itinerante: solo la opción elegida (o la primera) entra con Tab; las flechas recorren el resto.
-                const enfocable = activo || (!perfil && i === 0);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={activo}
-                    tabIndex={enfocable ? 0 : -1}
-                    className="pt-chip"
-                    onClick={() => elegir(p.id)}
-                  >
-                    {/* Una sola píldora que se desliza de una opción a otra (muestra qué cambió). */}
-                    {activo && (
-                      <motion.span
-                        layoutId="pt-chip-activo"
-                        className="pt-chip-fondo"
-                        transition={reducir ? { duration: 0 } : { type: 'spring' as const, duration: 0.4, bounce: 0.15 }}
-                        aria-hidden="true"
-                      />
-                    )}
-                    <span className="pt-chip-contenido">{p.icono}{p.etiqueta}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="pt-guia-respuesta" aria-live="polite">
-              {elegido ? (
-                <>
-                  <strong>Te corresponde {elegido.sistema.toUpperCase()}.</strong> {elegido.motivo}{' '}
-                  <EnlaceSistema href={elegido.sistema === 'sigae' ? '/sigae' : '/sicei'} className="pt-enlace">
-                    Ir a {elegido.sistema.toUpperCase()} <ArrowRight aria-hidden="true" />
-                  </EnlaceSistema>
-                </>
-              ) : (
-                <span className="pt-guia-vacio">Toca una opción para ver la recomendación.</span>
-              )}
+          <motion.div className="pt-heroe-centro" style={estiloTexto}>
+            <div className="pt-heroe-compacto pt-ilus-entra" style={{ '--i': 0 } as CSSProperties}><GrupoCompacto /></div>
+            <p className="pt-sello pt-entra" style={{ '--i': 0 } as CSSProperties}>
+              <span className="pt-sello-sigla"><Sparkles aria-hidden="true" />SIDECyT</span>
+              <span>Sistema Digital de Emprendimiento, Ciencia y Talento Mexiquense</span>
             </p>
+            <h1 id="pt-titulo" className="pt-titulo pt-entra" style={{ '--i': 1 } as CSSProperties}>
+              ¿A qué sistema{' '}
+              <span className="pt-subrayado">
+                quieres entrar
+                <svg className="pt-subrayado-trazo" viewBox="0 0 200 16" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                  <path pathLength={1} d="M3 11 C 50 4, 110 3, 197 8" />
+                </svg>
+              </span>?
+            </h1>
+            <p className="pt-heroe-texto pt-entra" style={{ '--i': 2 } as CSSProperties}>
+              SIDECyT es la puerta digital del {INSTITUTION.fullName}: reúne <strong>SIGAE</strong>, para el apoyo a
+              empresas y emprendedores, y <strong>SICEI</strong>, para las becas a estudiantes y el impulso a la
+              investigación. Elige el tuyo; si no sabes cuál, te ayudamos abajo.
+            </p>
+            <div className="pt-heroe-acciones pt-entra" style={{ '--i': 3 } as CSSProperties}>
+              <a href="#pt-sistemas" className="pt-cta" data-variante="principal">
+                <span>Ver los sistemas</span><ArrowDown className="pt-cta-flecha pt-cta-flecha-abajo" aria-hidden="true" />
+              </a>
+              <a href="#pt-guia" className="pt-cta" data-variante="secundario">
+                <span>¿No sabes cuál? Te ayudamos</span>
+              </a>
+            </div>
+            {/* Señal en vivo: solo aparece si hay convocatorias reales (abiertas o por abrir). Nunca una cifra inventada. */}
+            <AnimatePresence>
+              {resumen && (resumen.abiertas > 0 || resumen.proximas > 0) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                >
+                  <Link href="/sigae#convocatorias" className="pt-senal" data-tipo={resumen.abiertas > 0 ? 'abiertas' : 'proximas'}>
+                    <span className="pt-senal-punto" aria-hidden="true" />
+                    {resumen.abiertas > 0 ? (
+                      <span><Contador valor={resumen.abiertas} animar={!reducir} /> {resumen.abiertas === 1 ? 'convocatoria abierta' : 'convocatorias abiertas'} en SIGAE</span>
+                    ) : (
+                      <span><Contador valor={resumen.proximas} animar={!reducir} /> {resumen.proximas === 1 ? 'convocatoria próxima a abrir' : 'convocatorias próximas a abrir'}</span>
+                    )}
+                    <ArrowRight className="pt-senal-flecha" aria-hidden="true" />
+                  </Link>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+          <div className="pt-heroe-lado pt-heroe-lado-der pt-ilus-entra" style={{ '--i': 2 } as CSSProperties}>
+            <motion.div style={estiloIlus}><GrupoDerecho /></motion.div>
           </div>
         </section>
 
-        <section id="pt-pasos" ref={pasosRef} className="pt-wrap pt-pasos pt-revela" data-visible={pasosVisible || undefined} aria-labelledby="pt-pasos-titulo">
-          <h2 id="pt-pasos-titulo" className="pt-h2">Cómo funciona</h2>
-          <p className="pt-guia-sub">Tres pasos, del primer clic a tu proyecto en marcha.</p>
-          {/* La línea que une los pasos es `.pt-pasos-lista::before`: se dibuja al entrar en pantalla. */}
-          <ol className="pt-pasos-lista">
-            {PASOS.map((p, i) => (
-              <li key={p.titulo} className="pt-paso" style={{ '--k': i } as CSSProperties}>
-                <span className="pt-paso-num" aria-hidden="true">{i + 1}</span>
-                <div className="pt-paso-cuerpo">
-                  <h3 className="pt-paso-titulo"><span className="pt-paso-icono">{p.icono}</span>{p.titulo}</h3>
-                  <p className="pt-paso-texto">{p.texto}</p>
-                </div>
-              </li>
+        {/* Lo principal de la página: entra con el héroe (no espera al scroll, que en pantallas bajas no llega). */}
+        <section id="pt-sistemas" className="pt-wrap" aria-labelledby="pt-sistemas-titulo">
+          <div className="pt-seccion-cabeza pt-entra" style={{ '--i': 4 } as CSSProperties}>
+            <TextoScroll id="pt-sistemas-titulo" className="pt-h2" texto="Dos sistemas, una sola puerta" />
+            <p className="pt-sub">Cada uno con su registro, sus convocatorias y su seguimiento.</p>
+          </div>
+          <div className="pt-sistemas">
+            {SISTEMAS.map((s, i) => (
+              <div key={s.id} id={`pt-sistema-${s.id}`} className="pt-sistema-marco pt-entra" style={{ '--i': 5 + i } as CSSProperties}>
+                <TarjetaSistema
+                  s={s}
+                  destacado={elegido?.sistema === s.id}
+                  atenuado={Boolean(elegido) && elegido?.sistema !== s.id}
+                  programas={s.id === 'sigae' ? sigae.programas.map((p) => p.nombre) : []}
+                />
+              </div>
             ))}
-          </ol>
+          </div>
         </section>
 
-        <section ref={accesosRef} className="pt-wrap pt-accesos pt-revela" data-visible={accesosVisible || undefined} aria-labelledby="pt-accesos-titulo">
-          <h2 id="pt-accesos-titulo" className="pt-h2">Accesos rápidos</h2>
-          <ul className="pt-accesos-lista">
-            {ACCESOS.map((a) => (
-              <li key={a.href}>
-                <Link href={a.href} className="pt-acceso">
-                  <span className="pt-acceso-icono">{a.icono}</span>
-                  <span className="pt-acceso-texto">
-                    <span className="pt-acceso-etiqueta">{a.etiqueta}</span>
-                    <span className="pt-acceso-detalle">{a.detalle}</span>
-                  </span>
-                  <ArrowRight className="pt-acceso-flecha" aria-hidden="true" />
-                </Link>
-              </li>
+        <section id="pt-guia" ref={guiaRef} className="pt-wrap pt-seccion pt-guia" data-visible={guiaVisible || undefined} aria-labelledby="pt-guia-titulo">
+          <AparecerScroll className="pt-guia-caja">
+            {/* 30 %: panel vino con las opciones en vidrio líquido (sin blur). */}
+            <div className="pt-guia-panel">
+              <div className="pt-guia-intro">
+                <h2 id="pt-guia-titulo" className="pt-h2">¿Cuál es para mí?</h2>
+                <p className="pt-sub">Elige lo que mejor te describe y te mostramos el sistema que te corresponde.</p>
+              </div>
+              <div ref={chipsRef} className="pt-chips" role="radiogroup" aria-label="¿Quién eres?" onKeyDown={teclaChips}>
+                {PERFILES.map((p, i) => {
+                  const activo = perfil === p.id;
+                  // Foco itinerante: solo la opción elegida (o la primera) entra con Tab; las flechas recorren el resto.
+                  const enfocable = activo || (!perfil && i === 0);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={activo}
+                      tabIndex={enfocable ? 0 : -1}
+                      className="pt-chip"
+                      data-tono={p.tono}
+                      style={{ '--k': i } as CSSProperties}
+                      onClick={() => elegir(p.id)}
+                    >
+                      {/* Una sola capa de vidrio que se desliza de una tarjeta a otra (muestra qué cambió). */}
+                      {activo && (
+                        <motion.span
+                          layoutId="pt-chip-activo"
+                          className="pt-chip-fondo"
+                          transition={reducir ? { duration: 0 } : { type: 'spring' as const, duration: 0.4, bounce: 0.15 }}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span className="pt-chip-contenido">
+                        <span className="pt-chip-icono">{p.icono}</span>
+                        <span className="pt-chip-texto">
+                          <span className="pt-chip-etiqueta">{p.etiqueta}</span>
+                          <span className="pt-chip-ayuda">{p.ayuda}</span>
+                        </span>
+                      </span>
+                      <span className="pt-chip-marca" aria-hidden="true"><Check /></span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {/* 60 %: lado crema donde aparece la tarjeta del sistema que corresponde (cambio con desvanecido). */}
+            <div id="pt-guia-resultado" className="pt-guia-resultado" data-sistema={elegido?.sistema} aria-live="polite">
+              <AnimatePresence mode="wait" initial={false}>
+                {elegido ? (
+                  <motion.div
+                    key={elegido.id}
+                    className="pt-resultado"
+                    data-sistema={elegido.sistema}
+                    initial={reducir ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.97 }}
+                    animate={reducir ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+                    exit={reducir ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.98, transition: { duration: 0.16, ease: [0.23, 1, 0.32, 1] } }}
+                    transition={{ duration: 0.34, ease: [0.23, 1, 0.32, 1] }}
+                  >
+                    <div className="pt-resultado-cabeza" style={{ '--n': 0 } as CSSProperties}>
+                      <span className="pt-resultado-icono">{SISTEMAS.find((s) => s.id === elegido.sistema)?.icono}</span>
+                      <div>
+                        <p className="pt-resultado-etiqueta">Te corresponde</p>
+                        <p className="pt-resultado-sigla">{elegido.sistema.toUpperCase()}</p>
+                      </div>
+                    </div>
+                    <p className="pt-resultado-nombre" style={{ '--n': 1 } as CSSProperties}>{SISTEMAS.find((s) => s.id === elegido.sistema)?.nombre}</p>
+                    <p className="pt-resultado-motivo" style={{ '--n': 2 } as CSSProperties}>{elegido.motivo}</p>
+                    <span className="pt-resultado-perfil" data-tono={elegido.tono} style={{ '--n': 3 } as CSSProperties}>
+                      <span className="pt-chip-icono">{elegido.icono}</span>Elegiste: {elegido.etiqueta}
+                    </span>
+                    <EnlaceSistema href={elegido.sistema === 'sigae' ? '/sigae' : '/sicei'} className="pt-cta" data-variante="principal">
+                      <span>Ir a {elegido.sistema.toUpperCase()}</span><ArrowRight className="pt-cta-flecha" aria-hidden="true" />
+                    </EnlaceSistema>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="vacio"
+                    className="pt-resultado-vacio"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0, transition: { duration: 0.14 } }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Sparkles aria-hidden="true" />
+                    <strong>Tu sistema aparecerá aquí</strong>
+                    <span>Toca una de las opciones para ver la recomendación.</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </AparecerScroll>
+        </section>
+
+        <section id="pt-pasos" className="pt-wrap pt-seccion pt-pasos" aria-labelledby="pt-pasos-titulo">
+          <div className="pt-seccion-cabeza">
+            <TextoScroll id="pt-pasos-titulo" className="pt-h2" texto="Cómo funciona" />
+            <p className="pt-sub">Tres pasos, del primer clic a tu proyecto en marcha. Baja para recorrerlos.</p>
+          </div>
+          <PasosSecuencia pasos={PASOS} />
+        </section>
+
+        <section className="pt-wrap pt-seccion pt-accesos" aria-labelledby="pt-accesos-titulo">
+          <div className="pt-seccion-cabeza">
+            <TextoScroll id="pt-accesos-titulo" className="pt-h2" texto="Accesos rápidos" />
+          </div>
+          <div className="pt-accesos-sistemas">
+            {ACCESOS.map((g) => (
+              <AparecerScroll key={g.sistema}><div className="pt-accesos-grupo" data-sistema={g.sistema}>
+                <div className="pt-accesos-cabeza">
+                  <span className="pt-sistema-icono">{g.icono}</span>
+                  <span className="pt-accesos-sigla"><strong>{g.sigla}</strong><span>{g.detalle}</span></span>
+                </div>
+                <ul className="pt-accesos-lista" aria-label={`Accesos de ${g.sigla}`}>
+                  {g.items.map((a) => (
+                    <li key={a.href}>
+                      <EnlaceSistema href={a.href} className="pt-acceso">
+                        <span className="pt-acceso-icono">{a.icono}</span>
+                        <span className="pt-acceso-texto">
+                          <span className="pt-acceso-etiqueta">{a.etiqueta}</span>
+                          <span className="pt-acceso-detalle">{a.detalle}</span>
+                        </span>
+                        <ArrowRight className="pt-acceso-flecha" aria-hidden="true" />
+                      </EnlaceSistema>
+                    </li>
+                  ))}
+                </ul>
+              </div></AparecerScroll>
             ))}
-          </ul>
+          </div>
         </section>
       </main>
 

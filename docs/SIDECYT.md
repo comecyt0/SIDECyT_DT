@@ -35,6 +35,17 @@ arriba la **franja institucional** oficial del Gobierno del Estado de México y 
 sistema es ese logo. Detalle: `docs/IDENTIDAD.md`. El portal (`/`) suma la sección "Cómo funciona" (3 pasos) y una señal
 en vivo con el número real de convocatorias abiertas o próximas (se oculta si no hay).
 
+**Rediseño del portal (E73, 15/10/2026, referencia "Family"; diseño en `docs/DISENO_UI.md` §21):** héroe con personajes
+de ciencia en SVG, «Dos sistemas, una sola puerta», «¿Cuál es para mí?» con tarjeta de resultado, «Cómo funciona» como
+secuencia ligada al scroll y **accesos rápidos por sistema** (pedido del usuario: solo apartados reales, 2-3 por sistema):
+
+| Sistema | Acceso | Destino |
+|---|---|---|
+| SIGAE | Convocatorias abiertas · Iniciar sesión · Crear cuenta | `/sigae#convocatorias` · `/login` · `/registro` |
+| SICEI | Convocatorias · Programas · Entrar o crear cuenta | `/sicei#convocatorias` · `/sicei#programas` · `/sicei/portal` |
+
+Si SICEI cambia los anclajes de su landing o la ruta de su portal, actualizar `ACCESOS` en `Portal.tsx`.
+
 ## 3. Regla: programas y convocatorias NO se escriben en el código
 
 Pedido explícito del usuario (25/09/2026): *"lo que tenga que ver con programas o convocatorias no debe estar

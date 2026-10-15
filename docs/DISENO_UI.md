@@ -736,3 +736,71 @@ Referencia completa de logos, colores, tipografía y favicons: **`docs/IDENTIDAD
 - **Regla de barras (aprendida de las capturas del usuario):** en toda barra, marca y grupo de acciones llevan
   `flex: none`; lo que no quepa se reduce por pasos (texto corto, solo ícono) con `aria-label` completo — nunca se deja
   que el navegador encoja y encime. Verificar con la auditoría de encimados, no solo con scroll horizontal.
+
+## 21. Portal SIDECyT con la referencia "Family" — E73, 15/10/2026
+
+Pedido del usuario: rediseñar **solo el portal `/`** con el `design.md` de Family (family.co: lienzo crema, superficies
+con contorno interior de 1 px, personajes ilustrados) sin alterar logos ni colores institucionales; vino como color
+principal y el resto con la misma saturación; animaciones e interacción en toda la página. Skills: hallmark,
+frontend-design, ui-ux-pro-max, emil-design-eng. Código: `components/portal/Portal.tsx`, `portal.css` (tokens en
+`.pt-root`, sello Hallmark al inicio), `IlustracionesCiencia.tsx` y `ScrollPortal.tsx`.
+
+**Decisiones del usuario (cuestionarios y correcciones del día):**
+- Alcance: solo el portal (`/sigae`, login, paneles y SICEI no cambian).
+- Paleta derivada del vino: vino `#56212F` (botón principal en lugar del negro de Family), ocre `#BC955B` (dorado
+  oficial), ciruela `#4E2E5C`, terracota `#A4502F`, guinda `#9F2241`, azul tinta `#2A4673`. **Sin verdes** (corrección:
+  el petróleo y el bosque se retiraron). Neutros cálidos de Family (`#fbfaf9`, `#f2f0ed`, `#f6f4ef`, `#343433`,
+  `#474645`; gris tenue `#6f6e6c` para AA).
+- **Pasteles de detalle** para no saturar de vino: cielo `#e6edf7`, lavanda `#eee7f3`, durazno `#fbe8de`, mantequilla
+  `#faf0d9`, rosa `#f7e5ea`. Cada tono profundo tiene su pastel (azul→cielo, ciruela→lavanda, terracota→durazno,
+  ocre→mantequilla): los círculos de ícono son pastel con el ícono en el tono profundo; filas de acceso, programas,
+  insignias de estado y señal en vivo usan pastel; manchas pastel sólidas detrás de los personajes del héroe.
+- Ilustraciones: SVG propias de ciencia + confeti geométrico (matraz, foco, engrane, átomo; estrellas, hojas, medias
+  lunas, +, círculos). **Sin movimiento con el mouse** (el paralaje con el puntero se quitó a pedido del usuario);
+  conservan su animación propia (flotar, parpadear, saludar, burbujas, giro lento).
+- Tipografía: Gotham oficial + Inter. Gotham es comercial y **no se descargó** (sin licencia ni origen confiable); la
+  pila `--font-titulos` la pone primero y cae a Montserrat. **Inter 4.1** (OFL) del release oficial `rsms/inter`,
+  auto-hospedada (`src/fonts/Inter-Variable.woff2`, `lib/fonts.ts` `inter`); solo la importa `app/page.tsx`.
+- Barra **homologada a Family**: plana, ancho completo, fondo crema, marca a la izquierda, secciones al centro, botón
+  fantasma «Sitio COMECYT ↗» y píldora vino «Entrar»; al bajar aparece una línea fina y la **barra de progreso** vino.
+- «¿Cuál es para mí?» con **regla 60-30-10**: 60 % crema/blanco (caja y lado del resultado), 30 % vino (panel de
+  opciones), 10 % acentos (círculos pastel, aro arena de la elegida). Opciones como tarjetas de **vidrio líquido sin
+  blur** (translúcidas, brillo interior, filo de luz que cruza al pasar el cursor), entrada escalonada; la **tarjeta del
+  sistema que corresponde aparece con desvanecido** al elegir y cambia con desvanecido al elegir otra (AnimatePresence
+  `mode="wait"`, entrada 340 ms, salida 160 ms, hijos escalonados 50 ms). En teléfono, al elegir se desplaza a la tarjeta.
+- **Franja institucional alineada a la izquierda** en el portal, con el mismo margen que la barra y el contenido (16 px en
+  teléfono; el borde del contenedor de 1200 px en escritorio). La línea dorada sigue a todo lo ancho. Solo en el portal:
+  /sigae, acceso y legales la conservan centrada.
+- «Accesos rápidos» por sistema (3 por sistema, solo apartados reales): SIGAE → convocatorias abiertas, iniciar
+  sesión, crear cuenta; SICEI → `/sicei#convocatorias`, `/sicei#programas`, `/sicei/portal` (siempre `<a>`).
+
+**Efectos ligados al scroll (`ScrollPortal.tsx`, framer-motion `useScroll`/`useTransform`, solo transform/opacity):**
+- Héroe que se **desvanece y sube** al bajar (los personajes un poco antes que el texto).
+- Títulos de sección que **se escriben palabra por palabra** con el scroll (`TextoScroll`; el texto completo queda en
+  el DOM para lectores de pantalla).
+- Bloques que **se construyen** al entrar (suben, se aclaran, toman escala) y regresan al subir (`AparecerScroll`).
+- **«Cómo funciona» como secuencia fijada** (escritorio ≥ 960 px: pista de 260vh con la escena `sticky`): camino dorado
+  que se dibuja, estaciones 1-2-3 que se encienden, engrane que gira, matraz que se llena, confeti al final; el paso
+  activo de la lista y su línea de avance siguen al scroll. Es un *image sequence* hecho con vectores (nítido, sin
+  descargar fotogramas). Si se quiere una secuencia con fotos reales, hacen falta los fotogramas del usuario.
+- Barra de progreso de lectura.
+- Reglas: nada se oculta antes de montar (sin JS la página es legible); con `prefers-reduced-motion` no hay efectos de
+  scroll ni animaciones (todo visible y estático); todo es reversible al subir.
+
+**Retirado:** la órbita del héroe (E51), el fondo con halos/retícula y los degradados del pie (Family). `OrbitaSistemas.tsx`
+quedó sin uso; no se borró (pendiente de confirmación del usuario).
+
+**Trampas encontradas (no repetir):**
+- `animation-fill-mode: both` en un elemento que también tiene `transform` en `:hover`/`:active` deja el transform de la
+  animación fijo y anula el hover: usar `backwards` (tarjetas de opción, hijos del resultado).
+- Un revelado por IntersectionObserver con umbral 15 % no se dispara si el bloque apenas asoma en pantallas bajas: lo
+  principal (sistemas) entra con la orquestación del héroe, no con el scroll.
+- El lint del compilador de React marca leer `hook().ref` en el render: desestructurar el resultado del hook.
+- Las capturas `fullPage` de Playwright se toman desde arriba: los bloques ligados al scroll salen pálidos ahí; revisar
+  con capturas de ventana tras desplazarse.
+
+**Verificación:** tsc 0 errores, eslint 0 errores; Edge por dominio a 320/375/390/414/768/1024/1440 y con movimiento
+reducido: sin scroll horizontal, nada fuera de la ventana, ningún botón ni etiqueta en dos líneas, 0 errores de
+consola/CSP; secuencia: paso activo 1→2→3 con el scroll en 1440 y 390 px; héroe con opacidad 0.22 a 500 px de scroll;
+tarjeta de resultado SIGAE→SICEI al cambiar de opción. Destinos `/sicei`, `/sicei/portal`, `/sigae`, `/login`,
+`/registro` → 200. Scripts en el scratchpad de la sesión (`verif_portal.mjs`, `verif_scroll.mjs`).

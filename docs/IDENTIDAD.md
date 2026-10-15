@@ -49,6 +49,11 @@ El vino del texto del logotipo se verificó midiendo los píxeles del PNG oficia
   `src/fonts/Montserrat-Variable.woff2` (subconjunto latino, cubre español) con su licencia `LICENSE-OFL-Montserrat.txt`.
 - Pila: `--font-titulos: 'Gotham', var(--font-montserrat), 'Montserrat', …` (globals.css). Si COMECYT entrega los
   archivos oficiales de Gotham con licencia web, se agregan en `lib/fonts.ts` y todo el sistema los toma.
+- **15/10/2026 (E73):** el usuario pidió "Gotham oficial + Inter" para el portal y que se descargara Gotham. **No se
+  descargó:** es comercial (Hoefler&Co/Monotype) y no hay fuente oficial gratuita; una copia de terceros sería sin
+  licencia y de origen no confiable. Se pide a Comunicación Social (kit MAT DIGITAL 2026). Mientras, Montserrat.
+- **Inter 4.1** (SIL OFL 1.1, `src/fonts/Inter-Variable.woff2` + `LICENSE-OFL-Inter.txt`, del release oficial
+  `rsms/inter`) es el texto corrido **solo del portal `/`** (variable `--font-inter`). El resto del sistema sigue en Switzer.
 - Se aplica a: `h1–h3` (capa base, cualquier clase con fuente propia gana), `--sg-font-display` (paneles),
   `--font-basier-circle` (landing), `--pt-display` (portal) y `.auth-banner-title`.
 - **Nunca** desde Google Fonts ni CDN (la CSP solo permite `font-src 'self'` y el servidor no los alcanza).

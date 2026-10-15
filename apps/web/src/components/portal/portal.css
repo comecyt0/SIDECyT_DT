@@ -1,119 +1,169 @@
-/* Hallmark · page: portal de sistemas COMECYT (/) · genre: modern-minimal institucional · theme: studied-DNA (landing SIGAE)
- * macrostructure: héroe con pregunta + dos "puertas" (tarjetas de sistema) + selector guiado + accesos + pie Ft3 (columnas)
- * color: tinta navy + papel; vino no saturado SOLO en detalles (subrayado, puntos, foco, íconos); pastel por sistema
- * motion: una entrada escalonada; luz que sigue al puntero y ligera inclinación (solo puntero fino y sin reduced-motion)
- * Hallmark · pre-emit critique: P5 H5 E4 S5 R4 V4
+/* Hallmark · page: portal SIDECyT (/) · genre: playful institucional · theme: studied-DNA (source: design.md "Family",
+ *   family.co, entregado por el usuario el 15/10/2026) adaptado a la identidad COMECYT 2026
+ * paper oklch(98.4% 0.003 75) #fbfaf9 · accent vino oficial #56212F (botón principal en lugar del negro de Family)
+ * acentos derivados del vino (mismo croma bajo): azul tinta #2A4673 (sin verdes, 15/10) · ocre #BC955B (dorado oficial)
+ *   · ciruela #4E2E5C · terracota #A4502F · error guinda #9F2241 — decisión del usuario
+ * display: Gotham (si se instala) → Montserrat 600, roman, tracking cerrado · body: Inter 400/500/600
+ * macrostructure: héroe centrado con grupos de ilustración a los lados + tarjetas con contorno fino + tarjeta oscura
+ *   de acción ("¿Cuál es para mí?") + pasos + accesos + pie vino plano
+ * motion: entrada escalonada · personajes que flotan, parpadean y saludan · paralaje con resorte (solo puntero fino)
+ * Hallmark · pre-emit critique: P5 H5 E4 S5 R4 V5
  *
+ * Reglas Family respetadas: sin degradados, superficies con contorno interior de 1 px (#f2f0ed) en vez de sombras,
+ * radio 10 px en tarjetas y barra, píldoras solo en botones/insignias, sombra máxima suave al pasar el cursor.
  * Todo bajo `.pt-root`: los tokens no se declaran en :root (no chocan con --auth-*, --app-*, .lp-*).
  */
 
 .pt-root {
-  --pt-tinta: #08304c;
-  --pt-tinta-2: #3d5566;
-  --pt-papel: #fafafa;
+  /* Superficies (Family) */
+  --pt-lienzo: #fbfaf9;
+  --pt-piedra: #f2f0ed;
+  --pt-arena-sup: #f6f4ef;
   --pt-blanco: #ffffff;
-  --pt-niebla: #eef1f4;
-  --pt-linea: #e3e7eb;
-  --pt-vino: #56212f; /* vino oficial COMECYT 2026 (E50) */
+  --pt-oscuro: #121212;
+  /* Texto (Family, cálidos) */
+  --pt-titulo: #343433;
+  --pt-cuerpo: #474645;
+  --pt-tenue: #6f6e6c; /* #7e7e7d de Family oscurecido para AA (4.9:1 sobre el lienzo) */
+  --pt-borde-deco: #e5d5c3;
+  --pt-trazo: #343433;
+  /* Identidad COMECYT 2026 */
+  --pt-vino: #56212f;
+  --pt-vino-hover: #44192a;
   --pt-dorado: #bc955b;
   --pt-arena: #ddc8a4;
-  --pt-vino-suave: oklch(52% 0.08 4);
-  --pt-vino-lavado: oklch(96.5% 0.014 358);
-  --pt-vino-borde: oklch(45% 0.07 358 / 0.35);
-  --pt-cielo: #e8f1ff;
-  --pt-cielo-tinta: #0b3f8a;
-  --pt-menta: #dcf7e6;
-  --pt-menta-tinta: #0b5a2a;
-  --pt-mantequilla: #fff4d6;
-  --pt-sombra: rgba(8, 48, 76, 0.06) 0 1px 2px, rgba(8, 48, 76, 0.06) 0 12px 28px -12px;
-  --pt-sombra-alta: rgba(8, 48, 76, 0.08) 0 2px 4px, rgba(8, 48, 76, 0.14) 0 28px 56px -24px;
+  /* Acentos derivados del vino (decisión del usuario 15/10/2026) */
+  --pt-azul: #2a4673;
+  /* Pasteles de detalle (15/10: sin verdes y sin saturar de vino): fondo de círculos, filas y señales. */
+  --pt-pastel-cielo: #e6edf7;
+  --pt-pastel-lavanda: #eee7f3;
+  --pt-pastel-durazno: #fbe8de;
+  --pt-pastel-mantequilla: #faf0d9;
+  --pt-pastel-rosa: #f7e5ea;
+  --pt-ocre: #bc955b;
+  --pt-ocre-texto: #7d5a1f; /* ocre legible como texto (AA sobre blanco) */
+  --pt-ciruela: #4e2e5c;
+  --pt-terracota: #a4502f;
+  --pt-guinda: #9f2241;
+  /* Lavados 8–12 % y tintes de ilustración */
+  --pt-lavado-vino: color-mix(in oklab, var(--pt-vino) 9%, var(--pt-blanco));
+  --pt-lavado-azul: color-mix(in oklab, var(--pt-azul) 10%, var(--pt-blanco));
+  --pt-lavado-ocre: color-mix(in oklab, var(--pt-ocre) 16%, var(--pt-blanco));
+  --pt-lavado-ciruela: color-mix(in oklab, var(--pt-ciruela) 10%, var(--pt-blanco));
+  --pt-lavado-terracota: color-mix(in oklab, var(--pt-terracota) 11%, var(--pt-blanco));
+  --pt-tinte-azul: color-mix(in oklab, var(--pt-azul) 38%, var(--pt-lienzo));
+  --pt-tinte-azul-fuerte: color-mix(in oklab, var(--pt-azul) 62%, var(--pt-lienzo));
+  --pt-tinte-ocre: color-mix(in oklab, var(--pt-ocre) 58%, var(--pt-lienzo));
+  --pt-tinte-ciruela: color-mix(in oklab, var(--pt-ciruela) 36%, var(--pt-lienzo));
+  --pt-tinte-terracota: color-mix(in oklab, var(--pt-terracota) 48%, var(--pt-lienzo));
+  --pt-tinte-vino: color-mix(in oklab, var(--pt-vino) 55%, var(--pt-lienzo));
+  /* Elevación (Family) */
+  --pt-hairline: inset 0 0 0 1px var(--pt-piedra);
+  --pt-hairline-fuerte: inset 0 0 0 1px #e7e3de;
+  --pt-sombra-suave: 0 1px 6px 0 rgba(0, 0, 0, 0.04), 0 0 24px 0 rgba(0, 0, 0, 0.05);
+  --pt-sombra-oscura: 0 0 24px 0 rgba(0, 0, 0, 0.15);
+  /* Tipografía */
   --pt-display: var(--font-titulos);
-  --pt-texto: var(--font-lp-text), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --pt-texto: var(--font-inter), 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Movimiento */
   --pt-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --pt-ease-mov: cubic-bezier(0.77, 0, 0.175, 1);
+  --pt-radio: 10px;
 
   color-scheme: light;
   position: relative;
   isolation: isolate;
   min-height: 100vh;
   overflow-x: clip;
-  background: var(--pt-papel);
-  color: var(--pt-tinta);
+  background: var(--pt-lienzo);
+  color: var(--pt-cuerpo);
   font-family: var(--pt-texto);
   font-size: 16px;
-  line-height: 1.55;
+  line-height: 1.5;
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
 }
 .pt-root *, .pt-root *::before, .pt-root *::after { box-sizing: border-box; }
 .pt-root :where(h1, h2, h3, p) { margin: 0; }
 .pt-root :where(ul, ol) { margin: 0; padding: 0; list-style: none; }
-/* :where() deja este reinicio con especificidad (0,1,0): antes `.pt-root a` (0,1,1) le ganaba a `.pt-cta { color }` y el
-   botón principal quedaba con texto navy sobre fondo navy (invisible). */
+/* :where() deja el reinicio con especificidad (0,1,0) para que las clases de botón ganen (E48). */
 .pt-root :where(a) { color: inherit; text-decoration: none; }
 .pt-root :focus-visible { outline: 2px solid var(--pt-vino); outline-offset: 3px; border-radius: 12px; }
 .pt-root svg { width: 1.1em; height: 1.1em; flex: none; }
 
-.pt-wrap { width: 100%; max-width: 1180px; margin-inline: auto; padding-inline: 16px; }
+.pt-wrap { width: 100%; max-width: 1200px; margin-inline: auto; padding-inline: 16px; }
 @media (min-width: 640px) { .pt-wrap { padding-inline: 32px; } }
 
 .pt-saltar {
   position: absolute; left: 16px; top: -80px; z-index: 60; padding: 8px 16px; border-radius: 9999px;
-  background: var(--pt-tinta); color: var(--pt-blanco); font-weight: 600;
+  background: var(--pt-vino); color: var(--pt-blanco); font-weight: 600;
 }
 .pt-saltar:focus-visible { top: 16px; }
 
-/* ─────────── Fondo vivo ─────────── */
-.pt-fondo { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; --px: 50vw; --py: 30vh; }
-.pt-fondo-reticula {
-  position: absolute; inset: -2px;
-  background-image: radial-gradient(circle at 1px 1px, rgba(8, 48, 76, 0.10) 1px, transparent 0);
-  background-size: 28px 28px;
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+/* ─────────── Barra (Family: barra plana de ancho completo; logo a la izquierda, secciones al centro, botón
+   fantasma + píldora a la derecha). Al desplazarse aparece una línea fina abajo; nunca sombra fuerte. ─────────── */
+.pt-barra {
+  position: sticky; top: 0; z-index: 40; background: var(--pt-lienzo);
+  box-shadow: 0 1px 0 transparent; transition: box-shadow 240ms var(--pt-ease);
 }
-.pt-fondo-halo { position: absolute; width: 42vmax; height: 42vmax; border-radius: 50%; filter: blur(70px); opacity: 0.55; }
-.pt-fondo-halo-a { top: -14vmax; left: -10vmax; background: var(--pt-cielo); animation: pt-deriva 22s ease-in-out infinite alternate; }
-.pt-fondo-halo-b { top: 8vmax; right: -14vmax; background: var(--pt-vino-lavado); animation: pt-deriva 26s ease-in-out infinite alternate-reverse; }
-/* Halo que sigue al puntero: se mueve con transform (sin repintar el fondo). */
-.pt-fondo-puntero {
-  position: absolute; left: 0; top: 0; width: 520px; height: 520px; margin: -260px 0 0 -260px; border-radius: 50%;
-  background: radial-gradient(circle, oklch(36% 0.1 358 / 0.07), transparent 65%);
-  transform: translate3d(var(--px), var(--py), 0); opacity: 0; transition: opacity 400ms ease;
-}
-.pt-fondo[data-vivo] .pt-fondo-puntero { opacity: 1; }
-@keyframes pt-deriva { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(4vmax, 3vmax, 0) scale(1.08); } }
-
-/* ─────────── Barra ─────────── */
-.pt-barra { position: sticky; top: 12px; z-index: 40; margin-top: 12px; }
+.pt-barra[data-desplazado] { box-shadow: 0 1px 0 var(--pt-piedra); }
 .pt-barra-fila {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  min-height: 68px; padding-block: 8px; border-radius: 9999px; background: rgba(255, 255, 255, 0.86);
-  box-shadow: var(--pt-sombra); -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 68px;
+  transition: min-height 240ms var(--pt-ease);
 }
-@media (min-width: 640px) { .pt-barra-fila { padding-inline: 24px; } }
-.pt-marca { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.pt-marca img { height: 46px; width: auto; }
-.pt-marca-texto {
-  padding-left: 14px; border-left: 1px solid var(--pt-linea); font-family: var(--pt-display); font-weight: 600;
-  font-size: 15px; white-space: nowrap;
+@media (min-width: 1040px) {
+  .pt-barra-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .pt-barra-acciones { justify-self: end; }
 }
-.pt-marca-texto strong { display: block; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.1; }
-.pt-marca-sub { display: block; font-size: 12px; font-weight: 500; color: var(--pt-tinta-2); }
-.pt-heroe-eyebrow strong { color: var(--pt-tinta); font-weight: 800; }
-.pt-barra-enlace {
-  display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 9999px;
-  font-size: 14px; font-weight: 600; color: var(--pt-tinta-2); white-space: nowrap;
-  transition: background-color 200ms ease, color 200ms ease;
+.pt-barra[data-desplazado] .pt-barra-fila { min-height: 60px; }
+.pt-barra-acciones { display: flex; align-items: center; gap: 4px; flex: none; }
+/* Botón fantasma (Family "Ghost Nav Button"): sin fondo ni borde. */
+.pt-boton-fantasma {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 12px; border-radius: 9999px;
+  font-size: 14px; font-weight: 500; color: var(--pt-titulo); white-space: nowrap;
+  transition: background-color 180ms ease, transform 160ms var(--pt-ease);
 }
-.pt-barra-enlace:hover { background: var(--pt-vino-lavado); color: var(--pt-vino); }
-/* 28/09/2026 (captura del usuario en iPhone): el enlace "comecyt.edomex.gob.mx" se montaba sobre "SIDECyT". La marca
-   ya no se encoge; bajo 640 px el enlace queda como botón redondo solo con el ícono (nombre accesible en aria-label). */
-.pt-marca { flex: none; }
-.pt-barra-enlace { flex: none; }
+.pt-boton-fantasma svg { width: 15px; height: 15px; color: var(--pt-tenue); transition: transform 220ms var(--pt-ease); }
+@media (hover: hover) and (pointer: fine) {
+  .pt-boton-fantasma:hover { background: var(--pt-piedra); }
+  .pt-boton-fantasma:hover .pt-boton-fantasma-flecha { transform: translate(2px, -2px); }
+}
+.pt-boton-fantasma:active { transform: scale(0.97); }
 @media (max-width: 640px) {
-  .pt-barra-enlace { width: 44px; height: 44px; padding: 0; justify-content: center; background: var(--pt-vino-lavado); color: var(--pt-vino); }
-  .pt-barra-enlace-texto { display: none; }
-  .pt-barra-fila { padding-inline: 12px 8px; }
+  .pt-boton-fantasma { width: 44px; min-height: 44px; padding: 0; justify-content: center; }
+  .pt-boton-fantasma-texto, .pt-boton-fantasma-flecha { display: none; }
+  .pt-boton-fantasma svg { width: 19px; height: 19px; color: var(--pt-titulo); }
 }
+@media (max-width: 379px) { .pt-boton-fantasma { display: none; } }
+.pt-marca { display: flex; align-items: center; gap: 14px; min-width: 0; flex: none; }
+.pt-marca img { height: 44px; width: auto; }
+.pt-marca-texto { padding-left: 14px; border-left: 1px solid var(--pt-piedra); white-space: nowrap; }
+.pt-marca-texto strong {
+  display: block; font-family: var(--pt-display); font-size: 17px; font-weight: 700; letter-spacing: -0.02em;
+  line-height: 1.1; color: var(--pt-oscuro);
+}
+.pt-marca-sub { display: block; font-size: 12px; font-weight: 500; color: var(--pt-tenue); letter-spacing: -0.001em; }
+.pt-barra-nav { display: none; align-items: center; gap: 2px; }
+@media (min-width: 1040px) { .pt-barra-nav { display: flex; } }
+.pt-barra-nav a {
+  position: relative; padding: 8px 12px; border-radius: 9999px; font-size: 14px; font-weight: 500; color: var(--pt-titulo);
+  transition: background-color 180ms ease, color 180ms ease;
+}
+@media (hover: hover) and (pointer: fine) { .pt-barra-nav a:hover { background: var(--pt-piedra); color: var(--pt-oscuro); } }
+.pt-barra-nav a:active { transform: scale(0.97); }
+/* Píldora principal de la barra (Family "Dark Pill Button", en vino). */
+.pt-boton-barra {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 16px;
+  border-radius: 32px; background: var(--pt-vino); color: var(--pt-blanco); font-size: 14px; font-weight: 600;
+  white-space: nowrap; transition: background-color 180ms ease, transform 160ms var(--pt-ease);
+}
+.pt-boton-barra svg { width: 15px; height: 15px; transition: transform 220ms var(--pt-ease); }
+@media (hover: hover) and (pointer: fine) {
+  .pt-boton-barra:hover { background: var(--pt-vino-hover); }
+  .pt-boton-barra:hover svg { transform: translateY(2px); }
+}
+.pt-boton-barra:active { transform: scale(0.97); }
+@media (max-width: 640px) { .pt-boton-barra { min-height: 44px; padding-inline: 14px; } }
 @media (max-width: 520px) {
   .pt-marca img { height: 36px; }
   .pt-marca { gap: 10px; }
@@ -122,468 +172,523 @@
 }
 @media (max-width: 340px) { .pt-marca img { height: 30px; } .pt-marca-texto strong { font-size: 15px; } }
 
-/* ─────────── Héroe ─────────── */
-.pt-heroe { padding-top: clamp(40px, 8vw, 88px); padding-bottom: clamp(28px, 4vw, 44px); max-width: 1180px; }
-.pt-heroe-eyebrow {
-  display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 9999px;
-  background: var(--pt-blanco); box-shadow: var(--pt-sombra); font-size: 13px; font-weight: 600; color: var(--pt-tinta-2);
+/* ─────────── Héroe: texto centrado entre dos grupos de ilustración ─────────── */
+.pt-heroe {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center;
+  padding-top: clamp(28px, 6vw, 72px); padding-bottom: clamp(48px, 7vw, 96px);
 }
-.pt-heroe-eyebrow svg { color: var(--pt-vino); }
+@media (min-width: 1100px) {
+  .pt-heroe { grid-template-columns: minmax(0, 1fr) minmax(0, 620px) minmax(0, 1fr); align-items: center; gap: 24px; }
+}
+.pt-heroe-centro { display: grid; justify-items: center; text-align: center; min-width: 0; max-width: 680px; }
+.pt-heroe-lado { display: none; min-width: 0; width: 100%; max-width: 300px; }
+.pt-heroe-lado-izq { justify-self: start; }
+.pt-heroe-lado-der { justify-self: end; }
+@media (min-width: 1100px) { .pt-heroe-lado { display: block; } .pt-heroe-compacto { display: none; } }
+.pt-heroe-compacto { width: min(100%, 360px); margin-bottom: 8px; }
+
+.pt-sello {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 6px 14px 6px 6px; border-radius: 9999px;
+  background: var(--pt-blanco); box-shadow: var(--pt-hairline-fuerte); font-size: 13px; font-weight: 500; color: var(--pt-cuerpo);
+  line-height: 1.35; text-align: left;
+}
+.pt-sello-sigla {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px;
+  background: var(--pt-vino); color: var(--pt-blanco); font-family: var(--pt-display); font-weight: 700; font-size: 12.5px; letter-spacing: 0.01em;
+}
+.pt-sello-sigla svg { width: 13px; height: 13px; color: var(--pt-arena); }
+@media (max-width: 560px) { .pt-sello { border-radius: 18px; padding-block: 6px; } }
+
 .pt-titulo {
-  margin-top: 20px; max-width: 16ch; font-family: var(--pt-display); font-weight: 700;
-  font-size: clamp(38px, 7vw, 76px); line-height: 1.02; letter-spacing: -0.035em; overflow-wrap: anywhere;
+  margin-top: 22px; max-width: 15ch; font-family: var(--pt-display); font-weight: 600; color: var(--pt-oscuro);
+  font-size: clamp(40px, 6.4vw, 68px); line-height: 1.08; letter-spacing: -0.031em; overflow-wrap: anywhere; min-width: 0;
 }
-/* Subrayado vino dibujado (no cambia color ni estilo de la palabra). */
-.pt-subrayado { position: relative; white-space: nowrap; }
-.pt-subrayado::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: 0.02em; height: 0.12em; border-radius: 9999px;
-  background: linear-gradient(90deg, var(--pt-vino), var(--pt-vino-suave)); opacity: 0.75;
-  transform-origin: left; transform: scaleX(1);
+/* Palabra destacada: color vino + subrayado dibujado (sin itálica ni degradado). */
+.pt-subrayado { position: relative; color: var(--pt-vino); white-space: nowrap; }
+.pt-subrayado-trazo {
+  position: absolute; left: -2%; right: -2%; bottom: -0.16em; width: 104%; height: 0.32em; overflow: visible;
+  pointer-events: none;
 }
-.pt-root[data-listo] .pt-subrayado::after { animation: pt-trazo 900ms var(--pt-ease) 700ms both; }
-@keyframes pt-trazo { from { transform: scaleX(0.02); } to { transform: scaleX(1); } }
+.pt-root .pt-subrayado-trazo { width: 104%; height: 0.32em; }
+.pt-subrayado-trazo path { fill: none; stroke: var(--pt-dorado); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.pt-root:not([data-listo]) .pt-subrayado-trazo path { stroke-dashoffset: 1; }
+.pt-root[data-listo] .pt-subrayado-trazo path { animation: pt-trazo 900ms var(--pt-ease) 650ms both; }
+@keyframes pt-trazo { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @media (max-width: 420px) { .pt-subrayado { white-space: normal; } }
-.pt-heroe-texto { margin-top: 18px; max-width: 60ch; font-size: clamp(16px, 1.6vw, 19px); color: var(--pt-tinta-2); }
+.pt-heroe-texto { margin-top: 20px; max-width: 56ch; font-size: clamp(16px, 1.5vw, 17px); line-height: 1.53; color: var(--pt-cuerpo); letter-spacing: -0.013em; }
+.pt-heroe-texto strong { color: var(--pt-titulo); font-weight: 600; }
+.pt-heroe-acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 28px; }
+@media (max-width: 480px) { .pt-heroe-acciones { width: 100%; } .pt-heroe-acciones .pt-cta { flex: 1 1 100%; justify-content: center; } }
 
 /* Entrada escalonada (una sola orquestación). Sin JS o con movimiento reducido: todo visible. */
 .pt-entra { opacity: 1; }
-.pt-root:not([data-listo]) .pt-entra { opacity: 0; transform: translateY(14px); }
-.pt-root[data-listo] .pt-entra { animation: pt-aparece 700ms var(--pt-ease) both; animation-delay: calc(var(--i, 0) * 80ms); }
-@keyframes pt-aparece { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.pt-root:not([data-listo]) .pt-entra { opacity: 0; transform: translateY(12px); }
+.pt-root[data-listo] .pt-entra { animation: pt-aparece 640ms var(--pt-ease) both; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes pt-aparece { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+/* Grupos de ilustración: aparecen desde 0.92 (nunca desde cero) después del texto. */
+.pt-root:not([data-listo]) .pt-ilus-entra { opacity: 0; transform: scale(0.92); }
+.pt-root[data-listo] .pt-ilus-entra { animation: pt-ilus-aparece 900ms var(--pt-ease) both; animation-delay: calc(var(--i, 0) * 70ms + 120ms); }
+@keyframes pt-ilus-aparece { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: none; } }
 
-/* ─────────── Tarjetas de sistema ─────────── */
-.pt-sistemas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
-@media (min-width: 880px) { .pt-sistemas { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; } }
-.pt-sistema-marco { display: flex; min-width: 0; }
-.pt-sistema {
-  --mx: 50%; --my: 0%;
-  --acento: var(--pt-cielo); --acento-tinta: var(--pt-cielo-tinta);
-  position: relative; display: flex; flex-direction: column; width: 100%; min-width: 0;
-  padding: clamp(24px, 3.4vw, 40px); border-radius: 32px; background: var(--pt-blanco);
-  box-shadow: var(--pt-sombra); overflow: hidden; transform-style: preserve-3d;
-  transition: box-shadow 320ms var(--pt-ease), opacity 320ms var(--pt-ease), scale 320ms var(--pt-ease);
+/* ─────────── Botones (Family: píldora oscura → vino; píldora arena) ─────────── */
+.pt-cta {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 12px 20px; border-radius: 32px;
+  font-size: 15px; font-weight: 600; letter-spacing: -0.009em; line-height: 1.2; white-space: nowrap;
+  background: var(--pt-vino); color: var(--pt-blanco);
+  transition: background-color 180ms ease, box-shadow 180ms ease, transform 160ms var(--pt-ease);
 }
-.pt-sistema[data-sistema='sicei'] { --acento: var(--pt-menta); --acento-tinta: var(--pt-menta-tinta); }
-.pt-sistema::before {
-  /* Franja pastel del sistema, arriba. */
-  content: ''; position: absolute; inset: 0 0 auto 0; height: 132px; background: linear-gradient(180deg, var(--acento), transparent);
-  opacity: 0.8; pointer-events: none;
-}
-.pt-sistema-luz {
-  position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 300ms ease;
-  background: radial-gradient(360px circle at var(--mx) var(--my), oklch(36% 0.1 358 / 0.07), transparent 60%);
-}
+.pt-cta[data-variante='secundario'] { background: var(--pt-arena-sup); color: var(--pt-oscuro); box-shadow: var(--pt-hairline-fuerte); }
+.pt-cta-flecha { width: 16px; height: 16px; transition: transform 240ms var(--pt-ease); }
 @media (hover: hover) and (pointer: fine) {
-  .pt-sistema:hover { box-shadow: var(--pt-sombra-alta); }
-  .pt-sistema:hover .pt-sistema-luz { opacity: 1; }
+  .pt-cta:hover { background: var(--pt-vino-hover); }
+  .pt-cta[data-variante='secundario']:hover { background: var(--pt-piedra); }
+  .pt-cta:hover .pt-cta-flecha { transform: translateX(3px); }
+  .pt-cta:hover .pt-cta-flecha-abajo { transform: translateY(3px); }
 }
-.pt-sistema[data-destacado] { box-shadow: var(--pt-sombra-alta), 0 0 0 2px var(--pt-vino-borde); }
-.pt-sistema[data-atenuado] { opacity: 0.55; scale: 0.985; }
-.pt-sistema > * { position: relative; }
+.pt-cta:active { transform: scale(0.97); }
 
+/* ─────────── Señal en vivo (convocatorias reales) — insignia de estado Family ─────────── */
+.pt-senal {
+  display: inline-flex; align-items: center; gap: 10px; margin-top: 20px; padding: 7px 12px 7px 8px; border-radius: 9999px;
+  background: var(--pt-pastel-cielo); color: var(--pt-azul); font-size: 14px; font-weight: 500;
+  transition: transform 160ms var(--pt-ease), background-color 180ms ease;
+}
+.pt-senal[data-tipo='proximas'] { background: var(--pt-lavado-ocre); color: var(--pt-ocre-texto); }
+.pt-senal-punto { position: relative; width: 10px; height: 10px; flex: none; border-radius: 50%; background: currentColor; }
+.pt-senal-punto::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: inherit; opacity: 0.45; }
+@media (prefers-reduced-motion: no-preference) { .pt-senal-punto::after { animation: pt-onda 1.8s var(--pt-ease) infinite; } }
+@keyframes pt-onda { from { transform: scale(1); opacity: 0.45; } to { transform: scale(2.6); opacity: 0; } }
+.pt-contador { font-family: var(--pt-display); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pt-senal-flecha { width: 15px; height: 15px; transition: transform 220ms var(--pt-ease); }
+@media (hover: hover) and (pointer: fine) { .pt-senal:hover .pt-senal-flecha { transform: translateX(3px); } }
+.pt-senal:active { transform: scale(0.97); }
+
+/* ─────────── Encabezado de sección (centrado, Family) ─────────── */
+.pt-seccion { margin-top: clamp(72px, 9vw, 112px); }
+.pt-seccion-cabeza { display: grid; justify-items: center; gap: 10px; text-align: center; margin-bottom: 32px; }
+.pt-h2 {
+  font-family: var(--pt-display); font-weight: 600; color: var(--pt-oscuro); font-size: clamp(30px, 4vw, 44px);
+  line-height: 1.1; letter-spacing: -0.025em; overflow-wrap: anywhere; min-width: 0;
+}
+.pt-sub { max-width: 52ch; color: var(--pt-cuerpo); font-size: 17px; line-height: 1.5; }
+
+/* ─────────── Tarjetas de sistema (blanco + contorno interior, radio 10) ─────────── */
+.pt-sistemas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 880px) { .pt-sistemas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.pt-sistema-marco { display: flex; min-width: 0; scroll-margin-top: 110px; }
+.pt-sistema {
+  --tono: var(--pt-azul); --lavado: var(--pt-lavado-azul);
+  position: relative; display: flex; flex-direction: column; width: 100%; min-width: 0;
+  padding: clamp(24px, 3vw, 32px); border-radius: var(--pt-radio); background: var(--pt-blanco); box-shadow: var(--pt-hairline);
+  transition: box-shadow 260ms var(--pt-ease), opacity 260ms var(--pt-ease), transform 260ms var(--pt-ease);
+}
+.pt-sistema[data-sistema='sicei'] { --tono: var(--pt-ciruela); --lavado: var(--pt-lavado-ciruela); }
+@media (hover: hover) and (pointer: fine) {
+  .pt-sistema:hover { box-shadow: var(--pt-hairline), var(--pt-sombra-suave); transform: translateY(-2px); }
+  .pt-sistema:hover .pt-sistema-icono { transform: rotate(-6deg) scale(1.04); }
+}
+.pt-sistema[data-destacado] { box-shadow: inset 0 0 0 2px var(--pt-vino), var(--pt-sombra-suave); }
+.pt-sistema[data-atenuado] { opacity: 0.55; transform: scale(0.99); }
 .pt-sistema-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .pt-sistema-icono {
-  display: grid; place-items: center; width: 52px; height: 52px; border-radius: 18px;
-  background: var(--pt-blanco); color: var(--acento-tinta); box-shadow: var(--pt-sombra);
+  display: grid; place-items: center; width: 48px; height: 48px; border-radius: 40px; background: var(--tono); color: var(--pt-blanco);
+  transition: transform 300ms var(--pt-ease);
 }
-.pt-sistema-icono svg { width: 24px; height: 24px; }
+.pt-sistema-icono svg { width: 22px; height: 22px; }
 .pt-estado {
-  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 9999px;
-  background: var(--pt-blanco); font-size: 12.5px; font-weight: 700; color: var(--pt-tinta);
-  box-shadow: 0 0 0 1px var(--pt-linea);
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 9999px;
+  background: var(--pt-pastel-cielo); color: var(--pt-azul); font-size: 12.5px; font-weight: 600;
 }
-.pt-estado > span { width: 8px; height: 8px; border-radius: 50%; background: var(--pt-menta-tinta); box-shadow: 0 0 0 4px var(--pt-menta); }
-.pt-estado[data-estado='proximamente'] > span { background: var(--pt-vino); box-shadow: 0 0 0 4px var(--pt-vino-lavado); }
+.pt-estado > span { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pt-estado[data-estado='proximamente'] { background: var(--pt-lavado-ocre); color: var(--pt-ocre-texto); }
 @media (prefers-reduced-motion: no-preference) {
   .pt-estado[data-estado='disponible'] > span { animation: pt-latido 2.4s ease-in-out infinite; }
 }
-@keyframes pt-latido { 50% { box-shadow: 0 0 0 7px var(--pt-menta); } }
-
+@keyframes pt-latido { 50% { opacity: 0.35; } }
 .pt-sigla {
-  margin-top: 28px; font-family: var(--pt-display); font-weight: 800; font-size: clamp(48px, 8vw, 84px);
-  line-height: 0.95; letter-spacing: -0.04em; color: var(--pt-tinta);
+  margin-top: 28px; font-family: var(--pt-display); font-weight: 600; color: var(--pt-oscuro);
+  font-size: clamp(44px, 6vw, 68px); line-height: 1; letter-spacing: -0.035em;
 }
-.pt-nombre { margin-top: 10px; font-family: var(--pt-display); font-weight: 600; font-size: clamp(17px, 1.9vw, 21px); line-height: 1.3; }
-.pt-para { margin-top: 12px; color: var(--pt-tinta-2); max-width: 52ch; }
+.pt-nombre { margin-top: 10px; font-size: 19px; font-weight: 500; line-height: 1.35; letter-spacing: -0.016em; color: var(--pt-titulo); }
+.pt-para { margin-top: 10px; color: var(--pt-cuerpo); max-width: 52ch; font-size: 16px; }
 .pt-puntos { display: grid; gap: 10px; margin-top: 20px; margin-bottom: 28px; }
-.pt-puntos li { display: flex; gap: 12px; align-items: baseline; font-size: 15px; }
-.pt-puntos li::before {
-  content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--pt-vino); transform: translateY(-2px);
-}
-
-/* E49: programas vigentes (en vivo desde el panel) dentro de la tarjeta. */
-.pt-programas { margin: -8px 0 28px; padding: 14px 16px; border-radius: 18px; background: var(--pt-papel); }
-.pt-programas-titulo { font-size: 12.5px; font-weight: 700; color: var(--acento-tinta); }
+.pt-puntos li { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; color: var(--pt-titulo); }
+.pt-puntos li svg { width: 18px; height: 18px; margin-top: 1px; color: var(--tono); }
+/* Programas vigentes (en vivo desde /admin/sitio, E49) en superficie arena. */
+.pt-programas { margin: -8px 0 28px; padding: 14px 16px; border-radius: 12px; background: var(--pt-arena-sup); }
+.pt-programas-titulo { font-size: 13px; font-weight: 600; color: var(--tono); }
 .pt-programas-lista { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .pt-programas-lista li {
-  max-width: 100%; padding: 5px 10px; border-radius: 9999px; background: var(--pt-blanco); box-shadow: 0 0 0 1px var(--pt-linea);
-  font-size: 12.5px; line-height: 1.3; overflow-wrap: anywhere;
+  max-width: 100%; padding: 4px 10px; border-radius: 6px; background: var(--pt-blanco); box-shadow: var(--pt-hairline-fuerte);
+  font-size: 12.5px; line-height: 1.35; color: var(--pt-titulo); overflow-wrap: anywhere;
 }
-.pt-programas-mas { font-weight: 700; color: var(--pt-vino); }
-.pt-pie-sidecyt { margin-top: 10px; max-width: 42ch; font-size: 13.5px; color: var(--pt-tinta-2); }
-.pt-pie-sidecyt strong { color: var(--pt-vino); }
-
-/* Botón: contorno + relleno que barre al pasar el cursor (vino MUY suave; nunca un bloque saturado). */
-.pt-cta {
-  position: relative; isolation: isolate; overflow: hidden; margin-top: auto; align-self: flex-start;
-  display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 14px 24px; border-radius: 9999px;
-  font-weight: 700; font-size: 16px; color: var(--pt-blanco); background: var(--pt-tinta);
-  transition: transform 160ms var(--pt-ease), box-shadow 220ms ease;
-}
-.pt-cta::before {
-  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
-  background: linear-gradient(100deg, oklch(40% 0.085 358), oklch(50% 0.08 4));
-  transform: scaleX(0.001); transform-origin: left; transition: transform 420ms var(--pt-ease);
-}
-.pt-cta[data-variante='secundario'] { background: var(--pt-blanco); color: var(--pt-tinta); box-shadow: inset 0 0 0 1.5px var(--pt-tinta); }
-.pt-cta[data-variante='secundario']::before { background: var(--pt-vino-lavado); }
-.pt-cta-flecha { transition: transform 260ms var(--pt-ease); }
-@media (hover: hover) and (pointer: fine) {
-  .pt-cta:hover::before { transform: scaleX(1); }
-  .pt-cta:hover .pt-cta-flecha { transform: translateX(4px); }
-  .pt-cta[data-variante='secundario']:hover { color: var(--pt-vino); box-shadow: inset 0 0 0 1.5px var(--pt-vino-borde); }
-}
-.pt-cta:active { transform: scale(0.97); }
-@media (max-width: 480px) { .pt-cta { align-self: stretch; justify-content: center; } }
-
-/* ─────────── ¿Cuál es para mí? ─────────── */
-.pt-guia { margin-top: 28px; }
-.pt-guia-caja {
-  display: grid; gap: 18px; padding: clamp(22px, 3vw, 32px); border-radius: 28px; background: var(--pt-blanco);
-  box-shadow: var(--pt-sombra);
-}
-@media (min-width: 960px) { .pt-guia-caja { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr); align-items: center; } .pt-guia-respuesta { grid-column: 1 / -1; } }
-.pt-h2 { font-family: var(--pt-display); font-weight: 700; font-size: clamp(22px, 2.6vw, 30px); letter-spacing: -0.02em; line-height: 1.15; }
-.pt-guia-sub { margin-top: 6px; color: var(--pt-tinta-2); font-size: 15px; }
-.pt-chips { display: flex; flex-wrap: wrap; gap: 10px; }
-.pt-chip {
-  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 16px; border: 0; border-radius: 9999px;
-  background: var(--pt-niebla); color: var(--pt-tinta); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
-  transition: background-color 200ms ease, color 200ms ease, box-shadow 200ms ease, transform 140ms var(--pt-ease);
-}
-.pt-chip svg { color: var(--pt-tinta-2); transition: color 200ms ease; }
-@media (hover: hover) and (pointer: fine) { .pt-chip:hover { background: var(--pt-vino-lavado); } }
-.pt-chip:active { transform: scale(0.97); }
-.pt-chip { position: relative; isolation: isolate; }
-.pt-chip-contenido { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; }
-/* E50: la píldora blanca con borde vino es UNA sola (layoutId) que se desliza a la opción elegida. */
-.pt-chip-fondo { position: absolute; inset: 0; z-index: 0; border-radius: inherit; background: var(--pt-blanco); box-shadow: 0 0 0 2px var(--pt-vino); }
-.pt-chip[aria-checked='true'] { background: transparent; color: var(--pt-vino); }
-.pt-chip[aria-checked='true'] svg { color: var(--pt-vino); }
-
-/* Insignia "Recomendado para ti" sobre la tarjeta elegida. */
-/* Va en la fila del ícono (posición absoluta): no cambia el alto de la tarjeta ni mueve lo de abajo bajo el cursor. */
-.pt-sistema .pt-recomendado {
-  position: absolute; top: calc(clamp(24px, 3.4vw, 40px) + 12px); left: calc(clamp(24px, 3.4vw, 40px) + 64px); z-index: 2;
-  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; white-space: nowrap;
-  border-radius: 9999px; background: var(--pt-vino); color: var(--pt-blanco); font-size: 13px; font-weight: 700;
-  transform-origin: left center;
-}
-.pt-recomendado svg { width: 14px; height: 14px; }
-/* En tarjetas angostas no cabe junto a "Disponible/Próximamente": se oculta la insignia de estado mientras se recomienda. */
-@media (max-width: 480px) { .pt-sistema[data-destacado] .pt-estado { visibility: hidden; } }
-
-/* Chips de programas: entran escalonados cuando llegan de la API. */
+.pt-programas-mas { font-weight: 600; color: var(--pt-terracota); text-decoration: underline; text-underline-offset: 3px; }
 @media (prefers-reduced-motion: no-preference) {
   .pt-programa-chip { animation: pt-aparece 460ms var(--pt-ease) both; animation-delay: calc(var(--j, 0) * 60ms + 120ms); }
 }
+.pt-sistema .pt-cta { margin-top: auto; align-self: flex-start; }
+@media (max-width: 480px) { .pt-sistema .pt-cta { align-self: stretch; justify-content: center; } }
+.pt-sistema .pt-recomendado {
+  position: absolute; top: calc(clamp(24px, 3vw, 32px) + 10px); left: calc(clamp(24px, 3vw, 32px) + 60px); z-index: 2;
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; white-space: nowrap; border-radius: 9999px;
+  background: var(--pt-vino); color: var(--pt-blanco); font-size: 12.5px; font-weight: 600; transform-origin: left center;
+}
+.pt-recomendado svg { width: 13px; height: 13px; }
+@media (max-width: 480px) { .pt-sistema[data-destacado] .pt-estado { visibility: hidden; } }
 
-/* ─────────── Señal en vivo (convocatorias reales) ─────────── */
-.pt-senal {
-  display: inline-flex; align-items: center; gap: 10px; margin-top: 24px; padding: 10px 16px 10px 14px; border-radius: 9999px;
-  background: var(--pt-blanco); box-shadow: var(--pt-sombra); font-size: 15px; font-weight: 600; color: var(--pt-tinta);
-  transition: box-shadow 220ms var(--pt-ease), transform 160ms var(--pt-ease);
+/* ─────────── ¿Cuál es para mí? — regla 60-30-10 (pedido del usuario 15/10/2026) ───────────
+ * 60 % crema/blanco: la caja y el lado del resultado · 30 % vino: el panel con las opciones · 10 % acentos: círculos de
+ * color de cada opción, aro arena de la elegida y el tono del sistema en la tarjeta de resultado.
+ * Vidrio líquido SIN blur (regla del usuario 14/09): superficies translúcidas con brillo interior y filo de luz, sin
+ * backdrop-filter. La tarjeta de resultado cambia con desvanecido (Portal.tsx, AnimatePresence).
+ */
+.pt-guia-caja {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 8px; border-radius: 24px;
+  background: var(--pt-blanco); box-shadow: var(--pt-hairline), var(--pt-sombra-suave);
 }
-.pt-senal-punto { position: relative; width: 10px; height: 10px; border-radius: 50%; background: var(--pt-menta-tinta); }
-.pt-senal[data-tipo='proximas'] .pt-senal-punto { background: var(--pt-dorado); }
-.pt-senal-punto::after {
-  content: ''; position: absolute; inset: 0; border-radius: 50%; background: inherit; opacity: 0.5;
+@media (min-width: 960px) { .pt-guia-caja { grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); } }
+/* 30 %: panel vino */
+.pt-guia-panel {
+  position: relative; overflow: hidden; display: grid; align-content: start; gap: 20px; padding: 24px 16px 16px;
+  border-radius: 18px; background: var(--pt-vino); color: var(--pt-blanco);
 }
-@media (prefers-reduced-motion: no-preference) { .pt-senal-punto::after { animation: pt-onda 1.8s var(--pt-ease) infinite; } }
-@keyframes pt-onda { from { transform: scale(1); opacity: 0.5; } to { transform: scale(2.6); opacity: 0; } }
-.pt-contador { font-family: var(--pt-display); font-weight: 800; font-variant-numeric: tabular-nums; color: var(--pt-vino); }
-.pt-senal-flecha { color: var(--pt-tinta-2); transition: transform 240ms var(--pt-ease); }
+@media (min-width: 640px) { .pt-guia-panel { padding: 32px 24px 24px; } }
+/* Formas sólidas tenues detrás del vidrio: lo que deja ver la transparencia (sin blur). */
+.pt-guia-panel::before, .pt-guia-panel::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; }
+.pt-guia-panel::before { width: 220px; height: 220px; right: -60px; top: -70px; background: color-mix(in oklab, var(--pt-dorado) 22%, var(--pt-vino)); }
+.pt-guia-panel::after { width: 160px; height: 160px; left: -50px; bottom: -60px; background: color-mix(in oklab, var(--pt-terracota) 30%, var(--pt-vino)); }
+.pt-guia-panel > * { position: relative; z-index: 1; }
+.pt-guia-intro .pt-h2 { color: var(--pt-blanco); }
+.pt-guia-intro .pt-sub { margin-top: 8px; color: rgba(255, 255, 255, 0.72); }
+.pt-chips { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+@media (min-width: 520px) { .pt-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Vidrio líquido sobre vino */
+.pt-chip {
+  position: relative; isolation: isolate; overflow: hidden; display: grid; align-content: start; gap: 12px; width: 100%;
+  min-height: 112px; padding: 14px; border: 0; border-radius: 16px; color: var(--pt-blanco); text-align: left; font: inherit;
+  cursor: pointer; background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 10px 22px -16px rgba(0, 0, 0, 0.55);
+  transition: background-color 200ms ease, box-shadow 200ms ease, transform 200ms var(--pt-ease);
+}
+/* Filo de luz que cruza el vidrio al pasar el cursor (solo transform). */
+.pt-chip::before {
+  content: ''; position: absolute; inset: -40% auto -40% -30%; width: 40%; z-index: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  transform: translateX(-120%) skewX(-16deg); transition: transform 700ms var(--pt-ease);
+}
 @media (hover: hover) and (pointer: fine) {
-  .pt-senal:hover { box-shadow: var(--pt-sombra-alta); }
-  .pt-senal:hover .pt-senal-flecha { transform: translateX(4px); color: var(--pt-vino); }
+  .pt-chip:hover { background: rgba(255, 255, 255, 0.12); transform: translateY(-2px); }
+  .pt-chip:hover::before { transform: translateX(420%) skewX(-16deg); }
+  .pt-chip:hover .pt-chip-icono { transform: rotate(-8deg) scale(1.06); }
 }
-.pt-senal:active { transform: scale(0.97); }
+.pt-chip:active { transform: scale(0.97); transition-duration: 120ms; }
+.pt-chip:focus-visible { outline-color: var(--pt-arena); }
+.pt-chip-contenido { position: relative; z-index: 1; display: grid; gap: 12px; min-width: 0; }
+.pt-chip-icono {
+  display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 40px; color: var(--pt-blanco);
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.3); transition: transform 300ms var(--pt-ease);
+}
+.pt-chip-icono svg { width: 19px; height: 19px; }
+.pt-chip-texto { display: grid; gap: 2px; min-width: 0; }
+.pt-chip-etiqueta { font-size: 16px; font-weight: 600; letter-spacing: -0.013em; line-height: 1.25; }
+.pt-chip-ayuda { font-size: 13px; color: rgba(255, 255, 255, 0.7); }
+.pt-chip-marca {
+  position: absolute; top: 14px; right: 14px; z-index: 1; display: grid; place-items: center; width: 24px; height: 24px;
+  border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.32); color: var(--pt-vino);
+  transition: background-color 180ms ease, box-shadow 180ms ease;
+}
+.pt-chip-marca svg { width: 14px; height: 14px; opacity: 0; transform: scale(0.6); transition: opacity 180ms ease, transform 240ms var(--pt-ease); }
+.pt-chip[aria-checked='true'] { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 0 0 1.5px var(--pt-arena), 0 14px 28px -16px rgba(0, 0, 0, 0.6); }
+.pt-chip[aria-checked='true'] .pt-chip-marca { background: var(--pt-arena); box-shadow: none; }
+.pt-chip[aria-checked='true'] .pt-chip-marca svg { opacity: 1; transform: none; }
+.pt-chip[aria-checked='true'] .pt-chip-icono { transform: rotate(-8deg) scale(1.06); }
+/* La opción activa: UNA sola capa de vidrio más clara que se desliza entre tarjetas (layoutId). */
+.pt-chip-fondo { position: absolute; inset: 0; z-index: 0; border-radius: inherit; background: rgba(255, 255, 255, 0.1); }
+/* Entrada escalonada de las tarjetas al llegar a la sección. */
+.pt-root[data-js] .pt-guia:not([data-visible]) .pt-chip { opacity: 0; transform: translateY(14px) scale(0.97); }
+.pt-root[data-js] .pt-guia[data-visible] .pt-chip {
+  animation: pt-chip-entra 560ms var(--pt-ease) backwards; animation-delay: calc(var(--k, 0) * 70ms + 120ms);
+}
+@keyframes pt-chip-entra { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+/* 60 %: lado del resultado (crema) */
+.pt-guia-resultado {
+  position: relative; overflow: hidden; display: grid; min-height: 300px; padding: 16px; border-radius: 18px;
+  background: var(--pt-lienzo); scroll-margin-top: 96px;
+}
+@media (min-width: 640px) { .pt-guia-resultado { padding: 24px; } }
+/* Formas de color tenues detrás del vidrio claro (cambian de tono con el sistema; transición de color, no de forma). */
+.pt-guia-resultado::before, .pt-guia-resultado::after {
+  content: ''; position: absolute; border-radius: 50%; pointer-events: none; transition: background-color 500ms ease;
+}
+.pt-guia-resultado::before { width: 240px; height: 240px; right: -70px; top: -80px; background: var(--pt-lavado-vino); }
+.pt-guia-resultado::after { width: 180px; height: 180px; left: -60px; bottom: -70px; background: var(--pt-lavado-ocre); }
+.pt-guia-resultado[data-sistema='sigae']::before { background: var(--pt-pastel-cielo); }
+.pt-guia-resultado[data-sistema='sicei']::before { background: var(--pt-pastel-lavanda); }
+/* Tarjeta de resultado: vidrio claro, translúcido, sin blur. */
+.pt-resultado {
+  --tono: var(--pt-vino);
+  position: relative; z-index: 1; align-self: center; display: grid; gap: 14px; padding: 22px; border-radius: 16px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 1px 6px rgba(0, 0, 0, 0.04), 0 18px 36px -24px rgba(86, 33, 47, 0.35);
+}
+.pt-resultado[data-sistema='sigae'] { --tono: var(--pt-azul); }
+.pt-resultado[data-sistema='sicei'] { --tono: var(--pt-ciruela); }
+.pt-resultado-cabeza { display: flex; align-items: center; gap: 12px; }
+.pt-resultado-icono { display: grid; place-items: center; width: 48px; height: 48px; flex: none; border-radius: 40px; background: var(--tono); color: var(--pt-blanco); }
+.pt-resultado-icono svg { width: 22px; height: 22px; }
+.pt-resultado-etiqueta { font-size: 13px; font-weight: 500; color: var(--pt-tenue); }
+.pt-resultado-sigla { font-family: var(--pt-display); font-weight: 600; font-size: clamp(34px, 4vw, 44px); line-height: 1; letter-spacing: -0.03em; color: var(--pt-oscuro); }
+.pt-resultado-nombre { font-size: 15px; font-weight: 500; color: var(--pt-titulo); }
+.pt-resultado-motivo { font-size: 15.5px; color: var(--pt-cuerpo); line-height: 1.5; }
+.pt-resultado-perfil {
+  display: inline-flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%; padding: 5px 12px 5px 5px; border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.8); box-shadow: inset 0 0 0 1px var(--pt-piedra); font-size: 13px; font-weight: 500; color: var(--pt-titulo);
+}
+.pt-resultado-perfil .pt-chip-icono { width: 26px; height: 26px; box-shadow: none; }
+.pt-resultado-perfil .pt-chip-icono svg { width: 14px; height: 14px; }
+.pt-resultado .pt-cta { justify-self: start; }
+@media (max-width: 480px) { .pt-resultado .pt-cta { justify-self: stretch; justify-content: center; } }
+/* Los hijos de la tarjeta entran escalonados cada vez que cambia (se monta una tarjeta nueva por opción). */
+@media (prefers-reduced-motion: no-preference) {
+  .pt-resultado > * { animation: pt-aparece 420ms var(--pt-ease) backwards; animation-delay: calc(var(--n, 0) * 50ms + 60ms); }
+}
+.pt-resultado-vacio { position: relative; z-index: 1; align-self: center; justify-self: center; display: grid; justify-items: center; gap: 10px; max-width: 30ch; text-align: center; color: var(--pt-tenue); }
+.pt-resultado-vacio svg { width: 28px; height: 28px; color: var(--pt-vino); }
+.pt-resultado-vacio strong { font-size: 17px; font-weight: 600; color: var(--pt-titulo); }
+@media (prefers-reduced-motion: no-preference) { .pt-resultado-vacio svg { animation: il-flota 2.2s ease-in-out infinite alternate; } }
+.pt-enlace {
+  display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: var(--pt-terracota);
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px;
+}
+.pt-enlace svg { width: 15px; height: 15px; transition: transform 220ms var(--pt-ease); }
+@media (hover: hover) and (pointer: fine) { .pt-enlace:hover svg { transform: translateX(3px); } }
 
 /* ─────────── Revelado al entrar en pantalla (solo con JS y sin movimiento reducido) ─────────── */
-.pt-root[data-js] .pt-revela:not([data-visible]) { opacity: 0; transform: translateY(18px); }
-.pt-root[data-js] .pt-revela { transition: opacity 640ms var(--pt-ease), transform 640ms var(--pt-ease); }
+.pt-root[data-js] .pt-revela:not([data-visible]) { opacity: 0; transform: translateY(16px); }
+.pt-root[data-js] .pt-revela { transition: opacity 600ms var(--pt-ease), transform 600ms var(--pt-ease); }
 
-/* ─────────── Cómo funciona ─────────── */
-.pt-pasos { margin-top: 56px; }
-.pt-pasos-lista {
-  position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 22px; counter-reset: paso;
+/* ─────────── Cómo funciona: secuencia ilustrada fijada y mapeada al scroll (ScrollPortal.tsx) ───────────
+ * Escritorio: la pista mide 260vh y la escena queda fija mientras el scroll la "reproduce" (camino que se dibuja,
+ * estaciones que se encienden, engrane que gira, matraz que se llena, confeti al final). Teléfono/tableta y movimiento
+ * reducido: sin fijar; la escena se reproduce mientras la sección cruza la pantalla.
+ */
+.pt-pasos-pista { position: relative; }
+@media (min-width: 960px) { .pt-pasos-pista[data-vivo] { height: 260vh; } }
+.pt-pasos-fijo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: center; }
+@media (min-width: 960px) {
+  .pt-pasos-pista[data-vivo] .pt-pasos-fijo { position: sticky; top: 96px; min-height: calc(100vh - 120px); }
+  .pt-pasos-fijo { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 32px; }
 }
-/* Línea que une los números: vertical en teléfono, horizontal desde 820 px. Se dibuja con scale al revelarse. */
-.pt-pasos-lista::before {
-  content: ''; position: absolute; left: 41px; top: 42px; bottom: 42px; width: 2px; border-radius: 2px;
-  background: linear-gradient(180deg, var(--pt-vino), var(--pt-dorado));
-  transform-origin: top; transform: scaleY(1);
+.pt-secuencia {
+  position: relative; padding: 12px; border-radius: 24px; background: var(--pt-blanco); box-shadow: var(--pt-hairline);
 }
-.pt-root[data-js] .pt-pasos:not([data-visible]) .pt-pasos-lista::before { transform: scaleY(0); }
-.pt-root[data-js] .pt-pasos-lista::before { transition: transform 900ms var(--pt-ease) 200ms; }
-@media (min-width: 820px) {
-  .pt-pasos-lista { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
-  .pt-pasos-lista::before {
-    left: 46px; right: calc(33.333% - 58px); top: 43px; bottom: auto; width: auto; height: 2px;
-    background: linear-gradient(90deg, var(--pt-vino), var(--pt-dorado)); transform-origin: left; transform: scaleX(1);
-  }
-  .pt-root[data-js] .pt-pasos:not([data-visible]) .pt-pasos-lista::before { transform: scaleX(0); }
+.pt-root .pt-secuencia-svg { max-height: min(62vh, 520px); margin-inline: auto; }
+.pt-secuencia-base { fill: none; stroke: var(--pt-piedra); stroke-width: 10; stroke-linecap: round; }
+.pt-secuencia-trazo { fill: none; stroke: var(--pt-dorado); stroke-width: 10; stroke-linecap: round; }
+.pt-secuencia-anillo { fill: var(--pt-blanco); stroke: var(--pt-trazo); stroke-width: 2.4; }
+.pt-secuencia-num { font-family: var(--pt-display); font-weight: 700; font-size: 15px; fill: var(--pt-blanco); paint-order: stroke; stroke: var(--pt-trazo); stroke-width: 3px; }
+.il-f-azul-solido { fill: var(--pt-azul); }
+.il-f-ciruela-solido { fill: var(--pt-ciruela); }
+.il-f-terracota-solido { fill: var(--pt-terracota); }
+
+.pt-pasos-lista { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding-left: 18px; }
+/* Línea de avance: se llena con el scroll (scaleY). */
+.pt-pasos-lista::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: var(--pt-piedra); }
+.pt-pasos-progreso {
+  position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: var(--pt-vino);
+  transform-origin: top;
 }
 .pt-paso {
-  position: relative; display: flex; gap: 16px; align-items: flex-start; padding: 20px; border-radius: 22px;
-  background: var(--pt-blanco); box-shadow: var(--pt-sombra);
+  position: relative; display: grid; align-content: start; gap: 10px; padding: 22px 24px; border-radius: var(--pt-radio);
+  background: var(--pt-blanco); box-shadow: var(--pt-hairline);
+  opacity: 0.45; transform: translateX(6px);
+  transition: opacity 360ms var(--pt-ease), transform 360ms var(--pt-ease), box-shadow 360ms var(--pt-ease);
 }
-@media (min-width: 820px) { .pt-paso { flex-direction: column; gap: 14px; padding: 22px 24px 24px; } }
-.pt-paso-num {
-  position: relative; z-index: 1; display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 50%;
-  background: var(--pt-vino); color: var(--pt-blanco); font-family: var(--pt-display); font-weight: 800; font-size: 18px;
-  box-shadow: 0 0 0 6px var(--pt-blanco);
+.pt-paso[data-activo] { opacity: 1; transform: none; }
+.pt-paso[aria-current='step'] { box-shadow: var(--pt-hairline), var(--pt-sombra-suave); }
+.pt-paso-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pt-paso-icono {
+  display: grid; place-items: center; width: 44px; height: 44px; border-radius: 40px; color: var(--pt-blanco); background: var(--pt-piedra);
+  transition: background-color 360ms ease, transform 360ms var(--pt-ease);
 }
-.pt-root[data-js] .pt-pasos:not([data-visible]) .pt-paso { opacity: 0; transform: translateY(12px); }
-.pt-root[data-js] .pt-paso { transition: opacity 520ms var(--pt-ease), transform 520ms var(--pt-ease); transition-delay: calc(var(--k, 0) * 140ms + 120ms); }
-.pt-paso-titulo { display: flex; align-items: center; gap: 8px; font-family: var(--pt-display); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
-.pt-paso-icono { display: inline-grid; color: var(--pt-vino); }
-.pt-paso-texto { margin-top: 6px; color: var(--pt-tinta-2); font-size: 15px; }
-.pt-guia-respuesta { min-height: 48px; padding: 14px 18px; border-radius: 18px; background: var(--pt-papel); font-size: 15px; }
-.pt-guia-respuesta strong { color: var(--pt-vino); }
-.pt-guia-vacio { color: var(--pt-tinta-2); }
-.pt-enlace { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: var(--pt-tinta); border-bottom: 1.5px solid var(--pt-vino-borde); }
-.pt-enlace:hover { color: var(--pt-vino); }
+.pt-paso-icono svg { width: 20px; height: 20px; }
+.pt-paso[aria-current='step'] .pt-paso-icono { transform: rotate(-8deg) scale(1.06); }
+.pt-paso-num { font-family: var(--pt-display); font-weight: 600; font-size: 13px; color: var(--pt-tenue); font-variant-numeric: tabular-nums; }
+.pt-paso-titulo { font-size: 21px; font-weight: 500; line-height: 1.2; letter-spacing: -0.019em; color: var(--pt-titulo); }
+.pt-paso-texto { color: var(--pt-cuerpo); font-size: 15.5px; line-height: 1.5; }
 
-/* ─────────── Accesos rápidos ─────────── */
-.pt-accesos { margin-top: 48px; margin-bottom: 72px; }
-.pt-accesos-lista { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 16px; }
-@media (min-width: 760px) { .pt-accesos-lista { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.pt-acceso {
-  display: flex; align-items: center; gap: 14px; height: 100%; padding: 18px 20px; border-radius: 22px; background: var(--pt-blanco);
-  box-shadow: var(--pt-sombra); transition: box-shadow 260ms var(--pt-ease), transform 160ms var(--pt-ease);
+/* ─────────── Scroll: barra de progreso y palabras que se llenan ─────────── */
+.pt-barra { position: sticky; }
+.pt-progreso {
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--pt-vino); transform-origin: left;
+  pointer-events: none;
 }
-.pt-acceso-icono { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 14px; background: var(--pt-vino-lavado); color: var(--pt-vino); }
+.pt-palabra { display: inline-block; }
+/* ─────────── Accesos rápidos por sistema: tarjeta blanca por sistema con filas arena (Family "Light Tag Surface") ── */
+.pt-accesos { margin-bottom: clamp(72px, 9vw, 112px); }
+.pt-accesos-sistemas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 880px) { .pt-accesos-sistemas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.pt-accesos-grupo {
+  --tono: var(--pt-azul);
+  display: grid; align-content: start; gap: 14px; padding: 20px; border-radius: var(--pt-radio);
+  background: var(--pt-blanco); box-shadow: var(--pt-hairline);
+}
+.pt-accesos-grupo[data-sistema='sicei'] { --tono: var(--pt-ciruela); --pastel: var(--pt-pastel-lavanda); }
+.pt-accesos-cabeza { display: flex; align-items: center; gap: 12px; padding-inline: 4px; }
+.pt-accesos-cabeza .pt-sistema-icono { width: 40px; height: 40px; }
+.pt-accesos-cabeza .pt-sistema-icono svg { width: 19px; height: 19px; }
+.pt-accesos-sigla { display: grid; line-height: 1.2; }
+.pt-accesos-sigla strong { font-family: var(--pt-display); font-weight: 600; font-size: 19px; letter-spacing: -0.02em; color: var(--pt-oscuro); }
+.pt-accesos-sigla span { font-size: 13px; color: var(--pt-tenue); }
+.pt-accesos-lista { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.pt-acceso .pt-acceso-icono { color: var(--tono); }
+/* Teléfonos angostos (≤ 360 px): menos relleno para que ninguna etiqueta se parta en dos líneas. */
+@media (max-width: 360px) {
+  .pt-accesos .pt-accesos-grupo { padding: 12px; }
+  .pt-accesos .pt-acceso { gap: 10px; padding: 12px 10px; }
+  .pt-accesos .pt-acceso-icono { width: 34px; height: 34px; }
+  .pt-accesos .pt-acceso-etiqueta { font-size: 14.5px; }
+  .pt-accesos .pt-acceso-flecha { display: none; }
+  .pt-guia-caja { padding: 4px; }
+  .pt-chip { gap: 10px; padding-inline: 10px; }
+  .pt-chip-contenido { gap: 10px; }
+  .pt-chip-icono { width: 34px; height: 34px; }
+  .pt-chip-etiqueta { font-size: 15px; }
+}
+.pt-acceso {
+  display: flex; align-items: center; gap: 14px; height: 100%; padding: 14px 18px 14px 14px; border-radius: 12px;
+  background: var(--pt-arena-sup); transition: background-color 180ms ease, transform 160ms var(--pt-ease);
+}
+.pt-acceso-icono { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 40px; background: var(--pt-blanco); color: var(--pt-vino); box-shadow: var(--pt-hairline-fuerte); }
+.pt-acceso-icono svg { width: 18px; height: 18px; }
 .pt-acceso-texto { display: grid; min-width: 0; flex: 1; }
-.pt-acceso-etiqueta { font-weight: 700; }
-.pt-acceso-detalle { font-size: 13.5px; color: var(--pt-tinta-2); }
-.pt-acceso-flecha { color: var(--pt-tinta-2); transition: transform 260ms var(--pt-ease), color 200ms ease; }
+.pt-acceso-etiqueta { font-weight: 600; font-size: 15px; color: var(--pt-oscuro); }
+.pt-acceso-detalle { font-size: 13.5px; color: var(--pt-tenue); }
+.pt-acceso-flecha { width: 16px; height: 16px; color: var(--pt-tenue); transition: transform 220ms var(--pt-ease), color 180ms ease; }
 @media (hover: hover) and (pointer: fine) {
-  .pt-acceso:hover { box-shadow: var(--pt-sombra-alta); }
-  .pt-acceso:hover .pt-acceso-flecha { transform: translateX(4px); color: var(--pt-vino); }
+  .pt-acceso:hover { background: var(--pt-piedra); }
+  .pt-acceso:hover .pt-acceso-flecha { transform: translateX(3px); color: var(--pt-vino); }
 }
 .pt-acceso:active { transform: scale(0.985); }
 
-/* ─────────── Pie ─────────── */
-.pt-pie { background: var(--pt-blanco); border-top: 1px solid var(--pt-linea); padding-top: 48px; }
+.pt-root :where(section[id]) { scroll-margin-top: 100px; }
+
+/* ─────────── Pie en vino oficial, plano (sin degradado), con logo negativo ─────────── */
+.pt-pie { position: relative; padding-top: 56px; background: var(--pt-vino); color: rgba(255, 255, 255, 0.82); box-shadow: inset 0 3px 0 var(--pt-dorado); }
 .pt-pie-rejilla { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
 @media (min-width: 720px) { .pt-pie-rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1040px) { .pt-pie-rejilla { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.8fr); } }
 .pt-pie-marca img { width: 180px; height: auto; }
-.pt-pie-nombre { margin-top: 14px; font-family: var(--pt-display); font-weight: 700; font-size: 17px; }
-.pt-pie-desc { margin-top: 6px; max-width: 42ch; color: var(--pt-tinta-2); font-size: 14.5px; }
+.pt-pie-nombre { margin-top: 14px; font-family: var(--pt-display); font-weight: 600; font-size: 17px; color: var(--pt-blanco); }
+.pt-pie-desc, .pt-pie-sidecyt { margin-top: 6px; max-width: 42ch; font-size: 14.5px; color: rgba(255, 255, 255, 0.78); }
+.pt-pie-sidecyt { margin-top: 10px; font-size: 13.5px; }
+.pt-pie-sidecyt strong { color: var(--pt-arena); }
 .pt-pie-col { display: grid; align-content: start; gap: 10px; font-size: 14.5px; }
-.pt-pie-col > a { display: inline-flex; align-items: center; gap: 6px; width: fit-content; color: var(--pt-tinta-2); transition: color 200ms ease; }
-.pt-pie-col > a:hover { color: var(--pt-vino); }
-.pt-pie-titulo { font-family: var(--pt-display); font-weight: 700; color: var(--pt-tinta); position: relative; padding-bottom: 8px; margin-bottom: 2px; }
-.pt-pie-titulo::after { content: ''; position: absolute; left: 0; bottom: 0; width: 24px; height: 2px; border-radius: 9999px; background: var(--pt-vino); opacity: 0.7; }
-.pt-pie-contacto { display: grid; gap: 10px; font-style: normal; color: var(--pt-tinta-2); }
+.pt-pie-col > a { display: inline-flex; align-items: center; gap: 6px; width: fit-content; color: rgba(255, 255, 255, 0.78); transition: color 180ms ease; }
+.pt-pie-col > a:hover, .pt-pie-contacto a:hover { color: var(--pt-blanco); }
+.pt-pie-titulo { position: relative; padding-bottom: 8px; margin-bottom: 2px; font-family: var(--pt-display); font-weight: 600; color: var(--pt-blanco); }
+.pt-pie-titulo::after { content: ''; position: absolute; left: 0; bottom: 0; width: 24px; height: 2px; border-radius: 9999px; background: var(--pt-dorado); }
+.pt-pie-contacto { display: grid; gap: 10px; font-style: normal; color: rgba(255, 255, 255, 0.78); }
 .pt-pie-contacto > * { display: flex; gap: 10px; align-items: flex-start; overflow-wrap: break-word; min-width: 0; }
 .pt-pie-contacto a[href^='mailto:'] span { overflow-wrap: normal; }
-.pt-pie-contacto svg { margin-top: 3px; color: var(--pt-vino); }
-.pt-pie-contacto a:hover { color: var(--pt-vino); }
-.pt-pie-legal { margin-top: 40px; padding-block: 20px; border-top: 1px solid var(--pt-linea); font-size: 13px; color: var(--pt-tinta-2); }
-
-/* ─────────── Página de SICEI (próximamente) ─────────── */
-.pt-sicei { padding-block: clamp(48px, 9vw, 110px); }
-.pt-sicei-caja {
-  position: relative; overflow: hidden; max-width: 880px; padding: clamp(28px, 5vw, 56px); border-radius: 36px; background: var(--pt-blanco);
-  box-shadow: var(--pt-sombra-alta);
-}
-.pt-sicei-caja::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 180px; background: linear-gradient(180deg, var(--pt-menta), transparent); pointer-events: none; }
-.pt-sicei-caja > * { position: relative; }
-.pt-sicei-acciones { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
-.pt-sicei-areas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 24px; }
-@media (min-width: 720px) { .pt-sicei-areas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.pt-sicei-areas .pt-acceso { background: var(--pt-papel); box-shadow: none; }
-.pt-sicei-programas { margin-top: 32px; }
-.pt-sicei-programas ul { display: grid; gap: 10px; margin-top: 12px; }
-.pt-sicei-programa { display: flex; gap: 14px; padding: 16px; border-radius: 18px; background: var(--pt-papel); }
-.pt-sicei-programa-enlaces { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px; font-size: 13.5px; }
-.pt-sicei-programa-enlaces a { display: inline-flex; align-items: center; gap: 6px; color: var(--pt-tinta); border-bottom: 1px solid var(--pt-vino-borde); }
-
-/* ═══════════════════════════ E51 (28/09/2026) — Rediseño del portal ═══════════════════════════
- * Hallmark · page: portal SIDECyT · genre: institucional moderno · motif: arcos del logo COMECYT (órbita de sistemas)
- * color: tinta navy + papel; vino oficial en detalles y pie; dorado en arcos y puntos · motion: un trazo al cargar,
- * giro lento de puntos, respuesta al cursor/foco en nodos y tarjetas · pre-emit critique: P5 H5 E4 S5 R4 V5
- */
-
-/* ── Barra: marca + secciones + botón del sitio; se compacta al desplazarse ── */
-.pt-barra-fila { transition: min-height 260ms var(--pt-ease), box-shadow 260ms var(--pt-ease), background-color 260ms ease; }
-.pt-barra[data-desplazado] .pt-barra-fila { min-height: 58px; box-shadow: var(--pt-sombra-alta); background: rgba(255, 255, 255, 0.94); }
-.pt-marca-texto strong { font-size: 18px; letter-spacing: -0.02em; }
-.pt-marca-sub { font-size: 12px; letter-spacing: 0; }
-.pt-barra-nav { display: none; align-items: center; gap: 2px; margin-left: auto; margin-right: 8px; }
-@media (min-width: 1040px) { .pt-barra-nav { display: flex; } }
-.pt-barra-nav a {
-  position: relative; padding: 10px 14px; border-radius: 9999px; font-size: 14px; font-weight: 600; color: var(--pt-tinta-2);
-  transition: color 200ms ease, background-color 200ms ease;
-}
-.pt-barra-nav a::after {
-  content: ''; position: absolute; left: 14px; right: 14px; bottom: 6px; height: 2px; border-radius: 2px; background: var(--pt-vino);
-  transform: scaleX(0); transform-origin: left; transition: transform 260ms var(--pt-ease);
-}
-@media (hover: hover) and (pointer: fine) {
-  .pt-barra-nav a:hover { color: var(--pt-tinta); }
-  .pt-barra-nav a:hover::after { transform: scaleX(1); }
-}
-/* Botón del sitio oficial: relleno vino con brillo que cruza al pasar el cursor; ícono de globo y flecha externa. */
-.pt-boton-sitio {
-  position: relative; isolation: isolate; overflow: hidden; flex: none;
-  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 16px 10px 14px; border-radius: 9999px;
-  background: var(--pt-vino); color: var(--pt-blanco); font-size: 14px; font-weight: 700; white-space: nowrap;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 8px 18px -10px rgba(86, 33, 47, 0.8);
-  transition: transform 160ms var(--pt-ease), box-shadow 220ms ease;
-}
-.pt-boton-sitio::before {
-  content: ''; position: absolute; inset: -40% auto -40% -60%; width: 45%; z-index: -1;
-  background: linear-gradient(100deg, transparent, rgba(221, 200, 164, 0.45), transparent);
-  transform: translateX(-120%) skewX(-18deg); transition: transform 700ms var(--pt-ease);
-}
-.pt-boton-sitio-icono { width: 17px; height: 17px; color: var(--pt-arena); }
-.pt-boton-sitio-flecha { width: 15px; height: 15px; opacity: 0.8; transition: transform 240ms var(--pt-ease); }
-@media (hover: hover) and (pointer: fine) {
-  .pt-boton-sitio:hover { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 12px 24px -10px rgba(86, 33, 47, 0.9); }
-  .pt-boton-sitio:hover::before { transform: translateX(420%) skewX(-18deg); }
-  .pt-boton-sitio:hover .pt-boton-sitio-flecha { transform: translate(2px, -2px); }
-}
-.pt-boton-sitio:active { transform: scale(0.97); }
-@media (max-width: 640px) {
-  .pt-boton-sitio { width: 44px; padding: 0; justify-content: center; }
-  .pt-boton-sitio-texto, .pt-boton-sitio-flecha { display: none; }
-  .pt-boton-sitio-icono { width: 19px; height: 19px; }
-}
-@media (max-width: 520px) { .pt-marca-sub { display: none; } }
-
-/* ── Sello del héroe: sigla en bloque vino + nombre completo ── */
-.pt-sello {
-  display: inline-flex; align-items: stretch; max-width: 100%; border-radius: 16px; overflow: hidden;
-  background: var(--pt-blanco); box-shadow: var(--pt-sombra), 0 0 0 1px var(--pt-linea);
-}
-.pt-sello-sigla {
-  display: inline-flex; align-items: center; gap: 7px; flex: none; padding: 8px 12px;
-  background: var(--pt-vino); color: var(--pt-blanco); font-family: var(--pt-display); font-weight: 800; font-size: 13.5px; letter-spacing: 0.01em;
-}
-.pt-sello-sigla svg { width: 14px; height: 14px; color: var(--pt-arena); }
-.pt-sello-nombre { display: inline-flex; align-items: center; padding: 8px 14px; font-size: 13.5px; font-weight: 600; color: var(--pt-tinta-2); line-height: 1.35; }
-@media (max-width: 560px) {
-  .pt-sello { display: grid; grid-template-columns: minmax(0, 1fr); border-radius: 18px; }
-  .pt-sello-sigla { justify-content: flex-start; }
-  .pt-sello-nombre { padding: 10px 14px; }
-}
-
-/* ── Héroe en dos columnas: texto + órbita ── */
-.pt-heroe { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: center; }
-@media (min-width: 980px) { .pt-heroe { grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr); gap: 40px; } }
-.pt-heroe-texto-col { min-width: 0; }
-.pt-heroe-acciones { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
-.pt-heroe-acciones .pt-cta { margin-top: 0; }
-.pt-cta-flecha-abajo { transition: transform 260ms var(--pt-ease); }
-@media (hover: hover) and (pointer: fine) { .pt-cta:hover .pt-cta-flecha-abajo { transform: translateY(3px); } }
-@media (max-width: 480px) { .pt-heroe-acciones .pt-cta { flex: 1 1 100%; } }
-.pt-heroe-visual { display: flex; justify-content: center; min-width: 0; }
-
-/* ── Órbita ── */
-.pt-orbita { position: relative; width: min(100%, 460px); aspect-ratio: 1; }
-@media (max-width: 979px) { .pt-orbita { width: min(100%, 360px); } }
-/* `.pt-root svg` (íconos, 1.1em) le ganaría a una sola clase: se sube la especificidad. */
-.pt-root .pt-orbita-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.pt-orbita-anillo { fill: none; stroke: rgba(8, 48, 76, 0.1); stroke-width: 1; }
-.pt-orbita-anillo-2 { stroke-dasharray: 2 6; stroke: rgba(86, 33, 47, 0.22); }
-.pt-orbita-anillo-3 { fill: rgba(255, 255, 255, 0.7); stroke: rgba(8, 48, 76, 0.08); }
-.pt-orbita-trazo { fill: none; stroke: var(--pt-vino); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
-.pt-orbita-trazo-dorado { stroke: var(--pt-dorado); stroke-width: 3.5; }
-.pt-orbita-trazo-fino { stroke: var(--pt-vino-suave); stroke-width: 3; }
-.pt-root:not([data-listo]) .pt-orbita-trazo { stroke-dashoffset: 1; }
-.pt-root[data-listo] .pt-orbita-trazo { animation: pt-orbita-dibuja 1400ms var(--pt-ease) both; animation-delay: calc(var(--d, 0ms) + 250ms); }
-@keyframes pt-orbita-dibuja { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-.pt-orbita-conector { stroke: var(--pt-vino); stroke-width: 1.5; stroke-dasharray: 3 5; opacity: 0; transition: opacity 260ms ease; }
-.pt-orbita[data-foco='sigae'] .pt-orbita-conector[data-sistema='sigae'],
-.pt-orbita[data-foco='sicei'] .pt-orbita-conector[data-sistema='sicei'] { opacity: 0.6; }
-.pt-orbita-punto { fill: var(--pt-vino); }
-.pt-orbita-punto-dorado { fill: var(--pt-dorado); }
-.pt-orbita-punto-suave { fill: var(--pt-vino-suave); }
-.pt-orbita-giro { transform-box: view-box; transform-origin: 220px 220px; }
-@media (prefers-reduced-motion: no-preference) {
-  .pt-orbita-giro { animation: pt-orbita-gira var(--dur, 40s) linear infinite; }
-  .pt-orbita-giro-inverso { animation-direction: reverse; }
-}
-@keyframes pt-orbita-gira { to { transform: rotate(360deg); } }
-.pt-orbita-centro {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  display: grid; justify-items: center; gap: 2px; text-align: center; pointer-events: none;
-}
-.pt-orbita-centro-sigla { font-family: var(--pt-display); font-weight: 800; font-size: clamp(22px, 3vw, 30px); letter-spacing: -0.03em; color: var(--pt-tinta); }
-.pt-orbita-centro-sub { font-size: 12.5px; font-weight: 600; color: var(--pt-tinta-2); }
-/* Nodos: botones reales sobre la órbita (anclados por su centro). */
-.pt-orbita-nodo {
-  position: absolute; transform: translate(-50%, -50%); z-index: 1;
-  display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 9999px;
-  background: var(--pt-blanco); box-shadow: var(--pt-sombra), 0 0 0 1px var(--pt-linea); white-space: nowrap;
-  transition: box-shadow 240ms var(--pt-ease), scale 200ms var(--pt-ease);
-}
-.pt-orbita-nodo-icono {
-  display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
-  background: var(--pt-cielo); color: var(--pt-cielo-tinta);
-}
-.pt-orbita-nodo[data-sistema='sicei'] .pt-orbita-nodo-icono { background: var(--pt-menta); color: var(--pt-menta-tinta); }
-.pt-orbita-nodo-icono svg { width: 19px; height: 19px; }
-.pt-orbita-nodo-texto { display: grid; line-height: 1.15; }
-.pt-orbita-nodo-texto strong { font-family: var(--pt-display); font-weight: 800; font-size: 15px; letter-spacing: -0.01em; }
-.pt-orbita-nodo-texto span { font-size: 11.5px; font-weight: 600; color: var(--pt-tinta-2); }
-.pt-orbita-nodo-texto span[data-estado='disponible'] { color: var(--pt-menta-tinta); }
-.pt-orbita-nodo[data-activo] { box-shadow: var(--pt-sombra-alta), 0 0 0 2px var(--pt-vino); scale: 1.06; }
-.pt-orbita-nodo:active { scale: 0.97; }
-@media (prefers-reduced-motion: no-preference) {
-  .pt-orbita-nodo::before {
-    content: ''; position: absolute; left: 27px; top: 50%; width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%;
-    border: 1.5px solid var(--pt-vino); opacity: 0; pointer-events: none;
-  }
-  .pt-orbita-nodo[data-activo]::before { animation: pt-orbita-pulso 1.4s var(--pt-ease) infinite; }
-}
-@keyframes pt-orbita-pulso { from { transform: scale(1); opacity: 0.5; } to { transform: scale(1.8); opacity: 0; } }
-/* En pantallas angostas los nodos se anclan hacia dentro para no salirse del cuadro. */
-@media (max-width: 560px) {
-  .pt-orbita-nodo[data-sistema='sigae'] { transform: translate(-82%, -50%); }
-  .pt-orbita-nodo[data-sistema='sicei'] { transform: translate(-18%, -50%); }
-}
-@media (max-width: 420px) {
-  .pt-orbita-nodo { gap: 7px; padding: 6px 10px 6px 6px; }
-  .pt-orbita-nodo-icono { width: 30px; height: 30px; }
-  .pt-orbita-nodo-texto strong { font-size: 13.5px; }
-}
-
-/* Tarjeta ↔ nodo en foco */
-.pt-sistema[data-foco]:not([data-atenuado]) { box-shadow: var(--pt-sombra-alta), 0 0 0 1.5px var(--pt-vino-borde); }
-.pt-sistema-marco { scroll-margin-top: 110px; }
-.pt-root :where(section[id]) { scroll-margin-top: 100px; }
-
-/* ── Pie en vino oficial con logo negativo ── */
-.pt-pie { position: relative; background: linear-gradient(180deg, #56212f, #3f1722); color: rgba(255, 255, 255, 0.82); border-top: 0; }
-.pt-pie::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 3px; background: linear-gradient(90deg, var(--pt-dorado), var(--pt-arena), var(--pt-dorado)); }
-.pt-pie-nombre, .pt-pie-titulo { color: var(--pt-blanco); }
-.pt-pie-titulo::after { background: var(--pt-dorado); opacity: 1; }
-.pt-pie-desc, .pt-pie-contacto, .pt-pie-col > a, .pt-pie-sidecyt { color: rgba(255, 255, 255, 0.78); }
-.pt-pie-sidecyt strong { color: var(--pt-arena); }
-.pt-pie-contacto svg { color: var(--pt-arena); }
-.pt-pie-col > a:hover, .pt-pie-contacto a:hover { color: var(--pt-blanco); }
-.pt-pie-legal { border-top-color: rgba(255, 255, 255, 0.16); color: rgba(255, 255, 255, 0.65); }
+.pt-pie-contacto svg { margin-top: 3px; color: var(--pt-arena); }
+.pt-pie-legal { margin-top: 40px; padding-block: 20px; border-top: 1px solid rgba(255, 255, 255, 0.16); font-size: 13px; color: rgba(255, 255, 255, 0.65); }
 .pt-pie :focus-visible { outline-color: var(--pt-arena); }
+
+/* ═══════════ Ilustraciones (IlustracionesCiencia.tsx) ═══════════ */
+.pt-root .il-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.il-trazo { stroke: var(--pt-trazo); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.il-sin-relleno { fill: none; }
+.il-linea { fill: none; stroke: var(--pt-trazo); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.il-linea-ocre { stroke: var(--pt-ocre); stroke-width: 3; }
+.il-linea-vino { stroke: var(--pt-vino); stroke-width: 3; }
+.il-linea-azul { stroke: var(--pt-azul); stroke-width: 3; }
+.il-tinta { fill: var(--pt-trazo); }
+.il-mejilla { fill: var(--pt-tinte-terracota); opacity: 0.6; }
+.il-f-azul { fill: var(--pt-tinte-azul); }
+.il-f-azul-fuerte { fill: var(--pt-tinte-azul-fuerte); }
+.il-f-ocre { fill: var(--pt-tinte-ocre); }
+.il-f-ciruela { fill: var(--pt-tinte-ciruela); }
+.il-f-terracota { fill: var(--pt-tinte-terracota); }
+.il-f-vino { fill: var(--pt-tinte-vino); }
+.il-f-piedra { fill: var(--pt-piedra); }
+.il-aro { fill: none; stroke-width: 2.6; }
+.il-aro-azul { stroke: var(--pt-azul); }
+.il-aro-ciruela { stroke: var(--pt-ciruela); }
+
+/* Movimiento continuo y suave; todo con transform. */
+.il-flota, .il-confeti, .il-ojos, .il-burbuja, .il-rayos, .il-dientes, .il-atomo, .il-brazo-saluda {
+  transform-box: view-box;
+}
+.il-ojos { transform-box: fill-box; transform-origin: center; }
+.il-brazo-saluda { transform-origin: 98px 128px; }
+.il-dientes, .il-atomo, .il-confeti { transform-origin: 0 0; }
+.il-rayos { transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .il-flota { animation: il-flota var(--dur, 7s) ease-in-out var(--d, 0s) infinite alternate; }
+  .il-confeti { animation: il-deriva 5.5s ease-in-out var(--d, 0s) infinite alternate; }
+  .il-ojos { animation: il-parpadeo 5s linear var(--d, 0s) infinite; }
+  .il-burbuja { animation: il-burbuja 3.2s var(--pt-ease) var(--d, 0s) infinite; }
+  .il-rayos { animation: il-rayos 2.8s ease-in-out infinite alternate; }
+  .il-dientes { animation: il-gira 18s linear infinite; }
+  .il-atomo { animation: il-gira 24s linear infinite; }
+  .il-brazo-saluda { animation: il-saluda 4s var(--pt-ease-mov) 1.4s infinite; }
+}
+@keyframes il-flota { from { transform: translateY(-5px); } to { transform: translateY(7px); } }
+@keyframes il-deriva { from { transform: translateY(-3px) rotate(-6deg); } to { transform: translateY(4px) rotate(8deg); } }
+@keyframes il-parpadeo { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes il-burbuja { 0% { transform: translateY(6px); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(-18px); opacity: 0; } }
+@keyframes il-rayos { from { transform: scale(0.94); opacity: 0.6; } to { transform: scale(1.06); opacity: 1; } }
+@keyframes il-gira { to { transform: rotate(360deg); } }
+@keyframes il-saluda { 0%, 60%, 100% { transform: rotate(0deg); } 70% { transform: rotate(-16deg); } 80% { transform: rotate(8deg); } 90% { transform: rotate(-10deg); } }
 
 @media (prefers-reduced-motion: reduce) {
   .pt-root *, .pt-root *::before, .pt-root *::after { animation: none !important; transition-duration: 1ms !important; }
-  .pt-root .pt-orbita-trazo { stroke-dashoffset: 0 !important; }
-  .pt-root .pt-entra, .pt-root .pt-revela, .pt-root .pt-paso { opacity: 1 !important; transform: none !important; }
-  .pt-root .pt-pasos-lista::before { transform: none !important; }
-  .pt-fondo-puntero { display: none; }
+  .pt-root .pt-subrayado-trazo path { stroke-dashoffset: 0 !important; }
+  .pt-root .pt-entra, .pt-root .pt-ilus-entra, .pt-root .pt-revela, .pt-root .pt-paso, .pt-root .pt-chip { opacity: 1 !important; transform: none !important; }
 }
+
+/* ═══════════ Pasteles de detalle (15/10/2026, pedido del usuario: sin verdes y sin saturar de vino) ═══════════
+ * Cada tono profundo tiene su pastel: azul→cielo, ciruela→lavanda, terracota→durazno, ocre→mantequilla.
+ * Los círculos de ícono pasan a fondo pastel con el ícono en el tono profundo (antes, círculo sólido saturado).
+ */
+.pt-root [data-tono='azul'], .pt-root [data-sistema='sigae'] { --tono: var(--pt-azul); --pastel: var(--pt-pastel-cielo); }
+.pt-root [data-tono='ciruela'], .pt-root [data-sistema='sicei'] { --tono: var(--pt-ciruela); --pastel: var(--pt-pastel-lavanda); }
+.pt-root [data-tono='terracota'] { --tono: var(--pt-terracota); --pastel: var(--pt-pastel-durazno); }
+.pt-root [data-tono='ocre'] { --tono: var(--pt-ocre-texto); --pastel: var(--pt-pastel-mantequilla); }
+.pt-root .pt-sistema-icono, .pt-root .pt-resultado-icono, .pt-root .pt-chip-icono,
+.pt-root .pt-paso[data-activo] .pt-paso-icono { background: var(--pastel); color: var(--tono); }
+.pt-root .pt-chip-icono { box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.5); }
+.pt-root .pt-resultado-perfil .pt-chip-icono { box-shadow: none; }
+.pt-root .pt-sistema[data-sistema='sicei'] .pt-estado { background: var(--pt-pastel-lavanda); color: var(--pt-ciruela); }
+.pt-root .pt-programas { background: var(--pt-pastel-cielo); }
+.pt-root .pt-puntos li svg { color: var(--tono); }
+.pt-root .pt-senal[data-tipo='proximas'] { background: var(--pt-pastel-mantequilla); }
+/* Filas de acceso: pastel del sistema en lugar de arena. */
+.pt-root .pt-accesos-grupo { --pastel: var(--pt-pastel-cielo); }
+.pt-root .pt-accesos-grupo[data-sistema='sicei'] { --pastel: var(--pt-pastel-lavanda); }
+.pt-root .pt-acceso { background: var(--pastel); }
+@media (hover: hover) and (pointer: fine) { .pt-root .pt-acceso:hover { background: color-mix(in oklab, var(--pastel) 80%, var(--tono)); } }
+.pt-root .pt-acceso-icono { box-shadow: none; }
+/* Secuencia: tarjeta con un pastel muy tenue y estaciones en tono profundo. */
+.pt-root .pt-secuencia { background: color-mix(in oklab, var(--pt-pastel-cielo) 45%, var(--pt-blanco)); }
+/* Panel vino de "¿Cuál es para mí?": formas pastel translúcidas detrás del vidrio (más luz, menos vino). */
+.pt-root .pt-guia-panel::before { background: color-mix(in oklab, var(--pt-pastel-rosa) 28%, var(--pt-vino)); }
+.pt-root .pt-guia-panel::after { background: color-mix(in oklab, var(--pt-pastel-cielo) 22%, var(--pt-vino)); }
+.pt-root .pt-guia-resultado::after { background: var(--pt-pastel-durazno); }
+/* Héroe: dos manchas pastel sólidas (sin degradado) detrás de los personajes. */
+@media (min-width: 1100px) {
+  .pt-heroe-lado { position: relative; }
+  .pt-heroe-lado::before { content: ''; position: absolute; z-index: -1; border-radius: 50%; width: 260px; height: 260px; top: 18%; }
+  .pt-heroe-lado-izq::before { left: -10px; background: var(--pt-pastel-cielo); }
+  .pt-heroe-lado-der::before { right: -10px; background: var(--pt-pastel-durazno); }
+}
+
+/* Franja institucional del portal alineada a la izquierda, con el mismo margen que la barra y el contenido
+   (pedido del usuario 15/10/2026). Solo en el portal: /sigae, acceso y legales la conservan centrada (globals.css).
+   El elemento sigue a todo lo ancho (su línea dorada inferior no se recorta); solo cambia el relleno. */
+.pt-root .banda-institucional { justify-content: flex-start; padding-inline: 16px; }
+@media (min-width: 640px) { .pt-root .banda-institucional { padding-inline: max(32px, calc((100% - 1200px) / 2 + 32px)); } }
+.pt-root .banda-institucional-marco { max-width: 600px; }

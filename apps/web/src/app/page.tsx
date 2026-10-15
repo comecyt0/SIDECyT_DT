@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { INSTITUTION } from '@/lib/institution';
 import Portal from '@/components/portal/Portal';
+import { inter } from '@/lib/fonts';
 import '@/components/portal/portal.css';
 
 /**
@@ -17,5 +18,6 @@ export const metadata: Metadata = {
 };
 
 export default function RootPage() {
-  return <Portal />;
+  // Inter solo se carga en el portal (texto corrido del rediseño del 15/10/2026); define `--font-inter`.
+  return <div className={inter.variable}><Portal /></div>;
 }

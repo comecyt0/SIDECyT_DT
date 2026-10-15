@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-10-15",
+    "macrostructure": "Héroe centrado con grupos de ilustración + tarjetas con contorno fino + tarjeta 60-30-10 + secuencia fijada al scroll",
+    "theme": "studied-DNA (design.md Family, family.co) adaptado a la identidad COMECYT",
+    "theme_axes": "light / geometric-sans (Gotham→Montserrat + Inter) / warm (vino #56212F) con pasteles",
+    "enrichment": "Tier B hand-built SVG (personajes de ciencia + confeti) + secuencia SVG mapeada al scroll",
+    "nav": "barra plana Family (fantasma + píldora vino) con barra de progreso",
+    "footer": "Ft3 existente (pie vino plano)",
+    "brief": "SIDECyT · portal / rediseñado (E73)"
+  },  {
     "date": "2026-09-23",
     "macrostructure": "Panel shell existente (sin cambio estructural, E26) — capa de sistema",
     "theme": "studied-DNA (misma que la landing /sigac) + vino de detalle",

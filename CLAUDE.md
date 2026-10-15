@@ -2169,6 +2169,26 @@ Guía completa (decisiones del usuario, arquitectura, regla de nombres, pasos y 
       - Superadmin de SICEI (`php artisan sicei:crear-admin <correo>`).
       - Rotar el `REVALIDATE_SECRET` de `sicei-web`.
 
+### E73 — Portal SIDECyT rediseñado con la referencia "Family" + efectos de scroll [publicado 15-10-2026]
+Detalle de diseño y decisiones del usuario: **`docs/DISENO_UI.md` §21**. Para desarrollo:
+- Solo el portal `/` (`components/portal/`): `Portal.tsx`, `portal.css`, `IlustracionesCiencia.tsx` (SVG decorativos) y
+  `ScrollPortal.tsx` (`BarraProgreso`, `AparecerScroll`, `TextoScroll`, `useSalidaHeroe`, `PasosSecuencia`).
+- Tokens solo en `.pt-root` (no tocar `:root`). Paleta: vino principal, acentos azul/ciruela/terracota/ocre (**sin
+  verdes**, pedido del usuario) y pasteles de detalle vía `[data-tono]`/`[data-sistema]` → `--tono`/`--pastel`.
+- **Inter** auto-hospedada (`src/fonts/Inter-Variable.woff2`, OFL, `lib/fonts.ts` `inter`), importada solo en
+  `app/page.tsx`. Gotham: la pila `--font-titulos` ya la pone primero; **no se descarga de terceros** — cuando COMECYT
+  entregue los archivos con licencia web, agregarlos con `localFont` en `lib/fonts.ts`.
+- Efectos de scroll con `useScroll`/`useTransform` (framer-motion 12): solo transform/opacity, nada oculto antes de
+  montar, apagados con `prefers-reduced-motion`. La secuencia de «Cómo funciona» fija la escena con `sticky` en ≥ 960 px
+  (pista de 260vh).
+- Enlaces a SICEI desde el portal siempre `<a>` (`EnlaceSistema`), nunca `<Link>` (E72).
+- Sin mouse en los personajes del héroe (el usuario pidió quitar el paralaje con el puntero).
+- Franja institucional alineada a la izquierda **solo en el portal** (.pt-root .banda-institucional); en las demás
+  páginas sigue centrada (globals.css).
+- `OrbitaSistemas.tsx` quedó sin uso; no se borró sin confirmación del usuario.
+**Verificado:** tsc/eslint 0 errores; Edge por dominio en 7 anchos + movimiento reducido (sin desbordes, sin texto partido,
+0 errores de consola/CSP); secuencia 1→2→3, héroe desvanecido y tarjeta de resultado con desvanecido comprobados.
+
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de
 un club del director) **si están dados de alta en ese club**. `Club::destinatarios()` = dueño + todos sus accesos activos

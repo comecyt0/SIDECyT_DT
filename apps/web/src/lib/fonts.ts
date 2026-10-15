@@ -31,6 +31,18 @@ export const montserrat = localFont({
   display: 'swap',
 });
 
+/**
+ * Texto corrido del portal SIDECyT (15/10/2026, rediseño con la referencia "Family"). Inter 4.1, SIL OFL 1.1
+ * (src/fonts/LICENSE-OFL-Inter.txt), descargada del release oficial rsms/inter. Solo la importa el portal
+ * (`app/page.tsx`), así que no se precarga en el resto del sistema.
+ */
+export const inter = localFont({
+  src: '../fonts/Inter-Variable.woff2',
+  variable: '--font-inter',
+  weight: '100 900',
+  display: 'swap',
+});
+
 export const satoshi = localFont({
   src: '../fonts/Satoshi-Variable.woff2',
   variable: '--font-lp-display',
