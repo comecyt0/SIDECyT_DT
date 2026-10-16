@@ -5,8 +5,7 @@ import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer
 import { ArrowLeft, ArrowRight, Pause, Play } from 'lucide-react';
 import { INSTITUTION } from '@/lib/institution';
 import { useT } from '@/i18n/I18nProvider';
-import BannerImagen, { fondoEsClaro, normalizarEncuadre, type Encuadre } from '@/components/ui/BannerImagen';
-import { LogoComecyt } from '@/components/branding/Logos';
+import BannerImagen, { normalizarEncuadre, type Encuadre } from '@/components/ui/BannerImagen';
 
 interface CarouselSlide {
   id: number;
@@ -187,7 +186,6 @@ export function LoginCarousel() {
   const variants = textVariants(reduceMotion);
   // E50: con imagen, se ve la imagen tal cual (sin velo ni manchas); sin imagen, el fondo institucional de manchas.
   const conImagen = Boolean(current.imagen_url);
-  const claro = conImagen && current.encuadre ? fondoEsClaro(current.encuadre) : false;
   const mostrarTextos = current.mostrar_textos !== false;
 
   return (
@@ -247,11 +245,8 @@ export function LoginCarousel() {
       </div>
 
       <div className="relative flex h-full flex-col p-8 text-white xl:p-10">
-        {/* Arriba: logo oficial (negativo sobre fondos oscuros, a color sobre fondo claro). Sin sello de texto (28/09/2026). */}
-        <div className="auth-reveal flex items-start justify-between gap-6" style={{ '--i': 0 } as React.CSSProperties}>
-          <LogoComecyt variante={claro ? 'color' : 'negativo'} className="h-24 xl:h-28" />
-        </div>
-
+        {/* 16/10/2026 (pedido del usuario): sin el logo COMECYT sobre el carrusel; el logo institucional ya va en la franja
+            de arriba. La diapositiva queda limpia. */}
         {/* Abajo: texto de la diapositiva. pr deja libre el recorte de los botones */}
         <div className="auth-reveal mt-auto pr-[152px]" style={{ '--i': 1 } as React.CSSProperties}>
           <div aria-live={isPaused ? 'polite' : 'off'} aria-atomic="true">

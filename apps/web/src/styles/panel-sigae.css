@@ -1624,8 +1624,8 @@ html.sg-scroll-bloqueado, html.sg-scroll-bloqueado body { overflow: hidden; over
   background: linear-gradient(to top, rgb(28 10 18 / 0.62), rgb(28 10 18 / 0.28) 55%, transparent);
 }
 :is(.panel-root, html.sg-panel) .encuadre-scrim[data-textos="true"] { height: 58%; }
-:is(.panel-root, html.sg-panel) .encuadre-sim { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 7%; pointer-events: none; }
-:is(.panel-root, html.sg-panel) .encuadre-sim-logo { height: 13%; max-height: 42px; min-height: 16px; width: auto; align-self: flex-start; }
+/* 16/10/2026: sin el logo simulado (el login ya no lo lleva); textos y controles abajo, como en el carrusel real. */
+:is(.panel-root, html.sg-panel) .encuadre-sim { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 7%; pointer-events: none; }
 :is(.panel-root, html.sg-panel) .encuadre-sim-abajo { display: grid; gap: 6px; }
 :is(.panel-root, html.sg-panel) .encuadre-sim-tarjeta {
   padding: 8% 7%; border-radius: 10px; background: rgb(255 255 255 / 0.14); backdrop-filter: blur(6px);

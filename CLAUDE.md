@@ -2324,6 +2324,10 @@ el login, el registro, la recuperación y la pantalla de carga conservan el logo
   - Se quitó la barra vertical vino (`lp-swatch lp-swatch-marca`) y su CSS.
   - El `.lp-swatch` genérico sigue donde se usa fuera de la marca.
   - Los paneles conservan su `.panel-brand-barra`.
+- **Login de SIGAE, a pedido del usuario:** se quitó el logo COMECYT que iba sobre el carrusel (`login-carousel.tsx`).
+  - También se quitó de la simulación del editor de encuadre (`EncuadreEditor`, `.encuadre-sim` con `flex-end`), para
+    que la vista previa del admin sea igual al login.
+  - Quedan el logo del formulario y la franja.
 
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de

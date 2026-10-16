@@ -2,8 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { Crosshair, Expand, Move, RotateCcw, ScanLine } from 'lucide-react';
-import BannerImagen, { ENCUADRE_INICIAL, fondoEsClaro, type Encuadre, type Fondo } from '@/components/ui/BannerImagen';
-import { LogoComecyt } from '@/components/branding/Logos';
+import BannerImagen, { ENCUADRE_INICIAL, type Encuadre, type Fondo } from '@/components/ui/BannerImagen';
 
 /**
  * E50 (28/09/2026) — Herramienta de encuadre para las imágenes del carrusel del login.
@@ -37,14 +36,12 @@ interface Props {
 function Marco({ src, e, proporcion, textos, titulo, children, editable = false }: {
   src: string; e: Encuadre; proporcion: number; textos: boolean; titulo: string; children?: React.ReactNode; editable?: boolean;
 }) {
-  const claro = fondoEsClaro(e);
   return (
     <div className="encuadre-marco" style={{ aspectRatio: String(proporcion) }} data-editable={editable || undefined}>
       <BannerImagen src={src} encuadre={e} />
       <span className="encuadre-scrim" data-textos={textos} aria-hidden="true" />
-      {/* Simulación del contenido del login encima: logo, tarjeta de textos (si se muestra) y controles. */}
+      {/* Simulación del contenido del login encima: tarjeta de textos (si se muestra) y controles. 16/10/2026: el login ya no lleva el logo sobre el carrusel. */}
       <div className="encuadre-sim" aria-hidden="true">
-        <LogoComecyt variante={claro ? 'color' : 'negativo'} decorativo className="encuadre-sim-logo" />
         <div className="encuadre-sim-abajo">
           {textos && <div className="encuadre-sim-tarjeta"><span>{titulo || 'Título de la diapositiva'}</span></div>}
           <div className="encuadre-sim-barra"><i /><i /><i /></div>
