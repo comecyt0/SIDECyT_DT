@@ -18,6 +18,19 @@ export interface ErroresFormulario {
   paso: string | null;
 }
 
+/**
+ * 16/10/2026 (reporte del usuario: un aviso mostraba «validation.regex»): ningún texto técnico llega a la persona.
+ * Una clave de traducción sin traducir («validation.regex», «passwords.token») o un mensaje por defecto de Laravel en
+ * inglés se cambia por un texto en español. El API ya trae sus traducciones (lang/es); esto es la segunda red.
+ */
+export function textoLegible(mensaje: string, porDefecto = 'Revisa este dato: no tiene el formato esperado.'): string {
+  const m = mensaje.trim();
+  const partes = m.split('.');
+  if (partes.length > 1 && partes.every((p) => /^[a-z0-9_]+$/i.test(p))) return porDefecto;
+  if (/^(The |This |Validation failed|Server Error|The given data was invalid|Unauthenticated|Too Many Attempts)/.test(m)) return porDefecto;
+  return m;
+}
+
 // Algunos controladores antiguos responden `{ error: '...' }` en lugar de `{ message }`; se aceptan ambos.
 type RespuestaError = { response?: { status?: number; data?: { message?: string; error?: string; errors?: Record<string, unknown> } } };
 
@@ -56,7 +69,8 @@ export function erroresFormulario(
     const lineas: string[] = [];
     let paso: string | null = null;
     for (const [clave, valor] of Object.entries(errors)) {
-      const mensaje = Array.isArray(valor) ? String(valor[0] ?? '') : String(valor ?? '');
+      const crudo = Array.isArray(valor) ? String(valor[0] ?? '') : String(valor ?? '');
+      const mensaje = crudo ? textoLegible(crudo) : '';
       if (!mensaje) continue;
       const raiz = clave.split('.')[0];
       campos[clave] = mensaje;
@@ -71,7 +85,7 @@ export function erroresFormulario(
   }
 
   const msg = r.data?.message || (typeof r.data?.error === 'string' ? r.data.error : undefined);
-  const legible = msg && status !== 500 && !/^(Validation failed|Server Error|The given data was invalid)/i.test(msg);
+  const legible = msg && status !== 500 && textoLegible(msg, '') !== '';
   return {
     titulo: legible ? msg! : 'No se pudo guardar.',
     lineas: legible ? [] : ['Ocurrió un problema en el servidor. Inténtalo de nuevo en un momento; si continúa, avisa al administrador.'],

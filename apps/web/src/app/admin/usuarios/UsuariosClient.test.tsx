@@ -24,11 +24,17 @@ vi.mock('@/lib/api', () => ({
 
 const pagination = { current_page: 1, last_page: 1, per_page: 12, total: 0 };
 
+/** E76: el nombre va por partes (se guarda con mayúscula inicial). */
+function llenarNombre(dlg: HTMLElement) {
+  fireEvent.change(within(dlg).getByLabelText(/^Nombre\(s\) \*/), { target: { value: 'ana' } });
+  fireEvent.change(within(dlg).getByLabelText(/^Primer apellido \*/), { target: { value: 'PÉREZ' } });
+}
+
 async function llenarHastaAlcance() {
   render(<UsuariosClient users={[]} pagination={pagination} />);
   fireEvent.click(screen.getByRole('button', { name: /Nuevo usuario/ }));
   const dlg = screen.getByRole('dialog');
-  fireEvent.change(within(dlg).getByLabelText(/^Nombre completo \*/), { target: { value: 'Ana Pérez' } });
+  llenarNombre(dlg);
   fireEvent.change(within(dlg).getByLabelText(/^Correo electrónico \*/), { target: { value: 'ana@comecyt.mx' } });
   fireEvent.change(within(dlg).getByLabelText(/^Contraseña inicial \*/), { target: { value: 'corta' } });
   fireEvent.click(within(dlg).getByRole('button', { name: /Siguiente/ }));
@@ -49,7 +55,7 @@ describe('Crear usuario (reporte 29/09/2026: 422 sin decir qué corregir)', () =
     render(<UsuariosClient users={[]} pagination={pagination} />);
     fireEvent.click(screen.getByRole('button', { name: /Nuevo usuario/ }));
     const dlg = screen.getByRole('dialog');
-    fireEvent.change(within(dlg).getByLabelText(/^Nombre completo \*/), { target: { value: 'Ana Pérez' } });
+    llenarNombre(dlg);
     fireEvent.change(within(dlg).getByLabelText(/^Correo electrónico \*/), { target: { value: 'ana@comecyt.mx' } });
     fireEvent.change(within(dlg).getByLabelText(/^Contraseña inicial \*/), { target: { value: 'Comecyt2026Seguro' } });
     const conf = within(dlg).getByLabelText(/^Confirmar contraseña \*/) as HTMLInputElement;
@@ -106,5 +112,22 @@ describe('Crear usuario (reporte 29/09/2026: 422 sin decir qué corregir)', () =
     fireEvent.click(within(dlg).getByRole('button', { name: 'Crear usuario' }));
     await waitFor(() => expect(screen.getByText(/Usuario Ana Pérez creado/)).toBeInTheDocument());
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(post).toHaveBeenCalledWith('/admin/usuarios', expect.objectContaining({ nombres: 'Ana', primer_apellido: 'Pérez' }));
+  });
+
+  it('E76: una CURP que no coincide se detiene hasta que el admin la confirma', async () => {
+    render(<UsuariosClient users={[]} pagination={pagination} />);
+    fireEvent.click(screen.getByRole('button', { name: /Nuevo usuario/ }));
+    const dlg = screen.getByRole('dialog');
+    fireEvent.change(within(dlg).getByLabelText(/^Nombre\(s\) \*/), { target: { value: 'Gloria' } });
+    fireEvent.change(within(dlg).getByLabelText(/^Primer apellido \*/), { target: { value: 'Hernández' } });
+    fireEvent.change(within(dlg).getByLabelText(/^Segundo apellido/), { target: { value: 'García' } });
+    fireEvent.change(within(dlg).getByLabelText(/^CURP/), { target: { value: 'hegg560427mvzrrl04' } });
+    fireEvent.change(within(dlg).getByLabelText(/^Fecha de nacimiento/), { target: { value: '1956-04-28' } });
+    expect(within(dlg).getByText(/no es tu fecha de nacimiento/)).toBeInTheDocument();
+    fireEvent.click(within(dlg).getByRole('button', { name: /Siguiente/ }));
+    expect(within(dlg).getAllByText(/La CURP no coincide/).length).toBeGreaterThan(0);
+    fireEvent.change(within(dlg).getByLabelText(/^Fecha de nacimiento/), { target: { value: '1956-04-27' } });
+    expect(within(dlg).getByText('La CURP coincide con el nombre y la fecha de nacimiento.')).toBeInTheDocument();
   });
 });

@@ -15,6 +15,8 @@ use App\Models\ProgramaDocumento;
 use App\Models\User;
 use App\Support\Audit;
 use App\Support\Especie;
+use App\Support\IdentidadCurp;
+use App\Support\NombrePropio;
 use App\Support\ImagenSegura;
 use App\Support\RevisionClub;
 use App\Support\TiposArchivo;
@@ -114,7 +116,11 @@ class ClubController extends Controller
                 $club->forceFill(['dueno_director' => true])->save();
             } else {
                 // El líder es el primer integrante (cuenta para el mínimo y el máximo; decisión del usuario).
-                $lider = new ClubIntegrante(['nombre' => $user->name, 'correo' => $user->email, 'telefono' => $user->telefono, 'curp' => $user->curp, 'orden' => 0]);
+                // E76: con la identidad ya verificada de su cuenta (nombre por partes, fecha, sexo y estado de la CURP).
+                $lider = new ClubIntegrante(['nombre' => $user->name, 'correo' => $user->email, 'telefono' => $user->telefono, 'curp' => $user->curp, 'orden' => 0,
+                    'nombres' => $user->nombres, 'primer_apellido' => $user->primer_apellido, 'segundo_apellido' => $user->segundo_apellido,
+                    'fecha_nacimiento' => $user->fecha_nacimiento, 'sexo' => $user->sexo, 'entidad_nacimiento' => $user->entidad_nacimiento,
+                    'curp_verificacion' => $user->curp_verificacion]);
                 $lider->forceFill(['club_id' => $club->id, 'es_lider' => true])->save();
             }
 
@@ -252,12 +258,36 @@ class ClubController extends Controller
 
     private function datosIntegrante(Request $request, Club $club, EspecieConfig $cfg): array
     {
-        if ($request->filled('curp')) $request->merge(['curp' => mb_strtoupper(trim((string) $request->input('curp')))]);
-        $v = $request->validate(Especie::reglasIntegrante($cfg), \App\Support\RegistroRoles::mensajes());
+        // E76: nombres con mayúscula inicial; con CURP, nombre por partes y la CURP verificada contra nombre y fecha.
+        $request->merge(IdentidadCurp::normalizar($request->only(['nombres', 'primer_apellido', 'segundo_apellido', 'curp'])));
+        if ($request->filled('nombre')) $request->merge(['nombre' => NombrePropio::formatear((string) $request->input('nombre'), true)]);
+        $v = $request->validate(Especie::reglasIntegrante($cfg), \App\Support\RegistroRoles::mensajes() + [
+            'nombre.regex' => 'El nombre solo puede llevar letras, espacios, guion o apóstrofo; sin números.',
+        ]);
         $pc = Especie::camposIntegrante($cfg);
-        $out = ['nombre' => trim(strip_tags($v['nombre']))];
+        if ($pc['curp']['pedir']) {
+            $out = [
+                'nombres' => $v['nombres'], 'primer_apellido' => $v['primer_apellido'], 'segundo_apellido' => $v['segundo_apellido'] ?? null,
+                'nombre' => NombrePropio::completo($v['nombres'], $v['primer_apellido'], $v['segundo_apellido'] ?? null),
+            ];
+        } else {
+            $out = ['nombre' => trim(strip_tags($v['nombre'])), 'nombres' => null, 'primer_apellido' => null, 'segundo_apellido' => null];
+        }
         foreach (['fecha_nacimiento', 'sexo', 'curp', 'grado_grupo', 'correo', 'telefono'] as $k) {
             $out[$k] = $pc[$k]['pedir'] ? ($v[$k] ?? null) : null;
+        }
+        // Con CURP y fecha se comparan; si no coincide, el líder corrige o la manda a revisión del admin. El sexo y el
+        // estado salen de la CURP.
+        $out += ['entidad_nacimiento' => null, 'curp_verificacion' => null, 'curp_problemas' => null];
+        if ($out['curp'] && $out['fecha_nacimiento']) {
+            [$estado, $problemas] = IdentidadCurp::verificar(['curp' => $out['curp'], 'fecha_nacimiento' => $out['fecha_nacimiento'], 'curp_revision' => $v['curp_revision'] ?? false] + $out);
+            $out['entidad_nacimiento'] = substr($out['curp'], 11, 2);
+            $out['sexo'] = $out['curp'][10];
+            $out['curp_verificacion'] = $estado;
+            $out['curp_problemas'] = $problemas ? array_values($problemas) : null;
+        } elseif ($out['curp']) {
+            $out['entidad_nacimiento'] = substr($out['curp'], 11, 2);
+            $out['sexo'] = $out['curp'][10];
         }
         if ($out['grado_grupo']) $out['grado_grupo'] = trim(strip_tags($out['grado_grupo']));
         if (! $cfg->participan_menores && $out['fecha_nacimiento'] && \Carbon\Carbon::parse($out['fecha_nacimiento'])->age < 18) {
@@ -406,6 +436,8 @@ class ClubController extends Controller
             }
             if (! $cfg->participan_menores && $i->menor_de_edad) $falta[] = 'no participan menores de edad';
             if ($falta) $f[] = "{$i->nombre}: falta ".implode(', ', $falta).'.';
+            // E76: una CURP rechazada en revisión se corrige antes de enviar.
+            if ($i->curp_verificacion === IdentidadCurp::RECHAZADA) $f[] = "{$i->nombre}: el COMECYT rechazó su CURP; corrígela con sus datos.";
         }
         $subidos = $club->documentos->pluck('clave')->all();
         if (! in_array(Especie::CARTA_ESCUELA, $subidos, true)) $f[] = 'Sube la carta de consentimiento de la escuela (firmada y sellada).';

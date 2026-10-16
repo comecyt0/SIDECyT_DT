@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\SolicitudAcceso;
 use App\Models\User;
 use App\Notifications\NuevaSolicitudAcceso;
+use App\Support\IdentidadCurp;
+use App\Support\NombrePropio;
 use App\Support\RegistroRoles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -44,11 +46,13 @@ class RegistroGeneralController extends Controller
         $base->validate();
         $rol = (string) $request->input('rol_solicitado');
 
-        // Normalizar antes de validar.
-        $request->merge([
-            'curp' => mb_strtoupper(trim((string) $request->input('curp'))),
-            'email' => mb_strtolower(trim((string) $request->input('email'))),
-        ]);
+        // Normalizar antes de validar. E76: nombres con mayúscula inicial («MARÍA DE LA LUZ» → «María de la Luz»).
+        $request->merge(IdentidadCurp::normalizar([
+            'nombres' => $request->input('nombres'),
+            'primer_apellido' => $request->input('primer_apellido'),
+            'segundo_apellido' => $request->input('segundo_apellido'),
+            'curp' => (string) $request->input('curp'),
+        ]) + ['email' => mb_strtolower(trim((string) $request->input('email')))]);
 
         $request->validate(array_merge(
             RegistroRoles::reglasPersona(),
@@ -64,6 +68,10 @@ class RegistroGeneralController extends Controller
             'terminos_aceptados.required' => 'Debes aceptar los términos y el aviso de privacidad.',
             'terminos_aceptados.accepted' => 'Debes aceptar los términos y el aviso de privacidad.',
         ]));
+
+        // E76: la CURP debe corresponder al nombre y la fecha; si no, 422 (o revisión manual si la persona la confirma).
+        // Va antes de la revisión de duplicados: el 422 no revela si la persona ya tiene cuenta.
+        [$curpEstado, $curpProblemas] = IdentidadCurp::verificar($request->only(['nombres', 'primer_apellido', 'segundo_apellido', 'fecha_nacimiento', 'curp', 'curp_revision']));
 
         $domicilio = RegistroRoles::resolverDomicilio((string) $request->input('codigo_postal'), (string) $request->input('colonia'));
 
@@ -103,8 +111,9 @@ class RegistroGeneralController extends Controller
 
         try {
             $s = new SolicitudAcceso();
-            $s->forceFill([
-                'nombre' => trim((string) $request->input('nombre')),
+            $identidad = IdentidadCurp::columnas($request->only(['nombres', 'primer_apellido', 'segundo_apellido', 'fecha_nacimiento', 'curp']), $curpEstado, $curpProblemas, false);
+            $s->forceFill($identidad + [
+                'nombre' => NombrePropio::completo($identidad['nombres'], $identidad['primer_apellido'], $identidad['segundo_apellido']),
                 'email' => $email,
                 'password' => (string) $request->input('password'), // cast 'hashed'
                 'rol_solicitado' => $rol,

@@ -26,11 +26,11 @@ class RegistroRoles
         return (array) config('comecyt.registro.roles_autoservicio', []);
     }
 
-    /** Reglas de los datos personales del registro general. */
+    /** Reglas de los datos personales del registro general. E76: nombre por partes + fecha, verificados con la CURP. */
     public static function reglasPersona(): array
     {
         return [
-            'nombre' => 'required|string|max:255',
+            ...IdentidadCurp::reglas(),
             'telefono' => ['required', 'string', 'regex:/^\d{10}$/'],
             'curp' => ['required', 'string', 'size:18', 'regex:'.self::PATRON_CURP],
             'codigo_postal' => ['required', 'string', 'regex:/^\d{5}$/'],
@@ -71,8 +71,7 @@ class RegistroRoles
     public static function mensajes(): array
     {
         return [
-            'curp.regex' => 'La CURP no tiene un formato válido.',
-            'curp.size' => 'La CURP debe tener 18 caracteres.',
+            ...IdentidadCurp::mensajes(),
             'telefono.regex' => 'El teléfono debe tener 10 dígitos.',
             'codigo_postal.regex' => 'El código postal debe tener 5 dígitos.',
             'empresa_datos.rfc.regex' => 'El RFC no tiene un formato válido.',

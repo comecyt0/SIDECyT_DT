@@ -6,9 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Alcance;
 use App\Support\Audit;
+use App\Support\IdentidadCurp;
+use App\Support\NombrePropio;
+use App\Support\ValidadorCurp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 /**
@@ -46,23 +50,26 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate($this->reglas() + [
-            'name' => 'required|string|max:255',
+        // E76: nombre por partes con mayúscula inicial; CURP opcional (personal), verificada si se escribe.
+        $request->merge(IdentidadCurp::normalizar($request->only(['nombres', 'primer_apellido', 'segundo_apellido', 'curp'])));
+        $validated = $request->validate($this->reglas() + $this->reglasIdentidad(true, null) + [
             'email' => 'required|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Password::defaults()], // 15/10/2026: con confirmación
             'rol_id' => 'required|exists:roles,id',
-        ]);
+        ], IdentidadCurp::mensajes() + self::MENSAJES);
 
-        $user = DB::transaction(function () use ($validated) {
-            $datos = collect($validated)->except(['convocatoria_ids', 'periodo_ids'])->all();
+        $identidad = $this->identidad($validated, null);
+        $user = DB::transaction(function () use ($validated, $identidad) {
+            $datos = collect($validated)->except(['convocatoria_ids', 'periodo_ids', ...self::CAMPOS_IDENTIDAD])->all();
             $datos['password'] = Hash::make($datos['password']);
-            $user = User::create($datos);
+            $user = User::create($datos + ['name' => $identidad['name']]);
+            $user->forceFill($identidad)->save();
             $this->sincronizarAlcance($user, $validated);
             $this->sincronizarRoles($user, (int) $user->rol_id);
 
             return $user;
         });
-        Audit::log('user.creado', $user, ['rol_id' => $user->rol_id] + $this->resumenAlcance($user));
+        Audit::log('user.creado', $user, ['rol_id' => $user->rol_id, 'curp_verificacion' => $user->curp_verificacion] + $this->resumenAlcance($user));
 
         return response()->json([
             'message' => 'Usuario creado con éxito',
@@ -77,12 +84,12 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
-        $validated = $request->validate($this->reglas() + [
-            'name' => 'string|max:255',
+        $request->merge(IdentidadCurp::normalizar($request->only(['nombres', 'primer_apellido', 'segundo_apellido', 'curp'])));
+        $validated = $request->validate($this->reglas() + $this->reglasIdentidad(false, $user) + [
             'email' => 'string|email|max:255|unique:users,email,'.$user->id,
             'password' => ['nullable', 'confirmed', Password::defaults()],
             'rol_id' => 'exists:roles,id',
-        ]);
+        ], IdentidadCurp::mensajes() + self::MENSAJES);
 
         // Nadie se quita a sí mismo el rol de admin ni se desactiva (evita quedarse fuera por error).
         $yo = $request->user();
@@ -105,8 +112,12 @@ class UserController extends Controller
 
         $antes = ['rol_id' => $user->rol_id, 'activo' => $user->activo] + $this->resumenAlcance($user);
 
-        DB::transaction(function () use ($validated, $user) {
-            $datos = collect($validated)->except(['convocatoria_ids', 'periodo_ids'])->all();
+        $identidad = $this->identidad($validated, $user);
+        DB::transaction(function () use ($validated, $user, $identidad) {
+            $datos = collect($validated)->except(['convocatoria_ids', 'periodo_ids', ...self::CAMPOS_IDENTIDAD])->all();
+            if ($identidad !== []) {
+                $user->forceFill($identidad);
+            }
             if (! empty($datos['password'])) {
                 $datos['password'] = Hash::make($datos['password']);
             } else {
@@ -150,6 +161,74 @@ class UserController extends Controller
         return response()->json([
             'message' => 'Usuario eliminado con éxito',
         ]);
+    }
+
+    private const MENSAJES = [
+        'curp.unique' => 'Esa CURP ya tiene una cuenta.',
+        'fecha_nacimiento.required_with' => 'Escribe la fecha de nacimiento: la CURP se compara con ella.',
+        'name.prohibited' => 'El nombre se escribe por partes (nombre y apellidos).',
+        'primer_apellido.required_with' => 'Escribe el primer apellido.',
+    ];
+
+    private const CAMPOS_IDENTIDAD = ['name', 'nombres', 'primer_apellido', 'segundo_apellido', 'curp', 'fecha_nacimiento', 'curp_revision'];
+
+    /**
+     * E76 — Reglas del nombre y la CURP. Alta: nombre por partes obligatorio; CURP y fecha opcionales (el personal no
+     * siempre la registra). Edición: una cuenta con nombre por partes se edita por partes; una anterior, en un campo.
+     */
+    private function reglasIdentidad(bool $alta, ?User $user): array
+    {
+        $nombre = ['string', 'max:'.NombrePropio::MAX, 'regex:'.NombrePropio::REGEX];
+        $porPartes = $alta || $user?->nombres !== null;
+
+        return [
+            'name' => $porPartes ? ['prohibited'] : ['sometimes', 'string', 'min:3', 'max:255', 'regex:'.NombrePropio::REGEX],
+            'nombres' => $porPartes ? [$alta ? 'required' : 'sometimes', ...$nombre] : ['sometimes', 'required', ...$nombre],
+            'primer_apellido' => [$alta ? 'required' : 'required_with:nombres', ...$nombre],
+            'segundo_apellido' => ['nullable', ...$nombre],
+            'curp' => ['nullable', 'string', 'size:18', 'regex:'.ValidadorCurp::REGEX, Rule::unique('users', 'curp')->ignore($user?->id)],
+            'fecha_nacimiento' => ['nullable', 'required_with:curp', 'date_format:Y-m-d', 'before:today', 'after:1900-01-01'],
+            'curp_revision' => ['sometimes', 'boolean'],
+        ];
+    }
+
+    /**
+     * Columnas de identidad a guardar ([] si no cambió nada). Si la cuenta tiene (o recibe) CURP y fecha, el nombre debe
+     * corresponderle; el admin puede confirmar una CURP que no coincide (curp_revision) y queda como aprobada por él.
+     */
+    private function identidad(array $v, ?User $user): array
+    {
+        if (isset($v['name'])) {
+            return ['name' => NombrePropio::formatear(strip_tags($v['name']), true)];
+        }
+        $toca = array_intersect_key($v, array_flip(['nombres', 'primer_apellido', 'segundo_apellido', 'curp', 'fecha_nacimiento']));
+        if ($toca === []) {
+            return [];
+        }
+        $final = [
+            'nombres' => $v['nombres'] ?? $user?->nombres,
+            'primer_apellido' => $v['primer_apellido'] ?? $user?->primer_apellido,
+            'segundo_apellido' => array_key_exists('nombres', $v) ? ($v['segundo_apellido'] ?? null) : $user?->segundo_apellido,
+            'curp' => $v['curp'] ?? $user?->curp,
+            'fecha_nacimiento' => $v['fecha_nacimiento'] ?? $user?->fecha_nacimiento?->format('Y-m-d'),
+            'curp_revision' => (bool) ($v['curp_revision'] ?? false),
+        ];
+        // Al editar, el formulario manda todo: si nada cambió no se vuelve a verificar (una CURP aprobada en revisión no
+        // debe impedir cambiar el rol o el teléfono).
+        if ($user && $final['nombres'] === $user->nombres && $final['primer_apellido'] === $user->primer_apellido
+            && $final['segundo_apellido'] === $user->segundo_apellido && $final['curp'] === $user->curp
+            && $final['fecha_nacimiento'] === $user->fecha_nacimiento?->format('Y-m-d')) {
+            return [];
+        }
+        $name = NombrePropio::completo((string) $final['nombres'], (string) $final['primer_apellido'], $final['segundo_apellido']);
+        if (! $final['curp'] || ! $final['fecha_nacimiento']) {
+            return ['nombres' => $final['nombres'], 'primer_apellido' => $final['primer_apellido'], 'segundo_apellido' => $final['segundo_apellido'], 'name' => $name];
+        }
+        [$estado, $problemas] = IdentidadCurp::verificar($final);
+        // Quien confirma aquí es el propio admin (el revisor): no queda pendiente, queda aprobada.
+        $estado = $estado === IdentidadCurp::REVISION ? IdentidadCurp::APROBADA : $estado;
+
+        return IdentidadCurp::columnas($final, $estado, $problemas);
     }
 
     private function reglas(): array

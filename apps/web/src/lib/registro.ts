@@ -1,5 +1,6 @@
 'use client';
 
+import { textoLegible } from '@/lib/errores-formulario';
 import { useEffect, useState } from 'react';
 import type { RolAutoservicio } from '@/lib/roles';
 
@@ -101,6 +102,6 @@ export function useCodigoPostal(cp: string) {
 /** Convierte los errores de validación de Laravel en una lista legible (el primero de cada campo). */
 export function erroresServidor(e: unknown): string {
   const d = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
-  if (d?.errors) return Object.values(d.errors).map((m) => m[0]).filter(Boolean).join(' · ');
-  return d?.message || 'No se pudo enviar tu registro. Intenta de nuevo.';
+  if (d?.errors) return [...new Set(Object.values(d.errors).flat().filter(Boolean).map((m) => textoLegible(String(m))))].join(' · ');
+  return (d?.message && textoLegible(d.message, '')) || 'No se pudo enviar tu registro. Intenta de nuevo.';
 }

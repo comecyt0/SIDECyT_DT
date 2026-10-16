@@ -17,6 +17,18 @@ export interface MiPerfil {
   empresa?: { id: number; nombre: string; acronimo?: string | null } | null;
   convocatorias_asignadas?: { id: number; nombre: string }[];
   periodos?: { id: number; nombre: string }[];
+  /** E76: identidad de la propia persona; `verificada` = nombre por partes ligado a su CURP. */
+  identidad?: {
+    verificada: boolean;
+    nombres: string | null;
+    primer_apellido: string | null;
+    segundo_apellido: string | null;
+    fecha_nacimiento: string | null;
+    curp: string | null;
+    sexo: string | null;
+    entidad_nacimiento: string | null;
+    curp_verificacion: string | null;
+  };
 }
 
 export interface ResumenPerfil {
@@ -32,7 +44,7 @@ function cargar(forzar = false) {
   if (cache && !forzar) return Promise.resolve(cache);
   if (enCurso && !forzar) return enCurso;
   enCurso = api.get('/mi-perfil').then(({ data }) => {
-    const user = data?.user as MiPerfil;
+    const user = { ...(data?.user as MiPerfil), identidad: data?.identidad ?? undefined };
     const resumen = Array.isArray(data?.resumen) ? (data.resumen as ResumenPerfil[]) : [];
     cache = { user, resumen };
     return cache;

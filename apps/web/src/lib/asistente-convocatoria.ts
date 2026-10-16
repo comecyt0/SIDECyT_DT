@@ -3,6 +3,7 @@
  * envío atómico, traducción de errores del servidor a "paso + texto entendible" y restauración segura de borradores.
  */
 
+import { textoLegible } from '@/lib/errores-formulario';
 import { TIPO_ESPECIE, configVacia, leerConfig, payloadCampos, payloadConfig, type ConfigEspecie } from '@/lib/especie';
 
 /** Mismos topes que `AsistenteConvocatoriaController::reglas()` (y que las columnas de la base). */
@@ -195,7 +196,7 @@ export function erroresDelServidor(errors: unknown, s: EstadoAsistente): { linea
   if (!errors || typeof errors !== 'object') return null;
   const esp = esEspecie(s);
   const pares = Object.entries(errors as Record<string, unknown>)
-    .map(([k, v]) => [k, Array.isArray(v) ? String(v[0] ?? '') : String(v ?? '')] as const)
+    .map(([k, v]) => [k, textoLegible(Array.isArray(v) ? String(v[0] ?? '') : String(v ?? ''))] as const)
     .filter(([, m]) => m)
     .sort((a, b) => pasoDeError(a[0], esp) - pasoDeError(b[0], esp));
   if (pares.length === 0) return null;

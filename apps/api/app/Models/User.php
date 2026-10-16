@@ -47,6 +47,11 @@ class User extends Authenticatable implements JWTSubject
         // quien los necesita (admin en la revisión, la propia persona en "Mi cuenta").
         'curp',
         'datos_registro',
+        // E76: identidad verificada contra la CURP; mismo trato que la CURP.
+        'fecha_nacimiento',
+        'sexo',
+        'entidad_nacimiento',
+        'curp_problemas',
     ];
 
     /** E52: roles otorgados (el activo es rol_id). */
@@ -106,6 +111,8 @@ class User extends Authenticatable implements JWTSubject
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
             'datos_registro' => 'array',
+            'fecha_nacimiento' => 'date:Y-m-d', // E76
+            'curp_problemas' => 'array',
             // E61: cuenta creada por un líder de club con contraseña que él definió → cambio obligatorio al entrar.
             'debe_cambiar_password' => 'boolean',
         ];

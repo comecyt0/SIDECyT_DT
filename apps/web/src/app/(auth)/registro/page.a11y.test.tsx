@@ -33,16 +33,44 @@ describe('RegistroPage', () => {
     expect(await screen.findByText('Elige cómo participarás.')).toBeInTheDocument();
   });
 
-  it('valida la CURP antes de avanzar (primera capa)', async () => {
-    render(<RegistroPage />);
+  /** E76: nombre por partes, fecha y CURP; el resto de los datos del paso. */
+  function llenarPersona(curp: string, fecha: string) {
+    const { container } = render(<RegistroPage />);
     fireEvent.click(screen.getByRole('radio', { name: /Club De Robótica/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
-    fireEvent.change(screen.getByLabelText(/^Nombre completo \*/), { target: { value: 'Ana Pérez López' } });
-    fireEvent.change(screen.getByLabelText(/^Correo electrónico \*/), { target: { value: 'ana@example.com' } });
+    fireEvent.change(screen.getByLabelText(/^Nombre\(s\) \*/), { target: { value: 'GLORIA' } });
+    fireEvent.change(screen.getByLabelText(/^Primer apellido \*/), { target: { value: 'hernández' } });
+    fireEvent.change(screen.getByLabelText(/^Segundo apellido \*/), { target: { value: 'García' } });
+    fireEvent.change(screen.getByLabelText(/^Fecha de nacimiento \*/), { target: { value: fecha } });
+    fireEvent.change(screen.getByLabelText(/^CURP \*/), { target: { value: curp } });
+    fireEvent.change(screen.getByLabelText(/^Correo electrónico \*/), { target: { value: 'gloria@example.com' } });
     fireEvent.change(screen.getByLabelText(/^Teléfono \(10 dígitos\) \*/), { target: { value: '7221234567' } });
-    fireEvent.change(screen.getByLabelText(/^CURP \*/), { target: { value: 'XXXX' } });
     fireEvent.change(screen.getByLabelText(/^Cargo u ocupación \*/), { target: { value: 'Docente' } });
+    return container;
+  }
+
+  it('valida la CURP antes de avanzar (primera capa)', async () => {
+    llenarPersona('XXXX', '1956-04-27');
     fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
-    expect(await screen.findByText(/La CURP no tiene un formato válido/)).toBeInTheDocument();
+    expect(await screen.findByText(/La CURP debe tener 18 caracteres \(llevas 4\)/)).toBeInTheDocument();
+  });
+
+  it('E76: la CURP debe corresponder al nombre y la fecha; si no, se corrige o se manda a revisión', async () => {
+    llenarPersona('hegg560427mvzrrl04', '1956-04-28');
+    expect(screen.getByText('Tu CURP no coincide con tus datos')).toBeInTheDocument();
+    expect(screen.getByText(/La fecha de la CURP \(27\/04\/1956\) no es tu fecha de nacimiento/)).toBeInTheDocument();
+    expect(screen.getByText('Mujer')).toBeInTheDocument(); // sexo y estado salen de la CURP
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+    expect(await screen.findByText(/envíala a revisión/)).toBeInTheDocument();
+    // Con la fecha correcta coincide y avanza
+    fireEvent.change(screen.getByLabelText(/^Fecha de nacimiento \*/), { target: { value: '1956-04-27' } });
+    expect(screen.getByText('Tu CURP coincide con tu nombre y tu fecha de nacimiento.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+    expect(await screen.findByLabelText(/^Código postal \*/)).toBeInTheDocument();
+  });
+
+  it('E76: el paso de datos no tiene violaciones axe', async () => {
+    const container = llenarPersona('hegg560427mvzrrl04', '1956-04-28');
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

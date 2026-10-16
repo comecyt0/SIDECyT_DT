@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AtSign, Briefcase, Building2, CalendarDays, CalendarRange, Clock, Layers, Loader2, Phone, ShieldCheck, User as UserIcon, UserCog } from 'lucide-react';
+import { AtSign, Briefcase, Building2, CalendarDays, CalendarRange, Clock, IdCard, Layers, Loader2, Phone, ShieldCheck, User as UserIcon, UserCog } from 'lucide-react';
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
 import PerfilHero from '@/components/perfil/PerfilHero';
 import { avisarPerfilActualizado, useMiPerfil } from '@/hooks/useMiPerfil';
 import { formatDate } from '@/lib/format';
 import { ROL_ETIQUETA, type RolSlug } from '@/lib/roles';
+import { textoLegible } from '@/lib/errores-formulario';
+import { ENTIDADES, SEXOS, ddmmaaaaFecha, nombrePropio, problemaNombre } from '@/lib/curp';
 import MisRoles from '@/components/perfil/MisRoles';
 
 const MAX_MB = 5;
@@ -18,7 +20,7 @@ const TIPOS = ['image/jpeg', 'image/png', 'image/webp'];
 function mensajeError(e: unknown, porDefecto: string): string {
   const d = (e as { response?: { data?: { message?: string; error?: string; errors?: Record<string, string[]> } } })?.response?.data;
   const primero = d?.errors ? Object.values(d.errors).flat()[0] : undefined;
-  return primero || d?.message || d?.error || porDefecto;
+  return textoLegible(primero || d?.message || d?.error || porDefecto, porDefecto);
 }
 
 /**
@@ -28,13 +30,16 @@ function mensajeError(e: unknown, porDefecto: string): string {
  */
 export default function MiCuenta({ seguridadHref }: { seguridadHref?: string }) {
   const { perfil, resumen } = useMiPerfil();
-  const [form, setForm] = useState({ name: '', telefono: '', cargo: '' });
+  const [form, setForm] = useState({ name: '', nombres: '', primer_apellido: '', segundo_apellido: '', telefono: '', cargo: '' });
   const [guardando, setGuardando] = useState(false);
   const [subiendo, setSubiendo] = useState<'avatar' | 'banner' | null>(null);
   const [aviso, setAviso] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
 
   useEffect(() => {
-    if (perfil) setForm({ name: perfil.name ?? '', telefono: perfil.telefono ?? '', cargo: perfil.cargo ?? '' });
+    if (perfil) setForm({
+      name: perfil.name ?? '', nombres: perfil.identidad?.nombres ?? '', primer_apellido: perfil.identidad?.primer_apellido ?? '',
+      segundo_apellido: perfil.identidad?.segundo_apellido ?? '', telefono: perfil.telefono ?? '', cargo: perfil.cargo ?? '',
+    });
   }, [perfil]);
 
   if (!perfil) {
@@ -46,6 +51,7 @@ export default function MiCuenta({ seguridadHref }: { seguridadHref?: string }) 
   }
 
   const slug = (perfil.rol?.slug ?? '') as RolSlug;
+  const verificada = !!perfil.identidad?.verificada;
   const rolTexto = ROL_ETIQUETA[slug] ?? perfil.rol?.nombre ?? '';
 
   const subir = async (tipo: 'avatar' | 'banner', archivo: File) => {
@@ -88,8 +94,12 @@ export default function MiCuenta({ seguridadHref }: { seguridadHref?: string }) 
   const guardar = async (e: React.FormEvent) => {
     e.preventDefault();
     setAviso(null);
-    if (form.name.trim().length < 3) {
-      setAviso({ tipo: 'error', texto: 'Escribe tu nombre completo.' });
+    // E76: cuenta verificada → nombre por partes (el servidor lo vuelve a comparar con la CURP); anterior → un campo.
+    const errNombre = verificada
+      ? problemaNombre(form.nombres, 'nombre') ?? problemaNombre(form.primer_apellido, 'primer apellido') ?? problemaNombre(form.segundo_apellido, 'segundo apellido', false)
+      : problemaNombre(form.name, 'nombre completo');
+    if (errNombre) {
+      setAviso({ tipo: 'error', texto: errNombre });
       return;
     }
     if (form.telefono && !/^[0-9+()\s-]{7,20}$/.test(form.telefono)) {
@@ -98,7 +108,10 @@ export default function MiCuenta({ seguridadHref }: { seguridadHref?: string }) 
     }
     setGuardando(true);
     try {
-      await api.put('/mi-perfil', { name: form.name.trim(), telefono: form.telefono.trim() || null, cargo: form.cargo.trim() || null });
+      const nombre = verificada
+        ? { nombres: nombrePropio(form.nombres, true), primer_apellido: nombrePropio(form.primer_apellido), segundo_apellido: nombrePropio(form.segundo_apellido) || null }
+        : { name: nombrePropio(form.name, true) };
+      await api.put('/mi-perfil', { ...nombre, telefono: form.telefono.trim() || null, cargo: form.cargo.trim() || null });
       avisarPerfilActualizado();
       setAviso({ tipo: 'success', texto: 'Cambios guardados.' });
     } catch (err) {
@@ -116,6 +129,11 @@ export default function MiCuenta({ seguridadHref }: { seguridadHref?: string }) 
   const datos: { icono: React.ReactNode; etiqueta: string; valor: React.ReactNode }[] = [
     { icono: <ShieldCheck />, etiqueta: 'Rol', valor: rolTexto || '—' },
     { icono: <AtSign />, etiqueta: 'Correo', valor: perfil.email },
+    // E76: lo que dice la CURP de la persona (solo la ve ella).
+    ...(perfil.identidad?.curp ? [{ icono: <IdCard />, etiqueta: 'CURP', valor: perfil.identidad.curp }] : []),
+    ...(perfil.identidad?.fecha_nacimiento
+      ? [{ icono: <CalendarDays />, etiqueta: 'Nacimiento (según tu CURP)', valor: [ddmmaaaaFecha(perfil.identidad.fecha_nacimiento), SEXOS[perfil.identidad.sexo ?? ''], ENTIDADES[perfil.identidad.entidad_nacimiento ?? '']].filter(Boolean).join(' · ') }]
+      : []),
     ...(perfil.empresa ? [{ icono: <Building2 />, etiqueta: 'Institución / empresa', valor: perfil.empresa.nombre }] : []),
     ...(perfil.convocatorias_asignadas && perfil.convocatorias_asignadas.length > 0
       ? [{ icono: <Layers />, etiqueta: 'Convocatorias a tu cargo', valor: perfil.convocatorias_asignadas.map((c) => c.nombre).join(', ') }]
@@ -146,11 +164,34 @@ export default function MiCuenta({ seguridadHref }: { seguridadHref?: string }) 
         <section className="perfil-tarjeta" aria-labelledby="perfil-editar">
           <h2 id="perfil-editar" className="perfil-tarjeta-titulo"><UserCog aria-hidden="true" />Editar tu perfil</h2>
           <form onSubmit={guardar} className="space-y-4" noValidate>
-            <label className="perfil-campo">
-              <span><UserIcon aria-hidden="true" />Nombre completo</span>
-              <input className="auth-input auth-input-static pl-4" value={form.name} maxLength={255} autoComplete="name"
-                onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-            </label>
+            {verificada ? (
+              <>
+                <label className="perfil-campo">
+                  <span><UserIcon aria-hidden="true" />Nombre(s)</span>
+                  <input className="auth-input auth-input-static pl-4" value={form.nombres} maxLength={60} autoComplete="given-name"
+                    onChange={(e) => setForm({ ...form, nombres: e.target.value })} onBlur={() => setForm((f) => ({ ...f, nombres: nombrePropio(f.nombres, true) }))} required />
+                </label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="perfil-campo">
+                    <span><UserIcon aria-hidden="true" />Primer apellido</span>
+                    <input className="auth-input auth-input-static pl-4" value={form.primer_apellido} maxLength={60} autoComplete="family-name"
+                      onChange={(e) => setForm({ ...form, primer_apellido: e.target.value })} onBlur={() => setForm((f) => ({ ...f, primer_apellido: nombrePropio(f.primer_apellido) }))} required />
+                  </label>
+                  <label className="perfil-campo">
+                    <span><UserIcon aria-hidden="true" />Segundo apellido</span>
+                    <input className="auth-input auth-input-static pl-4" value={form.segundo_apellido} maxLength={60} autoComplete="off"
+                      onChange={(e) => setForm({ ...form, segundo_apellido: e.target.value })} onBlur={() => setForm((f) => ({ ...f, segundo_apellido: nombrePropio(f.segundo_apellido) }))} />
+                  </label>
+                </div>
+                <p className="text-xs text-[var(--app-ink-2)]">Tu nombre está ligado a tu CURP: si lo cambias, debe seguir correspondiéndole.</p>
+              </>
+            ) : (
+              <label className="perfil-campo">
+                <span><UserIcon aria-hidden="true" />Nombre completo</span>
+                <input className="auth-input auth-input-static pl-4" value={form.name} maxLength={255} autoComplete="name"
+                  onChange={(e) => setForm({ ...form, name: e.target.value })} onBlur={() => setForm((f) => ({ ...f, name: nombrePropio(f.name, true) }))} required />
+              </label>
+            )}
             <label className="perfil-campo">
               <span><Phone aria-hidden="true" />Teléfono</span>
               <input className="auth-input auth-input-static pl-4" value={form.telefono} maxLength={20} inputMode="tel" autoComplete="tel"

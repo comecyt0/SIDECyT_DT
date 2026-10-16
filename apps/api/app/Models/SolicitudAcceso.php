@@ -21,6 +21,7 @@ class SolicitudAcceso extends Model
         'revisado_por',
         'revisado_at',
         'motivo_rechazo',
+        'curp_verificacion', // E76: lo fija el servidor
         'created_at',
         'updated_at',
     ];
@@ -34,6 +35,8 @@ class SolicitudAcceso extends Model
         'contactos' => 'array',
         'datos_rol' => 'array',
         'terminos_aceptados' => 'boolean',
+        'fecha_nacimiento' => 'date:Y-m-d', // E76
+        'curp_problemas' => 'array',
     ];
 
     /**

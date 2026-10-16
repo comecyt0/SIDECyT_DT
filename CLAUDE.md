@@ -2236,6 +2236,61 @@ espacio que dejaban los pasos).
   - El endpoint público `/api/codigos-postales/{cp}` de SIGAE ahora también lo consume el perfil de SICEI (mismo
     origen; throttle y lista blanca sin cambios).
 
+### E76 — Validador de CURP compartido con SICEI y ningún texto técnico en avisos [publicado 16-10-2026]
+Reporte del usuario: el registro de SICEI mostraba «validation.regex». Causa: SICEI tenía `APP_LOCALE=es` pero no tenía
+`lang/es`; se copió el `validation.php` de SIGAE. Segunda red en el front: `textoLegible()` cambia claves sin traducir y
+mensajes en inglés por español (SIGAE `lib/errores-formulario.ts`; SICEI `lib/errores.ts` con `textoError`).
+
+**Validador de CURP (decisiones del usuario del 16/10/2026):**
+- Se pide nombre(s), primer apellido, segundo apellido (o «No tengo segundo apellido») y fecha de nacimiento.
+- El sexo y el estado se leen de la CURP; no se piden. El usuario descartó un campo de identidad de género.
+- Los nombres se guardan con mayúscula inicial y las partículas en minúscula («María de la Luz», «de la Cruz»).
+- Si la CURP no coincide, se bloquea. La persona puede confirmar que es correcta y mandarla a revisión manual.
+  - Formato o dígito verificador mal escritos nunca van a revisión.
+  - Revisan el admin y el admin de convocatoria.
+- Solo cuentas nuevas: las anteriores conservan `name` en un campo hasta que modifiquen sus datos.
+
+**Archivos:** el mismo en los dos repos, si cambias uno cambias los cuatro.
+- `app/Support/ValidadorCurp.php`: instructivo de RENAPO.
+  - Posiciones 1–4 con partículas, María/José, Ñ→X y altisonantes; 5–10 con el siglo en la 17; 14–16 y el dígito 18.
+  - Probado con el ejemplo oficial HEGG560427MVZRRL04.
+- `app/Support/NombrePropio.php`.
+- `app/Support/IdentidadCurp.php`: reglas, `verificar()` y `columnas()`.
+- `web/src/lib/curp.ts`: espejo en el front con `revisarIdentidad`.
+
+**Base (`2026_10_16_000001_identidad_curp`, solo columnas nulas):**
+- En `users`, `solicitudes_acceso` y `club_integrantes`: `nombres`, `primer_apellido`, `segundo_apellido`,
+  `fecha_nacimiento`, `sexo`, `entidad_nacimiento`, `curp_verificacion` (coincide | revision | aprobada | rechazada) y
+  `curp_problemas`.
+- GRANT INSERT/UPDATE de esas columnas a `sicei_app`, verificado en producción.
+- `name` se sigue llenando con el nombre completo.
+- En `User`, la fecha, el sexo, la entidad y los problemas van en `$hidden`, como la CURP.
+
+**Dónde aplica en SIGAE:**
+- `/registro` con `CamposIdentidad`.
+  - Una CURP que no coincide y que la persona confirma llega a `/admin/solicitudes-acceso` con la píldora «CURP por
+    revisar» y lo que no coincidió.
+  - Aprobar la cuenta aprueba la CURP.
+- «Mi cuenta»: una cuenta verificada edita el nombre por partes y debe seguir correspondiendo a su CURP; una anterior, en
+  un campo con mayúscula inicial.
+- Admin, «Nuevo usuario»: nombre por partes y CURP opcional con fecha.
+  - Si el admin confirma una CURP que no coincide, queda `aprobada` por él.
+  - Al editar solo se vuelve a verificar si cambió el nombre.
+- Integrantes de club: si la convocatoria pide CURP, el nombre va por partes y se compara con la CURP y la fecha.
+  - El líder puede mandarla a revisión.
+  - `POST /api/revision/clubes/{club}/integrantes/{i}/curp`: solo admin o admin de convocatoria con alcance.
+  - El panel «CURP por revisar» está en la ficha del club.
+  - No se aprueba el club con CURP pendientes, y una CURP rechazada bloquea el envío.
+- **Integrantes del equipo de una solicitud:** hoy no capturan CURP ni fecha, así que no hay nada que validar. Agregarlos
+  es una decisión pendiente del usuario.
+
+**Verificación:**
+- Vitest: 193 de 193.
+- Edge a 390 px: 18 de 18 en ambos sistemas.
+  - Se probó el caso del reporte: correo existente, con mensaje en español y sin «validation.».
+- La cuenta temporal se creó y se borró desde SIGAE.
+- Detalle de SICEI: `C:\SICEI\docs\plan\11-validador-curp.md` (D83).
+
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de
 un club del director) **si están dados de alta en ese club**. `Club::destinatarios()` = dueño + todos sus accesos activos

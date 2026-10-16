@@ -28,6 +28,11 @@ export interface User {
   activo: boolean;
   ultimo_acceso?: string;
   created_at?: string;
+  /** E76: nombre por partes (null en cuentas anteriores al validador de CURP) y estado de la CURP. */
+  nombres?: string | null;
+  primer_apellido?: string | null;
+  segundo_apellido?: string | null;
+  curp_verificacion?: 'coincide' | 'revision' | 'aprobada' | 'rechazada' | null;
 }
 
 export interface TipoPrograma {

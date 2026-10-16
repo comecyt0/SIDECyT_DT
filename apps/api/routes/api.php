@@ -420,6 +420,7 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::get('clubes', [$r, 'index']);
             Route::get('clubes/{club}', [$r, 'show']);
             Route::post('clubes/{club}/resolver', [$r, 'resolver'])->middleware('throttle:60,1,club-revision');
+            Route::post('clubes/{club}/integrantes/{integrante}/curp', [$r, 'revisarCurp'])->middleware('throttle:60,1,club-revision'); // E76
             Route::post('clubes/{club}/prorroga', [$r, 'prorroga'])->middleware('throttle:30,1,club-revision');
             Route::post('clubes/{club}/visto-bueno', [$r, 'vistoBueno'])->middleware('throttle:60,1,club-revision');
             Route::post('clubes/{club}/comite', [$r, 'comite'])->middleware('throttle:60,1,club-revision');

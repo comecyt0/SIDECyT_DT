@@ -237,6 +237,17 @@ class RegistroAccesoController extends Controller
                     'datos_registro' => $rol === 'evaluador' ? $solicitudAcceso->datos_rol : null,
                     // 08/10/2026: se registró como director(a) de la escuela (Club De Robótica).
                     'es_director' => $rol === 'lider_club' && (($solicitudAcceso->datos_rol['es_director'] ?? false) === true),
+                    // E76: identidad verificada. Si la CURP iba a revisión manual, aprobar la cuenta es aprobarla: el
+                    // admin vio en la bandeja qué no coincidía.
+                    'nombres' => $solicitudAcceso->nombres,
+                    'primer_apellido' => $solicitudAcceso->primer_apellido,
+                    'segundo_apellido' => $solicitudAcceso->segundo_apellido,
+                    'fecha_nacimiento' => $solicitudAcceso->fecha_nacimiento,
+                    'sexo' => $solicitudAcceso->sexo,
+                    'entidad_nacimiento' => $solicitudAcceso->entidad_nacimiento,
+                    'curp_verificacion' => $solicitudAcceso->curp_verificacion === \App\Support\IdentidadCurp::REVISION
+                        ? \App\Support\IdentidadCurp::APROBADA : $solicitudAcceso->curp_verificacion,
+                    'curp_problemas' => $solicitudAcceso->curp_problemas,
                 ])->save();
             } else {
                 Log::warning('RegistroAccesoController::aprobar — cuenta ya existía, se cierra la solicitud sin duplicarla', [
@@ -259,7 +270,8 @@ class RegistroAccesoController extends Controller
                 'estado' => 'aprobada',
                 'revisado_por' => auth()->id(),
                 'revisado_at' => now(),
-            ])->save();
+            ] + ($solicitudAcceso->curp_verificacion === \App\Support\IdentidadCurp::REVISION
+                ? ['curp_verificacion' => \App\Support\IdentidadCurp::APROBADA] : []))->save();
 
             // Notify applicant — solo si la cuenta se creó ahora. Si ya existía y estaba activa,
             // reenviar "tu acceso fue aprobado" confundiría a alguien que ya usa el sistema.

@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Club;
 use App\Http\Controllers\Admin\EspecieConfigController;
 use App\Http\Controllers\Controller;
 use App\Models\Club;
+use App\Models\ClubIntegrante;
 use App\Models\Convocatoria;
 use App\Models\EspecieConfig;
 use App\Models\User;
 use App\Support\Alcance;
 use App\Support\Audit;
 use App\Support\Especie;
+use App\Support\IdentidadCurp;
 use App\Support\RevisionClub;
 use App\Support\TiposArchivo;
 use Illuminate\Http\Request;
@@ -83,6 +85,10 @@ class RevisionClubController extends Controller
             'resultado' => 'required|in:aprobar,observar,rechazar',
             'comentario' => 'nullable|string|max:3000|required_if:resultado,observar,rechazar',
         ], ['comentario.required_if' => 'Escribe el comentario para el líder (qué corregir o el motivo).'], ['comentario' => 'comentario']);
+        // E76: no se aprueba un club con CURP de integrantes pendientes de revisión.
+        if ($v['resultado'] === 'aprobar' && $club->integrantes()->where('curp_verificacion', IdentidadCurp::REVISION)->exists()) {
+            return response()->json(['message' => 'Antes de aprobar, revisa las CURP marcadas «por revisar» en la lista de integrantes.'], 422);
+        }
         RevisionClub::resolver($club, $request->user(), $v['resultado'], $v['comentario'] ?? null);
 
         return response()->json(self::detallePersonal($club->fresh(), $request->user()));
@@ -110,6 +116,25 @@ class RevisionClubController extends Controller
         $this->exigirAceptar($request->user(), $club);
         $v = $request->validate(['resultado' => 'required|in:aceptado,no_aceptado', 'motivo' => 'nullable|string|max:2000'], [], ['motivo' => 'motivo']);
         RevisionClub::comite($club, $request->user(), $v['resultado'], $v['motivo'] ?? null);
+
+        return response()->json(self::detallePersonal($club->fresh(), $request->user()));
+    }
+
+    /**
+     * E76 — Revisión manual de la CURP de un integrante: el líder confirmó que es correcta aunque no coincide con el
+     * nombre o la fecha. Solo admin o admin de convocatoria con alcance (decisión del usuario del 16/10/2026).
+     */
+    public function revisarCurp(Request $request, Club $club, ClubIntegrante $integrante)
+    {
+        $this->exigirVer($request->user(), $club);
+        abort_unless(in_array(RevisionClub::rolDe($request->user()), ['admin', 'admin_convocatoria'], true), 403);
+        abort_unless((int) $integrante->club_id === (int) $club->id, 404);
+        $v = $request->validate(['decision' => 'required|in:aprobar,rechazar']);
+        if ($integrante->curp_verificacion !== IdentidadCurp::REVISION) {
+            return response()->json(['message' => 'Esa CURP ya no está en revisión.'], 422);
+        }
+        $integrante->forceFill(['curp_verificacion' => $v['decision'] === 'aprobar' ? IdentidadCurp::APROBADA : IdentidadCurp::RECHAZADA])->save();
+        Audit::log('especie.curp_'.($v['decision'] === 'aprobar' ? 'aprobada' : 'rechazada'), $club, ['integrante_id' => $integrante->id]);
 
         return response()->json(self::detallePersonal($club->fresh(), $request->user()));
     }
@@ -209,6 +234,8 @@ class RevisionClubController extends Controller
                 'visto_bueno' => $puedeAceptar && $club->estado === 'aprobado_revision' && ! $club->visto_bueno_at,
                 'comite' => $puedeAceptar && $club->estado === 'aprobado_revision' && (bool) $club->visto_bueno_at && (bool) $cfg->acta_comite,
                 'acta' => RevisionClub::puedeSubirActa($u, (int) $club->convocatoria_id),
+                // E76: aprobar o rechazar una CURP que el líder mandó a revisión (admin o admin de convocatoria).
+                'curp' => in_array(RevisionClub::rolDe($u), ['admin', 'admin_convocatoria'], true),
             ],
         ];
     }

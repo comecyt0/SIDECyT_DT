@@ -28,6 +28,12 @@ import {
   type CampoApi, type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi, type Predef,
 } from '@/lib/especie';
 import { PATRON_CURP, PATRON_TELEFONO, PATRON_CORREO, fechaDeCurp } from '@/lib/registro';
+import { textoLegible } from '@/lib/errores-formulario';
+import { nombrePropio, problemaNombre, revisarIdentidad } from '@/lib/curp';
+
+/** E76: comparación de la CURP de un integrante con su nombre y fecha (segundo apellido opcional). */
+const revisionDe = (f: { nombres: string; primer_apellido: string; segundo_apellido: string; fecha_nacimiento: string; curp: string; curp_revision: boolean }) =>
+  revisarIdentidad({ ...f, sin_segundo: !f.segundo_apellido.trim() });
 import { conAsterisco } from '@/components/ui/obligatorio';
 import { formatDate } from '@/lib/format';
 import ModalidadChip from '@/components/especie/ModalidadChip';
@@ -62,15 +68,16 @@ const ACCESO_TEXTO: Record<string, string> = {
 };
 const COMPARTIDO = 'Te compartieron el permiso: puedes editar, enviar y atender la logística del club mientras esté activo.';
 
-type FormIntegrante = { nombre: string; fecha_nacimiento: string; sexo: string; curp: string; grado_grupo: string; correo: string; telefono: string; datos: Record<string, string> };
-const INT_VACIO: FormIntegrante = { nombre: '', fecha_nacimiento: '', sexo: '', curp: '', grado_grupo: '', correo: '', telefono: '', datos: {} };
+// E76: con CURP pedida, el nombre va por partes y la CURP se compara con nombre y fecha (lib/curp.ts).
+type FormIntegrante = { nombre: string; nombres: string; primer_apellido: string; segundo_apellido: string; curp_revision: boolean; fecha_nacimiento: string; sexo: string; curp: string; grado_grupo: string; correo: string; telefono: string; datos: Record<string, string> };
+const INT_VACIO: FormIntegrante = { nombre: '', nombres: '', primer_apellido: '', segundo_apellido: '', curp_revision: false, fecha_nacimiento: '', sexo: '', curp: '', grado_grupo: '', correo: '', telefono: '', datos: {} };
 const labelCls = 'text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]';
 const inputCls = 'auth-input auth-input-static pl-4';
 
 function errores(e: unknown): { mensaje: string; campos: Record<string, string>; faltantes: string[] } {
   const d = (e as { response?: { status?: number; data?: { message?: string; errors?: Record<string, string[]>; faltantes?: unknown } } })?.response;
   const campos: Record<string, string> = {};
-  for (const [k, v] of Object.entries(d?.data?.errors ?? {})) campos[k] = Array.isArray(v) ? String(v[0]) : String(v);
+  for (const [k, v] of Object.entries(d?.data?.errors ?? {})) campos[k] = textoLegible(Array.isArray(v) ? String(v[0]) : String(v));
   const faltantes = Array.isArray(d?.data?.faltantes) ? (d!.data!.faltantes as unknown[]).filter((x): x is string => typeof x === 'string') : [];
   const primero = Object.values(campos)[0];
   const mensaje = d?.status === 429 ? 'Demasiadas acciones seguidas. Espera un momento.' : primero || d?.data?.message || 'No se pudo completar la acción. Inténtalo de nuevo.';
@@ -262,7 +269,8 @@ export default function MiClubPage() {
     setDialogo({
       id: i.id, lider: i.es_lider,
       form: {
-        nombre: i.nombre ?? '', fecha_nacimiento: i.fecha_nacimiento ? String(i.fecha_nacimiento).slice(0, 10) : '', sexo: i.sexo ?? '',
+        nombre: i.nombre ?? '', nombres: (i as { nombres?: string | null }).nombres ?? '', primer_apellido: (i as { primer_apellido?: string | null }).primer_apellido ?? '',
+        segundo_apellido: (i as { segundo_apellido?: string | null }).segundo_apellido ?? '', curp_revision: false, fecha_nacimiento: i.fecha_nacimiento ? String(i.fecha_nacimiento).slice(0, 10) : '', sexo: i.sexo ?? '',
         curp: i.curp ?? '', grado_grupo: i.grado_grupo ?? '', correo: i.correo ?? '', telefono: i.telefono ?? '', datos,
       },
     });
@@ -272,13 +280,26 @@ export default function MiClubPage() {
     if (!dialogo) return;
     const f = dialogo.form;
     const e: Record<string, string> = {};
-    if (f.nombre.trim().length < 3) e.nombre = 'Escribe el nombre completo.';
-    if (pi.curp?.pedir && f.curp && !PATRON_CURP.test(f.curp)) e.curp = 'La CURP no tiene un formato válido.';
+    const conCurp = !!pi.curp?.pedir;
+    if (conCurp) {
+      const n1 = problemaNombre(f.nombres, 'nombre'); if (n1) e.nombres = n1;
+      const n2 = problemaNombre(f.primer_apellido, 'primer apellido'); if (n2) e.primer_apellido = n2;
+      const n3 = problemaNombre(f.segundo_apellido, 'segundo apellido', false); if (n3) e.segundo_apellido = n3;
+    } else {
+      const n0 = problemaNombre(f.nombre, 'nombre completo'); if (n0) e.nombre = n0;
+    }
+    if (conCurp && f.curp && !PATRON_CURP.test(f.curp)) e.curp = 'La CURP no tiene un formato válido.';
+    else if (conCurp && f.curp && f.fecha_nacimiento && !e.nombres && !e.primer_apellido) {
+      const r = revisionDe(f);
+      if (!r.coincide && r.problemas.length && (!r.revisable || !f.curp_revision)) e.curp = r.revisable ? 'La CURP no coincide con el nombre o la fecha. Corrige los datos o confirma que la CURP es correcta.' : r.problemas[0];
+    }
     if (pi.telefono?.pedir && f.telefono && !PATRON_TELEFONO.test(f.telefono)) e.telefono = 'El teléfono debe tener 10 dígitos.';
     if (pi.correo?.pedir && f.correo && !PATRON_CORREO.test(f.correo)) e.correo = 'Revisa el correo.';
     setErroresInt(e);
     if (Object.keys(e).length) { setErrDialogo(Object.values(e)[0]); return; }
-    const cuerpo: Record<string, unknown> = { nombre: f.nombre.trim(), datos: {} as Record<string, string> };
+    const cuerpo: Record<string, unknown> = conCurp
+      ? { nombres: nombrePropio(f.nombres, true), primer_apellido: nombrePropio(f.primer_apellido), segundo_apellido: nombrePropio(f.segundo_apellido) || null, curp_revision: f.curp_revision, datos: {} as Record<string, string> }
+      : { nombre: nombrePropio(f.nombre, true), datos: {} as Record<string, string> };
     for (const k of ['fecha_nacimiento', 'sexo', 'curp', 'grado_grupo', 'correo', 'telefono'] as const) {
       if (pi[k]?.pedir) cuerpo[k] = f[k].trim() || null;
     }
@@ -646,13 +667,36 @@ export default function MiClubPage() {
           key: 'datos',
           label: 'Datos',
           question: '¿Quién es?',
-          validate: () => (dialogo.form.nombre.trim().length < 3 ? 'Escribe el nombre completo.' : null),
+          validate: () => (pi.curp?.pedir
+            ? problemaNombre(dialogo.form.nombres, 'nombre') ?? problemaNombre(dialogo.form.primer_apellido, 'primer apellido')
+            : problemaNombre(dialogo.form.nombre, 'nombre completo')),
           content: (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Campo id="int-nombre" etiqueta="Nombre completo *" error={erroresInt.nombre} className="sm:col-span-2">
-                <input id="int-nombre" className={inputCls} maxLength={255} value={dialogo.form.nombre}
-                  onChange={(e) => setDialogo({ ...dialogo, form: { ...dialogo.form, nombre: e.target.value } })} />
-              </Campo>
+              {pi.curp?.pedir ? (
+                <>
+                  <Campo id="int-nombres" etiqueta="Nombre(s) *" error={erroresInt.nombres} className="sm:col-span-2">
+                    <input id="int-nombres" className={inputCls} maxLength={60} value={dialogo.form.nombres}
+                      onChange={(e) => setDialogo({ ...dialogo, form: { ...dialogo.form, nombres: e.target.value, curp_revision: false } })}
+                      onBlur={() => setDialogo((d) => (d ? { ...d, form: { ...d.form, nombres: nombrePropio(d.form.nombres, true) } } : d))} />
+                  </Campo>
+                  <Campo id="int-ap1" etiqueta="Primer apellido *" error={erroresInt.primer_apellido}>
+                    <input id="int-ap1" className={inputCls} maxLength={60} value={dialogo.form.primer_apellido}
+                      onChange={(e) => setDialogo({ ...dialogo, form: { ...dialogo.form, primer_apellido: e.target.value, curp_revision: false } })}
+                      onBlur={() => setDialogo((d) => (d ? { ...d, form: { ...d.form, primer_apellido: nombrePropio(d.form.primer_apellido) } } : d))} />
+                  </Campo>
+                  <Campo id="int-ap2" etiqueta="Segundo apellido" error={erroresInt.segundo_apellido}>
+                    <input id="int-ap2" className={inputCls} maxLength={60} value={dialogo.form.segundo_apellido}
+                      onChange={(e) => setDialogo({ ...dialogo, form: { ...dialogo.form, segundo_apellido: e.target.value, curp_revision: false } })}
+                      onBlur={() => setDialogo((d) => (d ? { ...d, form: { ...d.form, segundo_apellido: nombrePropio(d.form.segundo_apellido) } } : d))} />
+                  </Campo>
+                </>
+              ) : (
+                <Campo id="int-nombre" etiqueta="Nombre completo *" error={erroresInt.nombre} className="sm:col-span-2">
+                  <input id="int-nombre" className={inputCls} maxLength={255} value={dialogo.form.nombre}
+                    onChange={(e) => setDialogo({ ...dialogo, form: { ...dialogo.form, nombre: e.target.value } })}
+                    onBlur={() => setDialogo((d) => (d ? { ...d, form: { ...d.form, nombre: nombrePropio(d.form.nombre, true) } } : d))} />
+                </Campo>
+              )}
               {pi.fecha_nacimiento?.pedir && (
                 <Campo id="int-fn" etiqueta={`Fecha de nacimiento${pi.fecha_nacimiento.obligatorio ? ' *' : ''}`} error={erroresInt.fecha_nacimiento}>
                   <input id="int-fn" type="date" className={inputCls} value={dialogo.form.fecha_nacimiento} max={new Date().toISOString().slice(0, 10)}
@@ -672,12 +716,37 @@ export default function MiClubPage() {
                   <input id="int-curp" className={`${inputCls} uppercase`} maxLength={18} value={dialogo.form.curp}
                     onChange={(e) => {
                       // 08/10/2026: la CURP llena sola la fecha de nacimiento (si se pide).
-                      const curp = e.target.value.toUpperCase().replace(/\s/g, '');
+                      const curp = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 18);
                       const fn = pi.fecha_nacimiento?.pedir ? fechaDeCurp(curp) : null;
-                      setDialogo({ ...dialogo, form: { ...dialogo.form, curp, ...(fn ? { fecha_nacimiento: fn } : {}) } });
+                      // E76: el sexo también sale de la CURP.
+                      const sexo = pi.sexo?.pedir && curp.length === 18 && /[HMX]/.test(curp[10]) ? curp[10] : dialogo.form.sexo;
+                      setDialogo({ ...dialogo, form: { ...dialogo.form, curp, sexo, curp_revision: false, ...(fn ? { fecha_nacimiento: fn } : {}) } });
                     }} />
                 </Campo>
               )}
+              {pi.curp?.pedir && dialogo.form.curp.length === 18 && dialogo.form.fecha_nacimiento && (() => {
+                const r = revisionDe(dialogo.form);
+                if (Object.keys(r.campos).length) return null;
+                return (
+                  <div className="sm:col-span-2 text-xs" role="status">
+                    {r.coincide ? (
+                      <p className="font-semibold" style={{ color: 'var(--tile-emerald-fg)' }}>La CURP coincide con el nombre y la fecha de nacimiento.</p>
+                    ) : (
+                      <div className="space-y-1.5 rounded-[12px] border p-3" style={{ borderColor: 'var(--auth-danger)' }}>
+                        <p className="font-bold" style={{ color: 'var(--auth-danger)' }}>La CURP no coincide con los datos</p>
+                        <ul className="list-disc space-y-0.5 pl-5">{r.problemas.map((p) => <li key={p}>{p}</li>)}</ul>
+                        {r.revisable && (
+                          <label className="flex cursor-pointer items-start gap-2 pt-1">
+                            <input type="checkbox" checked={dialogo.form.curp_revision} className="mt-0.5 h-4 w-4 accent-[var(--auth-vino)]"
+                              onChange={(e) => setDialogo({ ...dialogo, form: { ...dialogo.form, curp_revision: e.target.checked } })} />
+                            <span><strong>La CURP es correcta.</strong> Mándala a revisión: el COMECYT la comparará antes de aprobar el club.</span>
+                          </label>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               {pi.grado_grupo?.pedir && (
                 <Campo id="int-gg" etiqueta={`Grado y grupo${pi.grado_grupo.obligatorio ? ' *' : ''}`} error={erroresInt.grado_grupo}>
                   <input id="int-gg" className={inputCls} maxLength={30} value={dialogo.form.grado_grupo} placeholder="Ej. 2° B"

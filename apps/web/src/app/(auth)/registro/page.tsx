@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 're
 import Link from 'next/link';
 import {
   ArrowLeft, Briefcase, Building2, Check, ClipboardList, FileText, FlaskConical, GraduationCap, Hash, Loader2,
-  Lock, Mail, MapPin, Phone, School, Shield, ShieldCheck, User, Users, CircleAlert, IdCard, House,
+  Lock, Mail, MapPin, Phone, School, Shield, ShieldCheck, Users, CircleAlert, House,
 } from 'lucide-react';
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
@@ -13,12 +13,14 @@ import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import PieAuth from '@/components/branding/PieAuth';
 import { BandaInstitucional, LogoComecyt } from '@/components/branding/Logos';
 import { FField, StaticField, SummaryRow } from '@/components/registro/CamposAuth';
+import { CamposIdentidad } from '@/components/registro/CamposIdentidad';
+import { IDENTIDAD_VACIA, errorIdentidad, nombreCompleto, payloadIdentidad, type Identidad } from '@/lib/curp';
 import { validarPassword } from '@/lib/password-policy';
 import { BotonVerContrasena, SemaforoContrasena } from '@/components/ui/campo-contrasena';
 import { AvisoObligatorios } from '@/components/ui/obligatorio';
 import { ROLES_AUTOSERVICIO, type RolAutoservicio } from '@/lib/roles';
 import {
-  GRADO_ETIQUETA, PATRON_CORREO, PATRON_CURP, PATRON_RFC, PATRON_TELEFONO, ROL_REGISTRO, erroresServidor, useCodigoPostal,
+  GRADO_ETIQUETA, PATRON_CORREO, PATRON_RFC, PATRON_TELEFONO, ROL_REGISTRO, erroresServidor, useCodigoPostal,
 } from '@/lib/registro';
 
 /**
@@ -71,7 +73,9 @@ export default function RegistroPage() {
   // 08/10/2026: «Soy director» (solo Club De Robótica): llena el cargo y su club lo administra él (da de alta a los líderes A y B).
   const [esDirector, setEsDirector] = useState(false);
 
-  const [p, setP] = useState({ nombre: '', email: '', telefono: '', curp: '', cargo: '', cp: '', colonia: '', password: '', password2: '', terminos: false });
+  // E76: nombre por partes + fecha + CURP verificada (lib/curp.ts).
+  const [ident, setIdent] = useState<Identidad>(IDENTIDAD_VACIA);
+  const [p, setP] = useState({ email: '', telefono: '', cargo: '', cp: '', colonia: '', password: '', password2: '', terminos: false });
   const [emp, setEmp] = useState({ nombre: '', rfc: '', tipo: '' as TipoPersona, supervision: '' });
   const [contactos, setContactos] = useState<Record<(typeof CONTACTOS)[number], Contacto>>({
     responsable: { nombre: '', telefono: '', correo: '' }, legal: { nombre: '', telefono: '', correo: '' },
@@ -112,10 +116,9 @@ export default function RegistroPage() {
       case 'rol':
         return rol ? null : 'Elige cómo participarás.';
       case 'persona':
-        if (p.nombre.trim().length < 5) return 'Escribe tu nombre completo.';
+        { const e = errorIdentidad(ident); if (e) return e; }
         if (!PATRON_CORREO.test(p.email.trim())) return 'Escribe un correo válido.';
         if (!PATRON_TELEFONO.test(p.telefono)) return 'El teléfono debe tener 10 dígitos.';
-        if (!PATRON_CURP.test(p.curp)) return 'La CURP no tiene un formato válido (18 caracteres).';
         if (!p.cargo.trim()) return 'Escribe tu cargo u ocupación.';
         return null;
       case 'domicilio':
@@ -169,7 +172,10 @@ export default function RegistroPage() {
     const fd = new FormData();
     const add = (k: string, v: string) => fd.append(k, v);
     add('rol_solicitado', rol);
-    add('nombre', p.nombre.trim()); add('email', p.email.trim()); add('telefono', p.telefono); add('curp', p.curp);
+    const id = payloadIdentidad(ident);
+    add('nombres', id.nombres); add('primer_apellido', id.primer_apellido); add('segundo_apellido', id.segundo_apellido);
+    add('fecha_nacimiento', id.fecha_nacimiento); add('curp', id.curp); add('curp_revision', id.curp_revision ? '1' : '0');
+    add('email', p.email.trim()); add('telefono', p.telefono);
     add('cargo', p.cargo.trim()); add('codigo_postal', p.cp); add('colonia', p.colonia);
     add('password', p.password); add('password_confirmation', p.password2); add('terminos_aceptados', '1');
     if (rol === 'lider_club' && esDirector) add('es_director', '1');
@@ -302,20 +308,13 @@ export default function RegistroPage() {
 
                   {paso === 'persona' && (
                     <div className="auth-swap space-y-3">
-                      <FField id="r-nombre" icon={User} label="Nombre completo *">
-                        <input value={p.nombre} onChange={(e) => setP({ ...p, nombre: e.target.value })} maxLength={255} autoComplete="name" placeholder=" " className="auth-input" />
-                      </FField>
+                      <CamposIdentidad valor={ident} onChange={setIdent} />
                       <FField id="r-email" icon={Mail} label="Correo electrónico *" ayuda="Será tu usuario para entrar al sistema.">
                         <input type="email" value={p.email} onChange={(e) => setP({ ...p, email: e.target.value })} maxLength={255} autoComplete="email" placeholder=" " className="auth-input" />
                       </FField>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <FField id="r-telefono" icon={Phone} label="Teléfono (10 dígitos) *">
-                          <input inputMode="numeric" value={p.telefono} onChange={(e) => setP({ ...p, telefono: e.target.value.replace(/\D/g, '').slice(0, 10) })} autoComplete="tel-national" placeholder=" " className="auth-input" />
-                        </FField>
-                        <FField id="r-curp" icon={IdCard} label="CURP *">
-                          <input value={p.curp} onChange={(e) => setP({ ...p, curp: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 18) })} autoComplete="off" spellCheck={false} placeholder=" " className="auth-input" />
-                        </FField>
-                      </div>
+                      <FField id="r-telefono" icon={Phone} label="Teléfono (10 dígitos) *">
+                        <input inputMode="numeric" value={p.telefono} onChange={(e) => setP({ ...p, telefono: e.target.value.replace(/\D/g, '').slice(0, 10) })} autoComplete="tel-national" placeholder=" " className="auth-input" />
+                      </FField>
                       <FField id="r-cargo" icon={Briefcase} label="Cargo u ocupación *">
                         <input value={p.cargo} onChange={(e) => setP({ ...p, cargo: e.target.value })} maxLength={150} autoComplete="organization-title" placeholder=" " className="auth-input" readOnly={rol === 'lider_club' && esDirector} />
                       </FField>
@@ -464,10 +463,11 @@ export default function RegistroPage() {
                       <div className="space-y-2 rounded-[var(--auth-radius-field)] border p-4" style={{ borderColor: 'var(--auth-rule)', background: 'var(--auth-field)' }}>
                         <p className="mb-1 text-xs font-bold text-[var(--auth-ink-2)]">Resumen de tu registro</p>
                         <SummaryRow label="Rol" value={rol ? ROL_REGISTRO[rol].titulo : ''} />
-                        <SummaryRow label="Nombre" value={p.nombre} />
+                        <SummaryRow label="Nombre" value={nombreCompleto(ident)} />
                         <SummaryRow label="Correo" value={p.email} />
                         <SummaryRow label="Teléfono" value={p.telefono} />
-                        <SummaryRow label="CURP" value={p.curp} />
+                        <SummaryRow label="Fecha de nacimiento" value={ident.fecha_nacimiento.split('-').reverse().join('/')} />
+                        <SummaryRow label="CURP" value={ident.curp + (ident.curp_revision ? ' (irá a revisión)' : '')} />
                         <SummaryRow label="Domicilio" value={`${p.colonia}, ${cpDatos?.municipio ?? ''}, C.P. ${p.cp}`} />
                         <SummaryRow label="Cargo" value={p.cargo} />
                         {rol === 'solicitante' && <SummaryRow label="Empresa" value={emp.nombre} />}

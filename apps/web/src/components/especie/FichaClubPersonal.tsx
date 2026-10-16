@@ -11,6 +11,7 @@ import HistorialClub from '@/components/especie/HistorialClub';
 import RevisionClubPanel, { type PermisosRevision } from '@/components/especie/RevisionClubPanel';
 import LogisticaPersonal from '@/components/especie/LogisticaPersonal';
 import { descargarDocumentoClub } from '@/lib/especie-api';
+import { mensajeError } from '@/lib/errores-formulario';
 import {
   CARTA_ESCUELA, leerCamposApi, normalizarPredef, CAMPOS_INTEGRANTE, leerLogistica, type LogisticaEstado,
   type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi,
@@ -24,7 +25,7 @@ export interface DetalleClubPersonal {
     convocatoria?: { id: number; nombre: string }; acta_comite?: { nombre: string; subida_at: string } | null };
   faltantes: string[];
   historial: EntradaHistorial[];
-  permisos: PermisosRevision & { logistica?: boolean };
+  permisos: PermisosRevision & { logistica?: boolean; curp?: boolean };
   logistica: LogisticaEstado | null;
   /** E70: personas asignadas a la etapa actual y aprobaciones que lleva (solo personal). */
   aprobaciones: { requeridas: number; dadas: number; ya_aprobe: boolean; asignados: { nombre: string; aprobo: boolean }[] } | null;
@@ -42,7 +43,7 @@ export function documentosDe(d: DetalleClubPersonal): DocumentoClub[] {
   });
 }
 
-const SIN_PERMISOS: PermisosRevision & { logistica?: boolean } = { resolver: false, observar: false, rechazar: false, prorroga: false, visto_bueno: false, comite: false, acta: false, logistica: false };
+const SIN_PERMISOS: PermisosRevision & { logistica?: boolean; curp?: boolean } = { resolver: false, observar: false, rechazar: false, prorroga: false, visto_bueno: false, comite: false, acta: false, logistica: false, curp: false };
 
 export function leer(data: unknown): DetalleClubPersonal | null {
   const d = data as Partial<DetalleClubPersonal> | null;
@@ -69,6 +70,55 @@ function leerAprobaciones(v: unknown): DetalleClubPersonal['aprobaciones'] {
     asignados: (Array.isArray(a.asignados) ? a.asignados : []).filter((x): x is { nombre: string; aprobo: boolean } => typeof x?.nombre === 'string')
       .map((x) => ({ nombre: x.nombre.slice(0, 150), aprobo: x.aprobo === true })).slice(0, 20),
   };
+}
+
+/**
+ * E76 — CURP de integrantes que el líder mandó a revisión (no coinciden con nombre o fecha y confirmó que son correctas).
+ * Aprueban o rechazan el admin y el admin de convocatoria (permiso curp del servidor); los demás solo las ven.
+ */
+function CurpPorRevisar({ clubId, integrantes, puede, onHecho }: {
+  clubId: number;
+  integrantes: IntegranteApi[];
+  puede: boolean;
+  onHecho: (nuevo: unknown, mensaje: string, ok: boolean) => void;
+}) {
+  const [enviando, setEnviando] = useState<number | null>(null);
+  const pendientes = integrantes.filter((i) => (i as { curp_verificacion?: string | null }).curp_verificacion === 'revision');
+  if (pendientes.length === 0) return null;
+  const decidir = async (id: number, decision: 'aprobar' | 'rechazar') => {
+    setEnviando(id);
+    try {
+      const { data } = await api.post(`/revision/clubes/${clubId}/integrantes/${id}/curp`, { decision });
+      onHecho(data, decision === 'aprobar' ? 'CURP aprobada.' : 'CURP rechazada: el líder deberá corregirla antes de enviar.', true);
+    } catch (e) {
+      onHecho(null, mensajeError(e, 'No se pudo guardar la revisión de la CURP.'), false);
+    } finally {
+      setEnviando(null);
+    }
+  };
+  return (
+    <section className="rounded-[16px] border px-5 py-4" style={{ borderColor: 'var(--tile-gold-fg)', backgroundColor: 'var(--tile-gold-bg)' }} aria-labelledby="curp-revision">
+      <h3 id="curp-revision" className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><AlertTriangle className="h-4 w-4" aria-hidden="true" />CURP por revisar ({pendientes.length})</h3>
+      <p className="mt-1 text-xs text-[var(--app-ink-2)]">No coinciden con el nombre o la fecha de nacimiento; el líder confirmó que son correctas. Compáralas con el documento.</p>
+      <ul className="mt-3 space-y-3">
+        {pendientes.map((i) => {
+          const x = i as IntegranteApi & { curp?: string | null; curp_problemas?: string[] | null };
+          return (
+            <li key={i.id} className="rounded-[12px] bg-[var(--app-card,white)] p-3 text-sm">
+              <p className="font-bold text-[var(--app-ink)]">{i.nombre} · <span className="font-mono text-xs">{x.curp}</span></p>
+              {!!x.curp_problemas?.length && <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-[var(--app-ink-2)]">{x.curp_problemas.map((p) => <li key={p}>{p}</li>)}</ul>}
+              {puede && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button type="button" className="pill" data-tone="emerald" disabled={enviando === i.id} onClick={() => void decidir(i.id, 'aprobar')}><CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />La CURP es correcta</button>
+                  <button type="button" className="pill" data-tone="red" disabled={enviando === i.id} onClick={() => void decidir(i.id, 'rechazar')}>Rechazar</button>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
 }
 
 /** E70: quién revisa la etapa actual y cuántas aprobaciones lleva. */
@@ -148,6 +198,11 @@ export default function FichaClubPersonal({ endpoint, volverHref }: { endpoint: 
           <ul className="mt-2 list-disc space-y-0.5 pl-6 text-sm text-[var(--app-ink)]">{d.faltantes.map((f) => <li key={f}>{f}</li>)}</ul>
         </section>
       )}
+      <CurpPorRevisar clubId={d.club.id} integrantes={d.integrantes} puede={Boolean(d.permisos.curp)}
+        onHecho={(nuevo, mensaje, ok) => {
+          const x = ok && nuevo ? leer(nuevo) : null;
+          if (x) { setD(x); setAviso(mensaje); setError(null); } else { setError(mensaje); }
+        }} />
       {d.club.estado !== 'borrador' && (
         <RevisionClubPanel clubId={d.club.id} estado={d.club.estado} avance={d.club} permisos={d.permisos} hayActa={Boolean(d.config.acta_comite)}
           convocatoriaId={convId ?? 0}

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import StepFrame from '@/components/ui/step-frame';
 import {
   Edit, Trash2, UserPlus, Users,
-  Mail, UserCircle, Lock, Briefcase, Phone, Building2, ShieldCheck
+  Mail, UserCircle, Lock, Briefcase, Phone, Building2, ShieldCheck, IdCard, CalendarDays
 } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import api from '@/lib/api';
@@ -23,15 +23,17 @@ import { PASSWORD_HINT, validarPassword } from '@/lib/password-policy';
 import { BotonVerContrasena, SemaforoContrasena } from '@/components/ui/campo-contrasena';
 import { conAsterisco } from '@/components/ui/obligatorio';
 import { PATRON_CORREO } from '@/lib/registro';
+import { limpiarCurp, nombrePropio, problemaNombre, revisarIdentidad } from '@/lib/curp';
 
 /** Nombre visible y paso de cada campo: los errores del servidor se muestran así y regresan al paso correcto. */
 const ETIQUETA_CAMPO: Record<string, string> = {
-  name: 'Nombre completo', email: 'Correo electrónico', password: 'Contraseña', password_confirmation: 'Confirmar contraseña', rol_id: 'Papel en el sistema',
+  name: 'Nombre completo', nombres: 'Nombre(s)', primer_apellido: 'Primer apellido', segundo_apellido: 'Segundo apellido',
+  curp: 'CURP', fecha_nacimiento: 'Fecha de nacimiento', email: 'Correo electrónico', password: 'Contraseña', password_confirmation: 'Confirmar contraseña', rol_id: 'Papel en el sistema',
   empresa_id: 'Institución', cargo: 'Cargo', telefono: 'Teléfono', activo: 'Puede entrar al sistema',
   convocatoria_ids: 'Convocatorias a su cargo', periodo_ids: 'Periodos visibles',
 };
 const PASO_CAMPO: Record<string, string> = {
-  name: 'cuenta', email: 'cuenta', password: 'cuenta', password_confirmation: 'cuenta', rol_id: 'papel', empresa_id: 'papel', cargo: 'papel',
+  name: 'cuenta', nombres: 'cuenta', primer_apellido: 'cuenta', segundo_apellido: 'cuenta', curp: 'cuenta', fecha_nacimiento: 'cuenta', curp_revision: 'cuenta', email: 'cuenta', password: 'cuenta', password_confirmation: 'cuenta', rol_id: 'papel', empresa_id: 'papel', cargo: 'papel',
   telefono: 'papel', activo: 'papel', convocatoria_ids: 'alcance', periodo_ids: 'alcance',
 };
 
@@ -110,6 +112,13 @@ export default function UsuariosClient({ users, pagination }: Props) {
 
   const [formData, setFormData] = useState({
     name: '',
+    // E76: nombre por partes; CURP y fecha opcionales al dar de alta (se verifican si se escriben).
+    nombres: '',
+    primer_apellido: '',
+    segundo_apellido: '',
+    curp: '',
+    fecha_nacimiento: '',
+    curp_revision: false,
     email: '',
     password: '',
     rol_id: '',
@@ -132,6 +141,12 @@ export default function UsuariosClient({ users, pagination }: Props) {
       setPeriodosOp(Array.isArray(p.data) ? p.data.map((x: { id: number; nombre: string }) => ({ id: x.id, nombre: x.nombre })) : []);
     });
   }, []);
+  // E76: alta y cuentas con nombre por partes → tres campos; cuentas anteriores al validador → nombre completo.
+  const porPartes = !editingUser || !!editingUser.nombres;
+  const revisionCurp = revisarIdentidad({
+    nombres: formData.nombres, primer_apellido: formData.primer_apellido, segundo_apellido: formData.segundo_apellido,
+    sin_segundo: !formData.segundo_apellido.trim(), fecha_nacimiento: formData.fecha_nacimiento, curp: formData.curp, curp_revision: formData.curp_revision,
+  });
   const rolSlug = catalogs.roles.find((r) => String(r.id) === formData.rol_id)?.slug ?? '';
   // E52 · F4: el operador de evento también trabaja solo en sus convocatorias asignadas (sin periodos).
   const pideConvocatorias = rolSlug === 'admin_convocatoria' || rolSlug === 'operador_evento';
@@ -171,6 +186,12 @@ export default function UsuariosClient({ users, pagination }: Props) {
       setEditingUser(user);
       setFormData({
         name: user.name,
+        nombres: user.nombres ?? '',
+        primer_apellido: user.primer_apellido ?? '',
+        segundo_apellido: user.segundo_apellido ?? '',
+        curp: '',
+        fecha_nacimiento: '',
+        curp_revision: false,
         email: user.email,
         password: '',
         rol_id: user.rol_id.toString(),
@@ -185,6 +206,12 @@ export default function UsuariosClient({ users, pagination }: Props) {
       setEditingUser(null);
       setFormData({
         name: '',
+        nombres: '',
+        primer_apellido: '',
+        segundo_apellido: '',
+        curp: '',
+        fecha_nacimiento: '',
+        curp_revision: false,
         email: '',
         password: '',
         rol_id: '',
@@ -202,8 +229,20 @@ export default function UsuariosClient({ users, pagination }: Props) {
   /** Mismas reglas que el servidor (UserController + Password::defaults), para avisar antes de enviar. */
   const erroresCuenta = (): Record<string, string> => {
     const e: Record<string, string> = {};
-    if (!formData.name.trim()) e.name = 'Escribe el nombre completo.';
+    if (porPartes) {
+      const n1 = problemaNombre(formData.nombres, 'nombre'); if (n1) e.nombres = n1;
+      const n2 = problemaNombre(formData.primer_apellido, 'primer apellido'); if (n2) e.primer_apellido = n2;
+      const n3 = problemaNombre(formData.segundo_apellido, 'segundo apellido', false); if (n3) e.segundo_apellido = n3;
+    } else if (!formData.name.trim()) e.name = 'Escribe el nombre completo.';
     else if (formData.name.length > 255) e.name = 'Máximo 255 caracteres.';
+    if (!editingUser && formData.curp) {
+      if (revisionCurp.campos.fecha_nacimiento) e.fecha_nacimiento = revisionCurp.campos.fecha_nacimiento;
+      if (revisionCurp.campos.curp) e.curp = revisionCurp.campos.curp;
+      else if (!revisionCurp.coincide && revisionCurp.problemas.length) {
+        if (!revisionCurp.revisable) e.curp = revisionCurp.problemas[0];
+        else if (!formData.curp_revision) e.curp = 'La CURP no coincide con el nombre o la fecha. Corrígela o confirma que es correcta.';
+      }
+    }
     if (!formData.email.trim()) e.email = 'Escribe el correo electrónico.';
     else if (!PATRON_CORREO.test(formData.email.trim())) e.email = 'Revisa el correo: debe verse como nombre@dominio.mx.';
     if (!editingUser && !formData.password) e.password = 'Define una contraseña inicial.';
@@ -243,8 +282,11 @@ export default function UsuariosClient({ users, pagination }: Props) {
     setSubmitting(true);
     try {
       // Convert string IDs to numbers and filter empty values
-      const payload: Partial<User> & { password?: string; password_confirmation?: string; convocatoria_ids?: number[]; periodo_ids?: number[] } = {
-        name: formData.name,
+      const payload: Partial<User> & Record<string, unknown> & { password?: string; password_confirmation?: string; convocatoria_ids?: number[]; periodo_ids?: number[] } = {
+        ...(porPartes
+          ? { nombres: nombrePropio(formData.nombres, true), primer_apellido: nombrePropio(formData.primer_apellido), segundo_apellido: nombrePropio(formData.segundo_apellido) || null, curp_revision: formData.curp_revision }
+          : { name: nombrePropio(formData.name, true) }),
+        ...(!editingUser && formData.curp ? { curp: formData.curp, fecha_nacimiento: formData.fecha_nacimiento } : {}),
         email: formData.email,
         rol_id: parseInt(formData.rol_id, 10),
         telefono: formData.telefono || undefined,
@@ -271,11 +313,14 @@ export default function UsuariosClient({ users, pagination }: Props) {
       } else {
         await api.post('/admin/usuarios', payload);
       }
+      const nombreMostrado = porPartes
+        ? [nombrePropio(formData.nombres, true), nombrePropio(formData.primer_apellido), nombrePropio(formData.segundo_apellido)].filter(Boolean).join(' ')
+        : formData.name.trim();
       setShowModal(false);
       setErrors({});
       setFeedback({
         type: 'success',
-        message: editingUser ? `Se guardaron los cambios de ${formData.name.trim()}.` : `Usuario ${formData.name.trim()} creado. Ya puede entrar con ${formData.email.trim()}.`,
+        message: editingUser ? `Se guardaron los cambios de ${nombreMostrado}.` : `Usuario ${nombreMostrado} creado. Ya puede entrar con ${formData.email.trim()}.`,
       });
       router.refresh();
     } catch (error: unknown) {
@@ -410,12 +455,63 @@ export default function UsuariosClient({ users, pagination }: Props) {
             key: 'cuenta',
             label: 'La cuenta',
             question: '¿Quién es y cómo entra?',
-            validate: () => validarPaso(erroresCuenta(), ['name', 'email', 'password', 'password_confirmation']),
+            validate: () => validarPaso(erroresCuenta(), ['name', 'nombres', 'primer_apellido', 'segundo_apellido', 'curp', 'fecha_nacimiento', 'email', 'password', 'password_confirmation']),
             content: (
               <>
-                <FField id="usr-name" icon={UserCircle} label="Nombre completo *" error={errors.name}>
-                  <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="name" placeholder="Ej. Ana Pérez López" />
-                </FField>
+                {porPartes ? (
+                  <>
+                    <FField id="usr-nombres" icon={UserCircle} label="Nombre(s) *" error={errors.nombres}>
+                      <input value={formData.nombres} maxLength={60} onChange={e => setFormData({ ...formData, nombres: e.target.value })} onBlur={() => setFormData((f) => ({ ...f, nombres: nombrePropio(f.nombres, true) }))} className="auth-input auth-input-static pl-10" autoComplete="off" placeholder="Ej. Ana María" />
+                    </FField>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <FField id="usr-apellido1" icon={UserCircle} label="Primer apellido *" error={errors.primer_apellido}>
+                        <input value={formData.primer_apellido} maxLength={60} onChange={e => setFormData({ ...formData, primer_apellido: e.target.value })} onBlur={() => setFormData((f) => ({ ...f, primer_apellido: nombrePropio(f.primer_apellido) }))} className="auth-input auth-input-static pl-10" autoComplete="off" placeholder="Ej. Pérez" />
+                      </FField>
+                      <FField id="usr-apellido2" icon={UserCircle} label="Segundo apellido" error={errors.segundo_apellido}>
+                        <input value={formData.segundo_apellido} maxLength={60} onChange={e => setFormData({ ...formData, segundo_apellido: e.target.value })} onBlur={() => setFormData((f) => ({ ...f, segundo_apellido: nombrePropio(f.segundo_apellido) }))} className="auth-input auth-input-static pl-10" autoComplete="off" placeholder="Ej. López" />
+                      </FField>
+                    </div>
+                  </>
+                ) : (
+                  <FField id="usr-name" icon={UserCircle} label="Nombre completo *" error={errors.name}>
+                    <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} onBlur={() => setFormData((f) => ({ ...f, name: nombrePropio(f.name, true) }))} className="auth-input auth-input-static pl-10" autoComplete="name" placeholder="Ej. Ana Pérez López" />
+                  </FField>
+                )}
+                {!editingUser && (
+                  <div className="space-y-3 rounded-[12px] border p-3" style={{ borderColor: 'var(--app-rule)' }}>
+                    <p className="text-xs text-[var(--app-ink-2)]"><strong className="text-[var(--app-ink)]">CURP (opcional).</strong> Si la escribes, se compara con el nombre y la fecha de nacimiento.</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <FField id="usr-curp" icon={IdCard} label="CURP" error={errors.curp}>
+                        <input value={formData.curp} onChange={e => setFormData({ ...formData, curp: limpiarCurp(e.target.value), curp_revision: false })} className="auth-input auth-input-static pl-10" autoComplete="off" spellCheck={false} placeholder="18 caracteres" />
+                      </FField>
+                      <FField id="usr-fecha" icon={CalendarDays} label={formData.curp ? 'Fecha de nacimiento *' : 'Fecha de nacimiento'} error={errors.fecha_nacimiento}>
+                        <input type="date" value={formData.fecha_nacimiento} max={new Date().toISOString().slice(0, 10)} onChange={e => setFormData({ ...formData, fecha_nacimiento: e.target.value, curp_revision: false })} className="auth-input auth-input-static pl-10" />
+                      </FField>
+                    </div>
+                    {formData.curp.length === 18 && revisionCurp.coincide && (
+                      <p className="text-xs font-semibold" style={{ color: 'var(--tile-emerald-fg)' }} role="status">La CURP coincide con el nombre y la fecha de nacimiento.</p>
+                    )}
+                    {revisionCurp.problemas.length > 0 && (
+                      <div className="space-y-1.5 text-xs" role="status">
+                        <ul className="list-disc space-y-0.5 pl-5" style={{ color: 'var(--auth-danger)' }}>
+                          {revisionCurp.problemas.map((p) => <li key={p}>{p}</li>)}
+                        </ul>
+                        {revisionCurp.revisable && (
+                          <label className="flex cursor-pointer items-start gap-2">
+                            <input type="checkbox" checked={formData.curp_revision} onChange={e => setFormData({ ...formData, curp_revision: e.target.checked })} className="mt-0.5 h-4 w-4 accent-[var(--auth-vino)]" />
+                            <span>Revisé el documento: <strong>la CURP es correcta</strong> aunque no coincida (queda como aprobada por ti).</span>
+                          </label>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {editingUser?.curp_verificacion && porPartes && (
+                  <label className="flex cursor-pointer items-start gap-2 text-xs text-[var(--app-ink-2)]">
+                    <input type="checkbox" checked={formData.curp_revision} onChange={e => setFormData({ ...formData, curp_revision: e.target.checked })} className="mt-0.5 h-4 w-4 accent-[var(--auth-vino)]" />
+                    <span>Su nombre está ligado a su CURP. Si lo corriges y el sistema dice que ya no coincide, marca esta casilla para confirmarlo tú.</span>
+                  </label>
+                )}
                 <FField id="usr-email" icon={Mail} label="Correo electrónico *" error={errors.email}>
                   <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="auth-input auth-input-static pl-10" autoComplete="email" placeholder="nombre@institucion.mx" />
                 </FField>

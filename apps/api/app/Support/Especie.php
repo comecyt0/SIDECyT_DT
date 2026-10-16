@@ -86,9 +86,20 @@ class Especie
         $c = self::camposIntegrante($cfg);
         $req = fn (string $k) => ($paraEnvio && $c[$k]['obligatorio']) ? 'required' : 'nullable';
 
+        // E76: si la convocatoria pide la CURP, el nombre va por partes para compararlo con ella; si no, en un campo.
+        $porPartes = $c['curp']['pedir'];
+        $nombre = ['string', 'max:'.NombrePropio::MAX, 'regex:'.NombrePropio::REGEX];
+
         return [
-            'nombre' => 'required|string|min:3|max:255',
-            'fecha_nacimiento' => [$req('fecha_nacimiento'), 'date', 'before:today', 'after:1900-01-01'],
+            ...($porPartes ? [
+                'nombres' => ['required', ...$nombre],
+                'primer_apellido' => ['required', ...$nombre],
+                'segundo_apellido' => ['nullable', ...$nombre],
+                'curp_revision' => ['sometimes', 'boolean'],
+            ] : [
+                'nombre' => ['required', 'string', 'min:3', 'max:255', 'regex:'.NombrePropio::REGEX],
+            ]),
+            'fecha_nacimiento' => [$req('fecha_nacimiento'), 'date_format:Y-m-d', 'before:today', 'after:1900-01-01'],
             'sexo' => [$req('sexo'), 'in:H,M,X'],
             'curp' => [$req('curp'), 'string', 'size:18', 'regex:'.RegistroRoles::PATRON_CURP],
             'grado_grupo' => [$req('grado_grupo'), 'string', 'max:30'],

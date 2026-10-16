@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { erroresFormulario, mensajeError } from './errores-formulario';
+import { erroresFormulario, mensajeError, textoLegible } from './errores-formulario';
 
 const r422 = (errors: Record<string, string[]>, message = 'The given data was invalid.') => ({ response: { status: 422, data: { message, errors } } });
 
@@ -32,5 +32,17 @@ describe('errores de formulario (reporte: "Crear usuario" no decía qué corregi
     expect(mensajeError(r422({ new_password: ['La contraseña debe incluir al menos un número.'] }), 'x')).toBe('La contraseña debe incluir al menos un número.');
     expect(mensajeError({ response: { status: 500, data: {} } }, 'No se pudo.')).toBe('No se pudo.');
     expect(mensajeError({ response: { status: 422, data: { message: 'Esta convocatoria tiene prórroga.' } } }, 'x')).toBe('Esta convocatoria tiene prórroga.');
+  });
+});
+
+describe('16/10/2026: ningún texto técnico llega a la persona (reporte: «validation.regex»)', () => {
+  it('cambia claves sin traducir y mensajes en inglés por un texto en español', () => {
+    expect(textoLegible('validation.regex')).toBe('Revisa este dato: no tiene el formato esperado.');
+    expect(textoLegible('passwords.token', 'x')).toBe('x');
+    expect(textoLegible('The curp field format is invalid.')).toMatch(/^Revisa este dato/);
+    expect(textoLegible('Ese correo ya tiene una cuenta.')).toBe('Ese correo ya tiene una cuenta.');
+    expect(textoLegible('Revisa la fecha. Debe ser anterior a hoy.')).toBe('Revisa la fecha. Debe ser anterior a hoy.');
+    const r = erroresFormulario(r422({ curp: ['validation.regex'] }), { curp: 'CURP' });
+    expect(r.lineas).toEqual(['CURP: Revisa este dato: no tiene el formato esperado.']);
   });
 });

@@ -35,22 +35,78 @@ class PerfilController extends Controller
     {
         $u = $request->user()->load(['rol:id,nombre,slug', 'empresa:id,nombre,acronimo', 'convocatoriasAsignadas:id,nombre', 'periodos:id,nombre']);
 
-        return response()->json(['user' => $u, 'resumen' => $this->resumen($u)]);
+        return response()->json(['user' => $u, 'resumen' => $this->resumen($u), 'identidad' => $this->identidad($u)]);
+    }
+
+    /**
+     * E76: identidad de la propia persona (solo a ella). `verificada` = la cuenta se registró con el validador de CURP:
+     * su nombre va por partes y cada cambio se vuelve a comparar con la CURP y la fecha guardadas.
+     */
+    private function identidad(User $u): array
+    {
+        return [
+            'verificada' => $u->fecha_nacimiento !== null && $u->curp !== null && $u->nombres !== null,
+            'nombres' => $u->nombres,
+            'primer_apellido' => $u->primer_apellido,
+            'segundo_apellido' => $u->segundo_apellido,
+            'fecha_nacimiento' => $u->fecha_nacimiento?->format('Y-m-d'),
+            'curp' => $u->curp,
+            'sexo' => $u->sexo,
+            'entidad_nacimiento' => $u->entidad_nacimiento,
+            'curp_verificacion' => $u->curp_verificacion,
+        ];
     }
 
     public function update(Request $request)
     {
+        $user = $request->user();
+        $verificada = $this->identidad($user)['verificada'];
+        // E76: los nombres se guardan con mayúscula inicial. Una cuenta verificada edita su nombre por partes y el
+        // resultado debe seguir correspondiendo a su CURP; una cuenta anterior conserva el nombre en un solo campo.
+        $request->merge(\App\Support\IdentidadCurp::normalizar($request->only(['nombres', 'primer_apellido', 'segundo_apellido'])));
         $data = $request->validate([
-            'name' => ['sometimes', 'string', 'min:3', 'max:255'],
+            'name' => $verificada ? ['prohibited'] : ['sometimes', 'string', 'min:3', 'max:255', 'regex:'.\App\Support\NombrePropio::REGEX],
+            'nombres' => $verificada ? ['sometimes', 'required', 'string', 'max:60', 'regex:'.\App\Support\NombrePropio::REGEX] : ['prohibited'],
+            'primer_apellido' => $verificada ? ['required_with:nombres', 'string', 'max:60', 'regex:'.\App\Support\NombrePropio::REGEX] : ['prohibited'],
+            'segundo_apellido' => $verificada ? ['nullable', 'string', 'max:60', 'regex:'.\App\Support\NombrePropio::REGEX] : ['prohibited'],
             'telefono' => ['sometimes', 'nullable', 'string', 'max:20', 'regex:/^[0-9+()\s-]*$/'],
             'cargo' => ['sometimes', 'nullable', 'string', 'max:255'],
+        ], [
+            ...\App\Support\IdentidadCurp::mensajes(),
+            'name.regex' => 'El nombre solo puede llevar letras, espacios, guion o apóstrofo; sin números.',
+            'name.prohibited' => 'Tu nombre se edita por partes (nombre y apellidos).',
+            'nombres.prohibited' => 'Tu cuenta guarda el nombre completo en un solo campo.',
+            'primer_apellido.prohibited' => 'Tu cuenta guarda el nombre completo en un solo campo.',
+            'segundo_apellido.prohibited' => 'Tu cuenta guarda el nombre completo en un solo campo.',
+            'primer_apellido.required_with' => 'Escribe tu primer apellido.',
         ]);
-        foreach (['name', 'cargo'] as $k) {
-            if (isset($data[$k])) {
-                $data[$k] = trim(strip_tags($data[$k]));
-            }
+        if (isset($data['name'])) {
+            $data['name'] = \App\Support\NombrePropio::formatear(strip_tags($data['name']), true);
         }
-        $user = $request->user();
+        if (isset($data['cargo'])) {
+            $data['cargo'] = trim(strip_tags($data['cargo']));
+        }
+        if (isset($data['nombres'])) {
+            $cambio = $data['nombres'] !== $user->nombres || $data['primer_apellido'] !== $user->primer_apellido
+                || ($data['segundo_apellido'] ?? null) !== $user->segundo_apellido;
+            // Solo se compara si el nombre cambió (así una CURP aprobada en revisión no impide guardar el teléfono).
+            $problemas = ! $cambio ? [] : array_intersect_key(
+                \App\Support\ValidadorCurp::comparar((string) $user->curp, $data['nombres'], $data['primer_apellido'], $data['segundo_apellido'] ?? null, $user->fecha_nacimiento->format('Y-m-d')),
+                array_flip(['letras', 'consonantes']),
+            );
+            if ($problemas !== []) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'nombres' => array_merge(['Tu nombre ya no correspondería a tu CURP. Si tu CURP o tu nombre cambiaron, pide al administrador que los corrija.'], array_values($problemas)),
+                ]);
+            }
+            $user->forceFill([
+                'nombres' => $data['nombres'],
+                'primer_apellido' => $data['primer_apellido'],
+                'segundo_apellido' => $data['segundo_apellido'] ?? null,
+            ]);
+            $data['name'] = \App\Support\NombrePropio::completo($data['nombres'], $data['primer_apellido'], $data['segundo_apellido'] ?? null);
+            unset($data['nombres'], $data['primer_apellido'], $data['segundo_apellido']);
+        }
         $user->update($data);
         Audit::log('user.perfil_actualizado', $user, ['campos' => array_keys($data)]);
 

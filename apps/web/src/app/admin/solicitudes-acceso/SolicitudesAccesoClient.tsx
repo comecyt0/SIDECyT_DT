@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 import { GRADO_ETIQUETA } from '@/lib/registro';
+import { ENTIDADES, SEXOS, ddmmaaaaFecha } from '@/lib/curp';
 
 export interface SolicitudAcceso {
   id: number;
@@ -43,7 +44,21 @@ export interface SolicitudAcceso {
   /** E67: rechazos anteriores con el mismo correo o CURP (reintento) y el último motivo. */
   rechazos_previos?: number;
   motivo_rechazo_previo?: string | null;
+  /** E76: identidad verificada contra la CURP. */
+  fecha_nacimiento?: string | null;
+  sexo?: string | null;
+  entidad_nacimiento?: string | null;
+  curp_verificacion?: 'coincide' | 'revision' | 'aprobada' | 'rechazada' | null;
+  curp_problemas?: string[] | null;
 }
+
+/** E76: estado de la CURP de la solicitud (null = registro anterior al validador). */
+const CURP_ESTADO: Record<string, { label: string; tone: string }> = {
+  coincide: { label: 'CURP verificada', tone: 'emerald' },
+  revision: { label: 'CURP por revisar', tone: 'butter' },
+  aprobada: { label: 'CURP aprobada en revisión', tone: 'sky' },
+  rechazada: { label: 'CURP rechazada', tone: 'red' },
+};
 
 const ROL_SOLICITADO: Record<string, { label: string; tone: string }> = {
   solicitante: { label: 'Participante', tone: 'sky' },
@@ -249,6 +264,9 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
                               Reintento · {sol.rechazos_previos} rechazo{sol.rechazos_previos === 1 ? '' : 's'} antes
                             </span>
                           )}
+                          {sol.curp_verificacion && CURP_ESTADO[sol.curp_verificacion] && (
+                            <span className="pill" data-tone={CURP_ESTADO[sol.curp_verificacion].tone}>{CURP_ESTADO[sol.curp_verificacion].label}</span>
+                          )}
                         </div>
                         <p className="text-xs text-[var(--app-ink-2)] flex items-center gap-3 flex-wrap">
                           <span className="flex items-center gap-1 truncate"><Mail className="w-3 h-3 shrink-0" />{sol.email}</span>
@@ -315,11 +333,26 @@ export default function SolicitudesAccesoClient({ solicitudes }: Props) {
                 )}
               </ol>
 
+              {viewingSolicitud.curp_verificacion === 'revision' && (
+                <div className="rounded-[12px] border p-3 text-sm" style={{ borderColor: 'var(--tile-gold-fg)', background: 'var(--tile-gold-bg)' }} role="note">
+                  <p className="font-bold">La CURP no coincide con el nombre o la fecha de nacimiento</p>
+                  <p className="mt-1 text-xs">La persona confirmó que su CURP es correcta y pidió revisión. Compárala antes de aprobar: aprobar la cuenta aprueba también la CURP.</p>
+                  {!!viewingSolicitud.curp_problemas?.length && (
+                    <ul className="mt-2 list-disc space-y-0.5 pl-5 text-xs">
+                      {viewingSolicitud.curp_problemas.map((p) => <li key={p}>{p}</li>)}
+                    </ul>
+                  )}
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <DetailItem icon={ShieldCheck} label="Rol solicitado" value={ROL_SOLICITADO[viewingSolicitud.rol_solicitado ?? 'solicitante']?.label ?? String(viewingSolicitud.rol_solicitado)} />
                 <DetailItem icon={User} label="Nombre" value={viewingSolicitud.nombre} />
                 <DetailItem icon={Mail} label="Correo" value={viewingSolicitud.email} />
                 {viewingSolicitud.curp && <DetailItem icon={IdCard} label="CURP" value={viewingSolicitud.curp} />}
+                {viewingSolicitud.fecha_nacimiento && (
+                  <DetailItem icon={Calendar} label="Nacimiento (según la CURP: sexo y estado)"
+                    value={`${ddmmaaaaFecha(viewingSolicitud.fecha_nacimiento)} · ${SEXOS[viewingSolicitud.sexo ?? ''] ?? '—'} · ${ENTIDADES[viewingSolicitud.entidad_nacimiento ?? ''] ?? '—'}`} />
+                )}
                 {viewingSolicitud.empresa_nombre && <DetailItem icon={Building2} label="Empresa" value={viewingSolicitud.empresa_nombre} />}
                 {viewingSolicitud.cargo && <DetailItem icon={Briefcase} label="Cargo" value={viewingSolicitud.cargo} />}
                 {viewingSolicitud.telefono && <DetailItem icon={Phone} label="Teléfono" value={viewingSolicitud.telefono} />}

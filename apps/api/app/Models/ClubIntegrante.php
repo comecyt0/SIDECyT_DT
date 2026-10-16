@@ -14,7 +14,7 @@ class ClubIntegrante extends Model
 
     protected $hidden = ['foto_path'];
 
-    protected $casts = ['datos' => 'array', 'es_lider' => 'boolean', 'es_lider_b' => 'boolean', 'fecha_nacimiento' => 'date:Y-m-d'];
+    protected $casts = ['datos' => 'array', 'es_lider' => 'boolean', 'es_lider_b' => 'boolean', 'fecha_nacimiento' => 'date:Y-m-d', 'curp_problemas' => 'array'];
 
     protected $appends = ['foto_url', 'menor_de_edad'];
 
