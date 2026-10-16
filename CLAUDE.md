@@ -2225,6 +2225,16 @@ espacio que dejaban los pasos).
 - **Mismo día, en SICEI** (repo aparte, D80–D82): imágenes WebP, semáforo de contraseñas, perfil con aprobación y rol
   admin de convocatoria. Contraseñas: auditoría de `public.users` con 11 de 11 en argon2id y `solicitudes_acceso` con 6
   de 6 con hash; no hay contraseñas en texto plano en ninguno de los dos sistemas.
+- **Más tarde, ese mismo día (reportes del usuario):**
+  - **Confirmar contraseña con su propio ojo** donde se crea o cambia una contraseña:
+    - «Nuevo usuario» del admin (`UsuariosClient`; `UserController` exige `confirmed` al crear y al cambiar);
+    - restablecer contraseña (la confirmación tenía el ojo compartido).
+  - Acceso de `/evaluador` con ojo.
+  - `/solicitante/onboarding` con «Cerrar sesión» (no había forma de salir).
+  - En SICEI, «Cerrar sesión» ahora sale aunque la sesión ya haya vencido; perfil con catálogo de CP y reglas de CURP y
+    teléfono (detalle en `C:\SICEI\docs\plan\10-imagenes-contrasenas-perfil.md`).
+  - El endpoint público `/api/codigos-postales/{cp}` de SIGAE ahora también lo consume el perfil de SICEI (mismo
+    origen; throttle y lista blanca sin cambios).
 
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de

@@ -49,7 +49,7 @@ class UserController extends Controller
         $validated = $request->validate($this->reglas() + [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => ['required', Password::defaults()],
+            'password' => ['required', 'confirmed', Password::defaults()], // 15/10/2026: con confirmación
             'rol_id' => 'required|exists:roles,id',
         ]);
 
@@ -80,7 +80,7 @@ class UserController extends Controller
         $validated = $request->validate($this->reglas() + [
             'name' => 'string|max:255',
             'email' => 'string|email|max:255|unique:users,email,'.$user->id,
-            'password' => ['nullable', Password::defaults()],
+            'password' => ['nullable', 'confirmed', Password::defaults()],
             'rol_id' => 'exists:roles,id',
         ]);
 

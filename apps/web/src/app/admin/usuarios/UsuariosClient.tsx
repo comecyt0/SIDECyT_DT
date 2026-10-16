@@ -26,12 +26,12 @@ import { PATRON_CORREO } from '@/lib/registro';
 
 /** Nombre visible y paso de cada campo: los errores del servidor se muestran así y regresan al paso correcto. */
 const ETIQUETA_CAMPO: Record<string, string> = {
-  name: 'Nombre completo', email: 'Correo electrónico', password: 'Contraseña', rol_id: 'Papel en el sistema',
+  name: 'Nombre completo', email: 'Correo electrónico', password: 'Contraseña', password_confirmation: 'Confirmar contraseña', rol_id: 'Papel en el sistema',
   empresa_id: 'Institución', cargo: 'Cargo', telefono: 'Teléfono', activo: 'Puede entrar al sistema',
   convocatoria_ids: 'Convocatorias a su cargo', periodo_ids: 'Periodos visibles',
 };
 const PASO_CAMPO: Record<string, string> = {
-  name: 'cuenta', email: 'cuenta', password: 'cuenta', rol_id: 'papel', empresa_id: 'papel', cargo: 'papel',
+  name: 'cuenta', email: 'cuenta', password: 'cuenta', password_confirmation: 'cuenta', rol_id: 'papel', empresa_id: 'papel', cargo: 'papel',
   telefono: 'papel', activo: 'papel', convocatoria_ids: 'alcance', periodo_ids: 'alcance',
 };
 
@@ -98,6 +98,9 @@ export default function UsuariosClient({ users, pagination }: Props) {
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [verPass, setVerPass] = useState(false);
+  // 15/10/2026 (pedido del usuario): confirmar la contraseña con su propio ojo
+  const [confPass, setConfPass] = useState('');
+  const [verConf, setVerConf] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   // Error al guardar: se muestra DENTRO de la ventana y regresa al paso del campo (antes quedaba detrás del modal).
@@ -163,6 +166,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
   const handleOpenModal = (user: User | null = null) => {
     setErrors({});
     setErrorGuardar(null);
+    setConfPass(''); setVerPass(false); setVerConf(false);
     if (user) {
       setEditingUser(user);
       setFormData({
@@ -204,6 +208,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
     else if (!PATRON_CORREO.test(formData.email.trim())) e.email = 'Revisa el correo: debe verse como nombre@dominio.mx.';
     if (!editingUser && !formData.password) e.password = 'Define una contraseña inicial.';
     else if (formData.password) { const p = validarPassword(formData.password); if (p) e.password = p; }
+    if (formData.password && confPass !== formData.password) e.password_confirmation = confPass ? 'Las contraseñas no coinciden.' : 'Confirma la contraseña.';
     return e;
   };
   const erroresPapel = (): Record<string, string> => {
@@ -238,7 +243,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
     setSubmitting(true);
     try {
       // Convert string IDs to numbers and filter empty values
-      const payload: Partial<User> & { password?: string; convocatoria_ids?: number[]; periodo_ids?: number[] } = {
+      const payload: Partial<User> & { password?: string; password_confirmation?: string; convocatoria_ids?: number[]; periodo_ids?: number[] } = {
         name: formData.name,
         email: formData.email,
         rol_id: parseInt(formData.rol_id, 10),
@@ -253,6 +258,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
       // Only add password for new users or when password is provided
       if (!editingUser || formData.password) {
         payload.password = formData.password;
+        payload.password_confirmation = confPass;
       }
 
       // Only add empresa_id if it's selected
@@ -404,7 +410,7 @@ export default function UsuariosClient({ users, pagination }: Props) {
             key: 'cuenta',
             label: 'La cuenta',
             question: '¿Quién es y cómo entra?',
-            validate: () => validarPaso(erroresCuenta(), ['name', 'email', 'password']),
+            validate: () => validarPaso(erroresCuenta(), ['name', 'email', 'password', 'password_confirmation']),
             content: (
               <>
                 <FField id="usr-name" icon={UserCircle} label="Nombre completo *" error={errors.name}>
@@ -419,6 +425,12 @@ export default function UsuariosClient({ users, pagination }: Props) {
                 </FField>
                 <p className="-mt-2 text-xs text-[var(--app-ink-2)]">{PASSWORD_HINT}</p>
                 {formData.password && <SemaforoContrasena valor={formData.password} />}
+                {(formData.password || !editingUser) && (
+                  <FField id="usr-password2" icon={Lock} label={editingUser ? 'Confirma la nueva contraseña' : 'Confirmar contraseña *'} error={errors.password_confirmation}>
+                    <input type={verConf ? 'text' : 'password'} value={confPass} onChange={e => setConfPass(e.target.value)} className="auth-input auth-input-static pl-10 !pr-12" autoComplete="new-password" placeholder="Escríbela otra vez" />
+                    <BotonVerContrasena visible={verConf} onToggle={() => setVerConf(!verConf)} etiqueta="confirmación" />
+                  </FField>
+                )}
               </>
             ),
           },

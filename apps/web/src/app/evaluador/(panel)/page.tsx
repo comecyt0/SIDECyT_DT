@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, KeyRound, LogIn, Repeat, ShieldCheck, TimerOff } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
+import { BotonVerContrasena } from '@/components/ui/campo-contrasena';
 import PastelFrame from '@/components/ui/pastel-frame';
 import StatTile from '@/components/ui/stat-tile';
 import { Button } from '@/components/ui/button';
@@ -224,6 +225,7 @@ function SinAcceso({ sistema, motivo, mensaje, puedeUsarRol, onUsarRol, onEntro 
 function EntrarSicei({ onEntro }: { onEntro: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [verPassword, setVerPassword] = useState(false);
   const [codigo, setCodigo] = useState('');
   const [pideCodigo, setPideCodigo] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -252,8 +254,12 @@ function EntrarSicei({ onEntro }: { onEntro: () => void }) {
             className="rounded-xl border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 px-3 py-2" required />
         </label>
         <label className="grid gap-1 text-sm font-medium">Contraseña
-          <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} maxLength={200}
-            className="rounded-xl border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 px-3 py-2" required />
+          {/* 15/10/2026: ojo para ver la contraseña (también entran aquí quienes evalúan en SICEI) */}
+          <span className="relative">
+            <input type={verPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} maxLength={200}
+              className="w-full rounded-xl border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 px-3 py-2 pr-12" required />
+            <BotonVerContrasena visible={verPassword} onToggle={() => setVerPassword((v) => !v)} />
+          </span>
         </label>
         {pideCodigo && (
           <label className="grid gap-1 text-sm font-medium"><span className="inline-flex items-center gap-1"><ShieldCheck className="h-4 w-4" />Código de verificación (6 dígitos)</span>

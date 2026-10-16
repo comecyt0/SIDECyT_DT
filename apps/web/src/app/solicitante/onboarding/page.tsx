@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Label } from '@/components/ui/label';
 import { Asterisco } from '@/components/ui/obligatorio';
-import { Building, Phone, Briefcase, CheckCircle2 } from 'lucide-react';
+import { Building, Phone, Briefcase, CheckCircle2, LogOut } from 'lucide-react';
 import api from '@/lib/api';
+import { cerrarSesion } from '@/lib/logout';
 import { INSTITUTION } from '@/lib/institution';
 import StepFrame from '@/components/ui/step-frame';
 
@@ -21,6 +22,7 @@ const inputCls = 'auth-input auth-input-static pl-4';
 export default function SolicitanteOnboardingPage() {
   const router = useRouter();
   const [empresas, setEmpresas] = useState<EmpresaOption[]>([]);
+  const [saliendo, setSaliendo] = useState(false);
   const [loadingCat, setLoadingCat] = useState(true);
   const [form, setForm] = useState({
     empresa_id: '',
@@ -85,7 +87,7 @@ export default function SolicitanteOnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6" style={{ background: 'var(--app-bg)' }}>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6" style={{ background: 'var(--app-bg)' }}>
       <StepFrame
         inline
         hideCancel
@@ -157,6 +159,15 @@ export default function SolicitanteOnboardingPage() {
           },
         ]}
       />
+      {/* 15/10/2026: esta pantalla no tenía forma de salir (sin barra del panel). */}
+      <button
+        type="button"
+        onClick={() => { setSaliendo(true); void cerrarSesion(); }}
+        disabled={saliendo}
+        className="mt-4 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-[var(--app-ink-2)] transition-colors hover:bg-[color-mix(in_oklch,currentColor_8%,transparent)] hover:text-[var(--app-ink)] active:scale-[0.97] disabled:opacity-60"
+      >
+        <LogOut className="h-4 w-4" aria-hidden="true" /> {saliendo ? 'Saliendo…' : 'Cerrar sesión'}
+      </button>
     </div>
   );
 }

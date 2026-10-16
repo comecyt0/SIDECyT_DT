@@ -26,6 +26,7 @@ function ResetPasswordForm() {
     password_confirmation: '',
   });
   const [showPass, setShowPass] = useState(false);
+  const [showConf, setShowConf] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
@@ -113,16 +114,31 @@ function ResetPasswordForm() {
               <div className="relative group">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 group-focus-within:text-primary transition-colors" />
                 <Input
-                  type={showPass ? 'text' : 'password'}
+                  type={showConf ? 'text' : 'password'}
                   value={form.password_confirmation}
                   onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })}
                   placeholder="Repite la contraseña"
                   required
-                  className={`pl-10 h-12 rounded-xl bg-neutral-50 border-neutral-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${
+                  autoComplete="new-password"
+                  className={`pl-10 pr-10 h-12 rounded-xl bg-neutral-50 border-neutral-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${
                     form.password_confirmation && form.password !== form.password_confirmation ? 'border-red-300 focus:border-red-400' : ''
                   }`}
                 />
+                {/* 15/10/2026 (pedido del usuario): la confirmación tiene su propio ojo */}
+                <button
+                  type="button"
+                  onClick={() => setShowConf(!showConf)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-primary transition-colors"
+                  aria-label={showConf ? 'Ocultar confirmación' : 'Mostrar confirmación'} aria-pressed={showConf}
+                >
+                  {showConf ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
+              {form.password_confirmation && (
+                <p className="text-xs font-semibold" style={{ color: form.password === form.password_confirmation ? 'var(--tile-emerald-fg)' : 'var(--color-destructive)' }}>
+                  {form.password === form.password_confirmation ? 'Las contraseñas coinciden.' : 'Las contraseñas no coinciden.'}
+                </p>
+              )}
             </div>
 
             <Button

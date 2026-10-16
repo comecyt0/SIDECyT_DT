@@ -45,6 +45,23 @@ describe('Crear usuario (reporte 29/09/2026: 422 sin decir qué corregir)', () =
     expect(post).not.toHaveBeenCalled();
   });
 
+  it('15/10/2026: la confirmación debe coincidir y tiene su propio ojo', async () => {
+    render(<UsuariosClient users={[]} pagination={pagination} />);
+    fireEvent.click(screen.getByRole('button', { name: /Nuevo usuario/ }));
+    const dlg = screen.getByRole('dialog');
+    fireEvent.change(within(dlg).getByLabelText(/^Nombre completo \*/), { target: { value: 'Ana Pérez' } });
+    fireEvent.change(within(dlg).getByLabelText(/^Correo electrónico \*/), { target: { value: 'ana@comecyt.mx' } });
+    fireEvent.change(within(dlg).getByLabelText(/^Contraseña inicial \*/), { target: { value: 'Comecyt2026Seguro' } });
+    const conf = within(dlg).getByLabelText(/^Confirmar contraseña \*/) as HTMLInputElement;
+    fireEvent.change(conf, { target: { value: 'Comecyt2026Otro' } });
+    fireEvent.click(within(dlg).getByRole('button', { name: /Siguiente/ }));
+    expect(within(dlg).getAllByText('Las contraseñas no coinciden.').length).toBeGreaterThan(0);
+    expect(conf.type).toBe('password');
+    fireEvent.click(within(dlg).getByRole('button', { name: 'Mostrar confirmación' }));
+    expect(conf.type).toBe('text');
+    expect(post).not.toHaveBeenCalled();
+  });
+
   it('un error del servidor se muestra DENTRO de la ventana y regresa al paso del campo', async () => {
     // Solo la petición real falla (el entorno de pruebas hace una llamada extra sin URL).
     post.mockImplementation((url?: string) => (url === '/admin/usuarios'
@@ -52,6 +69,8 @@ describe('Crear usuario (reporte 29/09/2026: 422 sin decir qué corregir)', () =
       : Promise.resolve({ data: null })));
     const dlg = await llenarHastaAlcance();
     fireEvent.change(within(dlg).getByLabelText(/^Contraseña inicial \*/), { target: { value: 'Comecyt2026Seguro' } });
+    // 15/10/2026: la contraseña se confirma (con su propio ojo)
+    fireEvent.change(within(dlg).getByLabelText(/^Confirmar contraseña \*/), { target: { value: 'Comecyt2026Seguro' } });
     fireEvent.click(within(dlg).getByRole('button', { name: /Siguiente/ }));
     await waitFor(() => expect(within(dlg).getByRole('option', { name: 'Revisor Documental' })).toBeInTheDocument());
     fireEvent.change(within(dlg).getByLabelText(/^Papel en el sistema \*/), { target: { value: '2' } });
@@ -79,6 +98,8 @@ describe('Crear usuario (reporte 29/09/2026: 422 sin decir qué corregir)', () =
     post.mockResolvedValue({ data: { message: 'ok' } });
     const dlg = await llenarHastaAlcance();
     fireEvent.change(within(dlg).getByLabelText(/^Contraseña inicial \*/), { target: { value: 'Comecyt2026Seguro' } });
+    // 15/10/2026: la contraseña se confirma (con su propio ojo)
+    fireEvent.change(within(dlg).getByLabelText(/^Confirmar contraseña \*/), { target: { value: 'Comecyt2026Seguro' } });
     fireEvent.click(within(dlg).getByRole('button', { name: /Siguiente/ }));
     await waitFor(() => expect(within(dlg).getByRole('option', { name: 'Solicitante' })).toBeInTheDocument());
     fireEvent.change(within(dlg).getByLabelText(/^Papel en el sistema \*/), { target: { value: '4' } });
