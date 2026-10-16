@@ -11,7 +11,7 @@ recorrido de una solicitud y los roles, y cierra con la tarjeta «Entra a SIGAE�
 > **16/10/2026, pedido del usuario:**
 > - Se quitó también la tarjeta final **«Entra a SIGAE»** (`.lp-final`): la landing termina en «Un lugar para cada
 >   quien» y luego el pie. Iniciar sesión y Crear cuenta siguen en la barra.
-> - La barra ya no lleva el logo COMECYT: lleva el logotipo tipográfico «SIGAE · Apoyo Empresarial» (E77).
+> - La barra ya no lleva el logo COMECYT: lleva el logotipo tipográfico «SIGAE · Apoyo Empresarial» (E77), solo texto, sin la barra vino (lp-swatch-marca).
 >
 > **15/10/2026, pedido del usuario:** se quitaron las secciones **«Lo que vas a preparar»** (documentos y notas de
 > `contenido_sitio`) y **«¿Cómo obtengo acceso?»** (los 3 pasos). La tarjeta final se conservó sola (`.lp-cierre`), y

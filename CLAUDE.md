@@ -2320,6 +2320,10 @@ el login, el registro, la recuperación y la pantalla de carga conservan el logo
   - La landing termina en «Un lugar para cada quien» y luego el pie.
   - Iniciar sesión y Crear cuenta siguen en la barra superior.
   - Verificado a 1440 y 390 px: 10 de 10, sin errores de JavaScript ni scroll horizontal.
+- **También, a pedido del usuario:** la marca de la barra de `/sigae` quedó solo en texto, «SIGAE / APOYO EMPRESARIAL».
+  - Se quitó la barra vertical vino (`lp-swatch lp-swatch-marca`) y su CSS.
+  - El `.lp-swatch` genérico sigue donde se usa fuera de la marca.
+  - Los paneles conservan su `.panel-brand-barra`.
 
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de

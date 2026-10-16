@@ -609,7 +609,6 @@ export default function Landing() {
           <a href="#contenido" className="lp-brand" aria-label="SIGAE, Sistema de Gestión de Apoyo Empresarial — inicio" title="Sistema de Gestión de Apoyo Empresarial">
             {/* 16/10/2026 (pedido del usuario): sin el logo COMECYT en la barra; logotipo tipográfico del sistema. El logo
                 institucional sigue en la franja de arriba y en el pie. */}
-            <span className="lp-swatch lp-swatch-marca" aria-hidden="true" />
             <span className="lp-brand-texto">
               <span className="lp-brand-name">SIGAE</span>
               <span className="lp-brand-sub">Apoyo Empresarial</span>

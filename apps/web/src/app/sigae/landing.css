@@ -167,15 +167,8 @@
   white-space: nowrap;
 }
 /* 16/10/2026 (pedido del usuario): la barra ya no lleva el logo COMECYT (sigue en la franja y en el pie). La marca es
-   un logotipo tipográfico: cuadro vino de la marca + «SIGAE» grande + «Apoyo Empresarial» en versalitas. */
-.lp-brand { gap: 12px; }
-.lp-swatch-marca {
-  width: 14px;
-  height: 38px;
-  border-radius: 5px;
-  transition: transform var(--dur-ui) var(--ease-out);
-}
-@media (hover: hover) and (pointer: fine) { .lp-brand:hover .lp-swatch-marca { transform: scaleY(1.12); } }
+   un logotipo tipográfico: «SIGAE» grande + «Apoyo Empresarial» en versalitas (16/10: sin la barra vino, pedido del
+   usuario). */
 .lp-brand-texto { display: grid; gap: 4px; }
 .lp-brand-name {
   font-family: var(--font-basier-circle);
@@ -195,7 +188,6 @@
 }
 @media (max-width: 640px) {
   .lp-brand-name { font-size: 24px; }
-  .lp-swatch-marca { height: 30px; width: 11px; }
 }
 
 /* ─────────────────────────── Botones ─────────────────────────── */
