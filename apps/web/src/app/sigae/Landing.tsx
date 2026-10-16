@@ -846,26 +846,8 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ── Cierre: entrar a SIGAE ── (se quitaron «Lo que vas a preparar» y «¿Cómo obtengo acceso?», pedido del usuario 15/10/2026) */}
-        <section className="lp-section lp-cierre" aria-label="Entrar a SIGAE">
-          <div className="lp-wrap">
-            <div className="lp-final">
-              <span className="lp-final-mark">
-                <LogoComecyt decorativo />
-              </span>
-              <div className="lp-final-text">
-                <h3>Entra a SIGAE</h3>
-                <p>Sistema de Gestión de Apoyo Empresarial. Usa el correo con el que te registraste.</p>
-              </div>
-              <div className="lp-final-actions">
-                <Link href="/registro" className="lp-btn lp-btn-ghost">Crear cuenta</Link>
-                <Link href="/login" className="lp-btn lp-btn-rainbow">
-                  Iniciar sesión <ArrowRight className="lp-btn-arrow" aria-hidden="true" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* 16/10/2026 (pedido del usuario): se quitó la tarjeta final «Entra a SIGAE» (.lp-final). Entrar y crear cuenta
+            siguen en la barra superior. Antes (15/10) se habían quitado «Lo que vas a preparar» y «¿Cómo obtengo acceso?». */}
       </main>
 
       <footer className="lp-footer">

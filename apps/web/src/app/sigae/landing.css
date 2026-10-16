@@ -799,42 +799,6 @@
 .lp-role h3 { font-size: var(--text-subheading); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
 .lp-role p { margin-top: 4px; color: var(--color-graphite-body); font-size: 15px; line-height: 1.5; }
 
-/* Tarjeta final «Entra a SIGAE». 15/10/2026: se quitaron los pasos de «¿Cómo obtengo acceso?» (pedido del usuario);
-   la tarjeta queda sola, pegada a la sección anterior (sin el espacio que dejaban los pasos). */
-.lp-cierre { padding-top: 0; }
-@media (min-width: 1024px) { .lp-cierre { padding-top: 0; } }
-
-.lp-final {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-20);
-  max-width: 760px;
-  margin: 0 auto;
-  padding: var(--spacing-24);
-  border-radius: 28px;
-  background: var(--color-white-canvas);
-  box-shadow: var(--shadow-subtle-3);
-  text-align: center;
-}
-@media (min-width: 640px) {
-  .lp-final { flex-direction: row; text-align: left; padding: var(--spacing-20) var(--spacing-20) var(--spacing-20) var(--spacing-20); }
-}
-.lp-final-mark {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 164px;
-  height: 104px;
-  border-radius: 22px;
-  background: var(--color-white-canvas);
-  box-shadow: var(--shadow-subtle-5);
-}
-.lp-final-mark img { width: 140px; height: auto; }
-.lp-final-text { flex: 1; min-width: 0; }
-.lp-final-text h3 { color: var(--color-vino); font-family: var(--font-basier-circle); font-weight: 600; font-size: 24px; letter-spacing: -0.03em; line-height: 1.15; }
-.lp-final-text p { margin-top: 4px; color: var(--color-iron-quiet); font-size: var(--text-sm); }
-.lp-final-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--spacing-4); }
 
 /* Convocatorias abiertas (datos en vivo) */
 .lp-calls-section { padding-top: var(--spacing-48); }

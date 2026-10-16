@@ -2315,6 +2315,11 @@ el login, el registro, la recuperación y la pantalla de carga conservan el logo
 - Sin `img` de COMECYT en la barra ni en el menú, con la franja presente y sin scroll horizontal.
 - 32 de 34 comprobaciones bien. Las dos de SICEI esperaban «SICEI» en mayúsculas; el texto real es «sicei.», correcto.
 - Vitest: 192 de 192.
+- **Mismo día:** se quitó de `/sigae` la tarjeta final «Entra a SIGAE» (`.lp-final` y `.lp-cierre`, con su CSS), por
+  pedido del usuario.
+  - La landing termina en «Un lugar para cada quien» y luego el pie.
+  - Iniciar sesión y Crear cuenta siguen en la barra superior.
+  - Verificado a 1440 y 390 px: 10 de 10, sin errores de JavaScript ni scroll horizontal.
 
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de
