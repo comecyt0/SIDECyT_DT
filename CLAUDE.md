@@ -2291,6 +2291,31 @@ mensajes en inglés por español (SIGAE `lib/errores-formulario.ts`; SICEI `lib/
 - La cuenta temporal se creó y se borró desde SIGAE.
 - Detalle de SICEI: `C:\SICEI\docs\plan\11-validador-curp.md` (D83).
 
+### E77 — Barras superiores con el nombre del sistema, sin logo COMECYT [publicado 16-10-2026]
+Pedido del usuario. Alcance que eligió: **solo las barras superiores**. La franja institucional se queda, y los pies,
+el login, el registro, la recuperación y la pantalla de carga conservan el logo. El favicon sigue siendo el logo
+(regla permanente).
+
+**Cada barra lleva el nombre como logotipo tipográfico, con el estilo de su landing:**
+- **SIDECyT (`pt-barra`, `Portal.tsx` y `portal.css`):**
+  - «SIDE» en tinta y «CyT» en vino, en `--pt-display` a 26 px.
+  - Trazo dorado debajo que se alarga al pasar el puntero (respeta reduced-motion).
+  - Subtítulo «Portal de sistemas del COMECYT», oculto en teléfono.
+- **SIGAE landing (`lp-nav-bar`, `Landing.tsx` y `landing.css`):**
+  - Barra vertical vino (`.lp-swatch-marca`) y «SIGAE» a 30 px.
+  - «Apoyo Empresarial» en versalitas (`--color-iron-quiet`), oculto a ≤430 px.
+- **Paneles de SIGAE (`AdminTopLayout` y `RoleTopLayout`):**
+  - `.panel-brand-barra` y «SIGAE» a 24 px; el subtítulo aparece desde 1024 px.
+  - En el menú, «SIGAE» grande en lugar del logo (`.panel-menu-marca`).
+  - Se quitaron los `Image` de `LOGO_COMECYT` y sus imports.
+- **SICEI:** ver D84 en `C:\SICEI\docs\plan\00-plan-maestro.md`. «sicei.» en minúsculas, como los títulos de su
+  landing.
+
+**Verificación en Edge a 1440 y 390 px, con una cuenta temporal (creada y borrada):**
+- Sin `img` de COMECYT en la barra ni en el menú, con la franja presente y sin scroll horizontal.
+- 32 de 34 comprobaciones bien. Las dos de SICEI esperaban «SICEI» en mayúsculas; el texto real es «sicei.», correcto.
+- Vitest: 192 de 192.
+
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de
 un club del director) **si están dados de alta en ese club**. `Club::destinatarios()` = dueño + todos sus accesos activos

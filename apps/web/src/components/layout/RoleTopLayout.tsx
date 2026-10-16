@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { enlaceAviso, hrefBuzon, hrefAvisoClub } from '@/lib/notificaciones';
@@ -17,7 +16,6 @@ import NotificationDetailModal, { type NotificationDetail } from '@/components/n
 import PanelFooter from '@/components/layout/PanelFooter';
 import { LogOut, Bell, Menu, X, ChevronRight } from 'lucide-react';
 import { INSTITUTION } from '@/lib/institution';
-import { LOGO_COMECYT } from '@/lib/identidad';
 import { useT } from '@/i18n/I18nProvider';
 import { formatDate } from '@/lib/format';
 import { usePanelScope } from '@/hooks/usePanelScope';
@@ -180,11 +178,12 @@ export default function RoleTopLayout({
       <header className="panel-topbar sticky z-50">
         <div className="panel-topbar-row h-16 flex items-center gap-2 sm:gap-3">
 
-          {/* Logo (recortado, mismo que la landing) + marca SIGAE */}
+          {/* Marca SIGAE (logotipo tipográfico, igual que la landing) */}
           <Link href={homeHref} className="panel-brand flex items-center gap-3 shrink-0" title={`SIGAE — ${t('footer.system_name')}`}>
-            <Image src={LOGO_COMECYT.color.src} alt={LOGO_COMECYT.color.alt} width={LOGO_COMECYT.color.ancho} height={LOGO_COMECYT.color.alto} priority className="logo-tema-claro h-10 w-auto object-contain" /><Image src={LOGO_COMECYT.negativo.src} alt={LOGO_COMECYT.negativo.alt} width={LOGO_COMECYT.negativo.ancho} height={LOGO_COMECYT.negativo.alto} priority className="logo-tema-oscuro h-10 w-auto object-contain" />
-            <div className="hidden lg:block">
-              <span className="panel-brand-name">SIGAE<span className="panel-swatch" aria-hidden="true" /></span>
+            {/* 16/10/2026 (pedido del usuario): sin el logo COMECYT en la barra; logotipo tipográfico como en la landing. */}
+            <span className="panel-brand-barra" aria-hidden="true" />
+            <div>
+              <span className="panel-brand-name">SIGAE</span>
               <span className="panel-brand-sub">{t('nav.brand_sub')}</span>
             </div>
           </Link>
@@ -246,7 +245,7 @@ export default function RoleTopLayout({
                       <p className="panel-hero-pill !mb-2"><span aria-hidden="true" />{roleLabel}</p>
                       <p className="panel-menu-title">{menuTitle ?? t('nav.control_panel')}</p>
                     </div>
-                    <Image src={LOGO_COMECYT.color.src} alt="" width={LOGO_COMECYT.color.ancho} height={LOGO_COMECYT.color.alto} className="logo-tema-claro hidden sm:block h-12 w-auto" /><Image src={LOGO_COMECYT.negativo.src} alt="" width={LOGO_COMECYT.negativo.ancho} height={LOGO_COMECYT.negativo.alto} className="logo-tema-oscuro hidden sm:block h-12 w-auto" />
+                    <span className="panel-menu-marca hidden sm:flex" aria-hidden="true"><span className="panel-brand-barra" />SIGAE</span>
                   </div>
 
                   <div className="panel-menu-body !grid-cols-1">

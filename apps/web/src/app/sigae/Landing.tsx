@@ -607,10 +607,13 @@ export default function Landing() {
       <header className="lp-nav" data-scrolled={scrolled ? 'true' : 'false'}>
         <nav className="lp-nav-bar" aria-label="Principal">
           <a href="#contenido" className="lp-brand" aria-label="SIGAE, Sistema de Gestión de Apoyo Empresarial — inicio" title="Sistema de Gestión de Apoyo Empresarial">
-            {/* Logo oficial COMECYT 2026 (E50) */}
-            <LogoComecyt decorativo />
-            <span className="lp-brand-name">SIGAE</span>
-            <span className="lp-swatch" aria-hidden="true" />
+            {/* 16/10/2026 (pedido del usuario): sin el logo COMECYT en la barra; logotipo tipográfico del sistema. El logo
+                institucional sigue en la franja de arriba y en el pie. */}
+            <span className="lp-swatch lp-swatch-marca" aria-hidden="true" />
+            <span className="lp-brand-texto">
+              <span className="lp-brand-name">SIGAE</span>
+              <span className="lp-brand-sub">Apoyo Empresarial</span>
+            </span>
           </a>
           {openCount > 0 ? (
             <a href="#convocatorias" className="lp-announce">

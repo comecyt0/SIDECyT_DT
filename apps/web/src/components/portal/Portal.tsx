@@ -278,9 +278,10 @@ export default function Portal() {
         <div className="pt-wrap">
           <div className="pt-barra-fila">
             <Link href="/" className="pt-marca" aria-label={`SIDECyT, portal de sistemas del ${INSTITUTION.name} — inicio`}>
-              <LogoComecyt decorativo />
+              {/* 16/10/2026 (pedido del usuario): sin el logo COMECYT en la barra; solo el nombre del sistema como logotipo
+                  tipográfico. El logo institucional sigue en la franja de arriba y en el pie. */}
               <span className="pt-marca-texto">
-                <strong>SIDECyT</strong>
+                <strong className="pt-marca-nombre">SIDE<span>CyT</span></strong>
                 <span className="pt-marca-sub">Portal de sistemas del COMECYT</span>
               </span>
             </Link>

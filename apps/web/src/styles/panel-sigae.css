@@ -281,30 +281,58 @@ html.dark.sg-panel body {
   transform: translateX(-50%);
   pointer-events: none;
 }
-/* Logo recortado: 40 px de alto en escritorio; en teléfono se reduce para que la barra no desborde
-   (con búsqueda, idioma, tema, avisos y avatar no queda más espacio a 375 px). */
-:is(.panel-root, html.sg-panel) .panel-brand img { height: 40px; width: auto; }
-@media (max-width: 639px) { :is(.panel-root, html.sg-panel) .panel-brand img { height: 30px; } }
-@media (max-width: 420px) { :is(.panel-root, html.sg-panel) .panel-brand img { height: 24px; } }
+/* 16/10/2026 (pedido del usuario): la barra del panel ya no lleva el logo COMECYT. Logotipo tipográfico como el de la
+   landing: barra vertical vino + «SIGAE»; el subtítulo solo en pantallas anchas (en teléfono la barra trae búsqueda,
+   idioma, tema, avisos y avatar). */
+:is(.panel-root, html.sg-panel) .panel-brand { gap: 10px; }
+:is(.panel-root, html.sg-panel) .panel-brand-barra {
+  display: inline-block;
+  flex: none;
+  width: 9px;
+  height: 30px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--sg-vino), color-mix(in oklab, var(--sg-vino) 70%, #bc955b));
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(.panel-root, html.sg-panel) .panel-brand:hover .panel-brand-barra { transform: scaleY(1.15); }
+}
 :is(.panel-root, html.sg-panel) .panel-brand-name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: block;
   font-family: var(--sg-font-display);
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.03em;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
   color: var(--sg-ink);
 }
 :is(.panel-root, html.sg-panel) .panel-brand-sub {
-  display: block;
-  margin-top: 3px;
-  font-size: 11px;
-  font-weight: 500;
+  display: none;
+  margin-top: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
   line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--sg-ink-2);
 }
+@media (min-width: 1024px) { :is(.panel-root, html.sg-panel) .panel-brand-sub { display: block; } }
+@media (max-width: 420px) {
+  :is(.panel-root, html.sg-panel) .panel-brand-name { font-size: 20px; }
+  :is(.panel-root, html.sg-panel) .panel-brand-barra { height: 24px; width: 7px; }
+}
+/* Marca dentro del menú (antes, el logo COMECYT) */
+:is(.panel-root, html.sg-panel) .panel-menu-marca {
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  font-family: var(--sg-font-display);
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  color: var(--sg-ink);
+}
+:is(.panel-root, html.sg-panel) .panel-menu-marca .panel-brand-barra { height: 34px; }
 :is(.panel-root, html.sg-panel) .panel-swatch {
   display: inline-block;
   width: 8px;

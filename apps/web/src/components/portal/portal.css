@@ -136,12 +136,21 @@
 }
 @media (max-width: 379px) { .pt-boton-fantasma { display: none; } }
 .pt-marca { display: flex; align-items: center; gap: 14px; min-width: 0; flex: none; }
-.pt-marca img { height: 44px; width: auto; }
-.pt-marca-texto { padding-left: 14px; border-left: 1px solid var(--pt-piedra); white-space: nowrap; }
-.pt-marca-texto strong {
-  display: block; font-family: var(--pt-display); font-size: 17px; font-weight: 700; letter-spacing: -0.02em;
-  line-height: 1.1; color: var(--pt-oscuro);
+/* 16/10/2026 (pedido del usuario): logotipo tipográfico, sin el logo COMECYT en la barra. «SIDE» en tinta y «CyT» en
+   vino, rematado por un trazo dorado que se alarga al pasar el puntero; debajo, el subtítulo. */
+.pt-marca-texto { display: grid; gap: 3px; white-space: nowrap; }
+.pt-marca-nombre {
+  position: relative; display: inline-block; justify-self: start; padding-bottom: 5px;
+  font-family: var(--pt-display); font-size: 26px; font-weight: 800; letter-spacing: -0.04em; line-height: 1;
+  color: var(--pt-oscuro);
 }
+.pt-marca-nombre span { color: var(--pt-vino); }
+.pt-marca-nombre::after {
+  content: ''; position: absolute; left: 0; bottom: 0; width: 28px; height: 3px; border-radius: 9999px;
+  background: var(--pt-dorado); transition: width 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@media (hover: hover) and (pointer: fine) { .pt-marca:hover .pt-marca-nombre::after { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .pt-marca-nombre::after { transition: none; } }
 .pt-marca-sub { display: block; font-size: 12px; font-weight: 500; color: var(--pt-tenue); letter-spacing: -0.001em; }
 .pt-barra-nav { display: none; align-items: center; gap: 2px; }
 @media (min-width: 1040px) { .pt-barra-nav { display: flex; } }
@@ -165,12 +174,10 @@
 .pt-boton-barra:active { transform: scale(0.97); }
 @media (max-width: 640px) { .pt-boton-barra { min-height: 44px; padding-inline: 14px; } }
 @media (max-width: 520px) {
-  .pt-marca img { height: 36px; }
-  .pt-marca { gap: 10px; }
-  .pt-marca-texto { padding-left: 10px; }
+  .pt-marca-nombre { font-size: 23px; }
   .pt-marca-sub { display: none; }
 }
-@media (max-width: 340px) { .pt-marca img { height: 30px; } .pt-marca-texto strong { font-size: 15px; } }
+@media (max-width: 340px) { .pt-marca-nombre { font-size: 20px; } }
 
 /* ─────────── Héroe: texto centrado entre dos grupos de ilustración ─────────── */
 .pt-heroe {
