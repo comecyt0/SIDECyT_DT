@@ -10,6 +10,7 @@
         body { font-family: 'Helvetica', sans-serif; color: #1f2933; font-size: 10px; line-height: 1.45; }
         .franja { text-align: center; padding-bottom: 7px; border-bottom: 2px solid #BC955B; margin-bottom: 10px; }
         .franja img { width: 100%; max-width: 640px; }
+        p { text-align: justify; } /* 20/10/2026 */
         h1 { font-size: 15px; color: #56212F; margin: 0; }
         .sub { color: #6b7280; font-size: 9.5px; margin: 2px 0 10px; }
         h2 { font-size: 11.5px; color: #56212F; border-left: 4px solid #BC955B; padding-left: 7px; margin: 12px 0 5px; text-transform: uppercase; }

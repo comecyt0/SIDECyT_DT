@@ -36,9 +36,17 @@ class QrClubController extends Controller
         $this->propioHabilitado($request, $club);
         $club->loadMissing(['escuela', 'lider:id,name', 'integrantes', 'convocatoria:id,nombre']);
         $fotos = $club->integrantes->mapWithKeys(fn ($i) => [$i->id => self::pngDataUri($i->foto_path)]);
+        // 20/10/2026: líder A, líder B y director a los lados del QR (solo si siguen en el club).
+        $tarjeta = fn ($i, string $papel) => $i ? ['nombre' => $i->nombre, 'papel' => $papel, 'foto' => $fotos[$i->id] ?? null] : null;
+        $dir = \App\Support\FormatosClub::director($club);
+        $lideres = [
+            'a' => $tarjeta($club->integrantes->firstWhere('es_lider', true), 'Líder A'),
+            'b' => $tarjeta($club->integrantes->firstWhere('es_lider_b', true), 'Líder B'),
+            'director' => $dir ? ['nombre' => $dir, 'papel' => 'Director(a) de la escuela', 'foto' => null] : null,
+        ];
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.credencial_club', [
             'club' => $club, 'qr' => QrClub::pngDataUri($club), 'logo' => self::pngDataUri($club->logo_path),
-            'fotos' => $fotos, 'cfg' => LogisticaClub::config($club), 'fecha' => now('America/Mexico_City'),
+            'fotos' => $fotos, 'lideres' => $lideres, 'cfg' => LogisticaClub::config($club), 'fecha' => now('America/Mexico_City'),
         ]);
 
         return $pdf->download('credencial-'.$club->folio.'.pdf')->header('Cache-Control', 'private, no-store');

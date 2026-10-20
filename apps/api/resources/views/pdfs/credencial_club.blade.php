@@ -16,7 +16,10 @@
         .tarjeta { border: 2px solid #56212F; border-radius: 14px; padding: 18px 20px; }
         .tarjeta table { width: 100%; border-collapse: collapse; }
         .tarjeta td { vertical-align: top; }
-        .qr { width: 230px; text-align: center; }
+        .qr { width: 40%; text-align: center; vertical-align: middle; }
+        .qrfila { margin-top: 10px; table-layout: fixed; }
+        .lado { width: 30%; text-align: center; vertical-align: middle; padding: 6px; }
+        .director { padding-top: 10px; }
         .qr img { width: 210px; height: 210px; }
         .qr small { display: block; color: #6b7280; font-size: 9px; margin-top: 4px; }
         h1 { font-size: 20px; color: #56212F; margin: 0 0 2px; }
@@ -31,7 +34,7 @@
         .sinfoto { width: 86px; height: 86px; border-radius: 43px; border: 2px dashed #d6d1ca; display: inline-block; line-height: 86px; color: #9ca3af; font-size: 22px; }
         .nombre { font-size: 10px; margin-top: 4px; }
         .papel { font-size: 8.5px; color: #BC955B; font-weight: bold; }
-        .indica { margin-top: 16px; font-size: 10px; color: #4b5563; background: #f6f1ea; padding: 8px 10px; border-radius: 8px; }
+        .indica { text-align: justify; margin-top: 16px; font-size: 10px; color: #4b5563; background: #f6f1ea; padding: 8px 10px; border-radius: 8px; }
         .pie { position: fixed; bottom: -32px; left: 0; right: 0; text-align: center; font-size: 8.5px; color: #6b7280; }
     </style>
 </head>
@@ -40,27 +43,40 @@
         <div class="franja"><img src="{{ $franjaUri }}" alt="Gobierno del Estado de México y COMECYT"></div>
     @endif
 
+    {{-- 20/10/2026 (pedido del usuario): el líder A y el líder B a los lados del QR y el director debajo, si siguen en el club. --}}
+    @php
+        $persona = function ($p) {
+            if (! $p) return '';
+            $foto = $p['foto'] ? '<img class="foto" src="'.e($p['foto']).'" alt="">' : '<span class="sinfoto">'.e(mb_strtoupper(mb_substr($p['nombre'], 0, 1))).'</span>';
+            return $foto.'<div class="nombre"><strong>'.e($p['nombre']).'</strong></div><div class="papel">'.e($p['papel']).'</div>';
+        };
+    @endphp
     <div class="tarjeta">
+        @if ($logo)<img class="logo" src="{{ $logo }}" alt="">@endif
+        <h1>{{ $club->nombre }}</h1>
+        <div class="folio">{{ $club->folio }}</div>
         <table>
             <tr>
-                <td>
-                    @if ($logo)<img class="logo" src="{{ $logo }}" alt="">@endif
-                    <h1>{{ $club->nombre }}</h1>
-                    <div class="folio">{{ $club->folio }}</div>
-                    <div class="dato"><b>Escuela</b>{{ $club->escuela->nombre }} (CCT {{ $club->escuela->cct }})</div>
-                    <div class="dato"><b>Municipio</b>{{ $club->escuela->municipio }}, Estado de México</div>
-                    <div class="dato"><b>Líder del club</b>{{ $club->lider->name }}</div>
-                    <div class="dato"><b>Convocatoria</b>{{ $club->convocatoria->nombre }}</div>
-                    <div class="dato"><b>Integrantes</b>{{ $club->integrantes->count() }}</div>
-                </td>
+                <td style="width: 50%"><div class="dato"><b>Escuela</b>{{ $club->escuela->nombre }} (CCT {{ $club->escuela->cct }})</div>
+                    <div class="dato"><b>Municipio</b>{{ $club->escuela->municipio }}, Estado de México</div></td>
+                <td><div class="dato"><b>Convocatoria</b>{{ $club->convocatoria->nombre }}</div>
+                    <div class="dato"><b>Integrantes</b>{{ $club->integrantes->count() }} (incluidos los líderes)</div></td>
+            </tr>
+        </table>
+        <table class="qrfila">
+            <tr>
+                <td class="lado">{!! $persona($lideres['a']) !!}</td>
                 <td class="qr">
                     <img src="{{ $qr }}" alt="QR del club">
                     <small>Muestra este código al personal del COMECYT en cada evento.</small>
                 </td>
+                <td class="lado">{!! $persona($lideres['b']) !!}</td>
             </tr>
+            @if ($lideres['director'])
+                <tr><td></td><td class="lado director">{!! $persona($lideres['director']) !!}</td><td></td></tr>
+            @endif
         </table>
     </div>
-
     <h2>Integrantes</h2>
     <table class="integrantes">
         @foreach ($club->integrantes->chunk(4) as $fila)
@@ -73,7 +89,7 @@
                             <span class="sinfoto">?</span>
                         @endif
                         <div class="nombre">{{ $i->nombre }}</div>
-                        @if ($i->es_lider)<div class="papel">LÍDER</div>@endif
+                        @if ($i->es_lider)<div class="papel">LÍDER A</div>@elseif ($i->es_lider_b)<div class="papel">LÍDER B</div>@endif
                     </td>
                 @endforeach
                 @for ($k = $fila->count(); $k < 4; $k++)<td></td>@endfor

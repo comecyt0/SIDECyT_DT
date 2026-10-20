@@ -73,7 +73,7 @@ class LogisticaClubController extends Controller
         $club->loadMissing(['escuela', 'lider:id,name', 'convocatoria:id,nombre', 'convocatoria.especieConfig', 'integrantes:id,club_id']);
         // E87: sin transporte ni box lunch en la convocatoria, no hay formato.
         $cfg = $club->convocatoria->especieConfig;
-        abort_unless($cfg && ($cfg->incluye_transporte || $cfg->incluye_lunch), 404);
+        abort_unless($cfg && ($cfg->incluye_transporte || $cfg->incluye_lunch) && $cfg->logistica_habilitada, 404); // E91
         $logistica->loadMissing('evento');
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.solicitud_logistica_club', ['club' => $club, 'log' => $logistica, 'cfg' => $cfg, 'fecha' => now('America/Mexico_City')]);
 

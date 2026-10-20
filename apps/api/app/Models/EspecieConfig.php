@@ -23,6 +23,7 @@ class EspecieConfig extends Model
         'campos_integrante' => 'array',
         'formatos' => 'array', // E79
         'kit_diferenciado' => 'boolean', 'kits' => 'array', // E86
+        'logistica_habilitada' => 'boolean', // E91
         'min_integrantes' => 'integer',
         'max_integrantes' => 'integer',
         'clubes_por_escuela' => 'integer',

@@ -20,6 +20,8 @@ interface Evento { id?: number; nombre: string; fecha: string; sede: string; cup
 interface ConfigForm {
   logistica_modo: 'convocatoria' | 'evento'; cupo_transporte: string; cupo_lunch: string; max_transporte_club: string; max_lunch_club: string;
   tope_integrantes: boolean; acompanantes: string; fecha_limite_logistica: string;
+  /** E91: el líder ve la solicitud de transporte y/o box lunch solo cuando se habilita. */
+  logistica_habilitada: boolean;
 }
 interface ClubFila {
   id: number; folio: string; nombre: string; estado: string; estatal: boolean; escuela: { nombre: string; municipio: string } | null;
@@ -39,6 +41,7 @@ function aForm(c: Record<string, unknown>): ConfigForm {
     logistica_modo: c.logistica_modo === 'evento' ? 'evento' : 'convocatoria', cupo_transporte: s(c.cupo_transporte), cupo_lunch: s(c.cupo_lunch),
     max_transporte_club: s(c.max_transporte_club), max_lunch_club: s(c.max_lunch_club), tope_integrantes: c.tope_integrantes !== false,
     acompanantes: s(c.acompanantes ?? 0), fecha_limite_logistica: s(c.fecha_limite_logistica),
+    logistica_habilitada: c.logistica_habilitada === true,
   };
 }
 const aEventos = (e: Record<string, unknown>[]): Evento[] => e.map((x) => ({ id: Number(x.id), nombre: s(x.nombre), fecha: s(x.fecha), sede: s(x.sede), cupo_transporte: s(x.cupo_transporte), cupo_lunch: s(x.cupo_lunch), con_solicitudes: x.con_solicitudes === true }));
@@ -93,7 +96,7 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
       const { data } = await api.put(`/revision/convocatorias/${convocatoriaId}/logistica`, {
         logistica_modo: form.logistica_modo, cupo_transporte: n(form.cupo_transporte), cupo_lunch: n(form.cupo_lunch),
         max_transporte_club: n(form.max_transporte_club), max_lunch_club: n(form.max_lunch_club), tope_integrantes: form.tope_integrantes,
-        acompanantes: n(form.acompanantes) ?? 0, fecha_limite_logistica: form.fecha_limite_logistica || null,
+        acompanantes: n(form.acompanantes) ?? 0, fecha_limite_logistica: form.fecha_limite_logistica || null, logistica_habilitada: form.logistica_habilitada,
         eventos: eventos.map((e) => ({ ...(e.id ? { id: e.id } : {}), nombre: e.nombre.trim(), fecha: e.fecha || null, sede: e.sede.trim() || null, cupo_transporte: n(e.cupo_transporte), cupo_lunch: n(e.cupo_lunch) })),
       });
       aplicar(data);
@@ -201,6 +204,12 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
               {lunchExcede ? `No puede pasar de ${maxIntegrantes}` : `Hasta ${maxIntegrantes}`} (máximo de integrantes de la convocatoria).</span></label>}
           <label className="space-y-1.5"><span className={labelCls}>Fecha límite para pedir</span>
             <input type="date" className={inputCls} value={form.fecha_limite_logistica} onChange={(e) => setF({ fecha_limite_logistica: e.target.value })} /></label>
+          {/* E91 (decisión del usuario): la solicitud y su formato aparecen al líder solo cuando se habilita aquí. */}
+          <label className="flex cursor-pointer items-start gap-3 rounded-[14px] border px-4 py-3 sm:col-span-2" style={{ borderColor: form.logistica_habilitada ? 'var(--auth-vino)' : 'var(--app-rule)', backgroundColor: form.logistica_habilitada ? 'var(--auth-vino-soft)' : 'var(--auth-field)' }}>
+            <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--auth-vino)]" checked={form.logistica_habilitada} onChange={(e) => setF({ logistica_habilitada: e.target.checked })} />
+            <span><span className="block text-sm font-semibold text-[var(--app-ink)]">Habilitar la solicitud para los líderes</span>
+              <span className="block text-xs text-[var(--app-ink-2)]">Mientras esté apagado, los líderes no ven la solicitud de transporte y/o box lunch ni su formato.</span></span>
+          </label>
         </div>
         )}
 

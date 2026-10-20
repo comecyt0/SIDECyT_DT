@@ -21,6 +21,7 @@ const base: LogisticaEstado = {
   resguardo: [],
   kit: { nombre: 'Kit de robótica', fecha: null, lugar: null, asignado_at: null, entregado_at: null, entregado_lugar: null, entrego: null, recibio: null },
   salida: { lugar: null, maps: null, hora: null },
+  habilitada: true,
   qr: { habilitado: false, habilitado_at: null, falta: 'su carta de resguardo no está aprobada' },
 };
 

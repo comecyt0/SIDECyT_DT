@@ -151,7 +151,11 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
       </>)}
 
       {/* Transporte y box lunch — E71: solo lo que da la convocatoria; si no da ninguno, el apartado desaparece. */}
-      {(daT || daL) && (
+      {/* E91 (decisión del usuario): la solicitud y su formato aparecen cuando el COMECYT los habilita para la convocatoria. */}
+      {(daT || daL) && !l.habilitada && (
+        <p className="app-card p-5 text-sm text-[var(--app-ink-2)]"><strong className="block text-[var(--app-ink)]">{tituloApoyos}</strong>El COMECYT te avisará cuando puedas pedirlo; aquí aparecerá la solicitud y su formato.</p>
+      )}
+      {(daT || daL) && l.habilitada && (
       <div className="app-card space-y-3 p-5">
         <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--app-ink)]">{daT ? <Bus className="h-4 w-4" aria-hidden="true" /> : <Sandwich className="h-4 w-4" aria-hidden="true" />}{tituloApoyos}<ModalidadChip modalidad={l.modalidad} className="ml-auto" /></h3>
         {!l.estatal ? (

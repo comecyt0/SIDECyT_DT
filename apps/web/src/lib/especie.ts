@@ -465,6 +465,8 @@ export interface SolicitudLogistica {
 }
 export interface LogisticaEstado {
   aplica: boolean; estatal: boolean; modo: 'convocatoria' | 'evento'; abierta: boolean; fecha_limite: string | null;
+  /** E91: el COMECYT ya habilitó la solicitud de transporte y/o box lunch. */
+  habilitada: boolean;
   limites: { transporte: number | null; lunch: number | null }; tope_integrantes: boolean; acompanantes: number;
   max_integrantes: number; modalidad: Modalidad;
   /** E71: qué apoyos da la convocatoria y la salida/regreso del transporte ('AAAA-MM-DDTHH:mm' hora del centro o null). */
@@ -485,7 +487,7 @@ export function leerLogistica(v: unknown): LogisticaEstado | null {
   const d = v as Partial<LogisticaEstado> | null;
   if (!d || typeof d !== 'object' || d.aplica !== true) return null;
   return {
-    aplica: true, estatal: d.estatal === true, modo: d.modo === 'evento' ? 'evento' : 'convocatoria', abierta: d.abierta === true,
+    aplica: true, habilitada: d.habilitada !== false, estatal: d.estatal === true, modo: d.modo === 'evento' ? 'evento' : 'convocatoria', abierta: d.abierta === true,
     fecha_limite: typeof d.fecha_limite === 'string' ? d.fecha_limite : null,
     limites: { transporte: typeof d.limites?.transporte === 'number' ? d.limites.transporte : null, lunch: typeof d.limites?.lunch === 'number' ? d.limites.lunch : null },
     tope_integrantes: d.tope_integrantes === true, acompanantes: Number(d.acompanantes) || 0,

@@ -18,6 +18,7 @@
     <title>{{ ucfirst(mb_strtolower($titulo)) }} — {{ $club->folio }}</title>
     <style>
         @page { margin: 28px 40px 60px; }
+        p { text-align: justify; } /* 20/10/2026: texto justificado en todos los formatos */
         body { font-family: 'Helvetica', sans-serif; color: #1f2933; font-size: 11.5px; line-height: 1.55; }
         .franja { text-align: center; padding-bottom: 10px; border-bottom: 2px solid #BC955B; margin-bottom: 18px; }
         .franja img { width: 100%; max-width: 640px; }
@@ -62,8 +63,8 @@
         <div class="titulo">Lo que se solicita</div>
         <table class="servicios">
             <tr><th style="width: 38%">Servicio</th><th>Para cuántos</th></tr>
-            <tr><td>Transporte</td><td>{!! $daT ? '<span class="grande">'.e($log->transporte).'</span> de '.e($n).' integrante(s)' : '<span class="respaldo">No incluido en esta convocatoria (respaldo)</span>' !!}</td></tr>
-            <tr><td>Box lunch</td><td>{!! $daL ? '<span class="grande">'.e($log->lunch).'</span> de '.e($n).' integrante(s)' : '<span class="respaldo">No incluido en esta convocatoria (respaldo)</span>' !!}</td></tr>
+            <tr><td>Transporte</td><td>{!! $daT ? '<span class="grande">'.e($log->transporte).'</span> persona(s) · el club tiene '.e($n).' integrante(s)' : '<span class="respaldo">No incluido en esta convocatoria (respaldo)</span>' !!}</td></tr>
+            <tr><td>Box lunch</td><td>{!! $daL ? '<span class="grande">'.e($log->lunch).'</span> box lunch · el club tiene '.e($n).' integrante(s)' : '<span class="respaldo">No incluido en esta convocatoria (respaldo)</span>' !!}</td></tr>
             <tr><td>Enviada</td><td>{{ $log->enviada_at ? $log->enviada_at->setTimezone($tz)->format('d/m/Y H:i').' h' : '—' }}</td></tr>
         </table>
     </div>
@@ -83,7 +84,7 @@
     <table class="firma">
         <tr>
             <td><span class="linea">{{ $club->lider->name }}<br>Nombre y firma del líder del club</span></td>
-            <td><span class="linea">Nombre y firma de la autoridad escolar (visto bueno)</span></td>
+            <td>{{-- 20/10/2026 (pedido del usuario): nombre del director(a) si está dado de alta; si no, línea para escribirlo --}}<span class="linea">{!! ($dirNombre = \App\Support\FormatosClub::director($club)) ? e($dirNombre).'<br>Director(a) de la escuela · ' : '' !!}{{ $dirNombre ? 'Firma (visto bueno)' : 'Nombre y firma de la autoridad escolar (visto bueno)' }}</span></td>
         </tr>
     </table>
 

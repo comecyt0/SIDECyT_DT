@@ -92,6 +92,7 @@ class LogisticaClub
     {
         if (! self::aplica($club)) self::falla('La logística se habilita cuando el club está aceptado.');
         if (! self::esEstatal($club)) self::falla('El transporte y el box lunch son solo para escuelas estatales; tu club recibe el kit.');
+        if (! self::config($club)->logistica_habilitada) self::falla('El COMECYT todavía no habilita la solicitud de transporte y/o box lunch.'); // E91
         $log = DB::transaction(function () use ($club, $lider, $eventoId, $transporte, $lunch, $confirmoSinTransporte) {
             // Bloqueo de la configuración: serializa a los líderes de la convocatoria mientras se revisa el cupo.
             $cfg = EspecieConfig::where('convocatoria_id', $club->convocatoria_id)->lockForUpdate()->first() ?? self::falla('La convocatoria no tiene logística configurada.');
@@ -288,7 +289,9 @@ class LogisticaClub
                 'lugar' => $club->transporte_salida_lugar, 'maps' => $club->transporte_salida_maps,
                 'hora' => $club->transporte_salida_hora?->setTimezone(RevisionClub::ZONA)->format('Y-m-d\TH:i'),
             ],
-            'solicitudes' => $modo === 'evento' ? $eventos->map(fn ($e) => $solicitud($e))->values() : [$solicitud(null)],
+            // E91: hasta que el COMECYT la habilita, el líder no ve la solicitud ni su formato.
+            'habilitada' => (bool) $cfg->logistica_habilitada,
+            'solicitudes' => ! $cfg->logistica_habilitada ? [] : ($modo === 'evento' ? $eventos->map(fn ($e) => $solicitud($e))->values() : [$solicitud(null)]),
             'resguardo' => $firmados->where('tipo', 'resguardo')->values()->map($version),
             'kit' => [
                 'nombre' => $cfg->kit_nombre, 'fecha' => $club->kit_fecha, 'lugar' => $club->kit_lugar, 'asignado_at' => $club->kit_asignado_at,

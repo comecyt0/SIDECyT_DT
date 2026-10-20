@@ -44,6 +44,7 @@ class LogisticaAdminController extends Controller
             'tope_integrantes' => 'boolean',
             'acompanantes' => 'nullable|integer|min:0|max:100',
             'fecha_limite_logistica' => 'nullable|date_format:Y-m-d',
+            'logistica_habilitada' => 'sometimes|boolean', // E91
             'eventos' => 'present|array|max:30',
             'eventos.*.id' => 'nullable|integer',
             'eventos.*.nombre' => 'required|string|max:150',
@@ -76,7 +77,7 @@ class LogisticaAdminController extends Controller
                 'max_transporte_club' => $v['max_transporte_club'] ?? null, 'max_lunch_club' => $v['max_lunch_club'] ?? null,
                 'tope_integrantes' => (bool) ($v['tope_integrantes'] ?? true), 'acompanantes' => (int) ($v['acompanantes'] ?? 0),
                 'fecha_limite_logistica' => $v['fecha_limite_logistica'] ?? null,
-            ])->save();
+            ] + (array_key_exists('logistica_habilitada', $v) ? ['logistica_habilitada' => (bool) $v['logistica_habilitada']] : []))->save();
 
             // Eventos: se actualizan por id; los que no llegan se borran solo si no tienen solicitudes.
             $actuales = EspecieEvento::where('convocatoria_id', $convocatoria->id)->get()->keyBy('id');
@@ -188,7 +189,7 @@ class LogisticaAdminController extends Controller
                 'max_transporte_club' => $cfg->max_transporte_club, 'max_lunch_club' => $cfg->max_lunch_club,
                 'tope_integrantes' => (bool) $cfg->tope_integrantes, 'acompanantes' => (int) $cfg->acompanantes,
                 'max_integrantes' => (int) $cfg->max_integrantes, 'modalidad' => $cfg->modalidad ?? 'estatal',
-                'fecha_limite_logistica' => $cfg->fecha_limite_logistica?->format('Y-m-d'), 'kit_nombre' => $cfg->kit_nombre,
+                'fecha_limite_logistica' => $cfg->fecha_limite_logistica?->format('Y-m-d'), 'kit_nombre' => $cfg->kit_nombre, 'logistica_habilitada' => (bool) $cfg->logistica_habilitada,
                 // E71: qué apoyos da la convocatoria (se eligen al crear o editar la convocatoria).
                 'incluye_transporte' => (bool) ($cfg->incluye_transporte ?? true), 'incluye_lunch' => (bool) ($cfg->incluye_lunch ?? true),
             ],

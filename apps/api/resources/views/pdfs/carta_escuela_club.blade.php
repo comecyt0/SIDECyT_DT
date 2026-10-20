@@ -11,6 +11,7 @@
     <title>Carta de consentimiento — {{ $club->folio }}</title>
     <style>
         @page { margin: 28px 40px 60px; }
+        p { text-align: justify; } /* 20/10/2026: texto justificado en todos los formatos */
         body { font-family: 'Helvetica', sans-serif; color: #1f2933; font-size: 11.5px; line-height: 1.55; }
         .franja { text-align: center; padding-bottom: 10px; border-bottom: 2px solid #BC955B; margin-bottom: 18px; }
         .franja img { width: 100%; max-width: 640px; }
@@ -73,7 +74,7 @@
 
     <table class="firma">
         <tr>
-            <td><span class="linea">Nombre, cargo y firma de la autoridad escolar</span></td>
+            <td>{{-- 20/10/2026 (pedido del usuario): nombre del director(a) si está dado de alta; si no, línea para escribirlo --}}<span class="linea">{!! ($dirNombre = \App\Support\FormatosClub::director($club)) ? e($dirNombre).'<br>Director(a) de la escuela · ' : '' !!}{{ $dirNombre ? 'Firma (visto bueno)' : 'Nombre, cargo y firma de la autoridad escolar' }}</span></td>
             <td><div class="sello">Sello de la escuela</div></td>
         </tr>
     </table>
