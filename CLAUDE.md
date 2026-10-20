@@ -2345,6 +2345,19 @@ Duda del usuario: en F: se veían dos carpetas con lo mismo.
 
   Si algo falla, restaura la configuración y no borra nada.
   - A Claude se le negó el permiso para cambiar los servicios; por eso lo ejecuta el usuario.
+  - **Incidente al ejecutarlo (20-10-2026 12:10):** `comecyt-web` quedó en pausa y `/sigae` dio 502 durante unos minutos.
+    - Causa: `AppParameters` con la ruta sin comillas. Node recibió `F:\Desarrollo` («Cannot find module»).
+    - La restauración automática no corrió: `Restart-Service` falló sobre el servicio en pausa con
+      `ErrorAction Stop`.
+    - Corregido a mano: `AppParameters = "F:\Desarrollo Tecnologico\apps\web\.next\standalone\server.js"`, con
+      comillas. El script también quedó corregido.
+    - Verificado:
+      - `/sigae`, `/login` y el dominio responden 200.
+      - Los 4 servicios están en Running y sin errores en sus logs.
+      - Reverb escucha en el 8080.
+  - **Lección:** en NSSM, toda ruta con espacios dentro de `AppParameters` va entre comillas.
+  - La junction `F:\comecyt` la quita el usuario con `cmd /c rmdir F:\comecyt`; a Claude se le bloqueó borrar esa ruta.
+    Ya nada la usa.
 - **Limpieza:** se borraron `apps\web\.next\dev` y la misma carpeta dentro de `.next.bak-*`. Son la caché de `next dev`,
   unos 810 MB cada una; producción corre de `.next\standalone`.
   - Se borraron con `cmd /c rmdir /s /q`, que no sigue las junctions internas de pnpm. **Nunca uses `Remove-Item
