@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Award, CheckCircle2, Globe, Loader2, Search, XCircle, Hourglass, Layers } from 'lucide-react';
+import { Award, CheckCircle2, Globe, Loader2, Search, XCircle, Hourglass, Layers, Eye, FileDown, FileSpreadsheet } from 'lucide-react';
 import api from '@/lib/api';
 import PageHeader from '@/components/ui/page-header';
 import PaginationControls from '@/components/ui/pagination-controls';
@@ -13,6 +13,8 @@ import { estadoBadgeClass, estadoLabel } from '@/lib/solicitud-estados';
 import { formatDate } from '@/lib/format';
 import { useRol } from '@/hooks/useRol';
 import { ESTADO_CLUB } from '@/lib/especie';
+import VistaPreviaFolio from '@/components/admin/folios/VistaPreviaFolio';
+import { descargarExportacionFolios } from '@/lib/folios-api';
 
 type Grupo = 'aprobados' | 'no_aprobados' | 'en_proceso' | 'todos';
 
@@ -26,6 +28,10 @@ interface Folio {
   updated_at: string;
   user_id: number;
   publicado_en_landing?: boolean;
+  /** E81: clave única (solicitud-3 / club-7) y, en clubes, si la escuela es nueva o ya participó. */
+  clave?: string;
+  escuela_nueva?: boolean | null;
+  integrantes?: number | null;
   user?: { id: number; name: string; avatar_url?: string | null } | null;
   empresa?: { nombre: string } | null;
   convocatoria?: { id: number; nombre: string; periodo?: { nombre: string } | null } | null;
@@ -69,6 +75,10 @@ export default function FoliosPage() {
   const [convocatorias, setConvocatorias] = useState<{ id: number; nombre: string }[]>([]);
   const [periodos, setPeriodos] = useState<{ id: number; nombre: string }[]>([]);
   const [aviso, setAviso] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
+  // E81: selección para exportación parcial, vista previa y exportando.
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
+  const [vista, setVista] = useState<string | null>(null);
+  const [exportando, setExportando] = useState<string | null>(null);
 
   // Publicación
   const [pubConvId, setPubConvId] = useState('');
@@ -139,6 +149,24 @@ export default function FoliosPage() {
     }
   };
 
+  // E81: exportación completa (lo que muestran los filtros) o parcial (los marcados), en PDF o Excel.
+  const exportar = async (formato: 'pdf' | 'xlsx', modo: 'completo' | 'parcial') => {
+    setExportando(`${modo}-${formato}`);
+    try {
+      await descargarExportacionFolios({
+        formato, modo, ids: modo === 'parcial' ? [...seleccion] : undefined,
+        grupo, convocatoria_id: convocatoriaId || undefined, periodo_id: periodoId || undefined, search: busqueda.trim() || undefined,
+      }, modo === 'completo' ? `folios-${grupo}` : `folios-seleccion-${seleccion.size}`);
+    } catch (e) {
+      setAviso({ tipo: 'error', texto: mensaje(e, 'No se pudo exportar. Revisa los filtros e inténtalo de nuevo.') });
+    } finally {
+      setExportando(null);
+    }
+  };
+  const claveDe = (f: Folio) => f.clave ?? `${f.tipo ?? 'solicitud'}-${f.id}`;
+  const alternar = (k: string) => setSeleccion((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; });
+  const paginaSeleccionada = !!datos?.items.length && datos.items.every((f) => seleccion.has(claveDe(f)));
+
   const retirar = async () => {
     if (!pub) return;
     setConfirmarRetiro(false);
@@ -194,6 +222,40 @@ export default function FoliosPage() {
         </div>
       </div>
 
+      {/* E81: exportar (completo = lo que muestran los filtros; parcial = los marcados) */}
+      <div className="flex flex-wrap items-center gap-2 rounded-[16px] border px-4 py-3" style={{ borderColor: 'var(--app-rule)', backgroundColor: 'var(--app-card-bg)' }} role="toolbar" aria-label="Exportar folios">
+        <span className="mr-1 text-sm font-semibold text-[var(--app-ink)]">Exportar</span>
+        {seleccion.size > 0 ? (
+          <>
+            <span className="pill" data-tone="sky">{seleccion.size} seleccionado{seleccion.size === 1 ? '' : 's'}</span>
+            <Button size="sm" variant="soft" disabled={exportando !== null} onClick={() => void exportar('pdf', 'parcial')}>
+              {exportando === 'parcial-pdf' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileDown className="h-4 w-4" aria-hidden="true" />}PDF de la selección
+            </Button>
+            <Button size="sm" variant="soft" disabled={exportando !== null} onClick={() => void exportar('xlsx', 'parcial')}>
+              {exportando === 'parcial-xlsx' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />}Excel de la selección
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setSeleccion(new Set())}>Quitar selección</Button>
+          </>
+        ) : (
+          <>
+            <Button size="sm" variant="soft" disabled={exportando !== null || !datos?.total} onClick={() => void exportar('pdf', 'completo')}>
+              {exportando === 'completo-pdf' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileDown className="h-4 w-4" aria-hidden="true" />}PDF completo
+            </Button>
+            <Button size="sm" variant="soft" disabled={exportando !== null || !datos?.total} onClick={() => void exportar('xlsx', 'completo')}>
+              {exportando === 'completo-xlsx' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />}Excel completo
+            </Button>
+            <span className="text-xs text-[var(--app-ink-2)]">Con los filtros de arriba. Marca folios para exportar solo esos, o abre uno para exportarlo solo.</span>
+          </>
+        )}
+        {!!datos?.items.length && (
+          <label className="ml-auto inline-flex cursor-pointer items-center gap-2 text-sm text-[var(--app-ink)]">
+            <input type="checkbox" className="h-4 w-4 accent-[var(--sg-vino)]" checked={paginaSeleccionada}
+              onChange={(e) => setSeleccion((s) => { const n = new Set(s); for (const f of datos.items) { if (e.target.checked) n.add(claveDe(f)); else n.delete(claveDe(f)); } return n; })} />
+            Marcar esta página
+          </label>
+        )}
+      </div>
+
       {/* Lista */}
       <section className="pastel-frame" aria-busy={cargando}>
         {cargando && !datos ? (
@@ -210,8 +272,10 @@ export default function FoliosPage() {
               const esClub = f.tipo === 'club';
               const estClub = esClub ? ESTADO_CLUB[f.estado] : undefined;
               return (
-              <article key={`${f.tipo ?? 'solicitud'}-${f.id}`} className="app-card data-card relative p-5">
+              <article key={claveDe(f)} className="app-card data-card relative p-5" style={seleccion.has(claveDe(f)) ? { boxShadow: 'inset 0 0 0 2px var(--sg-vino)' } : undefined}>
                 <div className="flex items-start justify-between gap-3">
+                  <input type="checkbox" className="mt-2.5 h-4 w-4 shrink-0 accent-[var(--sg-vino)]" checked={seleccion.has(claveDe(f))}
+                    onChange={() => alternar(claveDe(f))} aria-label={`Marcar el folio ${f.folio} para exportar`} />
                   <UserChip user={f.user} sub={f.empresa?.nombre ?? null} href={esClub ? `/admin/clubes/${f.id}` : `/admin/perfiles/${f.user_id}?folio=${f.id}`} size="md" />
                   {esClub
                     ? <span className="pill shrink-0" data-tone={estClub?.tono ?? 'neutral'} data-dot="on">{estClub?.etiqueta ?? f.estado}</span>
@@ -224,9 +288,19 @@ export default function FoliosPage() {
                 <p className="mt-1 text-xs text-[var(--app-ink-2)]">
                   {f.convocatoria?.nombre ?? '—'}{f.convocatoria?.periodo?.nombre ? ` · ${f.convocatoria.periodo.nombre}` : ''} · actualizado {formatDate(f.updated_at)}
                 </p>
-                {f.publicado_en_landing && (
-                  <span className="pill mt-3 inline-flex items-center gap-1" data-tone="emerald"><Globe className="h-3 w-3" aria-hidden="true" />En la página pública</span>
-                )}
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  {/* 08/10/2026 (acuerdo con el usuario): identificador de escuela donde aparezca */}
+                  {esClub && f.escuela_nueva !== null && f.escuela_nueva !== undefined && (
+                    <span className="pill" data-tone={f.escuela_nueva ? 'mint' : 'gold'}>{f.escuela_nueva ? 'Nueva escuela' : 'Ya participó'}</span>
+                  )}
+                  {esClub && typeof f.integrantes === 'number' && <span className="pill" data-tone="neutral">{f.integrantes} integrante{f.integrantes === 1 ? '' : 's'}</span>}
+                  {f.publicado_en_landing && (
+                    <span className="pill inline-flex items-center gap-1" data-tone="emerald"><Globe className="h-3 w-3" aria-hidden="true" />En la página pública</span>
+                  )}
+                  <Button size="sm" variant="outline" className="ml-auto" onClick={() => setVista(claveDe(f))} aria-label={`Vista previa del folio ${f.folio}`}>
+                    <Eye className="h-4 w-4" aria-hidden="true" />Vista previa
+                  </Button>
+                </div>
               </article>
               );
             })}
@@ -285,6 +359,8 @@ export default function FoliosPage() {
           )}
         </section>
       )}
+
+      <VistaPreviaFolio clave={vista} onCerrar={() => setVista(null)} />
 
       <ConfirmDialog
         open={confirmarRetiro}

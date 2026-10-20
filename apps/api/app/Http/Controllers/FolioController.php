@@ -8,6 +8,7 @@ use App\Models\FolioPublicado;
 use App\Models\Solicitud;
 use App\Support\Alcance;
 use App\Support\Audit;
+use App\Support\FoliosReporte;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -23,125 +24,105 @@ class FolioController extends Controller
 {
     private const CACHE_PUBLICO = 'public:folios-aprobados-v1';
 
-    /** GET /admin/folios?grupo=aprobados|no_aprobados|en_proceso|todos&convocatoria_id=&periodo_id=&search=&page= */
-    public function index(Request $request)
+    /** Filtros comunes de la lista y de las exportaciones. */
+    private function filtros(Request $request): array
     {
-        $data = $request->validate([
+        return $request->validate([
             'grupo' => ['nullable', 'in:aprobados,no_aprobados,en_proceso,todos'],
             'convocatoria_id' => ['nullable', 'integer'],
             'periodo_id' => ['nullable', 'integer'],
             'search' => ['nullable', 'string', 'max:100'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
+    }
 
-        $q = Alcance::aplicar(Solicitud::query(), $request->user())
-            ->with(['user', 'empresa:id,nombre', 'convocatoria:id,nombre,periodo_id,ejercicio_fiscal', 'convocatoria.periodo:id,nombre'])
-            ->where('estado', '!=', 'borrador');
-
-        match ($data['grupo'] ?? 'todos') {
-            'aprobados' => $q->whereIn('estado', Solicitud::ESTADOS_APROBADOS),
-            'no_aprobados' => $q->whereIn('estado', Solicitud::ESTADOS_NO_APROBADOS),
-            'en_proceso' => $q->whereNotIn('estado', array_merge(Solicitud::ESTADOS_APROBADOS, Solicitud::ESTADOS_NO_APROBADOS)),
-            default => null,
-        };
-        if (! empty($data['convocatoria_id'])) {
-            $q->where('convocatoria_id', (int) $data['convocatoria_id']);
-        }
-        if (! empty($data['periodo_id'])) {
-            $q->whereHas('convocatoria', fn ($c) => $c->where('periodo_id', (int) $data['periodo_id']));
-        }
-        if (! empty($data['search'])) {
-            $like = '%'.addcslashes($data['search'], '%_\\').'%';
-            $q->where(fn ($w) => $w->where('folio', 'ilike', $like)->orWhere('titulo_proyecto', 'ilike', $like));
-        }
-
-        // Conteos por grupo (mismo alcance y filtros de convocatoria/periodo), para las pestañas.
-        $base = Alcance::aplicar(Solicitud::query(), $request->user())->where('estado', '!=', 'borrador');
-        if (! empty($data['convocatoria_id'])) {
-            $base->where('convocatoria_id', (int) $data['convocatoria_id']);
-        }
-        if (! empty($data['periodo_id'])) {
-            $base->whereHas('convocatoria', fn ($c) => $c->where('periodo_id', (int) $data['periodo_id']));
-        }
-        $porEstado = (clone $base)->select('estado', DB::raw('count(*) as total'))->groupBy('estado')->pluck('total', 'estado');
-        $suma = fn (array $estados) => (int) collect($estados)->sum(fn ($e) => (int) ($porEstado[$e] ?? 0));
-        $aprob = $suma(Solicitud::ESTADOS_APROBADOS);
-        $noAprob = $suma(Solicitud::ESTADOS_NO_APROBADOS);
-
-        // E80 (20/10/2026): los clubes de Apoyo en especie también son folios, incluidos los que siguen en captura
-        // (decisión del usuario). Se combinan con las solicitudes y se paginan juntos (volumen chico).
-        $grupo = $data['grupo'] ?? 'todos';
-        $clubes = $this->clubes($request, $data);
-        $clubesBase = $this->clubes($request, $data, false);
-        $cAprob = (clone $clubesBase)->whereIn('estado', self::CLUB_APROBADOS)->count();
-        $cNo = (clone $clubesBase)->whereIn('estado', self::CLUB_NO_APROBADOS)->count();
-        $cTodos = (clone $clubesBase)->count();
-        match ($grupo) {
-            'aprobados' => $clubes->whereIn('estado', self::CLUB_APROBADOS),
-            'no_aprobados' => $clubes->whereIn('estado', self::CLUB_NO_APROBADOS),
-            'en_proceso' => $clubes->whereNotIn('estado', array_merge(self::CLUB_APROBADOS, self::CLUB_NO_APROBADOS)),
-            default => null,
-        };
-
-        $solicitudes = $q->orderByDesc('updated_at')->limit(self::TOPE)->get();
-        $pubSol = FolioPublicado::whereIn('solicitud_id', $solicitudes->pluck('id'))->pluck('solicitud_id')->all();
-        $items = $solicitudes->toBase()->map(function ($s) use ($pubSol) {
-            $s->setAttribute('tipo', 'solicitud');
-            $s->setAttribute('publicado_en_landing', in_array($s->id, $pubSol, true));
-
-            return $s->toArray();
-        });
-        $listaClubes = $clubes->with(['lider:id,name,avatar_path', 'escuela:id,nombre', 'convocatoria:id,nombre,periodo_id', 'convocatoria.periodo:id,nombre'])
-            ->orderByDesc('updated_at')->limit(self::TOPE)->get();
-        $pubClub = FolioPublicado::whereIn('club_id', $listaClubes->pluck('id'))->pluck('club_id')->all();
-        $items = $items->merge($listaClubes->toBase()->map(fn (Club $c) => [
-            'tipo' => 'club', 'id' => $c->id, 'folio' => $c->folio, 'titulo_proyecto' => $c->nombre, 'estado' => $c->estadoVisible(),
-            'updated_at' => $c->updated_at, 'user_id' => $c->lider_id,
-            'user' => $c->lider ? ['id' => $c->lider->id, 'name' => $c->lider->name, 'avatar_url' => $c->lider->avatar_url ?? null] : null,
-            'empresa' => $c->escuela ? ['nombre' => $c->escuela->nombre] : null,
-            'convocatoria' => $c->convocatoria ? ['id' => $c->convocatoria->id, 'nombre' => $c->convocatoria->nombre, 'periodo' => $c->convocatoria->periodo?->only(['nombre'])] : null,
-            'publicado_en_landing' => in_array($c->id, $pubClub, true),
-        ]))->sortByDesc(fn ($x) => (string) $x['updated_at'])->values();
-
+    /**
+     * GET /admin/folios?grupo=aprobados|no_aprobados|en_proceso|todos&convocatoria_id=&periodo_id=&search=&page=
+     * E80 (20/10/2026): solicitudes y clubes de Apoyo en especie (también en captura), paginados juntos.
+     */
+    public function index(Request $request)
+    {
+        $data = $this->filtros($request);
+        $items = FoliosReporte::items($request->user(), $data, $data['grupo'] ?? 'todos');
         $porPagina = (int) ($data['per_page'] ?? 20);
         $paginaActual = max(1, (int) $request->input('page', 1));
-        $pagina = new \Illuminate\Pagination\LengthAwarePaginator(
-            $items->forPage($paginaActual, $porPagina)->values(), $items->count(), $porPagina, $paginaActual,
-        );
 
         return response()->json([
-            'folios' => $pagina,
-            'conteos' => [
-                'aprobados' => $aprob + $cAprob,
-                'no_aprobados' => $noAprob + $cNo,
-                'en_proceso' => ((int) $porEstado->sum() - $aprob - $noAprob) + ($cTodos - $cAprob - $cNo),
-                'todos' => (int) $porEstado->sum() + $cTodos,
-            ],
+            'folios' => new \Illuminate\Pagination\LengthAwarePaginator($items->forPage($paginaActual, $porPagina)->values(), $items->count(), $porPagina, $paginaActual),
+            'conteos' => FoliosReporte::conteos($request->user(), $data),
         ]);
     }
 
-    /** E80: estados de un club que cuentan como aprobado / no aprobado (el resto, en proceso, incluida la captura). */
-    public const CLUB_APROBADOS = ['aceptado', 'kit_entregado'];
-    public const CLUB_NO_APROBADOS = ['rechazado'];
-    private const TOPE = 2000;
-
-    /** Clubes con el mismo alcance y filtros (convocatoria, periodo y, si $conBusqueda, la búsqueda). */
-    private function clubes(Request $request, array $data, bool $conBusqueda = true)
+    /** E81 — GET /admin/folios/{tipo}/{id}/ficha: vista previa con todos sus datos y etiquetas (404 fuera del alcance). */
+    public function ficha(Request $request, string $tipo, int $id)
     {
-        $q = Alcance::aplicar(Club::query(), $request->user());
-        if (! empty($data['convocatoria_id'])) {
-            $q->where('convocatoria_id', (int) $data['convocatoria_id']);
-        }
-        if (! empty($data['periodo_id'])) {
-            $q->whereHas('convocatoria', fn ($c) => $c->where('periodo_id', (int) $data['periodo_id']));
-        }
-        if ($conBusqueda && ! empty($data['search'])) {
-            $like = '%'.addcslashes($data['search'], '%_\\').'%';
-            $q->where(fn ($w) => $w->where('folio', 'ilike', $like)->orWhere('nombre', 'ilike', $like));
+        abort_unless(in_array($tipo, ['solicitud', 'club'], true), 404);
+        $ficha = FoliosReporte::ficha($request->user(), $tipo, $id);
+        abort_unless($ficha !== null, 404);
+
+        return response()->json($ficha);
+    }
+
+    /**
+     * E81 — GET /admin/folios/exportar?formato=pdf|xlsx&modo=completo|parcial|individual&ids[]=club-3&(filtros)
+     * Completo: todo lo que muestran los filtros. Parcial: los folios marcados. Individual: un folio con su ficha completa.
+     * Con la franja institucional; Excel con defensa contra fórmulas.
+     */
+    public function exportar(Request $request)
+    {
+        $data = $this->filtros($request);
+        $v = $request->validate([
+            'formato' => ['required', 'in:pdf,xlsx'],
+            'modo' => ['required', 'in:completo,parcial,individual'],
+            'ids' => ['required_unless:modo,completo', 'array', 'max:500'],
+            'ids.*' => ['string', 'regex:/^(solicitud|club)-\d{1,10}$/'],
+        ], ['ids.required_unless' => 'Marca al menos un folio.']);
+        $u = $request->user();
+        $fecha = now('America/Mexico_City');
+        Audit::log('folios.exportados', null, ['formato' => $v['formato'], 'modo' => $v['modo'], 'total' => $v['modo'] === 'completo' ? null : count($v['ids'])]);
+
+        if ($v['modo'] === 'individual') {
+            [$tipo, $id] = explode('-', $v['ids'][0]);
+            $ficha = FoliosReporte::ficha($u, $tipo, (int) $id);
+            abort_unless($ficha !== null, 404);
+            $nombre = 'folio-'.preg_replace('/[^A-Za-z0-9\-]/', '', (string) $ficha['folio']);
+            if ($v['formato'] === 'pdf') {
+                return \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.folios.ficha', ['fichas' => [$ficha], 'fecha' => $fecha, 'franja' => \App\Support\FormatosClub::franja()])
+                    ->setPaper('letter')->download($nombre.'.pdf');
+            }
+
+            return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\FichaFolioExport($ficha, $fecha), $nombre.'.xlsx');
         }
 
-        return $q;
+        $items = FoliosReporte::items($u, $data, $data['grupo'] ?? 'todos', $v['modo'] === 'parcial' ? $v['ids'] : null);
+        abort_if($items->isEmpty(), 422, 'No hay folios para exportar con esos filtros.');
+        $nombre = 'folios-'.$v['modo'].'-'.$fecha->format('Y-m-d');
+        $titulo = 'Folios · '.($v['modo'] === 'completo' ? 'reporte completo' : 'selección de '.$items->count());
+        $filtrosTexto = collect([
+            ($data['grupo'] ?? 'todos') !== 'todos' ? ['aprobados' => 'Aprobados', 'no_aprobados' => 'No aprobados', 'en_proceso' => 'En proceso'][$data['grupo']] : null,
+            ! empty($data['convocatoria_id']) ? Convocatoria::find($data['convocatoria_id'])?->nombre : null,
+            ! empty($data['periodo_id']) ? \App\Models\Periodo::find($data['periodo_id'])?->nombre : null,
+            ! empty($data['search']) ? 'Búsqueda: «'.$data['search'].'»' : null,
+        ])->filter()->implode(' · ');
+        if ($v['formato'] === 'pdf') {
+            return \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.folios.lista', ['items' => $items, 'titulo' => $titulo, 'filtros' => $filtrosTexto, 'fecha' => $fecha, 'franja' => \App\Support\FormatosClub::franja()])
+                ->setPaper('letter', 'landscape')->download($nombre.'.pdf');
+        }
+        $s = fn ($x) => \App\Exports\SolicitudesExport::celda($x === null ? '' : (string) $x);
+        $filas = $items->map(fn ($x) => [
+            $s($x['folio']), $x['tipo'] === 'club' ? 'Club' : 'Solicitud', $s($x['convocatoria']['nombre'] ?? ''), $s($x['convocatoria']['periodo']['nombre'] ?? ''),
+            $s($x['user']['name'] ?? ''), $s($x['titulo_proyecto']), $s($x['empresa']['nombre'] ?? ''),
+            $x['escuela_nueva'] === null ? '' : ($x['escuela_nueva'] ? 'Nueva escuela' : 'Ya participó'), $x['integrantes'] ?? '',
+            $s($x['estado_texto']), $x['publicado_en_landing'] ? 'Sí' : 'No', $x['updated_at'] ? \Carbon\Carbon::parse($x['updated_at'])->setTimezone('America/Mexico_City')->format('d/m/Y H:i') : '',
+        ])->all();
+
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\ReporteInstitucional('Folios', $titulo, $filtrosTexto, $fecha,
+            ['Folio', 'Tipo', 'Convocatoria', 'Periodo', 'Solicitante / líder', 'Proyecto / club', 'Empresa / escuela', 'Participación de la escuela', 'Integrantes', 'Estado', 'En la página pública', 'Última actualización'],
+            $filas), $nombre.'.xlsx');
     }
+
+    /** E80: estados de un club que cuentan como aprobado / no aprobado (el resto, en proceso, incluida la captura). */
+    public const CLUB_APROBADOS = FoliosReporte::CLUB_APROBADOS;
 
     /** GET /admin/solicitudes/{solicitud}/historial — seguimiento (el middleware `alcance` ya validó el registro). */
     public function historial(Solicitud $solicitud)

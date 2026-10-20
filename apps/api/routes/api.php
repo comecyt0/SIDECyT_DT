@@ -180,6 +180,9 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::get('solicitudes/{solicitud}/full', [SolicitudController::class, 'adminShowFull']);
             Route::get('solicitudes/{solicitud}/historial', [FolioController::class, 'historial']);
             Route::get('folios', [FolioController::class, 'index']);
+        // E81: exportación (antes que la ficha para no chocar con {tipo}) y vista previa de un folio.
+        Route::get('folios/exportar', [FolioController::class, 'exportar'])->middleware('throttle:20,1,folios-exportar');
+        Route::get('folios/{tipo}/{id}/ficha', [FolioController::class, 'ficha'])->where(['tipo' => 'solicitud|club', 'id' => '[0-9]+'])->middleware('throttle:120,1,folios-ficha');
             Route::get('reportes/excel', [DocumentoController::class, 'exportExcel']);
             Route::get('periodos', [PeriodoController::class, 'index']);
             // E52 · Apoyo en especie: clubes registrados (lectura con alcance; la revisión llega en F2).
