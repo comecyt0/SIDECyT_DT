@@ -269,14 +269,24 @@ class EvaluadorController extends Controller
             return response()->json(['message' => 'Hay posibles conflictos de interés. Revísalos y confirma si deseas asignar de todos modos.', 'conflictos' => $conflictos], 409);
         }
 
-        $asignacion = AsignacionEvaluador::create([
+        $datosAsig = [
             'solicitud_id' => $solicitud->id,
             'evaluador_id' => $evaluador->id,
             'asignado_por' => $request->user()->id,
             'fecha_limite' => $validated['fecha_limite'],
             'estado' => 'asignado',
             'conflictos_aceptados' => $conflictos ?: null,
-        ]);
+        ];
+        // E85: si a esa persona se le había retirado esta solicitud, se reactiva la misma fila (única por solicitud y evaluador).
+        $retirada = AsignacionEvaluador::withoutGlobalScope('vigentes')->where('solicitud_id', $solicitud->id)
+            ->where('evaluador_id', $evaluador->id)->whereNotNull('retirada_at')->first();
+        if ($retirada) {
+            $retirada->forceFill($datosAsig + ['concluida_at' => null, 'aviso_previo_at' => null, 'aviso_vence_at' => null,
+                'carta_imparcialidad_aceptada' => false, 'retirada_at' => null, 'retirada_por' => null])->save();
+            $asignacion = $retirada;
+        } else {
+            $asignacion = AsignacionEvaluador::create($datosAsig);
+        }
         Audit::log('evaluacion.asignada', $solicitud, [
             'evaluador_id' => $evaluador->id, 'fecha_limite' => $validated['fecha_limite'], 'conflictos_aceptados' => array_column($conflictos, 'tipo'),
         ]);
@@ -310,10 +320,17 @@ class EvaluadorController extends Controller
         if ($asignacion->estado === 'concluido') {
             return response()->json(['message' => 'No se puede desasignar una evaluación ya concluida.'], 422);
         }
-        Audit::log('evaluacion.desasignada', $asignacion->solicitud, ['evaluador_id' => $asignacion->evaluador_id]);
-        $asignacion->delete();
+        // E85 (regla del usuario): solo el administrador elimina; el admin de convocatoria retira (se conserva la fila).
+        if ($request->user()->tieneRol('admin')) {
+            Audit::log('evaluacion.desasignada', $asignacion->solicitud, ['evaluador_id' => $asignacion->evaluador_id]);
+            $asignacion->delete();
 
-        return response()->json(['message' => 'Evaluador desasignado correctamente.']);
+            return response()->json(['message' => 'Evaluador desasignado correctamente.']);
+        }
+        $asignacion->forceFill(['retirada_at' => now(), 'retirada_por' => $request->user()->id])->save();
+        Audit::log('evaluacion.asignacion_retirada', $asignacion->solicitud, ['evaluador_id' => $asignacion->evaluador_id]);
+
+        return response()->json(['message' => 'Asignación retirada (queda registrada; puedes volver a asignarla).']);
     }
 
     public function ampliarFecha(Request $request, AsignacionEvaluador $asignacion)
@@ -332,6 +349,10 @@ class EvaluadorController extends Controller
     /** El dictamen se cierra al enviarlo; solo el admin lo reabre (queda en bitácora lo que tenía). */
     public function reabrir(Request $request, AsignacionEvaluador $asignacion)
     {
+        // E85 (regla del usuario): reabrir borra el dictamen enviado → solo el administrador.
+        if (! $request->user()->tieneRol('admin')) {
+            return response()->json(['message' => 'Solo el administrador puede reabrir un dictamen (se elimina el que se envió).'], 403);
+        }
         $d = $request->validate(['motivo' => 'required|string|min:5|max:500']);
         $dictamen = $asignacion->dictamen;
         if (! $dictamen) {

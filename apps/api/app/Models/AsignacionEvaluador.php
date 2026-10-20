@@ -8,6 +8,15 @@ class AsignacionEvaluador extends Model
 {
     protected $table = 'asignaciones_evaluador';
 
+    /**
+     * E85: las asignaciones retiradas por el admin de convocatoria (no se borran) no cuentan en ningún lado. Para verlas
+     * o reactivarlas: withoutGlobalScope('vigentes').
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope('vigentes', fn ($q) => $q->whereNull($q->getModel()->getTable().'.retirada_at'));
+    }
+
     // SEV-1 — Denylist. PK y timestamps bloqueados; el resto (incluyendo 'estado')
     // permanece asignable porque el flujo iniciar/concluir lo necesita, pero los
     // endpoints están protegidos por middleware admin/evaluador.

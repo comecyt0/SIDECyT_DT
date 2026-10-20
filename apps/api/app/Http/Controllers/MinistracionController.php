@@ -83,6 +83,10 @@ class MinistracionController extends Controller
 
     public function destroy(Ministracion $ministracion)
     {
+        // E85 (regla del usuario): solo el administrador elimina registros.
+        if (! request()->user()?->tieneRol('admin')) {
+            return response()->json(['message' => 'Solo el administrador puede eliminar registros.'], 403);
+        }
         if ($ministracion->estado !== 'pendiente') {
             return response()->json([
                 'error' => 'Solo se pueden eliminar ministraciones en estado pendiente.',

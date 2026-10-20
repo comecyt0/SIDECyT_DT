@@ -330,7 +330,8 @@ class DashboardController extends Controller
                 $q->select(DB::raw(1))
                     ->from('asignaciones_evaluador')
                     ->whereColumn('asignaciones_evaluador.solicitud_id', 'solicitudes.id')
-                    ->where('asignaciones_evaluador.evaluador_id', $user->id);
+                    ->where('asignaciones_evaluador.evaluador_id', $user->id)
+                    ->whereNull('asignaciones_evaluador.retirada_at'); // E85
             });
         }
 

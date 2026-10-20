@@ -1,5 +1,7 @@
 'use client';
 
+import { useRol } from '@/hooks/useRol';
+
 import { useCallback, useEffect, useState } from 'react';
 import { CalendarClock, CheckCircle2, ClipboardCheck, Download, RotateCcw, Trash2, XCircle } from 'lucide-react';
 import api from '@/lib/api';
@@ -54,6 +56,8 @@ function leer(d: unknown): Datos | null {
 }
 
 export default function ResultadoEvaluacion({ solicitudId }: { solicitudId: number }) {
+  // E85 (regla del usuario): solo el administrador elimina y reabre dictámenes; el admin de convocatoria retira.
+  const { esAdmin } = useRol();
   const [datos, setDatos] = useState<Datos | null>(null);
   const [oculto, setOculto] = useState(false);
   const [accion, setAccion] = useState<Accion | null>(null);
@@ -100,7 +104,7 @@ export default function ResultadoEvaluacion({ solicitudId }: { solicitudId: numb
   };
 
   const titulo = accion?.tipo === 'fecha' ? 'Ampliar la fecha límite' : accion?.tipo === 'reabrir' ? 'Reabrir el dictamen'
-    : accion?.tipo === 'quitar' ? 'Quitar la asignación' : accion?.tipo === 'decidir' ? (accion.resultado === 'aprobada' ? 'Aprobar la solicitud' : 'Rechazar la solicitud') : '';
+    : accion?.tipo === 'quitar' ? (esAdmin ? 'Quitar la asignación' : 'Retirar la asignación') : accion?.tipo === 'decidir' ? (accion.resultado === 'aprobada' ? 'Aprobar la solicitud' : 'Rechazar la solicitud') : '';
 
   return (
     <PastelFrame tone="butter" title="Resultado de la evaluación"
@@ -148,8 +152,8 @@ export default function ResultadoEvaluacion({ solicitudId }: { solicitudId: numb
                 {datos.puede_decidir && (
                   <div className="flex flex-wrap gap-2">
                     {a.estado !== 'concluido' && <Button size="sm" variant="soft" icon={<CalendarClock className="h-4 w-4" />} onClick={() => { setError(''); setAccion({ tipo: 'fecha', a, valor: manana }); }}>Ampliar fecha</Button>}
-                    {a.estado !== 'concluido' && <Button size="sm" variant="soft" icon={<Trash2 className="h-4 w-4" />} onClick={() => { setError(''); setAccion({ tipo: 'quitar', a }); }}>Quitar</Button>}
-                    {a.dictamen && <Button size="sm" variant="soft" icon={<RotateCcw className="h-4 w-4" />} onClick={() => { setError(''); setAccion({ tipo: 'reabrir', a, valor: '' }); }}>Reabrir dictamen</Button>}
+                    {a.estado !== 'concluido' && <Button size="sm" variant="soft" icon={<Trash2 className="h-4 w-4" />} onClick={() => { setError(''); setAccion({ tipo: 'quitar', a }); }}>{esAdmin ? 'Quitar' : 'Retirar'}</Button>}
+                    {a.dictamen && esAdmin && <Button size="sm" variant="soft" icon={<RotateCcw className="h-4 w-4" />} onClick={() => { setError(''); setAccion({ tipo: 'reabrir', a, valor: '' }); }}>Reabrir dictamen</Button>}
                   </div>
                 )}
               </li>
@@ -172,7 +176,7 @@ export default function ResultadoEvaluacion({ solicitudId }: { solicitudId: numb
             <DialogTitle className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4" />{titulo}</DialogTitle>
             <DialogDescription>
               {accion?.tipo === 'reabrir' && 'El dictamen se borra (queda en la bitácora) y la persona podrá enviarlo de nuevo.'}
-              {accion?.tipo === 'quitar' && `${accion.a.evaluador ?? 'La persona'} ya no verá esta solicitud.`}
+              {accion?.tipo === 'quitar' && `${accion.a.evaluador ?? 'La persona'} ya no verá esta solicitud.${esAdmin ? '' : ' Queda registrada como retirada y puedes volver a asignarla.'}`}
               {accion?.tipo === 'fecha' && 'Se reinician los recordatorios con la nueva fecha.'}
               {accion?.tipo === 'decidir' && `Promedio ${datos.promedio ?? '—'} de ${datos.maximo} (${datos.porcentaje ?? '—'} %; mínimo ${datos.minimo_aprobatorio} %). Se avisará al solicitante.`}
             </DialogDescription>

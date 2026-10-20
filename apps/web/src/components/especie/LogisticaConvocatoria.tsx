@@ -1,5 +1,7 @@
 'use client';
 
+import { useRol } from '@/hooks/useRol';
+
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Loader2, Save, Plus, Trash2, CalendarClock, Bus, Sandwich, Settings2, Users, AlertTriangle, QrCode, FileSpreadsheet } from 'lucide-react';
@@ -48,6 +50,7 @@ const textoCupo = (c: Cupo) => (c.total === null ? `${c.usado} pedidos · sin to
  * asignación de fecha y lugar del kit a varios clubes a la vez.
  */
 export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoriaId: number }) {
+  const { esAdmin } = useRol();
   const [t, setT] = useState<Tablero | null>(null);
   const [form, setForm] = useState<ConfigForm | null>(null);
   const [eventos, setEventos] = useState<Evento[]>([]);
@@ -216,8 +219,9 @@ export default function LogisticaConvocatoria({ convocatoriaId }: { convocatoria
                   {daL ? <label className="space-y-1"><span className={labelCls}>Cupo lunch</span><input type="number" min={0} className={inputCls} placeholder="Sin tope" value={e.cupo_lunch} onChange={(x) => setEventos(eventos.map((y, j) => (j === i ? { ...y, cupo_lunch: x.target.value } : y)))} /></label> : <span className="hidden lg:block" />}
                 </>) : <><span className="hidden lg:block" /><span className="hidden lg:block" /></>}
                 <div className="flex items-end">
-                  <Button variant="destructive" size="icon-sm" disabled={e.con_solicitudes} aria-label={`Quitar el evento ${e.nombre || i + 1}`} title={e.con_solicitudes ? 'Tiene solicitudes: no se puede quitar' : 'Quitar'}
-                    onClick={() => setEventos(eventos.filter((_, j) => j !== i))}><Trash2 /></Button>
+                  {/* E85: solo el administrador elimina eventos guardados; un evento nuevo (sin guardar) se puede quitar */}
+                  {(esAdmin || !e.id) && <Button variant="destructive" size="icon-sm" disabled={e.con_solicitudes} aria-label={`Quitar el evento ${e.nombre || i + 1}`} title={e.con_solicitudes ? 'Tiene solicitudes: no se puede quitar' : 'Quitar'}
+                    onClick={() => setEventos(eventos.filter((_, j) => j !== i))}><Trash2 /></Button>}
                 </div>
               </li>
             ))}

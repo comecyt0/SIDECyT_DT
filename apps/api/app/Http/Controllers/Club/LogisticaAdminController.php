@@ -91,6 +91,10 @@ class LogisticaAdminController extends Controller
                 $vistos[] = $ev->id;
             }
             foreach ($actuales->except($vistos) as $ev) {
+                // E85 (regla del usuario): solo el administrador elimina; el admin de convocatoria no quita eventos.
+                if (! request()->user()?->tieneRol('admin')) {
+                    throw ValidationException::withMessages(['eventos' => "Solo el administrador puede eliminar el evento «{$ev->nombre}»."]);
+                }
                 if (ClubLogistica::where('evento_id', $ev->id)->where('estado', '!=', 'cancelada')->exists()) {
                     throw ValidationException::withMessages(['eventos' => "El evento «{$ev->nombre}» ya tiene solicitudes; no se puede quitar."]);
                 }

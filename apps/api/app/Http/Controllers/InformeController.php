@@ -59,6 +59,10 @@ class InformeController extends Controller
 
     public function destroy(Informe $informe)
     {
+        // E85 (regla del usuario): solo el administrador elimina registros.
+        if (! request()->user()?->tieneRol('admin')) {
+            return response()->json(['message' => 'Solo el administrador puede eliminar registros.'], 403);
+        }
         if ($informe->estado !== 'pendiente') {
             return response()->json([
                 'error' => 'Solo se pueden eliminar informes en estado pendiente.',

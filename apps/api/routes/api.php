@@ -303,7 +303,8 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::apiResource('usuarios', UserController::class)->parameters(['usuarios' => 'user']);
             Route::apiResource('empresas', EmpresaController::class)->parameters(['empresas' => 'empresa']);
             Route::apiResource('categorias-apoyo', \App\Http\Controllers\Admin\CategoriaApoyoController::class)->parameters(['categorias-apoyo' => 'categoriasApoyo']);
-            Route::apiResource('lista-negra', ListaNegraController::class);
+            // E85: sin «destroy» (el controlador no lo tiene; «Levantar» la desactiva).
+            Route::apiResource('lista-negra', ListaNegraController::class)->except(['destroy']);
             Route::apiResource('notificaciones', NotificacionLogController::class)->only(['index', 'show']);
             Route::post('notificaciones/{notificacion}/leer', [NotificacionLogController::class, 'marcarLeida']);
             Route::post('notificaciones/leer-todas', [NotificacionLogController::class, 'marcarTodasLeidas']);

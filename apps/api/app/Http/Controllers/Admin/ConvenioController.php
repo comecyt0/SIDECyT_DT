@@ -186,6 +186,10 @@ class ConvenioController extends Controller
      */
     public function destroy(Convenio $convenio)
     {
+        // E85 (regla del usuario): solo el administrador elimina registros.
+        if (! request()->user()?->tieneRol('admin')) {
+            return response()->json(['message' => 'Solo el administrador puede eliminar registros.'], 403);
+        }
         if ($convenio->estado !== 'borrador') {
             return response()->json([
                 'error' => 'Solo se pueden eliminar convenios en estado borrador.',
