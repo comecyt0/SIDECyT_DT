@@ -29,6 +29,8 @@ export default function VersionesFirmadas({ versiones, onDescargar, onRevisar, o
           <li key={v.id} className={`rounded-[12px] border px-3 py-2 ${i > 0 ? 'opacity-80' : ''}`} style={{ borderColor: 'var(--app-rule)' }}>
             <div className="flex flex-wrap items-center gap-2">
               <span className="pill" data-tone={e.tono}>{e.etiqueta}</span>
+              {/* E90: los datos cambiaron después de subir esta versión */}
+              {i === 0 && v.desactualizado && <span className="pill" data-tone="gold" title="Los datos cambiaron: descárgalo de nuevo, fírmalo y súbelo">Desactualizado</span>}
               {/* En teléfono el nombre va en su propia línea (antes se partía letra por letra junto a la fecha y el botón). */}
               <span className="order-last w-full min-w-0 break-all text-xs text-[var(--app-ink)] sm:order-none sm:w-auto sm:flex-1">{v.nombre_original}</span>
               <span className="flex-1 text-xs text-[var(--app-ink-2)] sm:flex-none">{fechaHora(v.subido_at)}</span>

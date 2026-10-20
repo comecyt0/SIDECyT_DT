@@ -43,7 +43,7 @@ class Club extends Model
     protected $casts = [
         'datos' => 'array', 'enviado_at' => 'datetime', 'vence_at' => 'datetime', 'visto_bueno_at' => 'datetime',
         'comite_at' => 'datetime', 'aceptado_at' => 'datetime', 'aviso_privacidad_at' => 'datetime', 'ronda' => 'integer',
-        'kit_fecha' => 'datetime', 'kit_asignado_at' => 'datetime', 'kit_entregado_at' => 'datetime', 'transporte_salida_hora' => 'datetime', // E87
+        'kit_fecha' => 'datetime', 'kit_asignado_at' => 'datetime', 'kit_entregado_at' => 'datetime', 'transporte_salida_hora' => 'datetime', 'datos_cambiados_at' => 'datetime', // E87 / E90
         'qr_habilitado_at' => 'datetime', 'dueno_director' => 'boolean',
     ];
 
@@ -180,5 +180,11 @@ class Club extends Model
     public function editable(): bool
     {
         return $this->estado === 'borrador' || ($this->estado === 'observado' && ! $this->vencido());
+    }
+
+    /** E90: los datos que llenan los formatos cambiaron (los firmados anteriores quedan desactualizados). */
+    public function marcarCambioDatos(): void
+    {
+        $this->forceFill(['datos_cambiados_at' => now()])->saveQuietly();
     }
 }

@@ -89,7 +89,7 @@ class FolioController extends Controller
             $nombre = 'folio-'.preg_replace('/[^A-Za-z0-9\-]/', '', (string) $ficha['folio']);
             if ($v['formato'] === 'pdf') {
                 return \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.folios.ficha', ['fichas' => [$ficha], 'fecha' => $fecha, 'franja' => \App\Support\FormatosClub::franja()])
-                    ->setPaper('letter')->download($nombre.'.pdf');
+                    ->setPaper('letter')->download($nombre.'.pdf')->header('Cache-Control', 'private, no-store');
             }
 
             return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\FichaFolioExport($ficha, $fecha), $nombre.'.xlsx');
@@ -107,7 +107,7 @@ class FolioController extends Controller
         ])->filter()->implode(' · ');
         if ($v['formato'] === 'pdf') {
             return \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.folios.lista', ['items' => $items, 'titulo' => $titulo, 'filtros' => $filtrosTexto, 'fecha' => $fecha, 'franja' => \App\Support\FormatosClub::franja()])
-                ->setPaper('letter', 'landscape')->download($nombre.'.pdf');
+                ->setPaper('letter', 'landscape')->download($nombre.'.pdf')->header('Cache-Control', 'private, no-store');
         }
         $s = fn ($x) => \App\Exports\SolicitudesExport::celda($x === null ? '' : (string) $x);
         $filas = $items->map(fn ($x) => [

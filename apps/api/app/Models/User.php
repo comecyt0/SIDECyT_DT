@@ -132,6 +132,13 @@ class User extends Authenticatable implements JWTSubject
                 if (! $user->isDirty('debe_cambiar_password')) $user->debe_cambiar_password = false;
             }
         });
+        // E90 (20/10/2026): los líderes A y B son integrantes; si cambian su nombre, correo o teléfono, su tarjeta en
+        // cada club editable (y lo que llena los formatos) se actualiza.
+        static::updated(function (User $user) {
+            if ($user->wasChanged(['name', 'email', 'telefono'])) {
+                \App\Support\LiderBIntegrante::actualizarDesdeCuenta($user);
+            }
+        });
     }
 
     /** ¿Este JWT (claim `iat`) se emitió antes del último cambio de contraseña? */

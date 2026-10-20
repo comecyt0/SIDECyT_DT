@@ -155,13 +155,15 @@ class FormatosClub
     }
 
     /** Estado de revisión de un documento subido (lista blanca). */
-    public static function subido(?ClubDocumento $d): ?array
+    public static function subido(?ClubDocumento $d, mixed $limite = null): ?array
     {
         if (! $d) {
             return null;
         }
 
         return [
+            // E90: los datos que llenan el formato cambiaron después de subirlo → hay que descargarlo y subirlo de nuevo.
+            'desactualizado' => $limite !== null && $d->updated_at && $d->updated_at->lt($limite),
             'nombre_original' => $d->nombre_original, 'subido_at' => $d->updated_at,
             'estado' => in_array($d->estado, self::ESTADOS, true) ? $d->estado : 'pendiente',
             'motivo' => $d->estado === 'rechazado' ? $d->motivo : null,
@@ -197,7 +199,11 @@ class FormatosClub
             }
         }
 
-        return $lista->map(fn ($d) => $d + ['subido' => self::subido($docs[$d['clave']] ?? null)])->values();
+        $limite = self::ultimoCambio($club);
+        $porId = $club->integrantes->keyBy('id');
+
+        return $lista->map(fn ($d) => $d + ['subido' => self::subido($docs[$d['clave']] ?? null, empty($d['generable']) ? null
+            : (isset($d['integrante_id']) ? self::ultimoCambio($club, $porId[$d['integrante_id']] ?? null) : $limite))])->values();
     }
 
     /** Permiso de imagen de cada integrante: {integrante_id: {tipo, subido}} (solo si la convocatoria lo pide). */
@@ -212,10 +218,23 @@ class FormatosClub
         $out = [];
         foreach ($club->integrantes as $i) {
             $out[$i->id] = ['tipo' => self::esMenor($i) ? 'menor' : 'adulto', 'obligatorio' => $f['uso_imagen']['obligatorio'],
-                'subido' => self::subido($docs[self::claveImagen($i)] ?? null)];
+                'subido' => self::subido($docs[self::claveImagen($i)] ?? null, self::ultimoCambio($club, $i))];
         }
 
         return $out;
+    }
+
+    /**
+     * E90: último cambio de los datos que llenan los formatos del club (o de un integrante, para su permiso de imagen):
+     * datos del club, escuela e integrantes.
+     */
+    public static function ultimoCambio(Club $club, ?ClubIntegrante $i = null): ?\Carbon\CarbonInterface
+    {
+        $club->loadMissing(['escuela', 'integrantes']);
+        $fechas = collect([$club->datos_cambiados_at, $club->escuela?->updated_at])
+            ->merge($i ? [$i->updated_at] : $club->integrantes->pluck('updated_at'))->filter();
+
+        return $fechas->max();
     }
 
     /** Lo que falta de los formatos para poder enviar (textos para el líder). */
@@ -228,6 +247,8 @@ class FormatosClub
                 if ($d['obligatorio']) {
                     $f[] = isset($d['integrante_id']) ? "Sube el {$d['nombre']} (firmado)." : "Sube el documento {$quien}.";
                 }
+            } elseif ($d['subido']['desactualizado'] ?? false) {
+                $f[] = "Los datos de {$quien} cambiaron después de subirlo: descárgalo de nuevo, fírmalo y súbelo.";
             } elseif ($d['subido']['estado'] === 'rechazado') {
                 $f[] = "El COMECYT rechazó {$quien}".($d['subido']['motivo'] ? ": {$d['subido']['motivo']}" : '').'. Súbelo de nuevo.';
             }

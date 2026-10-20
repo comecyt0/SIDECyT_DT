@@ -59,6 +59,7 @@ class LogisticaClubController extends Controller
             throw \Illuminate\Validation\ValidationException::withMessages(['hora' => 'La salida no puede ser después del regreso que fijó el COMECYT.']);
         }
         $club->forceFill(['transporte_salida_lugar' => trim(strip_tags($v['lugar'])), 'transporte_salida_maps' => $v['maps'] ?: null, 'transporte_salida_hora' => $hora])->save();
+        $club->marcarCambioDatos(); // E90
         \App\Support\Audit::log('club.salida_transporte', $club, []);
 
         return response()->json(\App\Support\LogisticaClub::estado($club->fresh()));
@@ -76,7 +77,7 @@ class LogisticaClubController extends Controller
         $logistica->loadMissing('evento');
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.solicitud_logistica_club', ['club' => $club, 'log' => $logistica, 'cfg' => $cfg, 'fecha' => now('America/Mexico_City')]);
 
-        return $pdf->download('solicitud-transporte-lunch-'.$club->folio.($logistica->evento_id ? '-evento-'.$logistica->evento_id : '').'.pdf');
+        return $pdf->download('solicitud-transporte-lunch-'.$club->folio.($logistica->evento_id ? '-evento-'.$logistica->evento_id : '').'.pdf')->header('Cache-Control', 'private, no-store');
     }
 
     /** Carta de resguardo del kit para firmar (solo clubes aceptados). */
@@ -89,7 +90,7 @@ class LogisticaClubController extends Controller
         $club->loadMissing(['escuela', 'lider:id,name', 'integrantes', 'convocatoria:id,nombre']);
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.carta_resguardo_club', ['club' => $club, 'cfg' => LogisticaClub::config($club), 'fecha' => now('America/Mexico_City')]);
 
-        return $pdf->download('carta-resguardo-'.$club->folio.'.pdf');
+        return $pdf->download('carta-resguardo-'.$club->folio.'.pdf')->header('Cache-Control', 'private, no-store');
     }
 
     public function subirFirmado(Request $request, Club $club)

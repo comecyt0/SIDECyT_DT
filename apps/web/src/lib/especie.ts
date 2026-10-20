@@ -453,6 +453,8 @@ export const ESTADO_FIRMADO: Record<string, { etiqueta: string; tono: string }> 
 
 export interface VersionFirmada {
   id: number; nombre_original: string; estado: string; motivo: string | null; subido_at: string; revisado_at: string | null; revisor: string | null;
+  /** E90: los datos cambiaron después de subirla: hay que descargarla y subirla de nuevo. */
+  desactualizado?: boolean;
 }
 export interface Cupo { total: number | null; usado: number; disponible: number | null }
 export interface SolicitudLogistica {
@@ -585,7 +587,7 @@ export interface DocumentoClub {
   clave: string; nombre: string; descripcion?: string | null; obligatorio: boolean; formatos?: string[]; max_mb?: number;
   /** E79: el sistema lo genera lleno (carta, A, B, C o permiso de imagen) y su estado de revisión. */
   generable?: boolean; integrante_id?: number;
-  subido: { nombre_original: string; subido_at: string | null; estado?: string; motivo?: string | null } | null;
+  subido: { nombre_original: string; subido_at: string | null; estado?: string; motivo?: string | null; /** E90 */ desactualizado?: boolean } | null;
 }
 /** E79: permiso de uso de imagen de un integrante (tarjeta del integrante). */
 export interface PermisoImagen { tipo: 'menor' | 'adulto'; obligatorio: boolean; subido: DocumentoClub['subido'] }

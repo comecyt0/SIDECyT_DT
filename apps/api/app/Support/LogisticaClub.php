@@ -253,7 +253,10 @@ class LogisticaClub
         $eventos = $cfg->exists ? $cfg->eventos()->get() : collect();
         $logs = $club->logisticas()->get()->keyBy(fn ($l) => $l->evento_id ?? 0);
         $firmados = $club->firmados()->with('revisor:id,name')->get();
+        // E90: una versión firmada anterior al último cambio de datos (o de la solicitud) queda desactualizada.
+        $limiteDatos = FormatosClub::ultimoCambio($club);
         $version = fn (ClubFirmado $f) => ['id' => $f->id, 'nombre_original' => $f->nombre_original, 'estado' => $f->estado, 'motivo' => $f->motivo,
+            'desactualizado' => $f->estado !== 'reemplazado' && $f->created_at && collect([$limiteDatos, $f->logistica_id ? $logs->firstWhere('id', $f->logistica_id)?->updated_at : null])->filter()->contains(fn ($x) => $f->created_at->lt($x)),
             'subido_at' => $f->created_at, 'revisado_at' => $f->revisado_at, 'revisor' => $f->revisor?->name];
         $solicitud = function (?EspecieEvento $ev) use ($logs, $firmados, $cfg, $version) {
             $l = $logs->get($ev?->id ?? 0);

@@ -145,6 +145,7 @@ export default function ClubResumen({ club, integrantes, documentos, campos, cam
                 <span className="flex flex-wrap items-center gap-2 break-words text-sm font-semibold text-[var(--app-ink)]">
                   {d.nombre}{d.obligatorio ? '' : ' (opcional)'}
                   {d.subido && (() => { const e = ESTADO_DOCUMENTO[d.subido.estado ?? 'pendiente'] ?? ESTADO_DOCUMENTO.pendiente; return <span className="pill" data-tone={e.tono} data-dot="on">{e.etiqueta}</span>; })()}
+                  {d.subido?.desactualizado && <span className="pill" data-tone="gold" title="Los datos del club cambiaron después de subirlo">Desactualizado</span>}
                 </span>
                 <span className="block break-words text-xs text-[var(--app-ink-2)]">
                   {d.subido ? `${d.subido.nombre_original}${d.subido.subido_at ? ` · ${formatDate(d.subido.subido_at)}` : ''}` : 'Sin subir'}

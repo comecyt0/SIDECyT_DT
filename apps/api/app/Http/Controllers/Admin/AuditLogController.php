@@ -50,7 +50,7 @@ class AuditLogController extends Controller
             return \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.reportes.bitacora', [
                 'dias' => $items->groupBy('dia'), 'titulo' => $titulo, 'filtros' => $filtros, 'total' => $items->count(),
                 'fecha' => $fecha, 'franja' => \App\Support\FormatosClub::franja(),
-            ])->setPaper('letter', 'landscape')->download($nombre.'.pdf');
+            ])->setPaper('letter', 'landscape')->download($nombre.'.pdf')->header('Cache-Control', 'private, no-store');
         }
         $s = fn ($x) => \App\Exports\SolicitudesExport::celda($x === null ? '' : (string) $x);
 

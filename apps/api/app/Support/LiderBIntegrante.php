@@ -55,6 +55,7 @@ class LiderBIntegrante
             $i->forceFill(['club_id' => $club->id, 'es_lider' => $tipo === 'lider_a', 'es_lider_b' => $tipo === 'lider_b']);
         }
         $i->forceFill(['nombre' => $usuario->name, 'correo' => $usuario->email, 'telefono' => $usuario->telefono, 'curp' => $i->curp ?? $usuario->curp])->save();
+        $club->marcarCambioDatos(); // E90: los formatos ya llevan al nuevo líder
     }
 
     public static function quitar(Club $club, string $tipo = 'lider_b'): void
@@ -63,6 +64,7 @@ class LiderBIntegrante
         if ($i = self::de($club, $tipo)) {
             ImagenSegura::borrar(Especie::DIR_MEDIA, $i->foto_path);
             $i->delete();
+            $club->marcarCambioDatos(); // E90
         }
     }
 
@@ -77,5 +79,27 @@ class LiderBIntegrante
         // Primero se libera la de B (índice único parcial de es_lider_b).
         $b?->forceFill(['es_lider_b' => false, 'es_lider' => true, 'orden' => 0])->save();
         $a?->forceFill(['es_lider' => false, 'es_lider_b' => true, 'orden' => 1])->save();
+        $club->marcarCambioDatos(); // E90
+    }
+
+    /**
+     * E90 (20/10/2026, pedido del usuario: los líderes A y B son integrantes y todo debe estar actualizado): si la persona
+     * cambia su nombre, correo o teléfono en su cuenta, su tarjeta de líder en cada club editable se actualiza y los
+     * formatos firmados anteriores quedan marcados como desactualizados.
+     */
+    public static function actualizarDesdeCuenta(User $u): void
+    {
+        $clubes = Club::where(fn ($q) => $q->where('lider_id', $u->id)->orWhereHas('accesos', fn ($a) => $a->where('user_id', $u->id)->whereIn('tipo', array_keys(self::BANDERA))))->get();
+        foreach ($clubes as $club) {
+            if (! $club->editable()) continue;
+            $tipos = [];
+            if ((int) $club->lider_id === (int) $u->id && ! $club->dueno_director) $tipos[] = 'lider_a';
+            foreach ($club->accesos()->where('user_id', $u->id)->pluck('tipo') as $t) if (self::cuenta($t)) $tipos[] = $t;
+            foreach (array_unique($tipos) as $tipo) {
+                if (! ($i = self::de($club, $tipo))) continue;
+                $i->forceFill(['nombre' => $u->name, 'correo' => $u->email, 'telefono' => $u->telefono])->save();
+                $club->marcarCambioDatos();
+            }
+        }
     }
 }

@@ -179,6 +179,7 @@ class ClubController extends Controller
             $club->datos = $datos;
         }
         $club->save();
+        $club->marcarCambioDatos(); // E90
 
         return response()->json($this->detalle($club->fresh()));
     }
@@ -216,6 +217,7 @@ class ClubController extends Controller
         $datos = $this->datosIntegrante($request, $club, $cfg);
         $i = new ClubIntegrante($datos + ['orden' => (int) $club->integrantes()->max('orden') + 1]);
         $i->forceFill(['club_id' => $club->id, 'es_lider' => false])->save();
+        $club->marcarCambioDatos(); // E90
 
         return response()->json($i->fresh(), 201);
     }
@@ -225,6 +227,7 @@ class ClubController extends Controller
         $this->editable($request, $club);
         abort_unless((int) $integrante->club_id === (int) $club->id, 404);
         $integrante->fill($this->datosIntegrante($request, $club, $this->config($club)))->save();
+        $club->marcarCambioDatos(); // E90
 
         return response()->json($integrante->fresh());
     }
@@ -245,6 +248,7 @@ class ClubController extends Controller
             Storage::disk('local')->delete(Especie::DIR_DOCS.'/'.$club->id.'/'.$d->archivo);
         }
         $integrante->delete();
+        $club->marcarCambioDatos(); // E90
 
         return response()->json(['message' => 'Integrante quitado.']);
     }

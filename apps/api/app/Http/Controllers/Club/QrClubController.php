@@ -41,7 +41,7 @@ class QrClubController extends Controller
             'fotos' => $fotos, 'cfg' => LogisticaClub::config($club), 'fecha' => now('America/Mexico_City'),
         ]);
 
-        return $pdf->download('credencial-'.$club->folio.'.pdf');
+        return $pdf->download('credencial-'.$club->folio.'.pdf')->header('Cache-Control', 'private, no-store');
     }
 
     public function habilitar(Request $request)

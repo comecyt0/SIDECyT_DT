@@ -176,6 +176,7 @@ class RevisionClubController extends Controller
         $this->exigirAceptar($request->user(), $club);
         $v = $request->validate(['perfil' => 'required|in:auto,nueva,participo']);
         $club->forceFill(['kit_perfil' => $v['perfil'] === 'auto' ? null : $v['perfil']])->save();
+        $club->marcarCambioDatos(); // E90: cambia la carta de resguardo
         Audit::log('especie.kit_perfil', $club, ['perfil' => $v['perfil']]);
 
         return response()->json(self::detallePersonal($club->fresh(), $request->user()));

@@ -63,7 +63,7 @@ class DocumentoController extends Controller
 
         $pdf = Pdf::loadView('pdfs.dictamen', compact('dictamen', 'firma', 'detalle', 'minimo', 'porcentaje'));
 
-        return $pdf->download("Dictamen_{$dictamen->asignacion->solicitud->folio}.pdf");
+        return $pdf->download("Dictamen_{$dictamen->asignacion->solicitud->folio}.pdf")->header('Cache-Control', 'private, no-store');
     }
 
     /**
@@ -104,7 +104,7 @@ class DocumentoController extends Controller
 
         $pdf = Pdf::loadView('pdfs.convenio', compact('solicitud', 'firma'));
 
-        return $pdf->download("Convenio_{$solicitud->folio}.pdf");
+        return $pdf->download("Convenio_{$solicitud->folio}.pdf")->header('Cache-Control', 'private, no-store');
     }
 
     /**

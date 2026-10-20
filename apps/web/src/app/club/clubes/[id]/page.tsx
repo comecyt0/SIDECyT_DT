@@ -896,6 +896,8 @@ export default function MiClubPage() {
 function EstadoDoc({ subido }: { subido: DocumentoClub['subido'] }) {
   if (!subido) return null;
   const e = ESTADO_DOCUMENTO[subido.estado ?? 'pendiente'] ?? ESTADO_DOCUMENTO.pendiente;
+  // E90: los datos cambiaron después de subirlo.
+  if (subido.desactualizado) return <span className="pill font-semibold" data-tone="gold" data-dot="on" title="Los datos cambiaron: descárgalo de nuevo, fírmalo y súbelo">Desactualizado</span>;
   return <span className="pill font-semibold" data-tone={e.tono} data-dot="on">{e.etiqueta}</span>;
 }
 
