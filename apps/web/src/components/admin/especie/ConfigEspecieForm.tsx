@@ -50,13 +50,15 @@ function Seccion({ icon, titulo, ayuda, children }: { icon: React.ReactNode; tit
 function FilaPredef({ id, etiqueta, valor, onChange }: { id: string; etiqueta: string; valor: Predef; onChange: (p: Predef) => void }) {
   const actual = nivelDe(valor);
   return (
-    <div className="flex flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+    // 20/10/2026 (reporte del usuario: «Obligatorio» se salía del margen y las etiquetas se partían palabra por palabra):
+    // la etiqueta va arriba y el selector ocupa todo el ancho de la columna, con tres partes iguales.
+    <div className="flex flex-col gap-2 py-2.5">
       <span id={`${id}-lbl`} className="text-sm font-medium text-[var(--app-ink)]">{etiqueta}</span>
-      <div role="radiogroup" aria-labelledby={`${id}-lbl`} className="inline-flex w-full rounded-full border p-0.5 sm:w-auto" style={{ borderColor: 'var(--app-rule)', backgroundColor: 'var(--auth-field)' }}>
+      <div role="radiogroup" aria-labelledby={`${id}-lbl`} className="grid w-full grid-cols-3 rounded-full border p-0.5" style={{ borderColor: 'var(--app-rule)', backgroundColor: 'var(--auth-field)' }}>
         {NIVELES.map((n) => (
-          <label key={n.v} className="flex-1 cursor-pointer sm:flex-none">
+          <label key={n.v} className="min-w-0 cursor-pointer">
             <input type="radio" name={id} value={n.v} checked={actual === n.v} onChange={() => onChange(predefDe(n.v))} className="peer sr-only" />
-            <span className="block whitespace-nowrap rounded-full px-3 py-1.5 text-center text-xs font-semibold text-[var(--app-ink-2)] transition-colors peer-checked:bg-[var(--auth-vino)] peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--auth-vino)]">
+            <span className="block whitespace-nowrap rounded-full px-2 py-1.5 text-center text-xs font-semibold text-[var(--app-ink-2)] transition-colors peer-checked:bg-[var(--auth-vino)] peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--auth-vino)]">
               {n.t}
             </span>
           </label>
@@ -162,6 +164,31 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
     set({ campos });
     setDialogo(null);
   };
+
+  // 20/10/2026 (pedido del usuario: agregar, editar o quitar datos al crear o editar la convocatoria): los datos propios
+  // de cada ámbito van en su misma columna, con su botón para agregar.
+  const camposPropios = (ambito: Ambito) => (
+    <>
+      {c.campos.map((x, i) => (x.ambito !== ambito ? null : (
+        <div key={`${x.ambito}-${x.nombre_campo}-${i}`} className="flex items-start gap-2 py-2.5">
+          <span className="min-w-0 flex-1">
+            <span className="block break-words text-sm font-medium text-[var(--app-ink)]">{x.etiqueta}</span>
+            <span className="block text-xs text-[var(--app-ink-2)]">Dato propio · {TIPO_CAMPO_ETIQUETA[x.tipo_campo]} · {x.requerido ? 'Obligatorio' : 'Opcional'}</span>
+          </span>
+          <span className="inline-flex shrink-0 gap-1.5">
+            <Button variant="soft" size="icon-sm" aria-label={`Editar «${x.etiqueta}»`} title="Editar" onClick={() => { setErrDialogo(null); setDialogo({ idx: i, campo: { ...x } }); }}><Edit2 /></Button>
+            <Button variant="destructive" size="icon-sm" aria-label={`Quitar «${x.etiqueta}»`} title="Quitar" onClick={() => setBorrar(i)}><Trash2 /></Button>
+          </span>
+        </div>
+      )))}
+      <div className="py-3">
+        <Button variant="outline" size="sm" onClick={() => { setErrDialogo(null); setDialogo({ idx: null, campo: campoVacio(ambito) }); }}>
+          <Plus className="h-4 w-4" aria-hidden="true" />{ambito === 'club' ? 'Agregar dato del club' : 'Agregar dato de cada integrante'}
+        </Button>
+        <p className="mt-1 text-xs text-[var(--app-ink-2)]">Para lo que no está en la lista: talla de playera, turno, taller de interés…</p>
+      </div>
+    </>
+  );
 
   return (
     <div className="space-y-8">
@@ -295,7 +322,7 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
         {etapasFijas && (
           <p className="flex items-start gap-2 rounded-[14px] border px-4 py-3 text-xs text-[var(--app-ink-2)]" style={{ borderColor: 'var(--app-rule)' }}>
             <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            Ya hay clubes en revisión: puedes cambiar el nombre, quién revisa, el plazo y las correcciones de cada etapa, pero no agregar, quitar ni reordenar etapas.
+            Ya hay clubes en revisión: puedes cambiar, agregar y reordenar etapas. Solo no se puede quitar una etapa que tiene clubes o historial de revisión.
           </p>
         )}
         <ol className="space-y-3">
@@ -303,11 +330,13 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
             <li key={e.id ?? `n-${i}`} className="rounded-[16px] border p-4" style={{ borderColor: 'var(--app-rule)' }}>
               <div className="mb-3 flex items-center justify-between gap-2">
                 <span className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Etapa {i + 1}</span>
-                {!etapasFijas && (
+                {/* 20/10/2026 (pedido del usuario: todo editable): siempre se puede mover; quitar, salvo si la etapa está en uso. */}
+                {(
                   <span className="inline-flex gap-1">
                     <Button variant="soft" size="icon-sm" aria-label={`Subir la etapa ${i + 1}`} disabled={i === 0} onClick={() => moverEtapa(i, -1)}><ArrowUp /></Button>
                     <Button variant="soft" size="icon-sm" aria-label={`Bajar la etapa ${i + 1}`} disabled={i === c.etapas.length - 1} onClick={() => moverEtapa(i, 1)}><ArrowDown /></Button>
-                    <Button variant="destructive" size="icon-sm" aria-label={`Quitar la etapa ${i + 1}`} disabled={c.etapas.length <= 1}
+                    <Button variant="destructive" size="icon-sm" aria-label={`Quitar la etapa ${i + 1}`} disabled={c.etapas.length <= 1 || e.en_uso === true}
+                      title={e.en_uso ? 'Tiene clubes o historial: no se puede quitar' : 'Quitar'}
                       onClick={() => set({ etapas: c.etapas.filter((_, j) => j !== i) })}><Trash2 /></Button>
                   </span>
                 )}
@@ -339,7 +368,7 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
             </li>
           ))}
         </ol>
-        {!etapasFijas && c.etapas.length < MAX_ETAPAS && (
+        {c.etapas.length < MAX_ETAPAS && (
           <Button variant="outline" onClick={() => set({ etapas: [...c.etapas, { nombre: `Revisión ${c.etapas.length + 1}`, revisa: 'ambos', plazo_horas: 24, max_subsanaciones: 1 }] })}>
             <Plus className="h-4 w-4" aria-hidden="true" /> Agregar etapa
           </Button>
@@ -361,6 +390,7 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
                 <FilaPredef key={k} id={`${idBase}-club-${k}`} etiqueta={t} valor={c.campos_club[k] ?? { pedir: false, obligatorio: false }}
                   onChange={(p) => set({ campos_club: { ...c.campos_club, [k]: p } })} />
               ))}
+              {camposPropios('club')}
             </div>
           </div>
           <div className="rounded-[16px] border px-4 py-2" style={{ borderColor: 'var(--app-rule)' }}>
@@ -371,9 +401,18 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
                 <FilaPredef key={k} id={`${idBase}-int-${k}`} etiqueta={t} valor={c.campos_integrante[k] ?? { pedir: false, obligatorio: false }}
                   onChange={(p) => set({ campos_integrante: { ...c.campos_integrante, [k]: p } })} />
               ))}
+              {camposPropios('integrante')}
             </div>
           </div>
         </div>
+        {errores.campos && <AlertBox type="error" message={errores.campos} />}
+        {borrar !== null && (
+          <div role="alertdialog" aria-label="Confirmar" className="flex flex-wrap items-center gap-3 rounded-[14px] border px-4 py-3 text-sm" style={{ borderColor: 'var(--auth-danger)' }}>
+            <span className="flex-1">¿Quitar el dato «{c.campos[borrar]?.etiqueta}»?</span>
+            <Button variant="outline" size="sm" onClick={() => setBorrar(null)}>Cancelar</Button>
+            <Button variant="destructive" size="sm" onClick={() => { set({ campos: c.campos.filter((_, j) => j !== borrar) }); setBorrar(null); }}>Quitar</Button>
+          </div>
+        )}
       </Seccion>
 
       {/* E79 (20/10/2026, pedido del usuario): formatos institucionales con la franja de convivencia, llenos con los datos
@@ -393,44 +432,6 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
           de edad y de adulto para docentes. Para llenarlos solos, pide también el director(a), el lugar, grado, grupo, domicilio y tutor.
         </p>
       </Seccion>
-
-      <Seccion icon={<MessageSquarePlus />} titulo="Preguntas adicionales (opcional)" ayuda="Para lo que no está en la lista anterior: talla de playera, turno, taller de interés…">
-        {errores.campos && <AlertBox type="error" message={errores.campos} />}
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => { setErrDialogo(null); setDialogo({ idx: null, campo: campoVacio('club') }); }}>
-            <Plus className="h-4 w-4" aria-hidden="true" /> Pregunta del club
-          </Button>
-          <Button variant="outline" onClick={() => { setErrDialogo(null); setDialogo({ idx: null, campo: campoVacio('integrante') }); }}>
-            <Plus className="h-4 w-4" aria-hidden="true" /> Pregunta a cada integrante
-          </Button>
-        </div>
-        {c.campos.length > 0 && (
-          <ul className="divide-y rounded-[16px] border" style={{ borderColor: 'var(--app-rule)' }}>
-            {c.campos.map((x, i) => (
-              <li key={`${x.ambito}-${x.nombre_campo}-${i}`} className="flex flex-wrap items-center gap-2 px-4 py-3">
-                <span className="min-w-0 flex-1">
-                  <span className="block break-words text-sm font-semibold text-[var(--app-ink)]">{x.etiqueta}</span>
-                  <span className="block text-xs text-[var(--app-ink-2)]">
-                    {x.ambito === 'club' ? 'Del club' : 'De cada integrante'} · {TIPO_CAMPO_ETIQUETA[x.tipo_campo]}{x.requerido ? ' · Obligatoria' : ''}
-                  </span>
-                </span>
-                <span className="inline-flex gap-1.5">
-                  <Button variant="soft" size="icon-sm" aria-label={`Editar «${x.etiqueta}»`} title="Editar" onClick={() => { setErrDialogo(null); setDialogo({ idx: i, campo: { ...x } }); }}><Edit2 /></Button>
-                  <Button variant="destructive" size="icon-sm" aria-label={`Quitar «${x.etiqueta}»`} title="Quitar" onClick={() => setBorrar(i)}><Trash2 /></Button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        {borrar !== null && (
-          <div role="alertdialog" aria-label="Confirmar" className="flex flex-wrap items-center gap-3 rounded-[14px] border px-4 py-3 text-sm" style={{ borderColor: 'var(--auth-danger)' }}>
-            <span className="flex-1">¿Quitar la pregunta «{c.campos[borrar]?.etiqueta}»?</span>
-            <Button variant="outline" size="sm" onClick={() => setBorrar(null)}>Cancelar</Button>
-            <Button variant="destructive" size="sm" onClick={() => { set({ campos: c.campos.filter((_, j) => j !== borrar) }); setBorrar(null); }}>Quitar</Button>
-          </div>
-        )}
-      </Seccion>
-
       <StepFrame
         open={dialogo !== null}
         size="md"

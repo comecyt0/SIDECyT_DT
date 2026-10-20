@@ -55,6 +55,15 @@ class EtapasEspecie
             || ClubRevision::whereHas('club', fn ($q) => $q->where('convocatoria_id', $convocatoriaId))->exists();
     }
 
+    /** Etapas que no se pueden quitar: hay clubes en ellas o historial de revisión que las cita. */
+    public static function enUso(int $convocatoriaId): array
+    {
+        $ids = EspecieEtapa::where('convocatoria_id', $convocatoriaId)->pluck('id');
+
+        return Club::where('convocatoria_id', $convocatoriaId)->whereIn('etapa_actual_id', $ids)->pluck('etapa_actual_id')
+            ->merge(ClubRevision::whereIn('etapa_id', $ids)->pluck('etapa_id'))->unique()->map(fn ($x) => (int) $x)->values()->all();
+    }
+
     /** Guarda las etapas (dentro de la transacción de quien llama). */
     public static function guardar(int $convocatoriaId, array $etapas): void
     {
@@ -76,13 +85,30 @@ class EtapasEspecie
 
         $actuales = EspecieEtapa::where('convocatoria_id', $convocatoriaId)->orderBy('orden')->get();
         if (self::estructuraFija($convocatoriaId)) {
-            $ids = array_map(fn ($e) => $e['id'], $limpias);
-            if ($ids !== $actuales->pluck('id')->all()) {
-                throw ValidationException::withMessages(['etapas' => 'Ya hay clubes en revisión: puedes cambiar el nombre, quién revisa, el plazo y las correcciones de cada etapa, pero no agregar, quitar ni reordenar etapas.']);
+            // 20/10/2026 (pedido del usuario: «todo debe ser editable»): con clubes en revisión se pueden cambiar los
+            // datos, agregar, reordenar y quitar etapas; solo no se quita una etapa en la que hay clubes o historial.
+            $enUso = self::enUso($convocatoriaId);
+            $quedan = array_filter(array_map(fn ($e) => $e['id'], $limpias));
+            foreach ($actuales as $a) {
+                if (! in_array($a->id, $quedan, true) && in_array($a->id, $enUso, true)) {
+                    throw ValidationException::withMessages(['etapas' => "La etapa «{$a->nombre}» tiene clubes o historial de revisión: puedes cambiarla, pero no quitarla."]);
+                }
             }
-            foreach ($limpias as $e) {
-                $etapa = $actuales->firstWhere('id', $e['id']);
-                $etapa->fill($sinRevisores($e))->save();
+            foreach ($actuales as $a) {
+                if (! in_array($a->id, $quedan, true)) $a->delete();
+            }
+            // Único (convocatoria, orden): se aparta el orden actual antes de reordenar.
+            EspecieEtapa::where('convocatoria_id', $convocatoriaId)->update(['orden' => \Illuminate\Support\Facades\DB::raw('orden + 1000')]);
+            $actuales = EspecieEtapa::where('convocatoria_id', $convocatoriaId)->get();
+            foreach ($limpias as $i => $e) {
+                $etapa = $e['id'] ? $actuales->firstWhere('id', $e['id']) : null;
+                if ($e['id'] && ! $etapa) {
+                    throw ValidationException::withMessages(['etapas' => 'Una de las etapas ya no existe; recarga la página.']);
+                }
+                $etapa ??= new EspecieEtapa();
+                $etapa->fill($sinRevisores($e) + ['orden' => $i + 1]);
+                $etapa->convocatoria_id = $convocatoriaId;
+                $etapa->save();
                 self::asignar($convocatoriaId, $etapa, $e['revisores']);
             }
 
@@ -147,9 +173,12 @@ class EtapasEspecie
 
     public static function payload(int $convocatoriaId): array
     {
+        $enUso = self::enUso($convocatoriaId);
+
         return EspecieEtapa::where('convocatoria_id', $convocatoriaId)->orderBy('orden')->with('revisores:id,name,rol_id')
             ->get(['id', 'orden', 'nombre', 'revisa', 'plazo_horas', 'max_subsanaciones', 'aprobaciones_requeridas'])
             ->map(fn (EspecieEtapa $e) => [
+                'en_uso' => in_array((int) $e->id, $enUso, true), // 20/10/2026: no se puede quitar
                 'id' => $e->id, 'orden' => $e->orden, 'nombre' => $e->nombre, 'revisa' => $e->revisa, 'plazo_horas' => $e->plazo_horas,
                 'max_subsanaciones' => $e->max_subsanaciones, 'aprobaciones_requeridas' => $e->aprobaciones_requeridas,
                 'revisores' => $e->revisores->pluck('id')->map(fn ($x) => (int) $x)->values()->all(),

@@ -31,6 +31,8 @@ export interface EtapaEspecie {
   /** E70: personas asignadas (ids) y aprobaciones necesarias para pasar a la siguiente etapa. */
   revisores?: number[];
   aprobaciones_requeridas?: number;
+  /** 20/10/2026: tiene clubes o historial (no se puede quitar). */
+  en_uso?: boolean;
 }
 export const REVISA_ETIQUETA: Record<Revisa, string> = {
   revisor: 'Revisor documental',
@@ -280,6 +282,7 @@ export function leerConfig(datos: unknown): ConfigEspecie {
       max_subsanaciones: ent(x.max_subsanaciones, 1),
       revisores: Array.isArray(x.revisores) ? x.revisores.filter((r): r is number => typeof r === 'number' && Number.isInteger(r) && r > 0).slice(0, 20) : [],
       aprobaciones_requeridas: ent(x.aprobaciones_requeridas, 1),
+      en_uso: x.en_uso === true,
     };
   });
   return {
