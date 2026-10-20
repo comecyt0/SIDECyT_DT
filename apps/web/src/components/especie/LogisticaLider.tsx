@@ -9,7 +9,7 @@ import VersionesFirmadas from '@/components/especie/VersionesFirmadas';
 import QrLider from '@/components/especie/QrLider';
 import { mensajeError } from '@/lib/errores-formulario';
 import { descargarFirmado, descargarFormatoLogistica, descargarResguardo } from '@/lib/especie-api';
-import { ESTADO_SOLICITUD, fechaHora, fechaHoraLocal, leerLogistica, vigente, type LogisticaEstado, type SolicitudLogistica } from '@/lib/especie';
+import { ESTADO_SOLICITUD, fechaHora, fechaHoraLocal, leerLogistica, urlMapa, vigente, type LogisticaEstado, type SolicitudLogistica } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
 import ModalidadChip from '@/components/especie/ModalidadChip';
 import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
@@ -161,11 +161,11 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
               {' '}Máximo para tu club:{daT && <> transporte {l.limites.transporte ?? 'sin límite'} (lo define el COMECYT)</>}{daT && daL && ' y'}
               {daL && <> box lunch {l.limites.lunch ?? l.max_integrantes} (no pasa del máximo de {l.max_integrantes} integrantes de la convocatoria)</>}.
             </p>
-            {daT && (l.apoyos.transporte_salida_lugar || l.apoyos.transporte_salida_hora) && (
-              <div className="grid grid-cols-1 gap-2 rounded-[14px] px-4 py-3 text-sm sm:grid-cols-2" style={{ backgroundColor: 'var(--tile-sky-bg)' }}>
-                <p><strong className="block text-[var(--app-ink)]">Salida</strong>{l.apoyos.transporte_salida_lugar ?? 'Por confirmar'}{l.apoyos.transporte_salida_hora ? ` · ${fechaHoraLocal(l.apoyos.transporte_salida_hora)}` : ''}</p>
-                <p><strong className="block text-[var(--app-ink)]">Regreso</strong>{l.apoyos.transporte_regreso_lugar ?? l.apoyos.transporte_salida_lugar ?? 'Por confirmar'}{l.apoyos.transporte_regreso_hora ? ` · ${fechaHoraLocal(l.apoyos.transporte_regreso_hora)}` : ''}</p>
-              </div>
+            {/* E87 (pedido del usuario): la salida la define el líder (lugar, mapa y hora que propone); el regreso, el COMECYT. */}
+            {daT && (
+              <SalidaRegreso clubId={clubId} l={l} soloLectura={soloLectura || !l.abierta}
+                onGuardado={(x) => { onCambio(x); onAviso(true, 'Punto de salida guardado. El COMECYT lo verá en tu solicitud.'); }}
+                onError={(t) => onAviso(false, t)} />
             )}
             {l.solicitudes.length === 0 && <p className="text-sm text-[var(--app-ink-2)]">Todavía no hay eventos para pedir {tituloApoyos.toLowerCase()}.</p>}
             <ul className="space-y-3">
@@ -240,5 +240,80 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
         onCancel={() => setBajar(null)}
         onConfirm={() => { const s = bajar; setBajar(null); if (s?.solicitud) void ejecutar(`sol-${clave(s)}`, () => api.delete(`/club/clubes/${clubId}/logistica/${s.solicitud!.id}`), 'Solicitud bajada; se liberó tu lugar.'); }} />
     </section>
+  );
+}
+
+/** E87 — Enlace de Google Maps (solo si pasa la lista blanca; se abre en otra pestaña sin compartir la página). */
+function EnlaceMapa({ url, texto }: { url: string | null | undefined; texto: string }) {
+  const seguro = urlMapa(url);
+  if (!seguro) return null;
+  return (
+    <a href={seguro} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--auth-vino)] underline-offset-2 hover:underline">
+      <MapPin className="h-3.5 w-3.5" aria-hidden="true" />{texto}
+    </a>
+  );
+}
+
+/**
+ * E87 — Punto de salida del club (lo define el líder: lugar, enlace de Google Maps y hora que propone) y punto de regreso
+ * (lo define el COMECYT en la convocatoria). Los dos con su mapa.
+ */
+function SalidaRegreso({ clubId, l, soloLectura, onGuardado, onError }: {
+  clubId: number; l: LogisticaEstado; soloLectura: boolean;
+  onGuardado: (l: LogisticaEstado) => void; onError: (t: string) => void;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [f, setF] = useState({ lugar: l.salida.lugar ?? '', maps: l.salida.maps ?? '', hora: l.salida.hora ?? '' });
+  const [guardando, setGuardando] = useState(false);
+  const mapaMal = f.maps.trim() !== '' && !urlMapa(f.maps.trim());
+  const guardar = async () => {
+    if (f.lugar.trim().length < 3) { onError('Escribe el punto de salida (al menos 3 letras).'); return; }
+    if (mapaMal) { onError('El enlace debe ser de Google Maps (https://maps.app.goo.gl/… o https://www.google.com/maps/…).'); return; }
+    setGuardando(true);
+    try {
+      const { data } = await api.put(`/club/clubes/${clubId}/salida-transporte`, { lugar: f.lugar.trim(), maps: f.maps.trim() || null, hora: f.hora || null });
+      const x = leerLogistica(data);
+      if (x) onGuardado(x);
+      setEditando(false);
+    } catch (e) {
+      onError(mensajeError(e, 'No se pudo guardar el punto de salida.'));
+    } finally {
+      setGuardando(false);
+    }
+  };
+  const a = l.apoyos;
+  return (
+    <div className="grid grid-cols-1 gap-3 rounded-[14px] px-4 py-3 text-sm sm:grid-cols-2" style={{ backgroundColor: 'var(--tile-sky-bg)' }}>
+      <div className="space-y-1.5">
+        <p className="font-bold text-[var(--app-ink)]">Salida <span className="font-normal text-[var(--app-ink-2)]">(la defines tú)</span></p>
+        {editando ? (
+          <div className="space-y-2">
+            <label className="block space-y-1"><span className="text-xs font-semibold text-[var(--app-ink-2)]">Punto de salida *</span>
+              <input className="auth-input auth-input-static pl-3" maxLength={300} value={f.lugar} onChange={(e) => setF({ ...f, lugar: e.target.value })} placeholder="Ej. Escuela, entrada principal" /></label>
+            <label className="block space-y-1"><span className="text-xs font-semibold text-[var(--app-ink-2)]">Enlace de Google Maps (opcional)</span>
+              <input className="auth-input auth-input-static pl-3" type="url" inputMode="url" maxLength={500} value={f.maps} onChange={(e) => setF({ ...f, maps: e.target.value })}
+                placeholder="https://maps.app.goo.gl/…" aria-invalid={mapaMal ? 'true' : undefined} /></label>
+            {mapaMal && <p className="text-xs font-medium" style={{ color: 'var(--auth-danger)' }}>Pega un enlace de Google Maps.</p>}
+            <label className="block space-y-1"><span className="text-xs font-semibold text-[var(--app-ink-2)]">Hora de salida que propones</span>
+              <input className="auth-input auth-input-static pl-3" type="datetime-local" value={f.hora} onChange={(e) => setF({ ...f, hora: e.target.value })} /></label>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => void guardar()} disabled={guardando}>{guardando && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}Guardar salida</Button>
+              <Button size="sm" variant="outline" disabled={guardando} onClick={() => { setEditando(false); setF({ lugar: l.salida.lugar ?? '', maps: l.salida.maps ?? '', hora: l.salida.hora ?? '' }); }}>Cancelar</Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="text-[var(--app-ink)]">{l.salida.lugar ?? 'Aún no la defines'}{l.salida.hora ? ` · ${fechaHoraLocal(l.salida.hora)}` : ''}</p>
+            <EnlaceMapa url={l.salida.maps} texto="Ver salida en Google Maps" />
+            {!soloLectura && <Button size="sm" variant="soft" onClick={() => setEditando(true)}><MapPin className="h-4 w-4" aria-hidden="true" />{l.salida.lugar ? 'Cambiar salida' : 'Definir salida'}</Button>}
+          </>
+        )}
+      </div>
+      <div className="space-y-1.5">
+        <p className="font-bold text-[var(--app-ink)]">Regreso <span className="font-normal text-[var(--app-ink-2)]">(lo define el COMECYT)</span></p>
+        <p className="text-[var(--app-ink)]">{a.transporte_regreso_lugar ?? 'Por confirmar'}{a.transporte_regreso_hora ? ` · ${fechaHoraLocal(a.transporte_regreso_hora)}` : ''}</p>
+        <EnlaceMapa url={a.transporte_regreso_maps} texto="Ver regreso en Google Maps" />
+      </div>
+    </div>
   );
 }

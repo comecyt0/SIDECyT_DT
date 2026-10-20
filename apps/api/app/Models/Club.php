@@ -43,7 +43,7 @@ class Club extends Model
     protected $casts = [
         'datos' => 'array', 'enviado_at' => 'datetime', 'vence_at' => 'datetime', 'visto_bueno_at' => 'datetime',
         'comite_at' => 'datetime', 'aceptado_at' => 'datetime', 'aviso_privacidad_at' => 'datetime', 'ronda' => 'integer',
-        'kit_fecha' => 'datetime', 'kit_asignado_at' => 'datetime', 'kit_entregado_at' => 'datetime',
+        'kit_fecha' => 'datetime', 'kit_asignado_at' => 'datetime', 'kit_entregado_at' => 'datetime', 'transporte_salida_hora' => 'datetime', // E87
         'qr_habilitado_at' => 'datetime', 'dueno_director' => 'boolean',
     ];
 

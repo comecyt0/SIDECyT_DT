@@ -278,6 +278,11 @@ class LogisticaClub
             'acompanantes' => (int) $cfg->acompanantes,
             // E71: qué apoyos da la convocatoria y la salida del transporte.
             'apoyos' => ApoyosLogistica::payload($cfg),
+            // E87: punto de salida que define el líder (lugar, enlace de Google Maps y hora que propone).
+            'salida' => [
+                'lugar' => $club->transporte_salida_lugar, 'maps' => $club->transporte_salida_maps,
+                'hora' => $club->transporte_salida_hora?->setTimezone(RevisionClub::ZONA)->format('Y-m-d\TH:i'),
+            ],
             'solicitudes' => $modo === 'evento' ? $eventos->map(fn ($e) => $solicitud($e))->values() : [$solicitud(null)],
             'resguardo' => $firmados->where('tipo', 'resguardo')->values()->map($version),
             'kit' => [

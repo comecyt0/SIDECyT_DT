@@ -38,14 +38,43 @@ class LogisticaClubController extends Controller
         return response()->json(LogisticaClub::estado($club->fresh()));
     }
 
+    /**
+     * E87 (pedido del usuario): el líder define el punto de salida de su club (lugar, enlace de Google Maps y la hora que
+     * propone). Solo si la convocatoria da transporte; el regreso lo define el admin en la convocatoria.
+     */
+    public function salida(Request $request, Club $club)
+    {
+        $this->propio($request, $club);
+        abort_unless($club->puedeOperar($request->user()), 403, 'Solo el líder del club puede definir el punto de salida.');
+        abort_unless(\App\Support\LogisticaClub::aplica($club), 422, 'La logística está disponible cuando el club es aceptado.');
+        $cfg = $club->convocatoria->especieConfig;
+        abort_unless($cfg && $cfg->incluye_transporte, 422, 'Esta convocatoria no da transporte.');
+        $v = $request->validate([
+            'lugar' => 'required|string|min:3|max:300',
+            'maps' => ['nullable', 'string', 'max:500', fn ($a, $x, $fail) => $x && ! \App\Support\ApoyosLogistica::esMapa($x) ? $fail('El enlace debe ser de Google Maps (https://maps.app.goo.gl/… o https://www.google.com/maps/…).') : null],
+            'hora' => 'nullable|date_format:Y-m-d\TH:i',
+        ], [], ['lugar' => 'punto de salida', 'maps' => 'enlace de Google Maps', 'hora' => 'hora de salida']);
+        $hora = ! empty($v['hora']) ? \Illuminate\Support\Carbon::parse($v['hora'], \App\Support\RevisionClub::ZONA)->utc() : null;
+        if ($hora && $cfg->transporte_regreso_hora && $hora->gt($cfg->transporte_regreso_hora)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['hora' => 'La salida no puede ser después del regreso que fijó el COMECYT.']);
+        }
+        $club->forceFill(['transporte_salida_lugar' => trim(strip_tags($v['lugar'])), 'transporte_salida_maps' => $v['maps'] ?: null, 'transporte_salida_hora' => $hora])->save();
+        \App\Support\Audit::log('club.salida_transporte', $club, []);
+
+        return response()->json(\App\Support\LogisticaClub::estado($club->fresh()));
+    }
+
     /** Formato de la solicitud para firmar (PDF generado con lo pedido). */
     public function formato(Request $request, Club $club, ClubLogistica $logistica)
     {
         $this->propio($request, $club);
         abort_unless((int) $logistica->club_id === (int) $club->id && in_array($logistica->estado, ClubLogistica::APARTAN, true), 404);
-        $club->loadMissing(['escuela', 'lider:id,name', 'convocatoria:id,nombre']);
+        $club->loadMissing(['escuela', 'lider:id,name', 'convocatoria:id,nombre', 'convocatoria.especieConfig', 'integrantes:id,club_id']);
+        // E87: sin transporte ni box lunch en la convocatoria, no hay formato.
+        $cfg = $club->convocatoria->especieConfig;
+        abort_unless($cfg && ($cfg->incluye_transporte || $cfg->incluye_lunch), 404);
         $logistica->loadMissing('evento');
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.solicitud_logistica_club', ['club' => $club, 'log' => $logistica, 'fecha' => now('America/Mexico_City')]);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.solicitud_logistica_club', ['club' => $club, 'log' => $logistica, 'cfg' => $cfg, 'fecha' => now('America/Mexico_City')]);
 
         return $pdf->download('solicitud-transporte-lunch-'.$club->folio.($logistica->evento_id ? '-evento-'.$logistica->evento_id : '').'.pdf');
     }

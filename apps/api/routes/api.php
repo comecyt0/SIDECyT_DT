@@ -398,6 +398,7 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::post('clubes/{club}/logistica', [$l, 'solicitar'])->middleware('throttle:30,1,club-logistica');
             Route::delete('clubes/{club}/logistica/{logistica}', [$l, 'cancelar'])->middleware('throttle:30,1,club-logistica');
             Route::get('clubes/{club}/logistica/{logistica}/formato', [$l, 'formato'])->middleware('throttle:20,1,club-carta');
+            Route::put('clubes/{club}/salida-transporte', [$l, 'salida'])->middleware('throttle:30,1,club-salida'); // E87
             Route::get('clubes/{club}/resguardo', [$l, 'resguardo'])->middleware('throttle:20,1,club-carta');
             Route::post('clubes/{club}/firmados', [$l, 'subirFirmado'])->middleware('throttle:30,1,club-subidas');
             // E52 · F4 — QR y credencial (solo con el QR habilitado; 404 si no)

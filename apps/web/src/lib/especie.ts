@@ -77,6 +77,8 @@ export interface ConfigEspecie {
   transporte_salida_hora: string;
   transporte_regreso_lugar: string;
   transporte_regreso_hora: string;
+  /** E87: enlace de Google Maps del punto de regreso (lo define el admin). */
+  transporte_regreso_maps: string;
   /** 'AAAA-MM-DD' o '' (sin límite). */
   fecha_limite_logistica: string;
 }
@@ -141,6 +143,23 @@ const DEFAULT_FORMATOS: Record<string, Predef> = {
   formato_c: { pedir: false, obligatorio: false },
   uso_imagen: { pedir: false, obligatorio: false },
 };
+/**
+ * E87 — Enlace de Google Maps seguro para pintar como enlace (https y dominio de Google Maps; si no, null). Mismas reglas
+ * que ApoyosLogistica::esMapa del servidor.
+ */
+export function urlMapa(v: unknown): string | null {
+  if (typeof v !== 'string' || v.length > 500) return null;
+  try {
+    const u = new URL(v);
+    if (u.protocol !== 'https:' || u.username || u.password) return null;
+    const h = u.hostname.toLowerCase();
+    const ok = ['maps.app.goo.gl', 'maps.google.com', 'maps.google.com.mx'].includes(h)
+      || (h === 'goo.gl' && u.pathname.startsWith('/maps'))
+      || (['google.com', 'www.google.com', 'google.com.mx', 'www.google.com.mx'].includes(h) && u.pathname.startsWith('/maps'));
+    return ok ? u.toString() : null;
+  } catch { return null; }
+}
+
 /** E86 — Kit diferenciado: lista personalizable de artículos por perfil. */
 export interface ArticuloKit { articulo: string; cantidad: number }
 export interface KitsConfig {
@@ -215,6 +234,7 @@ export function configVacia(): ConfigEspecie {
     transporte_salida_hora: '',
     transporte_regreso_lugar: '',
     transporte_regreso_hora: '',
+    transporte_regreso_maps: '',
     fecha_limite_logistica: '',
   };
 }
@@ -294,6 +314,7 @@ export function leerConfig(datos: unknown): ConfigEspecie {
     transporte_salida_hora: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(txt(d.transporte_salida_hora)) ? txt(d.transporte_salida_hora) : '',
     transporte_regreso_lugar: txt(d.transporte_regreso_lugar),
     transporte_regreso_hora: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(txt(d.transporte_regreso_hora)) ? txt(d.transporte_regreso_hora) : '',
+    transporte_regreso_maps: txt(d.transporte_regreso_maps).slice(0, 500),
     fecha_limite_logistica: /^\d{4}-\d{2}-\d{2}$/.test(txt(d.fecha_limite_logistica)) ? txt(d.fecha_limite_logistica) : '',
   };
 }
@@ -323,6 +344,7 @@ export function payloadConfig(c: ConfigEspecie) {
     transporte_salida_hora: c.incluye_transporte && /T\d{2}:\d{2}$/.test(c.transporte_salida_hora) ? c.transporte_salida_hora : null,
     transporte_regreso_lugar: c.incluye_transporte ? c.transporte_regreso_lugar.trim() || null : null,
     transporte_regreso_hora: c.incluye_transporte && /T\d{2}:\d{2}$/.test(c.transporte_regreso_hora) ? c.transporte_regreso_hora : null,
+    transporte_regreso_maps: c.incluye_transporte ? c.transporte_regreso_maps.trim() || null : null,
     fecha_limite_logistica: c.fecha_limite_logistica || null,
     etapas: c.etapas.map((e) => ({
       ...(e.id ? { id: e.id } : {}), nombre: e.nombre.trim(), revisa: e.revisa, plazo_horas: e.plazo_horas, max_subsanaciones: e.max_subsanaciones,
@@ -366,6 +388,7 @@ export function validarConfig(c: ConfigEspecie): Record<string, string> {
     if (malas) e.kits = 'Cada artículo necesita una cantidad de 1 a 9999.';
     else if (!Number.isInteger(c.kits.participo.cantidad_por_club) || c.kits.participo.cantidad_por_club < 1 || c.kits.participo.cantidad_por_club > 999) e.kits = 'Kits por club (escuelas que ya participaron): de 1 a 999.';
   }
+  if (c.incluye_transporte && c.transporte_regreso_maps && !urlMapa(c.transporte_regreso_maps)) e.transporte_regreso_hora = 'El enlace del regreso debe ser de Google Maps.';
   if (c.etapas.length < 1) e.etapas = 'Agrega al menos una etapa de revisión.';
   else if (c.etapas.length > MAX_ETAPAS) e.etapas = `Máximo ${MAX_ETAPAS} etapas.`;
   else {
@@ -438,7 +461,9 @@ export interface LogisticaEstado {
   max_integrantes: number; modalidad: Modalidad;
   /** E71: qué apoyos da la convocatoria y la salida/regreso del transporte ('AAAA-MM-DDTHH:mm' hora del centro o null). */
   apoyos: { incluye_transporte: boolean; incluye_lunch: boolean; transporte_salida_lugar: string | null; transporte_salida_hora: string | null;
-    transporte_regreso_lugar: string | null; transporte_regreso_hora: string | null };
+    transporte_regreso_lugar: string | null; transporte_regreso_hora: string | null; transporte_regreso_maps?: string | null };
+  /** E87: punto de salida que define el líder. */
+  salida: { lugar: string | null; maps: string | null; hora: string | null };
   solicitudes: SolicitudLogistica[];
   resguardo: VersionFirmada[];
   kit: { nombre: string | null; fecha: string | null; lugar: string | null; asignado_at: string | null; entregado_at: string | null;
@@ -463,7 +488,12 @@ export function leerLogistica(v: unknown): LogisticaEstado | null {
       const h = (x: unknown) => (typeof x === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(x) ? x : null);
       return { incluye_transporte: a.incluye_transporte !== false, incluye_lunch: a.incluye_lunch !== false,
         transporte_salida_lugar: s(a.transporte_salida_lugar), transporte_salida_hora: h(a.transporte_salida_hora),
-        transporte_regreso_lugar: s(a.transporte_regreso_lugar), transporte_regreso_hora: h(a.transporte_regreso_hora) };
+        transporte_regreso_lugar: s(a.transporte_regreso_lugar), transporte_regreso_hora: h(a.transporte_regreso_hora), transporte_regreso_maps: urlMapa(a.transporte_regreso_maps) };
+    })(),
+    salida: (() => {
+      const x = (d.salida && typeof d.salida === 'object' ? d.salida : {}) as Record<string, unknown>;
+      return { lugar: typeof x.lugar === 'string' ? x.lugar.slice(0, 300) : null, maps: urlMapa(x.maps),
+        hora: typeof x.hora === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(x.hora) ? x.hora : null };
     })(),
     solicitudes: Array.isArray(d.solicitudes) ? d.solicitudes : [],
     resguardo: Array.isArray(d.resguardo) ? d.resguardo : [],

@@ -28,9 +28,28 @@ class ApoyosLogistica
             $k('transporte_salida_lugar') => 'nullable|string|max:300',
             $k('transporte_salida_hora') => 'nullable|date',
             $k('transporte_regreso_lugar') => 'nullable|string|max:300',
-            $k('transporte_regreso_hora') => 'nullable|date|after_or_equal:'.$k('transporte_salida_hora'),
+            // E87: la salida ya la define cada líder; el regreso no se compara con una salida de la convocatoria.
+            $k('transporte_regreso_hora') => 'nullable|date',
+            $k('transporte_regreso_maps') => ['nullable', 'string', 'max:500', fn ($a, $v, $fail) => $v && ! self::esMapa($v) ? $fail('El enlace debe ser de Google Maps (https://maps.app.goo.gl/… o https://www.google.com/maps/…).') : null],
             $k('fecha_limite_logistica') => 'nullable|date_format:Y-m-d',
         ];
+    }
+
+    /**
+     * E87: enlace de Google Maps válido (https y dominio de Google Maps). Evita guardar enlaces a cualquier sitio
+     * (phishing): solo se aceptan maps.app.goo.gl, goo.gl/maps, maps.google.com y google.com/maps.
+     */
+    public static function esMapa(?string $url): bool
+    {
+        if (! is_string($url) || strlen($url) > 500 || ! filter_var($url, FILTER_VALIDATE_URL)) return false;
+        $p = parse_url($url);
+        if (($p['scheme'] ?? '') !== 'https' || isset($p['user']) || isset($p['pass'])) return false;
+        $h = strtolower($p['host'] ?? '');
+        $ruta = $p['path'] ?? '';
+
+        return in_array($h, ['maps.app.goo.gl', 'maps.google.com', 'maps.google.com.mx'], true)
+            || ($h === 'goo.gl' && str_starts_with($ruta, '/maps'))
+            || (in_array($h, ['google.com', 'www.google.com', 'google.com.mx', 'www.google.com.mx'], true) && str_starts_with($ruta, '/maps'));
     }
 
     public static function atributos(string $p = ''): array
@@ -58,6 +77,7 @@ class ApoyosLogistica
         $hora = fn ($x) => $x ? Carbon::parse($x, RevisionClub::ZONA)->utc() : null;
         $datos = ['incluye_transporte' => $t, 'incluye_lunch' => $l];
         foreach (['transporte_salida_lugar', 'transporte_regreso_lugar'] as $c) if (array_key_exists($c, $v)) $datos[$c] = $t ? $texto($v[$c]) : null;
+        if (array_key_exists('transporte_regreso_maps', $v)) $datos['transporte_regreso_maps'] = $t && self::esMapa($v['transporte_regreso_maps'] ?? null) ? $v['transporte_regreso_maps'] : null; // E87
         foreach (['transporte_salida_hora', 'transporte_regreso_hora'] as $c) if (array_key_exists($c, $v)) $datos[$c] = $t ? $hora($v[$c]) : null;
         if (! $t) { $datos += ['transporte_salida_lugar' => null, 'transporte_salida_hora' => null, 'transporte_regreso_lugar' => null, 'transporte_regreso_hora' => null]; }
         if (array_key_exists('fecha_limite_logistica', $v)) $datos['fecha_limite_logistica'] = $v['fecha_limite_logistica'] ?: null;
@@ -109,6 +129,7 @@ class ApoyosLogistica
             'transporte_salida_hora' => $t ? $fmt($cfg->transporte_salida_hora) : null,
             'transporte_regreso_lugar' => $t ? $cfg->transporte_regreso_lugar : null,
             'transporte_regreso_hora' => $t ? $fmt($cfg->transporte_regreso_hora) : null,
+            'transporte_regreso_maps' => $t ? $cfg->transporte_regreso_maps : null, // E87
             'fecha_limite_logistica' => $cfg->fecha_limite_logistica?->format('Y-m-d'),
         ];
     }

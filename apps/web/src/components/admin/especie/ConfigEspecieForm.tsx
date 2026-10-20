@@ -18,7 +18,7 @@ import StepFrame from '@/components/ui/step-frame';
 import RevisoresEtapa from '@/components/admin/especie/RevisoresEtapa';
 import FechaHoraAmPm from '@/components/ui/fecha-hora-ampm';
 import {
-  CAMPOS_CLUB, CAMPOS_INTEGRANTE, FORMATOS, LIMITES_ESPECIE, PERFIL_KIT, MAX_ETAPAS, MODALIDADES, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, slugCampo,
+  CAMPOS_CLUB, CAMPOS_INTEGRANTE, FORMATOS, LIMITES_ESPECIE, PERFIL_KIT, urlMapa, MAX_ETAPAS, MODALIDADES, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, slugCampo,
   type Ambito, type Modalidad, type CampoEspecie, type ConfigEspecie, type EtapaEspecie, type Predef, type Revisa, type TipoCampoEspecie,
 } from '@/lib/especie';
 
@@ -261,15 +261,20 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
         {!c.incluye_transporte && !c.incluye_lunch && <p className="text-xs font-semibold text-[var(--app-ink-2)]">Sin transporte ni box lunch: los clubes aceptados solo reciben el kit.</p>}
         {c.incluye_transporte && (
           <div className="space-y-3 rounded-[16px] border p-4" style={{ borderColor: 'var(--app-rule)' }}>
-            <p className="text-sm font-semibold text-[var(--app-ink)]">Salida y regreso del transporte <span className="font-normal text-[var(--app-ink-2)]">(los ven los líderes)</span></p>
-            <div className="space-y-1.5">
-              <Label htmlFor={`${idBase}-sal-l`} className={labelCls}>Punto de salida</Label>
-              <input id={`${idBase}-sal-l`} maxLength={300} value={c.transporte_salida_lugar} onChange={(e) => set({ transporte_salida_lugar: e.target.value })} className={inputCls} placeholder="Ej. Explanada del COMECYT, Toluca" />
-            </div>
-            <FechaHoraAmPm value={c.transporte_salida_hora} onChange={(v) => set({ transporte_salida_hora: v })} etiquetaFecha="Fecha de salida" etiquetaHora="Hora de salida" />
+            <p className="text-sm font-semibold text-[var(--app-ink)]">Regreso del transporte <span className="font-normal text-[var(--app-ink-2)]">(lo ven los líderes)</span></p>
+            {/* E87 (pedido del usuario): la salida la define cada líder (lugar, mapa y hora); el regreso, el COMECYT. */}
+            <p className="rounded-[12px] px-3 py-2 text-xs text-[var(--app-ink)]" style={{ backgroundColor: 'var(--tile-sky-bg)' }}>
+              El punto y la hora de salida los define cada líder en el panel de su club, con su enlace de Google Maps.
+            </p>
             <div className="space-y-1.5">
               <Label htmlFor={`${idBase}-reg-l`} className={labelCls}>Punto de regreso</Label>
-              <input id={`${idBase}-reg-l`} maxLength={300} value={c.transporte_regreso_lugar} onChange={(e) => set({ transporte_regreso_lugar: e.target.value })} className={inputCls} placeholder="Si es el mismo, déjalo vacío" />
+              <input id={`${idBase}-reg-l`} maxLength={300} value={c.transporte_regreso_lugar} onChange={(e) => set({ transporte_regreso_lugar: e.target.value })} className={inputCls} placeholder="Ej. Explanada del COMECYT, Toluca" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`${idBase}-reg-m`} className={labelCls}>Enlace de Google Maps del regreso (opcional)</Label>
+              <input id={`${idBase}-reg-m`} type="url" inputMode="url" maxLength={500} value={c.transporte_regreso_maps} onChange={(e) => set({ transporte_regreso_maps: e.target.value.trim() })}
+                className={inputCls} placeholder="https://maps.app.goo.gl/…" aria-invalid={c.transporte_regreso_maps && !urlMapa(c.transporte_regreso_maps) ? 'true' : undefined} />
+              {c.transporte_regreso_maps && !urlMapa(c.transporte_regreso_maps) && <p className="text-xs font-medium" style={errStyle}>Pega un enlace de Google Maps (https://maps.app.goo.gl/… o https://www.google.com/maps/…).</p>}
             </div>
             <FechaHoraAmPm value={c.transporte_regreso_hora} onChange={(v) => set({ transporte_regreso_hora: v })} etiquetaFecha="Fecha de regreso" etiquetaHora="Hora de regreso" />
             {errores.transporte_regreso_hora && <p className="text-xs font-medium" style={errStyle}>{errores.transporte_regreso_hora}</p>}

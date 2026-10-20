@@ -13,7 +13,7 @@ import AvisoErrores from '@/components/ui/aviso-errores';
 import VersionesFirmadas from '@/components/especie/VersionesFirmadas';
 import { erroresFormulario, type ErroresFormulario } from '@/lib/errores-formulario';
 import { descargarFirmado } from '@/lib/especie-api';
-import { ESTADO_SOLICITUD, fechaHora, type LogisticaEstado, type VersionFirmada } from '@/lib/especie';
+import { ESTADO_SOLICITUD, fechaHora, fechaHoraLocal, urlMapa, type LogisticaEstado, type VersionFirmada } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
 
 const inputCls = 'auth-input auth-input-static pl-4';
@@ -160,6 +160,15 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
 
       <div className="app-card space-y-3 p-5">
         <h3 className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><Bus className="h-4 w-4" aria-hidden="true" />Transporte y box lunch</h3>
+        {/* E87: salida que definió el líder y regreso de la convocatoria, con sus mapas. */}
+        {l.estatal && l.apoyos.incluye_transporte && (
+          <div className="grid grid-cols-1 gap-2 rounded-[14px] px-4 py-3 text-sm sm:grid-cols-2" style={{ backgroundColor: 'var(--tile-sky-bg)' }}>
+            <p><strong className="block text-[var(--app-ink)]">Salida (la define el líder)</strong>{l.salida.lugar ?? 'Aún no la define'}{l.salida.hora ? ` · ${fechaHoraLocal(l.salida.hora)}` : ''}
+              {urlMapa(l.salida.maps) && <a href={urlMapa(l.salida.maps)!} target="_blank" rel="noopener noreferrer" className="block text-xs font-semibold text-[var(--auth-vino)] hover:underline">Ver en Google Maps</a>}</p>
+            <p><strong className="block text-[var(--app-ink)]">Regreso (convocatoria)</strong>{l.apoyos.transporte_regreso_lugar ?? 'Por confirmar'}{l.apoyos.transporte_regreso_hora ? ` · ${fechaHoraLocal(l.apoyos.transporte_regreso_hora)}` : ''}
+              {urlMapa(l.apoyos.transporte_regreso_maps) && <a href={urlMapa(l.apoyos.transporte_regreso_maps)!} target="_blank" rel="noopener noreferrer" className="block text-xs font-semibold text-[var(--auth-vino)] hover:underline">Ver en Google Maps</a>}</p>
+          </div>
+        )}
         {!l.estatal ? <p className="text-sm text-[var(--app-ink-2)]">Escuela federal: solo kit.</p> : (
           <ul className="space-y-3">
             {l.solicitudes.map((s) => {
