@@ -2329,6 +2329,28 @@ el login, el registro, la recuperación y la pantalla de carga conservan el logo
     que la vista previa del admin sea igual al login.
   - Quedan el logo del formulario y la franja.
 
+### E78 — Una sola carpeta del proyecto: `F:\comecyt` era un acceso directo [20-10-2026]
+Duda del usuario: en F: se veían dos carpetas con lo mismo.
+- `F:\Desarrollo Tecnologico` es la carpeta real. `F:\comecyt` es una *junction* de Windows (creada el 30-06-2026) que
+  apunta a ella: mismo contenido y mismo git, sin espacio extra.
+- Revisado quién usa cada ruta:
+  - IIS, la tarea `COMECYT-Backup-Diario`, el enlace `public\storage`, los enlaces de pnpm y la caché de Laravel ya
+    usan la ruta real.
+  - Solo los 4 servicios NSSM (`comecyt-queue`, `comecyt-reverb`, `comecyt-scheduler` y `comecyt-web`) tenían
+    `AppDirectory` y `AppParameters` en `F:\comecyt\...`.
+- Para unificar, el usuario ejecuta `unificar_carpetas.ps1`, que hace tres cosas en orden:
+  1. Respalda la configuración de esos servicios en `backups\servicios-nssm-*.json`.
+  2. Los apunta a la ruta real y los reinicia.
+  3. Si todo responde, quita solo la junction con `rmdir` sin `/s`.
+
+  Si algo falla, restaura la configuración y no borra nada.
+  - A Claude se le negó el permiso para cambiar los servicios; por eso lo ejecuta el usuario.
+- **Limpieza:** se borraron `apps\web\.next\dev` y la misma carpeta dentro de `.next.bak-*`. Son la caché de `next dev`,
+  unos 810 MB cada una; producción corre de `.next\standalone`.
+  - Se borraron con `cmd /c rmdir /s /q`, que no sigue las junctions internas de pnpm. **Nunca uses `Remove-Item
+    -Recurse` en carpetas con junctions:** en PowerShell 5.1 puede borrar el destino.
+  - Se conservan el `.next.bak` más reciente (regla de deploy), `backups\` y `logs\`.
+
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de
 un club del director) **si están dados de alta en ese club**. `Club::destinatarios()` = dueño + todos sus accesos activos
