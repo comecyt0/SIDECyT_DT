@@ -4,21 +4,43 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Megaphone, ListChecks } from 'lucide-react';
-import EstructuraPrograma from '@/components/admin/EstructuraPrograma';
-import EspecieConvocatoriaPanel from '@/components/admin/especie/EspecieConvocatoriaPanel';
+import { Loader2, Megaphone } from 'lucide-react';
+import EstructuraPrograma, { type PestanaEstructura } from '@/components/admin/EstructuraPrograma';
+import ConfigEspecieForm, { SECCIONES_ESPECIE, SECCION_DE_ERROR, type SeccionEspecie } from '@/components/admin/especie/ConfigEspecieForm';
 import PageHeader from '@/components/ui/page-header';
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
-import StepFrame from '@/components/ui/step-frame';
+import StepFrame, { type StepDef } from '@/components/ui/step-frame';
 import AvisoErrores from '@/components/ui/aviso-errores';
 import { erroresFormulario, type ErroresFormulario } from '@/lib/errores-formulario';
 import { Button } from '@/components/ui/button';
 import { Asterisco } from '@/components/ui/obligatorio';
 import { PATRON_CORTO, normalizarCorto, sugerirCorto } from '@/lib/asistente-convocatoria';
+import { leerConfig, payloadCampos, payloadConfig, validarConfig, type ConfigEspecie } from '@/lib/especie';
 
 const labelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
 const inputCls = 'auth-input auth-input-static pl-4';
+
+/** Pasos de «lo que se pide» (se guardan al momento, cada elemento por separado — E56). */
+const PASOS_ESTRUCTURA: { key: PestanaEstructura; label: string; question: string }[] = [
+  { key: 'campos', label: 'Preguntas', question: '¿Qué preguntas responde cada solicitud?' },
+  { key: 'documentos', label: 'Documentos', question: '¿Qué documentos se piden?' },
+  { key: 'rubros', label: 'Conceptos de gasto', question: '¿En qué se puede usar el apoyo?' },
+  { key: 'criterios', label: 'Criterios', question: '¿Con qué criterios se evalúa?' },
+];
+
+/** Sección del formulario de clubes donde se corrige un error del servidor (`etapas.0.nombre` → etapas). */
+function seccionDeCampo(campo: string): SeccionEspecie {
+  const raiz = campo.split('.')[0];
+  if (SECCION_DE_ERROR[raiz]) return SECCION_DE_ERROR[raiz];
+  if (raiz.startsWith('transporte_') || raiz.startsWith('incluye_') || raiz === 'fecha_limite_logistica') return 'logistica';
+  if (raiz.startsWith('kit')) return 'kit';
+  if (raiz === 'formatos') return 'formatos';
+  if (raiz.startsWith('campos')) return 'datos';
+  return 'modalidad';
+}
+
+const AVISO_INMEDIATO = 'Lo de este paso se guarda al momento (agregar, editar o quitar); no espera a «Guardar cambios».';
 
 export default function EditarConvocatoriaPage() {
   const router = useRouter();
@@ -50,6 +72,11 @@ export default function EditarConvocatoriaPage() {
   const [tipoProgramaId, setTipoProgramaId] = useState<number | null>(null);
   // E58: con clubes o solicitudes ya registrados, el nombre corto queda fijo (los folios lo llevan dentro).
   const [cortoFijo, setCortoFijo] = useState(false);
+  // 20/10/2026 (pedido del usuario: editar por pasos): la configuración de clubes y kit va en sus propios pasos y se
+  // guarda con «Guardar cambios», junto con los datos generales.
+  const [cfgEsp, setCfgEsp] = useState<ConfigEspecie | null>(null);
+  const [etapasFijas, setEtapasFijas] = useState(false);
+  const [erroresEsp, setErroresEsp] = useState<Record<string, string>>({});
   useEffect(() => {
     api.get('/admin/periodos').then(({ data }) => setPeriodos(Array.isArray(data) ? data : [])).catch(() => setPeriodos([]));
   }, []);
@@ -73,9 +100,15 @@ export default function EditarConvocatoriaPage() {
         estado: data.estado,
         periodo_id: data.periodo_id ? String(data.periodo_id) : '',
       });
-      setEsEspecie(data?.tipo_programa?.tipo_apoyo === 'especie');
+      const especie = data?.tipo_programa?.tipo_apoyo === 'especie';
+      setEsEspecie(especie);
       setCortoFijo(data?.tiene_registros === true);
       setTipoProgramaId(typeof data?.tipo_programa?.id === 'number' ? data.tipo_programa.id : null);
+      if (especie) {
+        const { data: esp } = await api.get(`/admin/convocatorias/${id}/especie`);
+        setCfgEsp(leerConfig(esp));
+        setEtapasFijas(esp?.etapas_fijas === true);
+      }
     } catch {
       setFeedback({ type: 'error', message: 'No se pudo abrir la convocatoria.' });
       router.push('/admin/convocatorias');
@@ -85,16 +118,37 @@ export default function EditarConvocatoriaPage() {
   };
 
   const handleSubmit = async () => {
-    setSaving(true);
     setErrorGuardar(null);
+    // Con pasos libres se puede llegar a «Guardar» sin pasar por todos: se revisa todo lo de clubes antes de enviar.
+    if (cfgEsp) {
+      const e = validarConfig(cfgEsp);
+      setErroresEsp(e);
+      const claves = Object.keys(e);
+      if (claves.length) {
+        setErrorGuardar({ titulo: 'Revisa lo marcado antes de guardar', lineas: Object.values(e), campos: e, paso: seccionDeCampo(claves[0]) });
+        return;
+      }
+    }
+    setSaving(true);
+    let pasoEsp = false;
     try {
       const cuerpo: Record<string, unknown> = { ...formData, periodo_id: formData.periodo_id ? Number(formData.periodo_id) : null };
       if (esEspecie) { delete cuerpo.monto_maximo_apoyo; delete cuerpo.porcentaje_aportacion_minima; }
       if (cortoFijo) delete cuerpo.nombre_corto;
       await api.put(`/admin/convocatorias/${id}`, cuerpo);
+      if (cfgEsp) {
+        pasoEsp = true;
+        await api.put(`/admin/convocatorias/${id}/especie`, { ...payloadConfig(cfgEsp), campos: payloadCampos(cfgEsp) });
+      }
       setFeedback({ type: 'success', message: 'Convocatoria actualizada.' });
       router.push(`/admin/convocatorias/${id}`);
     } catch (error: unknown) {
+      if (pasoEsp) {
+        const r = erroresFormulario(error, {}, {});
+        const primero = Object.keys((error as { response?: { data?: { errors?: Record<string, unknown> } } })?.response?.data?.errors ?? {})[0];
+        setErrorGuardar({ ...r, titulo: 'Los datos generales se guardaron; falta corregir esto de clubes y kit', paso: primero ? seccionDeCampo(primero) : 'modalidad' });
+        return;
+      }
       setErrorGuardar(erroresFormulario(error,
         { nombre: 'Nombre', nombre_corto: 'Nombre corto', ejercicio_fiscal: 'Ejercicio fiscal', periodo_id: 'Periodo', descripcion: 'Descripción', fecha_apertura: 'Abre el',
           fecha_cierre: 'Cierra el', monto_maximo_apoyo: 'Monto máximo', porcentaje_aportacion_minima: 'Aportación mínima', estado: 'Estado' },
@@ -113,8 +167,31 @@ export default function EditarConvocatoriaPage() {
     );
   }
 
+  // 20/10/2026 (pedido del usuario: «al editar la convocatoria todo debe ir por pasos»): lo que antes iba apilado abajo
+  // (clubes y kit, documentos, preguntas, conceptos de gasto y criterios) ahora es un paso más del mismo marco.
+  const avisoInmediato = <p className="rounded-[12px] px-3 py-2 text-xs text-[var(--app-ink)]" style={{ backgroundColor: 'var(--tile-sky-bg)' }}>{AVISO_INMEDIATO}</p>;
+  const pasosExtra: StepDef[] = [
+    ...(cfgEsp ? SECCIONES_ESPECIE.map((s): StepDef => ({
+      key: s.key,
+      label: s.label,
+      question: s.question,
+      validate: () => {
+        const e = validarConfig(cfgEsp);
+        const propio = Object.entries(e).find(([k]) => seccionDeCampo(k) === s.key);
+        return propio ? propio[1] : null;
+      },
+      content: <ConfigEspecieForm idBase="conv-esp" value={cfgEsp} onChange={setCfgEsp} errores={erroresEsp} etapasFijas={etapasFijas} secciones={[s.key]} />,
+    })) : []),
+    ...(tipoProgramaId ? PASOS_ESTRUCTURA.filter((p) => !esEspecie || p.key === 'documentos').map((p): StepDef => ({
+      key: `estructura-${p.key}`,
+      label: p.label,
+      question: p.question,
+      content: <>{avisoInmediato}<EstructuraPrograma programaId={tipoProgramaId} pestanas={[p.key]} /></>,
+    })) : []),
+  ];
+
   return (
-    <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {feedback && <AlertBox type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
       <PageHeader
         backHref={`/admin/convocatorias/${id}`}
@@ -126,9 +203,11 @@ export default function EditarConvocatoriaPage() {
 
       <StepFrame
         inline
+        libre
+        size="xl"
         title="Ajustar la convocatoria"
         icon={<Megaphone className="h-5 w-5" />}
-        intro={<>Aquí cambias <strong>nombre, fechas, montos y estado</strong>. Las preguntas, documentos{esEspecie ? ' y datos de los clubes' : ', conceptos de gasto y criterios'} se agregan y quitan más abajo.</>}
+        intro={<>Ve paso por paso o <strong>pulsa cualquier paso</strong> para ir directo. «Guardar cambios» (en el último paso) guarda los datos generales{esEspecie ? ' y la configuración de clubes y kit' : ''}; lo que se pide (documentos{esEspecie ? '' : ', preguntas, conceptos de gasto y criterios'}) se guarda al momento.</>}
         onClose={() => router.push('/admin/convocatorias')}
         onSubmit={handleSubmit}
         error={errorGuardar ? <AvisoErrores errores={errorGuardar} /> : null}
@@ -245,29 +324,10 @@ export default function EditarConvocatoriaPage() {
               </>
             ),
           },
+          // E56: agregar, editar y quitar lo que se pide. Quitar algo que ya tiene datos lo oculta (lo capturado se conserva).
+          ...pasosExtra,
         ]}
       />
-
-      {/* E56: agregar, editar y quitar lo que se pide en esta convocatoria. Quitar algo que ya tiene datos lo oculta. */}
-      {tipoProgramaId && (
-        <section className="app-card space-y-4 p-5" aria-labelledby="estructura-titulo">
-          <div>
-            <h2 id="estructura-titulo" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><ListChecks className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Lo que se pide en esta convocatoria</h2>
-            <p className="text-sm text-[var(--app-ink-2)]">
-              Agrega o quita en cualquier momento. Si algo ya tiene respuestas, archivos o calificaciones, al quitarlo se oculta para
-              las solicitudes nuevas y lo capturado se conserva.
-            </p>
-          </div>
-          {esEspecie ? (
-            <>
-              <EspecieConvocatoriaPanel convocatoriaId={Number(id)} puedeEditar />
-              <EstructuraPrograma programaId={tipoProgramaId} pestanas={['documentos']} />
-            </>
-          ) : (
-            <EstructuraPrograma programaId={tipoProgramaId} pestanas={['campos', 'documentos', 'rubros', 'criterios']} />
-          )}
-        </section>
-      )}
     </div>
   );
 }

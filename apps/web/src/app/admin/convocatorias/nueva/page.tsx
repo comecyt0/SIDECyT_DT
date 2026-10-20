@@ -493,6 +493,17 @@ export default function ConvocatoriasNuevaPage() {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
+  // 20/10/2026 (pedido del usuario): cambiar de paso con un clic. Hacia atrás, directo; hacia adelante se revisan los pasos
+  // de en medio y se queda en el primero que falte (con su error a la vista).
+  const irAPaso = (destino: number) => {
+    if (destino === currentStep || destino < 1 || destino > totalPasos) return;
+    if (destino < currentStep) { setCurrentStep(destino); return; }
+    for (let p = currentStep; p < destino; p++) {
+      if (!validateStep(p)) { setCurrentStep(p); return; }
+    }
+    setCurrentStep(destino);
+  };
+
   const openCampoModal = (idx?: number) => {
     if (idx !== undefined) {
       setEditCampoIdx(idx);
@@ -745,10 +756,13 @@ export default function ConvocatoriasNuevaPage() {
           const active = currentStep === step;
           return (
             <li key={step} className="flex items-center gap-1">
-              <span
-                title={label}
+              <button
+                type="button"
+                onClick={() => irAPaso(step)}
+                disabled={saving}
+                title={active ? label : `Ir a «${label}»`}
                 aria-current={active ? 'step' : undefined}
-                className={`w-7 h-7 text-xs min-[380px]:w-9 min-[380px]:h-9 min-[380px]:text-sm sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold transition-[transform,background-color,color] duration-200 ${
+                className={`w-7 h-7 text-xs min-[380px]:w-9 min-[380px]:h-9 min-[380px]:text-sm sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold transition-[transform,background-color,color] duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--auth-vino)] ${active ? '' : 'cursor-pointer hover:ring-2 hover:ring-[var(--auth-vino-soft)]'} ${
                   active
                     ? 'bg-[var(--auth-vino)] text-white ring-4 ring-[var(--auth-vino-soft)] scale-105'
                     : done
@@ -758,8 +772,8 @@ export default function ConvocatoriasNuevaPage() {
                 style={done ? { backgroundColor: 'var(--tile-emerald-bg)' } : undefined}
               >
                 {done ? <CheckCircle className="w-5 h-5" aria-hidden="true" /> : step}
-                <span className="sr-only">{label}</span>
-              </span>
+                <span className="sr-only">{active ? label : `Ir al paso ${step}: ${label}`}</span>
+              </button>
               {step < totalPasos && <span className="hidden min-[380px]:block w-2 sm:w-3 h-0.5 bg-[var(--app-rule)]" aria-hidden="true" />}
             </li>
           );

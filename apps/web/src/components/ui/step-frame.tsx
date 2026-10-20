@@ -51,6 +51,11 @@ interface StepFrameProps {
   inline?: boolean;
   /** Oculta "Cancelar" en el primer paso (flujos que no se pueden abandonar, como la bienvenida). */
   hideCancel?: boolean;
+  /**
+   * 20/10/2026 (pedido del usuario): se puede ir a cualquier paso con un clic (p. ej. al editar, donde todo ya existe).
+   * Sin esta prop, se puede ir con un clic a cualquier paso ya visitado. Avanzar siempre valida el paso actual.
+   */
+  libre?: boolean;
 }
 
 const ANCHO: Record<NonNullable<StepFrameProps['size']>, string> = { md: 'max-w-xl', lg: 'max-w-3xl', xl: 'max-w-5xl' };
@@ -94,9 +99,12 @@ function StepFrameBody({
   inline = false,
   hideCancel = false,
   size = 'lg',
+  libre = false,
 }: StepFrameProps) {
   const rail = size !== 'md'; // columna de pasos a la izquierda solo en ventanas anchas
   const [index, setIndex] = useState(0);
+  const [maximo, setMaximo] = useState(0); // paso más lejano visitado (se ajusta durante el render, sin efecto)
+  if (index > maximo) setMaximo(index);
   const [stepError, setStepError] = useState<string | null>(null);
 
   // Error del servidor en un paso anterior → volver a ese paso (patrón "ajustar estado al cambiar una prop").
@@ -137,8 +145,14 @@ function StepFrameBody({
     setIndex((i) => Math.max(0, i - 1));
   };
 
+  const alcanzable = (i: number) => libre || i <= maximo;
   const jumpTo = (i: number) => {
-    if (i > index) return; // solo se puede volver a pasos ya vistos
+    if (i === index || !alcanzable(i)) return;
+    if (i > index) {
+      // Avanzar con un clic valida el paso actual, igual que «Siguiente».
+      const err = current.validate?.() ?? null;
+      if (err) { setStepError(err); return; }
+    }
     setStepError(null);
     setIndex(i);
   };
@@ -194,16 +208,17 @@ function StepFrameBody({
             <div className={`grid grid-cols-1 gap-5 ${steps.length > 1 && rail ? 'md:grid-cols-[200px_1fr] md:gap-8' : ''}`}>
               {/* Lista de pasos */}
               {steps.length > 1 && (
-              <ol className={`step-list flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 ${rail ? 'md:flex-col md:overflow-visible' : ''}`} aria-label="Pasos">
+              <ol className={`step-list flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 ${rail ? 'md:flex-col md:overflow-visible' : ''} ${rail && inline ? 'md:sticky md:top-24 md:self-start' : ''}`} aria-label="Pasos">
                 {steps.map((s, i) => {
-                  const done = i < index;
+                  const done = libre ? false : i < index || (i <= maximo && i !== index);
                   const active = i === index;
                   return (
                     <li key={s.key} className="shrink-0">
                       <button
                         type="button"
                         onClick={() => jumpTo(i)}
-                        disabled={i > index}
+                        disabled={!alcanzable(i)}
+                        title={alcanzable(i) && !active ? `Ir a «${s.label}»` : undefined}
                         aria-current={active ? 'step' : undefined}
                         className="step-item flex items-center gap-3 w-full rounded-[16px] px-3 py-2.5 text-left text-sm transition-colors disabled:cursor-default"
                         style={{

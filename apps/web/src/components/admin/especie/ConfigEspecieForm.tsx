@@ -135,14 +135,36 @@ function EditorKit({ idBase, perfil, valor, onChange }: {
 
 const campoVacio = (ambito: Ambito): CampoEspecie => ({ ambito, nombre_campo: '', etiqueta: '', tipo_campo: 'text', requerido: false, opciones: '' });
 
-export default function ConfigEspecieForm({ value, onChange, errores = {}, idBase = 'esp', etapasFijas = false }: {
+/**
+ * 20/10/2026 (pedido del usuario: editar la convocatoria por pasos) — Secciones del formulario. Quien lo usa puede pintar
+ * solo algunas (una por paso) con `secciones`; los errores de `validarConfig` se asignan a su sección con `SECCION_DE_ERROR`.
+ */
+export type SeccionEspecie = 'modalidad' | 'kit' | 'logistica' | 'etapas' | 'datos' | 'formatos';
+export const SECCIONES_ESPECIE: { key: SeccionEspecie; label: string; question: string }[] = [
+  { key: 'modalidad', label: 'Modalidad e integrantes', question: '¿Para qué etapa es y cuántos integrantes tiene cada club?' },
+  { key: 'kit', label: 'Kit', question: '¿Qué kit se entrega?' },
+  { key: 'logistica', label: 'Transporte y box lunch', question: '¿Qué apoyos de logística da?' },
+  { key: 'etapas', label: 'Etapas de revisión', question: '¿Por qué revisiones pasa cada club?' },
+  { key: 'datos', label: 'Datos que se piden', question: '¿Qué datos se piden al club y a cada integrante?' },
+  { key: 'formatos', label: 'Formatos', question: '¿Qué formatos institucionales se piden?' },
+];
+export const SECCION_DE_ERROR: Record<string, SeccionEspecie> = {
+  min_integrantes: 'modalidad', max_integrantes: 'modalidad', clubes_por_escuela: 'modalidad', modalidad: 'modalidad',
+  kit_nombre: 'kit', kit_descripcion: 'kit', kits: 'kit',
+  transporte_regreso_hora: 'logistica', etapas: 'etapas', campos: 'datos',
+};
+
+export default function ConfigEspecieForm({ value, onChange, errores = {}, idBase = 'esp', etapasFijas = false, secciones }: {
   value: ConfigEspecie;
   onChange: (c: ConfigEspecie) => void;
   errores?: Record<string, string>;
   idBase?: string;
   /** Con clubes ya enviados no se agregan, quitan ni reordenan etapas (solo se editan sus datos). */
   etapasFijas?: boolean;
+  /** Solo estas secciones (para pasos); sin la prop, todas. */
+  secciones?: SeccionEspecie[];
 }) {
+  const muestra = (s: SeccionEspecie) => !secciones || secciones.includes(s);
   const c = value;
   const set = (p: Partial<ConfigEspecie>) => onChange({ ...c, ...p });
   const setEtapa = (i: number, p: Partial<EtapaEspecie>) => set({ etapas: c.etapas.map((e, j) => (j === i ? { ...e, ...p } : e)) });
@@ -203,6 +225,7 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
 
   return (
     <div className="space-y-8">
+      {muestra('modalidad') && (<>
       <Seccion icon={<Globe2 />} titulo="Modalidad" ayuda="Para qué etapa registran sus datos los clubes. Los líderes la ven en cada apartado de su club.">
         <div role="radiogroup" aria-label="Modalidad de la convocatoria" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {(Object.keys(MODALIDADES) as Modalidad[]).map((m) => (
@@ -249,7 +272,9 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
           </span>
         </label>
       </Seccion>
+      </>)}
 
+      {muestra('kit') && (
       <Seccion icon={<Package />} titulo="Kit que se entrega" ayuda="Lo ven los líderes al registrar su club. La fecha y el lugar de entrega se asignan después, por club.">
         {/* 20/10/2026 (decisión del usuario): en nacional e internacional no se entrega kit. */}
         {c.modalidad !== 'estatal' ? (
@@ -286,8 +311,10 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
         {errores.kits && <p className="text-xs font-medium" style={errStyle}>{errores.kits}</p>}
         </>)}
       </Seccion>
+      )}
 
       {/* E71 (pedido del usuario): qué apoyos de logística da la convocatoria. Lo que no da desaparece para el líder. */}
+      {muestra('logistica') && (
       <Seccion icon={<Bus />} titulo="Transporte y box lunch"
         ayuda="Elige qué apoyos da esta convocatoria a los clubes aceptados (escuelas estatales). Si quitas uno que ya pidieron, se quita de sus solicitudes y avisamos por correo a los líderes.">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -331,7 +358,9 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
           </div>
         )}
       </Seccion>
+      )}
 
+      {muestra('etapas') && (
       <Seccion icon={<ClipboardCheck />} titulo="Etapas de revisión"
         ayuda="Cada club pasa por estas etapas en orden. Si una etapa pide correcciones, el líder tiene el plazo indicado (horas naturales, hora del centro) para corregir.">
         {errores.etapas && <AlertBox type="error" message={errores.etapas} />}
@@ -394,7 +423,9 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
           El acta la suben el admin, el admin de convocatoria o una persona asignada a alguna etapa.
         </p>
       </Seccion>
+      )}
 
+      {muestra('datos') && (
       <Seccion icon={<ListChecks />} titulo="Datos que se piden" ayuda="Elige qué datos pides y cuáles son obligatorios para poder enviar el club a revisión.">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="rounded-[16px] border px-4 py-2" style={{ borderColor: 'var(--app-rule)' }}>
@@ -430,9 +461,11 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
           </div>
         )}
       </Seccion>
+      )}
 
       {/* E79 (20/10/2026, pedido del usuario): formatos institucionales con la franja de convivencia, llenos con los datos
           del club y en PDF sin edición. El líder los descarga, firma y sube; cada uno se revisa (aprobar o rechazar). */}
+      {muestra('formatos') && (
       <Seccion icon={<FileSignature />} titulo="Formatos institucionales"
         ayuda="Se generan llenos con los datos del club (lo que falte queda en línea para llenar a mano), en PDF sin edición. El líder los firma, sella y sube; el revisor aprueba o rechaza cada uno.">
         <div className="rounded-[16px] border px-4 py-2" style={{ borderColor: 'var(--app-rule)' }}>
@@ -461,6 +494,7 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
           de edad y de adulto para docentes. Para llenarlos solos, pide también el director(a), el lugar, grado, grupo, domicilio y tutor.
         </p>
       </Seccion>
+      )}
       <StepFrame
         open={dialogo !== null}
         size="md"
