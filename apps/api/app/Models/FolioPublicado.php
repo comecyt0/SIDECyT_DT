@@ -11,7 +11,7 @@ class FolioPublicado extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['convocatoria_id', 'solicitud_id', 'folio', 'publicado_por', 'publicado_at'];
+    protected $fillable = ['convocatoria_id', 'solicitud_id', 'club_id', 'folio', 'publicado_por', 'publicado_at'];
 
     protected $casts = ['publicado_at' => 'datetime'];
 

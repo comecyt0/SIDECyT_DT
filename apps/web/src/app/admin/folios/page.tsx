@@ -12,10 +12,13 @@ import { UserChip } from '@/components/ui/user-avatar';
 import { estadoBadgeClass, estadoLabel } from '@/lib/solicitud-estados';
 import { formatDate } from '@/lib/format';
 import { useRol } from '@/hooks/useRol';
+import { ESTADO_CLUB } from '@/lib/especie';
 
 type Grupo = 'aprobados' | 'no_aprobados' | 'en_proceso' | 'todos';
 
 interface Folio {
+  /** E80: los clubes de Apoyo en especie también son folios. */
+  tipo?: 'solicitud' | 'club';
   id: number;
   folio: string;
   titulo_proyecto: string;
@@ -30,8 +33,8 @@ interface Folio {
 
 interface Publicacion {
   convocatoria: { id: number; nombre: string };
-  aprobados: { id: number; folio: string; estado: string }[];
-  publicados: { solicitud_id: number; folio: string; publicado_at: string }[];
+  aprobados: { tipo?: 'solicitud' | 'club'; id: number; folio: string; estado: string }[];
+  publicados: { solicitud_id: number | null; club_id?: number | null; folio: string; publicado_at: string }[];
   pendientes_de_publicar: { id: number; folio: string }[];
   publicado_at: string | null;
 }
@@ -203,13 +206,20 @@ export default function FoliosPage() {
           </div>
         ) : (
           <div className="data-grid grid grid-cols-1 gap-4 md:grid-cols-2">
-            {datos?.items.map((f) => (
-              <article key={f.id} className="app-card data-card relative p-5">
+            {datos?.items.map((f) => {
+              const esClub = f.tipo === 'club';
+              const estClub = esClub ? ESTADO_CLUB[f.estado] : undefined;
+              return (
+              <article key={`${f.tipo ?? 'solicitud'}-${f.id}`} className="app-card data-card relative p-5">
                 <div className="flex items-start justify-between gap-3">
-                  <UserChip user={f.user} sub={f.empresa?.nombre ?? null} href={`/admin/perfiles/${f.user_id}?folio=${f.id}`} size="md" />
-                  <span className={`shrink-0 ${estadoBadgeClass(f.estado)}`}>{estadoLabel(f.estado)}</span>
+                  <UserChip user={f.user} sub={f.empresa?.nombre ?? null} href={esClub ? `/admin/clubes/${f.id}` : `/admin/perfiles/${f.user_id}?folio=${f.id}`} size="md" />
+                  {esClub
+                    ? <span className="pill shrink-0" data-tone={estClub?.tono ?? 'neutral'} data-dot="on">{estClub?.etiqueta ?? f.estado}</span>
+                    : <span className={`shrink-0 ${estadoBadgeClass(f.estado)}`}>{estadoLabel(f.estado)}</span>}
                 </div>
-                <p className="mt-4 font-mono text-xs font-bold tracking-wide text-[var(--sg-vino)]">{f.folio}</p>
+                <p className="mt-4 flex flex-wrap items-center gap-2 font-mono text-xs font-bold tracking-wide text-[var(--sg-vino)]">
+                  {f.folio}{esClub && <span className="pill font-sans" data-tone="sky">Club</span>}
+                </p>
                 <h3 className="mt-0.5 line-clamp-2 text-sm font-semibold text-[var(--app-ink)]">{f.titulo_proyecto}</h3>
                 <p className="mt-1 text-xs text-[var(--app-ink-2)]">
                   {f.convocatoria?.nombre ?? '—'}{f.convocatoria?.periodo?.nombre ? ` · ${f.convocatoria.periodo.nombre}` : ''} · actualizado {formatDate(f.updated_at)}
@@ -218,7 +228,8 @@ export default function FoliosPage() {
                   <span className="pill mt-3 inline-flex items-center gap-1" data-tone="emerald"><Globe className="h-3 w-3" aria-hidden="true" />En la página pública</span>
                 )}
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
         {datos && datos.total > 0 && (
@@ -251,7 +262,7 @@ export default function FoliosPage() {
               {pub.aprobados.length > 0 ? (
                 <ul className="flex flex-wrap gap-2" aria-label="Folios que se publicarán">
                   {pub.aprobados.map((a) => (
-                    <li key={a.id} className="rounded-full bg-[var(--sg-canvas)] px-3 py-1 font-mono text-xs font-semibold text-[var(--app-ink)]">{a.folio}</li>
+                    <li key={`${a.tipo ?? 'solicitud'}-${a.id}`} className="rounded-full bg-[var(--sg-canvas)] px-3 py-1 font-mono text-xs font-semibold text-[var(--app-ink)]">{a.folio}</li>
                   ))}
                 </ul>
               ) : (
