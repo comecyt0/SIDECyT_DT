@@ -46,7 +46,24 @@ class EscuelaController extends Controller
         if ($request->filled('participo')) $q->where('participo_antes', (bool) $request->input('participo'));
         if ($request->filled('activo')) $q->where('activo', (bool) $request->input('activo'));
 
-        return response()->json($q->orderBy('nombre')->paginate((int) $request->input('per_page', 25)));
+        $p = $q->orderBy('nombre')->paginate((int) $request->input('per_page', 25));
+        // E84 (20/10/2026, pedido del usuario): folios de los clubes de cada escuela con su estado (enlace a Folios).
+        // Con el alcance de quien mira; solo folio, estado y convocatoria.
+        $ids = collect($p->items())->pluck('id');
+        $clubes = \App\Support\Alcance::aplicar(\App\Models\Club::query(), $request->user())->whereIn('escuela_id', $ids)
+            ->with('convocatoria:id,nombre')->orderByDesc('updated_at')->get(['id', 'folio', 'estado', 'escuela_id', 'convocatoria_id', 'vence_at'])
+            ->groupBy('escuela_id');
+        $p->getCollection()->transform(function ($e) use ($clubes) {
+            $e->setAttribute('clubes', ($clubes[$e->id] ?? collect())->map(fn ($c) => [
+                'id' => $c->id, 'folio' => $c->folio, 'estado' => $c->estadoVisible(),
+                'estado_texto' => \App\Support\FoliosReporte::estadoTexto('club', $c->estadoVisible()),
+                'grupo' => \App\Support\FoliosReporte::grupoDe('club', $c->estadoVisible()), 'convocatoria' => $c->convocatoria?->nombre,
+            ])->values());
+
+            return $e;
+        });
+
+        return response()->json($p);
     }
 
     public function store(Request $request)

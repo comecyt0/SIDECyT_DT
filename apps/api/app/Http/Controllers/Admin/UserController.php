@@ -42,7 +42,17 @@ class UserController extends Controller
 
         $perPage = min(100, (int) $request->get('per_page', 0));
         if ($perPage > 0) {
-            return response()->json($query->paginate($perPage));
+            // E83 (20/10/2026, pedido del usuario): cuántas cuentas hay de cada tipo, para separarlas por pestañas
+            // (con la misma búsqueda, sin el filtro de tipo).
+            $conteo = User::query();
+            if ($request->filled('search')) {
+                $search = '%'.addcslashes((string) $request->search, '%_\\').'%';
+                $conteo->where(fn ($q) => $q->where('name', 'ilike', $search)->orWhere('email', 'ilike', $search));
+            }
+
+            return response()->json($query->paginate($perPage)->toArray() + [
+                'por_rol' => $conteo->selectRaw('rol_id, count(*) as total')->groupBy('rol_id')->pluck('total', 'rol_id'),
+            ]);
         }
 
         return response()->json($query->limit(1000)->get());

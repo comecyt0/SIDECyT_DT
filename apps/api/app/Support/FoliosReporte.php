@@ -83,6 +83,11 @@ class FoliosReporte
         self::filtrar($qc, $f, 'nombre');
         if ($idsClub !== null) $qc->whereIn('id', $idsClub ?: [0]);
 
+        // E84: desde Escuelas → Folios de esa escuela (solo clubes: las solicitudes no tienen escuela).
+        if (! empty($f['escuela_id'])) {
+            $qc->where('escuela_id', (int) $f['escuela_id']);
+            $qs->whereRaw('1 = 0');
+        }
         $sol = $qs->orderByDesc('updated_at')->limit(self::TOPE)->get();
         $clubes = $qc->orderByDesc('updated_at')->limit(self::TOPE)->get();
         $pubSol = FolioPublicado::whereIn('solicitud_id', $sol->pluck('id'))->pluck('solicitud_id')->all();

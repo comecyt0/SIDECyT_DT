@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { School, Loader2, Pencil, Plus, Upload, Download, Search, ChevronLeft, ChevronRight, FileSpreadsheet, History } from 'lucide-react';
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { NIVEL_ESCUELA, SISTEMA_ESCUELA } from '@/lib/especie';
 import TemporadasInput, { normalizarTemporadas } from '@/components/admin/escuelas/TemporadasInput';
@@ -11,7 +13,10 @@ import TemporadasInput, { normalizarTemporadas } from '@/components/admin/escuel
 interface Escuela {
   id: number; cct: string; nombre: string; municipio: string; nivel: string; sistema: string; activo: boolean;
   participo_antes: boolean; temporadas: string[];
+  /** E84: folios de los clubes de la escuela con su estado. */
+  clubes?: { id: number; folio: string; estado: string; estado_texto: string; grupo: string; convocatoria: string | null }[];
 }
+const TONO_GRUPO: Record<string, string> = { aprobados: 'emerald', no_aprobados: 'red', en_proceso: 'violet' };
 interface Pagina { data: Escuela[]; current_page: number; last_page: number; total: number }
 interface ResultadoImportacion { creadas: number; actualizadas: number; errores: { fila: number; cct: string; problemas: string[] }[] }
 
@@ -54,6 +59,8 @@ export default function CatalogoEscuelas() {
   const [importando, setImportando] = useState(false);
   const [resultado, setResultado] = useState<ResultadoImportacion | null>(null);
   const archivoRef = useRef<HTMLInputElement>(null);
+  const [modal, setModal] = useState<'agregar' | 'excel' | null>(null);
+  const cerrarModal = () => { setModal(null); setEditando(null); setForm(VACIO); setErrTemporadas(null); };
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -93,6 +100,7 @@ export default function CatalogoEscuelas() {
       setAviso({ tipo: 'success', texto: editando ? 'Escuela actualizada.' : 'Escuela agregada al catálogo.' });
       setForm(VACIO);
       setEditando(null);
+      setModal(null);
       void cargar();
     } catch (er) {
       const t = err(er, 'No se pudo guardar la escuela.');
@@ -157,12 +165,19 @@ export default function CatalogoEscuelas() {
 
   return (
     <div className="space-y-6">
-      {aviso && <AlertBox type={aviso.tipo} message={aviso.texto} onClose={() => setAviso(null)} />}
+      {aviso && !modal && <AlertBox type={aviso.tipo} message={aviso.texto} onClose={() => setAviso(null)} />}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-        <div className="space-y-6">
-          <section className="perfil-tarjeta space-y-4" aria-labelledby="esc-importar">
-            <h2 id="esc-importar" className="perfil-tarjeta-titulo"><FileSpreadsheet aria-hidden="true" />Cargar desde Excel</h2>
+      {/* E84 (20/10/2026, pedido del usuario): «Agregar escuela» y «Cargar desde Excel» se abren en una ventana desde su botón. */}
+      <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Acciones del catálogo">
+        <Button type="button" onClick={() => { setEditando(null); setForm(VACIO); setErrTemporadas(null); setAviso(null); setModal('agregar'); }}><Plus className="h-4 w-4" aria-hidden="true" />Agregar escuela</Button>
+        <Button type="button" variant="outline" onClick={() => { setResultado(null); setAviso(null); setModal('excel'); }}><FileSpreadsheet className="h-4 w-4" aria-hidden="true" />Cargar desde Excel</Button>
+      </div>
+
+      <Dialog open={modal === 'excel'} onOpenChange={(o) => { if (!o) cerrarModal(); }}>
+        <DialogContent className="max-h-[88dvh] overflow-y-auto sm:max-w-lg">
+          {aviso && <AlertBox type={aviso.tipo} message={aviso.texto} onClose={() => setAviso(null)} />}
+          <section className="space-y-4" aria-labelledby="esc-importar">
+            <DialogTitle id="esc-importar" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><FileSpreadsheet className="h-5 w-5" aria-hidden="true" />Cargar desde Excel</DialogTitle>
             <p className="text-sm text-[var(--app-ink-2)]">
               Descarga la plantilla, llena una escuela por fila y súbela. Si la CCT ya existe se actualiza; las filas con error se listan abajo y no se cargan.
             </p>
@@ -191,8 +206,15 @@ export default function CatalogoEscuelas() {
             )}
           </section>
 
-          <form onSubmit={guardar} className="perfil-tarjeta space-y-4" noValidate>
-            <h2 className="perfil-tarjeta-titulo">{editando ? <Pencil aria-hidden="true" /> : <Plus aria-hidden="true" />}{editando ? 'Editar escuela' : 'Agregar una escuela'}</h2>
+
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={modal === 'agregar'} onOpenChange={(o) => { if (!o) cerrarModal(); }}>
+        <DialogContent className="max-h-[88dvh] overflow-y-auto sm:max-w-lg">
+          {aviso && <AlertBox type={aviso.tipo} message={aviso.texto} onClose={() => setAviso(null)} />}
+          <form onSubmit={guardar} className="space-y-4" noValidate>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]">{editando ? <Pencil className="h-5 w-5" aria-hidden="true" /> : <Plus className="h-5 w-5" aria-hidden="true" />}{editando ? 'Editar escuela' : 'Agregar una escuela'}</DialogTitle>
             <label className="perfil-campo"><span>CCT</span>
               <input className={`${inputCls} uppercase`} maxLength={10} value={form.cct} placeholder="15EPR0001A"
                 onChange={(e) => setForm({ ...form, cct: e.target.value.toUpperCase() })} required />
@@ -225,11 +247,13 @@ export default function CatalogoEscuelas() {
             {form.participo_antes && <TemporadasInput value={form.temporadas} onChange={(t) => { setErrTemporadas(null); setForm({ ...form, temporadas: t }); }} error={errTemporadas} />}
             <div className="flex gap-2">
               <Button type="submit" disabled={guardando}>{guardando && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}{editando ? 'Guardar cambios' : 'Agregar escuela'}</Button>
-              {editando && <Button type="button" variant="outline" onClick={() => { setEditando(null); setForm(VACIO); setErrTemporadas(null); }}>Cancelar</Button>}
+              <Button type="button" variant="outline" onClick={cerrarModal}>Cancelar</Button>
             </div>
           </form>
-        </div>
+        </DialogContent>
+      </Dialog>
 
+      <div>
         <section className="space-y-4" aria-busy={cargando}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]">
             <label className="relative block sm:col-span-2 xl:col-span-1">
@@ -283,9 +307,24 @@ export default function CatalogoEscuelas() {
                           {x.temporadas.map((t) => <span key={t} className="pill" data-tone="gold">{t}</span>)}
                         </p>
                       )}
+                      {/* E84 (pedido del usuario): folios de sus clubes con su estado; cada uno lleva a Folios. */}
+                      {Array.isArray(x.clubes) && x.clubes.length > 0 && (
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                          <span className="font-semibold text-[var(--app-ink)]">Folios:</span>
+                          {x.clubes.map((c) => (
+                            <Link key={c.id} href={`/admin/folios?search=${encodeURIComponent(c.folio)}`} className="pill hover:underline" data-tone={TONO_GRUPO[c.grupo] ?? 'neutral'}
+                              title={c.convocatoria ?? undefined} aria-label={`Folio ${c.folio}: ${c.estado_texto}. Ver en Folios`}>
+                              <span className="font-mono">{c.folio}</span> · {c.estado_texto}
+                            </Link>
+                          ))}
+                          <Link href={`/admin/folios?escuela_id=${x.id}&escuela=${encodeURIComponent(x.nombre)}`} className="inline-flex items-center gap-1 font-semibold text-[var(--sg-vino)] hover:underline">
+                            Ver en Folios<ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                          </Link>
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-1.5">
-                      <Button size="sm" variant="soft" aria-label={`Editar ${x.nombre}`} onClick={() => { setEditando(x); setErrTemporadas(null); setForm({ cct: x.cct, nombre: x.nombre, municipio: x.municipio, nivel: x.nivel, sistema: x.sistema, participo_antes: x.participo_antes, temporadas: x.temporadas }); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                      <Button size="sm" variant="soft" aria-label={`Editar ${x.nombre}`} onClick={() => { setEditando(x); setErrTemporadas(null); setForm({ cct: x.cct, nombre: x.nombre, municipio: x.municipio, nivel: x.nivel, sistema: x.sistema, participo_antes: x.participo_antes, temporadas: x.temporadas }); setAviso(null); setModal('agregar'); }}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => void alternarActiva(x)}>{x.activo ? 'Desactivar' : 'Activar'}</Button>

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import StepFrame from '@/components/ui/step-frame';
 import {
   Edit, Trash2, UserPlus, Users,
-  Mail, UserCircle, Lock, Briefcase, Phone, Building2, ShieldCheck, IdCard, CalendarDays
+  Mail, UserCircle, Lock, Briefcase, Phone, Building2, ShieldCheck, IdCard, CalendarDays, Search
 } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import api from '@/lib/api';
@@ -89,9 +89,13 @@ function FField({
 interface Props {
   users: User[];
   pagination: PaginationMeta;
+  /** E83: total por tipo de cuenta, tipo elegido y búsqueda. */
+  porRol?: Record<string, number>;
+  rolId?: string;
+  busqueda?: string;
 }
 
-export default function UsuariosClient({ users, pagination }: Props) {
+export default function UsuariosClient({ users, pagination, porRol = {}, rolId = '', busqueda = '' }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -171,12 +175,29 @@ export default function UsuariosClient({ users, pagination }: Props) {
     fetchCatalogs();
   }, []);
 
-  const updateSearchParams = (next: { page?: number; per_page?: number }) => {
+  const updateSearchParams = (next: { page?: number; per_page?: number; rol_id?: string; search?: string }) => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');
     if (next.page !== undefined) params.set('page', String(next.page));
     if (next.per_page !== undefined) params.set('per_page', String(next.per_page));
+    for (const k of ['rol_id', 'search'] as const) {
+      if (next[k] !== undefined) { if (next[k]) params.set(k, next[k]!); else params.delete(k); }
+    }
     router.replace(`${pathname}?${params.toString()}`);
   };
+
+  // E83 (20/10/2026, pedido del usuario): separar las cuentas por tipo y buscar, para que no salgan todas juntas.
+  const [texto, setTexto] = useState(busqueda);
+  useEffect(() => {
+    if (texto === busqueda) return;
+    const t = setTimeout(() => updateSearchParams({ page: 1, search: texto.trim() }), 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al escribir
+  }, [texto]);
+  const totalTodos = Object.values(porRol).reduce((a, n) => a + Number(n || 0), 0);
+  const pestanasRol = [
+    { id: '', nombre: 'Todos', total: totalTodos },
+    ...catalogs.roles.map((r) => ({ id: String(r.id), nombre: r.nombre, total: Number(porRol[String(r.id)] ?? 0) })).filter((r) => r.total > 0 || r.id === rolId),
+  ];
 
   const handleOpenModal = (user: User | null = null) => {
     setErrors({});
@@ -364,6 +385,23 @@ export default function UsuariosClient({ users, pagination }: Props) {
           </Button>
         }
       />
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="seg-tabs flex-wrap" role="tablist" aria-label="Tipo de cuenta">
+          {pestanasRol.map((p) => (
+            <button key={p.id || 'todos'} type="button" role="tab" aria-selected={rolId === p.id}
+              onClick={() => updateSearchParams({ page: 1, rol_id: p.id })}
+              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold">
+              {p.nombre}<span className="text-xs opacity-70">{p.total}</span>
+            </button>
+          ))}
+        </div>
+        <div className="relative min-w-[220px] flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--app-ink-2)]" aria-hidden="true" />
+          <input type="search" aria-label="Buscar por nombre o correo" placeholder="Buscar por nombre o correo" maxLength={100}
+            className="auth-input auth-input-static pl-10" value={texto} onChange={(e) => setTexto(e.target.value)} />
+        </div>
+      </div>
 
       <DataCardGrid
         items={users}

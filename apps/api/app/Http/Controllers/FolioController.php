@@ -31,6 +31,7 @@ class FolioController extends Controller
             'grupo' => ['nullable', 'in:aprobados,no_aprobados,en_proceso,todos'],
             'convocatoria_id' => ['nullable', 'integer'],
             'periodo_id' => ['nullable', 'integer'],
+            'escuela_id' => ['nullable', 'integer'], // E84: desde Escuelas
             'search' => ['nullable', 'string', 'max:100'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);

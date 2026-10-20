@@ -68,6 +68,16 @@ export default function FoliosPage() {
   const [convocatoriaId, setConvocatoriaId] = useState('');
   const [periodoId, setPeriodoId] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  // E84: desde Escuelas → Folios de esa escuela (?escuela_id=) o de un folio (?search=). Se lee al montar.
+  const [escuela, setEscuela] = useState<{ id: string; nombre: string } | null>(null);
+  const [listo, setListo] = useState(false);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const id = q.get('escuela_id'); const s = q.get('search');
+    if (id && /^\d+$/.test(id)) { setEscuela({ id, nombre: (q.get('escuela') ?? '').slice(0, 120) }); setGrupo('todos'); }
+    if (s) { setBusqueda(s.slice(0, 100)); setGrupo('todos'); }
+    setListo(true);
+  }, []);
   const [pagina, setPagina] = useState(1);
   const [perPage, setPerPage] = useState(20);
   const [datos, setDatos] = useState<{ items: Folio[]; total: number; last: number; conteos: Record<Grupo, number> } | null>(null);
@@ -101,7 +111,7 @@ export default function FoliosPage() {
     setCargando(true);
     try {
       const { data } = await api.get('/admin/folios', {
-        params: { grupo, convocatoria_id: convocatoriaId || undefined, periodo_id: periodoId || undefined, search: busqueda.trim() || undefined, page: pagina, per_page: perPage },
+        params: { grupo, convocatoria_id: convocatoriaId || undefined, periodo_id: periodoId || undefined, escuela_id: escuela?.id, search: busqueda.trim() || undefined, page: pagina, per_page: perPage },
       });
       const f = data?.folios ?? {};
       setDatos({
@@ -115,12 +125,13 @@ export default function FoliosPage() {
     } finally {
       setCargando(false);
     }
-  }, [grupo, convocatoriaId, periodoId, busqueda, pagina, perPage]);
+  }, [grupo, convocatoriaId, periodoId, escuela, busqueda, pagina, perPage]);
 
   useEffect(() => {
+    if (!listo) return undefined;
     const t = setTimeout(() => { void cargar(); }, busqueda ? 300 : 0);
     return () => clearTimeout(t);
-  }, [cargar, busqueda]);
+  }, [cargar, busqueda, listo]);
 
   const cargarPublicacion = useCallback(async (id: string) => {
     setPub(null);
@@ -155,7 +166,7 @@ export default function FoliosPage() {
     try {
       await descargarExportacionFolios({
         formato, modo, ids: modo === 'parcial' ? [...seleccion] : undefined,
-        grupo, convocatoria_id: convocatoriaId || undefined, periodo_id: periodoId || undefined, search: busqueda.trim() || undefined,
+        grupo, convocatoria_id: convocatoriaId || undefined, periodo_id: periodoId || undefined, escuela_id: escuela?.id, search: busqueda.trim() || undefined,
       }, modo === 'completo' ? `folios-${grupo}` : `folios-seleccion-${seleccion.size}`);
     } catch (e) {
       setAviso({ tipo: 'error', texto: mensaje(e, 'No se pudo exportar. Revisa los filtros e inténtalo de nuevo.') });
@@ -221,6 +232,13 @@ export default function FoliosPage() {
           </div>
         </div>
       </div>
+
+      {escuela && (
+        <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--app-ink)]">
+          <span className="pill" data-tone="sky">Escuela: {escuela.nombre || `nº ${escuela.id}`}</span>
+          <Button size="sm" variant="outline" onClick={() => { setEscuela(null); setPagina(1); window.history.replaceState(null, '', '/admin/folios'); }}>Ver todos los folios</Button>
+        </p>
+      )}
 
       {/* E81: exportar (completo = lo que muestran los filtros; parcial = los marcados) */}
       <div className="flex flex-wrap items-center gap-2 rounded-[16px] border px-4 py-3" style={{ borderColor: 'var(--app-rule)', backgroundColor: 'var(--app-card-bg)' }} role="toolbar" aria-label="Exportar folios">

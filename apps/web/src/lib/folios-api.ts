@@ -11,6 +11,7 @@ export interface ParamsExportacion {
   grupo?: string;
   convocatoria_id?: string;
   periodo_id?: string;
+  escuela_id?: string;
   search?: string;
 }
 
