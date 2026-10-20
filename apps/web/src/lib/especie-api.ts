@@ -65,6 +65,18 @@ export async function descargarReporteClubes(convocatoriaId: number) {
   guardarBlob(r.data, `reporte-clubes-${convocatoriaId}-${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
+/** E79: formato institucional lleno y sin edición (carta, A, B o C) para firmar y subir. */
+export async function descargarFormatoClub(clubId: number, formato: string, folio: string) {
+  const r = await api.get(`/club/clubes/${clubId}/formatos/${encodeURIComponent(formato)}`, { responseType: 'blob' });
+  guardarBlob(r.data, `${formato.replace(/_/g, '-')}-${folio}.pdf`);
+}
+
+/** E79: permiso de uso de imagen de un integrante (infantil o de adulto, lo decide el servidor). */
+export async function descargarUsoImagen(clubId: number, integranteId: number, folio: string) {
+  const r = await api.get(`/club/clubes/${clubId}/integrantes/${integranteId}/uso-imagen`, { responseType: 'blob' });
+  guardarBlob(r.data, `permiso-uso-de-imagen-${folio}-${integranteId}.pdf`);
+}
+
 /** Carta de consentimiento generada para que la escuela la firme y selle (solo el líder del club). */
 export async function descargarCartaEscuela(clubId: number, folio: string) {
   const r = await api.get(`/club/clubes/${clubId}/carta-escuela`, { responseType: 'blob' });

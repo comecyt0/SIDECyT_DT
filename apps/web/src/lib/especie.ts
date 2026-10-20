@@ -64,6 +64,8 @@ export interface ConfigEspecie {
   kit_descripcion: string;
   campos_club: Record<string, Predef>;
   campos_integrante: Record<string, Predef>;
+  /** E79: formatos institucionales pedidos / obligatorios. */
+  formatos: Record<string, Predef>;
   campos: CampoEspecie[];
   /** E71: apoyos de logística de la convocatoria y salida del transporte ('AAAA-MM-DDTHH:mm', hora del centro). */
   incluye_transporte: boolean;
@@ -80,6 +82,9 @@ export interface ConfigEspecie {
 export const CAMPOS_CLUB: Record<string, string> = {
   logo: 'Logo o foto del club',
   descripcion: 'Descripción del proyecto del club',
+  // E79: llenan los formatos institucionales
+  director_nombre: 'Nombre del director(a) de la escuela',
+  lugar: 'Lugar (para los formatos)',
 };
 export const CAMPOS_INTEGRANTE: Record<string, string> = {
   foto: 'Foto',
@@ -87,6 +92,10 @@ export const CAMPOS_INTEGRANTE: Record<string, string> = {
   sexo: 'Sexo',
   curp: 'CURP',
   grado_grupo: 'Grado y grupo',
+  grado: 'Grado',
+  grupo: 'Grupo',
+  domicilio: 'Domicilio',
+  tutor_nombre: 'Madre, padre o tutor (menores de edad)',
   correo: 'Correo',
   telefono: 'Teléfono',
 };
@@ -94,6 +103,8 @@ export const CAMPOS_INTEGRANTE: Record<string, string> = {
 const DEFAULT_CLUB: Record<string, Predef> = {
   logo: { pedir: true, obligatorio: false },
   descripcion: { pedir: true, obligatorio: false },
+  director_nombre: { pedir: false, obligatorio: false },
+  lugar: { pedir: false, obligatorio: false },
 };
 const DEFAULT_INTEGRANTE: Record<string, Predef> = {
   foto: { pedir: true, obligatorio: false },
@@ -101,8 +112,37 @@ const DEFAULT_INTEGRANTE: Record<string, Predef> = {
   sexo: { pedir: false, obligatorio: false },
   curp: { pedir: false, obligatorio: false },
   grado_grupo: { pedir: true, obligatorio: false },
+  grado: { pedir: false, obligatorio: false },
+  grupo: { pedir: false, obligatorio: false },
+  domicilio: { pedir: false, obligatorio: false },
+  tutor_nombre: { pedir: false, obligatorio: false },
   correo: { pedir: false, obligatorio: false },
   telefono: { pedir: false, obligatorio: false },
+};
+
+/**
+ * E79 (20/10/2026) — Formatos institucionales (mismas claves que `App\Support\Especie::FORMATOS`): el sistema los
+ * genera llenos y sin edición; el líder los firma y sube. La carta de la escuela sigue pedida y obligatoria por defecto.
+ */
+export const FORMATOS: Record<string, string> = {
+  carta_escuela: 'Carta de consentimiento de la escuela',
+  formato_a: 'Formato A · Carta de interés de participación',
+  formato_b: 'Formato B · Constancia de integración del club',
+  formato_c: 'Formato C · Integración del club de robótica',
+  uso_imagen: 'Permiso de uso de imagen (uno por integrante)',
+};
+const DEFAULT_FORMATOS: Record<string, Predef> = {
+  carta_escuela: { pedir: true, obligatorio: true },
+  formato_a: { pedir: false, obligatorio: false },
+  formato_b: { pedir: false, obligatorio: false },
+  formato_c: { pedir: false, obligatorio: false },
+  uso_imagen: { pedir: false, obligatorio: false },
+};
+/** Estado de revisión de un documento subido (E79). */
+export const ESTADO_DOCUMENTO: Record<string, { etiqueta: string; tono: string }> = {
+  pendiente: { etiqueta: 'Por revisar', tono: 'violet' },
+  aprobado: { etiqueta: 'Aprobado', tono: 'emerald' },
+  rechazado: { etiqueta: 'Rechazado', tono: 'red' },
 };
 
 export const TIPO_CAMPO_ETIQUETA: Record<TipoCampoEspecie, string> = {
@@ -123,6 +163,7 @@ export function configVacia(): ConfigEspecie {
     kit_descripcion: '',
     campos_club: structuredClone(DEFAULT_CLUB),
     campos_integrante: structuredClone(DEFAULT_INTEGRANTE),
+    formatos: structuredClone(DEFAULT_FORMATOS),
     campos: [],
     incluye_transporte: true,
     incluye_lunch: true,
@@ -188,6 +229,7 @@ export function leerConfig(datos: unknown): ConfigEspecie {
     kit_descripcion: txt(d.kit_descripcion),
     campos_club: normalizarPredef(d.campos_club, CAMPOS_CLUB, DEFAULT_CLUB),
     campos_integrante: normalizarPredef(d.campos_integrante, CAMPOS_INTEGRANTE, DEFAULT_INTEGRANTE),
+    formatos: normalizarPredef(d.formatos, FORMATOS, DEFAULT_FORMATOS),
     campos: (Array.isArray(d.campos) ? d.campos : []).slice(0, LIMITES_ESPECIE.campos).map((c) => {
       const x = obj(c);
       const tipo = txt(x.tipo_campo);
@@ -222,6 +264,7 @@ export function payloadConfig(c: ConfigEspecie) {
     kit_descripcion: c.kit_descripcion.trim() || null,
     campos_club: c.campos_club,
     campos_integrante: c.campos_integrante,
+    formatos: c.formatos,
     // E71: apoyos (con transporte apagado el servidor borra la salida).
     incluye_transporte: c.incluye_transporte,
     incluye_lunch: c.incluye_lunch,
@@ -442,11 +485,19 @@ export interface IntegranteApi {
   id: number; es_lider: boolean; es_lider_b?: boolean; nombre: string; fecha_nacimiento: string | null; sexo: string | null; curp: string | null;
   grado_grupo: string | null; correo: string | null; telefono: string | null; datos: Record<string, unknown> | null;
   foto_url: string | null; menor_de_edad: boolean | null;
+  /** E79 */
+  grado?: string | null; grupo?: string | null; domicilio?: string | null; tutor_nombre?: string | null;
 }
 export interface DocumentoClub {
   clave: string; nombre: string; descripcion?: string | null; obligatorio: boolean; formatos?: string[]; max_mb?: number;
-  subido: { nombre_original: string; subido_at: string | null } | null;
+  /** E79: el sistema lo genera lleno (carta, A, B, C o permiso de imagen) y su estado de revisión. */
+  generable?: boolean; integrante_id?: number;
+  subido: { nombre_original: string; subido_at: string | null; estado?: string; motivo?: string | null } | null;
 }
+/** E79: permiso de uso de imagen de un integrante (tarjeta del integrante). */
+export interface PermisoImagen { tipo: 'menor' | 'adulto'; obligatorio: boolean; subido: DocumentoClub['subido'] }
+/** Formatos que se generan en «Documentos» (el de imagen va en la tarjeta del integrante). */
+export const FORMATOS_GENERABLES = ['carta_escuela', 'formato_a', 'formato_b', 'formato_c'];
 export interface ClubApi extends Partial<AvanceClub> {
   id: number; folio: string; nombre: string; estado: string; logo_url: string | null; datos: Record<string, unknown>;
   enviado_at: string | null; escuela: EscuelaApi | null; editable?: boolean;

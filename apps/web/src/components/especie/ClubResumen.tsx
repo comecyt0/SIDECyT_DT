@@ -1,10 +1,11 @@
 'use client';
 
-import { Shapes, School, User, FileText, Download, Crown, CheckCircle2, CircleDashed, Package, Eye } from 'lucide-react';
+import { useState } from 'react';
+import { Shapes, School, User, FileText, Download, Crown, CheckCircle2, CircleDashed, Package, Eye, Loader2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import FotoClub from '@/components/especie/FotoClub';
 import {
-  CAMPOS_INTEGRANTE, ESTADO_CLUB, NIVEL_ESCUELA, SEXO, SISTEMA_ESCUELA, valorCampo,
+  CAMPOS_INTEGRANTE, ESTADO_CLUB, ESTADO_DOCUMENTO, NIVEL_ESCUELA, SEXO, SISTEMA_ESCUELA, valorCampo,
   type CampoApi, type ClubApi, type DocumentoClub, type IntegranteApi, type Predef,
 } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
@@ -17,7 +18,7 @@ import EtiquetaEscuela from '@/components/especie/EtiquetaEscuela';
  * E52 · F1 — Vista de solo lectura de un club: datos, escuela, líder, integrantes con foto, respuestas adicionales y
  * documentos. La usan el personal (/admin/clubes/[id]) y el líder cuando su club ya se envió.
  */
-export default function ClubResumen({ club, integrantes, documentos, campos, camposIntegrante, kit, onDescargar, descargando }: {
+export default function ClubResumen({ club, integrantes, documentos, campos, camposIntegrante, kit, onDescargar, descargando, onRevisar }: {
   club: ClubApi;
   integrantes: IntegranteApi[];
   documentos: DocumentoClub[];
@@ -26,6 +27,8 @@ export default function ClubResumen({ club, integrantes, documentos, campos, cam
   kit?: string | null;
   onDescargar?: (clave: string, nombre: string) => void;
   descargando?: string | null;
+  /** E79: revisión por documento (solo personal con permiso). Devuelve si se guardó. */
+  onRevisar?: (clave: string, decision: 'aprobar' | 'rechazar', motivo?: string) => Promise<boolean>;
 }) {
   const { ver } = useVistaPrevia();
   const est = ESTADO_CLUB[club.estado] ?? { etiqueta: club.estado, tono: 'neutral' };
@@ -139,11 +142,16 @@ export default function ClubResumen({ club, integrantes, documentos, campos, cam
                 ? <CheckCircle2 className="h-5 w-5 shrink-0" style={{ color: 'var(--tile-emerald-fg)' }} aria-label="Subido" />
                 : <CircleDashed className="h-5 w-5 shrink-0 text-[var(--app-ink-2)]" aria-label="Sin subir" />}
               <span className="min-w-0 flex-1">
-                <span className="block break-words text-sm font-semibold text-[var(--app-ink)]">{d.nombre}{d.obligatorio ? '' : ' (opcional)'}</span>
+                <span className="flex flex-wrap items-center gap-2 break-words text-sm font-semibold text-[var(--app-ink)]">
+                  {d.nombre}{d.obligatorio ? '' : ' (opcional)'}
+                  {d.subido && (() => { const e = ESTADO_DOCUMENTO[d.subido.estado ?? 'pendiente'] ?? ESTADO_DOCUMENTO.pendiente; return <span className="pill" data-tone={e.tono} data-dot="on">{e.etiqueta}</span>; })()}
+                </span>
                 <span className="block break-words text-xs text-[var(--app-ink-2)]">
                   {d.subido ? `${d.subido.nombre_original}${d.subido.subido_at ? ` · ${formatDate(d.subido.subido_at)}` : ''}` : 'Sin subir'}
                 </span>
+                {d.subido?.estado === 'rechazado' && d.subido.motivo && <span className="block text-xs font-medium" style={{ color: 'var(--auth-danger)' }}>Motivo: {d.subido.motivo}</span>}
               </span>
+              {d.subido && onRevisar && <RevisarDocumento nombre={d.nombre} estado={d.subido.estado ?? 'pendiente'} onRevisar={(dec, m) => onRevisar(d.clave, dec, m)} />}
               {d.subido && (
                 // 02/10/2026: «Ver» muestra el archivo dentro de la página (antes solo se podía descargar).
                 <Button size="sm" variant="outline" onClick={() => void ver({ nombre: d.subido?.nombre_original ?? d.clave, cargar: () => archivoDocumentoClub(club.id, d.clave) })}
@@ -163,5 +171,51 @@ export default function ClubResumen({ club, integrantes, documentos, campos, cam
         </ul>
       </section>
     </div>
+  );
+}
+
+/**
+ * E79 — Aprobar o rechazar un documento subido. Rechazar pide el motivo (lo ve el líder). No es una acción que se
+ * repita cientos de veces: sin animaciones, botones con su estado de carga.
+ */
+function RevisarDocumento({ nombre, estado, onRevisar }: {
+  nombre: string; estado: string;
+  onRevisar: (decision: 'aprobar' | 'rechazar', motivo?: string) => Promise<boolean>;
+}) {
+  const [rechazando, setRechazando] = useState(false);
+  const [motivo, setMotivo] = useState('');
+  const [enviando, setEnviando] = useState<'aprobar' | 'rechazar' | null>(null);
+  const enviar = async (decision: 'aprobar' | 'rechazar') => {
+    setEnviando(decision);
+    const ok = await onRevisar(decision, decision === 'rechazar' ? motivo.trim() : undefined);
+    setEnviando(null);
+    if (ok) { setRechazando(false); setMotivo(''); }
+  };
+  if (rechazando) {
+    return (
+      <div className="flex w-full flex-wrap items-center gap-2">
+        <label className="sr-only" htmlFor={`motivo-${nombre}`}>Motivo del rechazo de {nombre}</label>
+        <input id={`motivo-${nombre}`} className="auth-input auth-input-static min-w-[220px] flex-1 pl-3 text-sm" maxLength={1000} autoFocus
+          value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="¿Qué debe corregir? (lo verá el líder)" />
+        <Button size="sm" variant="destructive" disabled={motivo.trim().length < 5 || enviando !== null} onClick={() => void enviar('rechazar')}>
+          {enviando === 'rechazar' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <XCircle className="h-4 w-4" aria-hidden="true" />}Rechazar
+        </Button>
+        <Button size="sm" variant="outline" disabled={enviando !== null} onClick={() => { setRechazando(false); setMotivo(''); }}>Cancelar</Button>
+      </div>
+    );
+  }
+  return (
+    <span className="inline-flex flex-wrap gap-1.5">
+      {estado !== 'aprobado' && (
+        <Button size="sm" variant="soft" disabled={enviando !== null} onClick={() => void enviar('aprobar')} aria-label={`Marcar ${nombre} como correcto`}>
+          {enviando === 'aprobar' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="h-4 w-4" aria-hidden="true" />}<span className="max-sm:sr-only">Correcto</span>
+        </Button>
+      )}
+      {estado !== 'rechazado' && (
+        <Button size="sm" variant="outline" disabled={enviando !== null} onClick={() => setRechazando(true)} aria-label={`Rechazar ${nombre}`}>
+          <XCircle className="h-4 w-4" aria-hidden="true" /><span className="max-sm:sr-only">Rechazar</span>
+        </Button>
+      )}
+    </span>
   );
 }

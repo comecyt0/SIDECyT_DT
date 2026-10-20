@@ -233,6 +233,7 @@ class AsistenteConvocatoriaController extends Controller
                     'kit_descripcion' => isset($e['kit_descripcion']) ? trim(strip_tags($e['kit_descripcion'])) : null,
                     'campos_club' => \App\Support\Especie::normalizarPredefinidos($e['campos_club'] ?? null, \App\Support\Especie::CAMPOS_CLUB, \App\Support\Especie::DEFAULT_CLUB),
                     'campos_integrante' => \App\Support\Especie::normalizarPredefinidos($e['campos_integrante'] ?? null, \App\Support\Especie::CAMPOS_INTEGRANTE, \App\Support\Especie::DEFAULT_INTEGRANTE),
+                    'formatos' => \App\Support\Especie::normalizarPredefinidos($e['formatos'] ?? null, \App\Support\Especie::FORMATOS, \App\Support\Especie::DEFAULT_FORMATOS), // E79
                 ]);
                 $cfg->convocatoria_id = $convocatoria->id;
                 \App\Support\ApoyosLogistica::aplicar($cfg, $e); // E71: transporte / box lunch, salida y fecha límite
@@ -324,6 +325,7 @@ class AsistenteConvocatoriaController extends Controller
         $r['especie.kit_descripcion'] = 'nullable|string|max:5000';
         $r['especie.campos_club'] = 'nullable|array';
         $r['especie.campos_integrante'] = 'nullable|array';
+        $r['especie.formatos'] = 'nullable|array'; // E79
         $r += array_map(fn ($x) => str_replace('required|array', 'sometimes|array', $x), \App\Support\EtapasEspecie::reglas('especie.etapas'));
         $r += \App\Support\ApoyosLogistica::reglas('especie');
 
@@ -421,8 +423,10 @@ class AsistenteConvocatoriaController extends Controller
                 }
             }
             foreach ((is_array($in['documentos'] ?? null) ? $in['documentos'] : []) as $i => $d) {
-                if (is_array($d) && ($d['clave'] ?? null) === \App\Support\Especie::CARTA_ESCUELA) {
-                    $errores["documentos.$i.clave"] = 'La carta de la escuela ya se pide siempre; usa otra clave.';
+                $cl = is_array($d) ? (string) ($d['clave'] ?? '') : '';
+                if (in_array($cl, \App\Support\Especie::FORMATOS_CLUB, true) || str_starts_with($cl, \App\Support\Especie::PREFIJO_IMAGEN)) {
+                    // E79: claves reservadas para los formatos institucionales (se activan con sus casillas).
+                    $errores["documentos.$i.clave"] = 'Ese nombre está reservado para los formatos institucionales; actívalo en «Formatos» o usa otro nombre.';
                 }
             }
 

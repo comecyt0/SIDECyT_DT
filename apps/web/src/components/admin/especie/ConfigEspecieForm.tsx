@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Lock, Users, Package, ListChecks, MessageSquarePlus, ClipboardCheck, ArrowUp, ArrowDown, Globe2, Bus, Sandwich } from 'lucide-react';
+import { Plus, Edit2, Trash2, Lock, Users, Package, ListChecks, MessageSquarePlus, ClipboardCheck, ArrowUp, ArrowDown, Globe2, Bus, Sandwich, FileSignature } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Asterisco } from '@/components/ui/obligatorio';
@@ -18,7 +18,7 @@ import StepFrame from '@/components/ui/step-frame';
 import RevisoresEtapa from '@/components/admin/especie/RevisoresEtapa';
 import FechaHoraAmPm from '@/components/ui/fecha-hora-ampm';
 import {
-  CAMPOS_CLUB, CAMPOS_INTEGRANTE, LIMITES_ESPECIE, MAX_ETAPAS, MODALIDADES, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, slugCampo,
+  CAMPOS_CLUB, CAMPOS_INTEGRANTE, FORMATOS, LIMITES_ESPECIE, MAX_ETAPAS, MODALIDADES, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, slugCampo,
   type Ambito, type Modalidad, type CampoEspecie, type ConfigEspecie, type EtapaEspecie, type Predef, type Revisa, type TipoCampoEspecie,
 } from '@/lib/especie';
 
@@ -284,7 +284,6 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
             <div className="divide-y" style={{ borderColor: 'var(--app-rule)' }}>
               <FilaFija etiqueta="Nombre del club" />
               <FilaFija etiqueta="Escuela" />
-              <FilaFija etiqueta="Carta de consentimiento de la escuela" />
               {Object.entries(CAMPOS_CLUB).map(([k, t]) => (
                 <FilaPredef key={k} id={`${idBase}-club-${k}`} etiqueta={t} valor={c.campos_club[k] ?? { pedir: false, obligatorio: false }}
                   onChange={(p) => set({ campos_club: { ...c.campos_club, [k]: p } })} />
@@ -302,6 +301,24 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
             </div>
           </div>
         </div>
+      </Seccion>
+
+      {/* E79 (20/10/2026, pedido del usuario): formatos institucionales con la franja de convivencia, llenos con los datos
+          del club y en PDF sin edición. El líder los descarga, firma y sube; cada uno se revisa (aprobar o rechazar). */}
+      <Seccion icon={<FileSignature />} titulo="Formatos institucionales"
+        ayuda="Se generan llenos con los datos del club (lo que falte queda en línea para llenar a mano), en PDF sin edición. El líder los firma, sella y sube; el revisor aprueba o rechaza cada uno.">
+        <div className="rounded-[16px] border px-4 py-2" style={{ borderColor: 'var(--app-rule)' }}>
+          <div className="divide-y" style={{ borderColor: 'var(--app-rule)' }}>
+            {Object.entries(FORMATOS).map(([k, t]) => (
+              <FilaPredef key={k} id={`${idBase}-fmt-${k}`} etiqueta={t} valor={c.formatos?.[k] ?? { pedir: false, obligatorio: false }}
+                onChange={(p) => set({ formatos: { ...c.formatos, [k]: p } })} />
+            ))}
+          </div>
+        </div>
+        <p className="text-xs text-[var(--app-ink-2)]">
+          Los formatos A, B y C son los del STEAM EDOMEX. El permiso de uso de imagen es uno por integrante: infantil para estudiantes menores
+          de edad y de adulto para docentes. Para llenarlos solos, pide también el director(a), el lugar, grado, grupo, domicilio y tutor.
+        </p>
       </Seccion>
 
       <Seccion icon={<MessageSquarePlus />} titulo="Preguntas adicionales (opcional)" ayuda="Para lo que no está en la lista anterior: talla de playera, turno, taller de interés…">

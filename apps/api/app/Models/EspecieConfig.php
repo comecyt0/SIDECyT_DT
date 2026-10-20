@@ -14,13 +14,14 @@ class EspecieConfig extends Model
 
     protected $fillable = [
         'min_integrantes', 'max_integrantes', 'clubes_por_escuela', 'participan_menores',
-        'kit_nombre', 'kit_descripcion', 'campos_club', 'campos_integrante', 'modalidad',
+        'kit_nombre', 'kit_descripcion', 'campos_club', 'campos_integrante', 'modalidad', 'formatos',
     ];
 
     protected $casts = [
         'participan_menores' => 'boolean',
         'campos_club' => 'array',
         'campos_integrante' => 'array',
+        'formatos' => 'array', // E79
         'min_integrantes' => 'integer',
         'max_integrantes' => 'integer',
         'clubes_por_escuela' => 'integer',

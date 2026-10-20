@@ -20,12 +20,12 @@ import ClubResumen from '@/components/especie/ClubResumen';
 import AvisoEstadoClub from '@/components/especie/AvisoEstadoClub';
 import HistorialClub from '@/components/especie/HistorialClub';
 import LogisticaLider from '@/components/especie/LogisticaLider';
-import { archivoDocumentoClub, descargarCartaEscuela, descargarDocumentoClub } from '@/lib/especie-api';
+import { archivoDocumentoClub, descargarDocumentoClub, descargarFormatoClub, descargarUsoImagen } from '@/lib/especie-api';
 import {
-  ACCEPT_FORMATO, ACCEPT_IMAGEN, CAMPOS_INTEGRANTE, CARTA_ESCUELA, ESTADO_CLUB, ETIQUETA_FORMATO, IMAGEN_MAX_MB, SEXO,
+  ACCEPT_FORMATO, ACCEPT_IMAGEN, CAMPOS_INTEGRANTE, ESTADO_CLUB, ESTADO_DOCUMENTO, ETIQUETA_FORMATO, IMAGEN_MAX_MB, SEXO,
   leerCamposApi, normalizarPredef, CAMPOS_CLUB, valorCampo,
   leerLogistica, type LogisticaEstado,
-  type CampoApi, type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi, type Predef,
+  type CampoApi, type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi, type PermisoImagen, type Predef,
 } from '@/lib/especie';
 import { PATRON_CURP, PATRON_TELEFONO, PATRON_CORREO, fechaDeCurp } from '@/lib/registro';
 import { textoLegible } from '@/lib/errores-formulario';
@@ -59,6 +59,8 @@ interface Detalle {
   accesos: AccesosClubApi | null;
   /** 08/10/2026: el club lo registró el director (da de alta al líder A y al B; no es integrante). */
   dueno_director: boolean;
+  /** E79: permiso de uso de imagen de cada integrante (si la convocatoria lo pide). */
+  permisos_imagen: Record<string, PermisoImagen>;
 }
 
 const ACCESO_TEXTO: Record<string, string> = {
@@ -69,8 +71,8 @@ const ACCESO_TEXTO: Record<string, string> = {
 const COMPARTIDO = 'Te compartieron el permiso: puedes editar, enviar y atender la logística del club mientras esté activo.';
 
 // E76: con CURP pedida, el nombre va por partes y la CURP se compara con nombre y fecha (lib/curp.ts).
-type FormIntegrante = { nombre: string; nombres: string; primer_apellido: string; segundo_apellido: string; curp_revision: boolean; fecha_nacimiento: string; sexo: string; curp: string; grado_grupo: string; correo: string; telefono: string; datos: Record<string, string> };
-const INT_VACIO: FormIntegrante = { nombre: '', nombres: '', primer_apellido: '', segundo_apellido: '', curp_revision: false, fecha_nacimiento: '', sexo: '', curp: '', grado_grupo: '', correo: '', telefono: '', datos: {} };
+type FormIntegrante = { nombre: string; nombres: string; primer_apellido: string; segundo_apellido: string; curp_revision: boolean; fecha_nacimiento: string; sexo: string; curp: string; grado_grupo: string; grado: string; grupo: string; domicilio: string; tutor_nombre: string; correo: string; telefono: string; datos: Record<string, string> };
+const INT_VACIO: FormIntegrante = { nombre: '', nombres: '', primer_apellido: '', segundo_apellido: '', curp_revision: false, fecha_nacimiento: '', sexo: '', curp: '', grado_grupo: '', grado: '', grupo: '', domicilio: '', tutor_nombre: '', correo: '', telefono: '', datos: {} };
 const labelCls = 'text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]';
 const inputCls = 'auth-input auth-input-static pl-4';
 
@@ -110,6 +112,7 @@ function leerDetalle(data: unknown): Detalle | null {
     acceso: typeof d.acceso === 'string' ? d.acceso : 'lider',
     accesos: leerAccesos(d.accesos),
     dueno_director: d.dueno_director === true,
+    permisos_imagen: d.permisos_imagen && typeof d.permisos_imagen === 'object' ? d.permisos_imagen : {},
   };
 }
 
@@ -235,6 +238,9 @@ export default function MiClubPage() {
     if (Object.keys(e).length) return;
     const datos: Record<string, string> = {};
     if (pc.descripcion?.pedir) datos.descripcion = datosClub.descripcion ?? '';
+    // E79: director(a) y lugar llenan los formatos institucionales.
+    if (pc.director_nombre?.pedir) datos.director_nombre = (datosClub.director_nombre ?? '').trim();
+    if (pc.lugar?.pedir) datos.lugar = (datosClub.lugar ?? '').trim();
     for (const c of camposClub) datos[c.nombre_campo] = datosClub[c.nombre_campo] ?? '';
     setOcupado('datos');
     try {
@@ -271,7 +277,7 @@ export default function MiClubPage() {
       form: {
         nombre: i.nombre ?? '', nombres: (i as { nombres?: string | null }).nombres ?? '', primer_apellido: (i as { primer_apellido?: string | null }).primer_apellido ?? '',
         segundo_apellido: (i as { segundo_apellido?: string | null }).segundo_apellido ?? '', curp_revision: false, fecha_nacimiento: i.fecha_nacimiento ? String(i.fecha_nacimiento).slice(0, 10) : '', sexo: i.sexo ?? '',
-        curp: i.curp ?? '', grado_grupo: i.grado_grupo ?? '', correo: i.correo ?? '', telefono: i.telefono ?? '', datos,
+        curp: i.curp ?? '', grado_grupo: i.grado_grupo ?? '', grado: i.grado ?? '', grupo: i.grupo ?? '', domicilio: i.domicilio ?? '', tutor_nombre: i.tutor_nombre ?? '', correo: i.correo ?? '', telefono: i.telefono ?? '', datos,
       },
     });
   };
@@ -300,7 +306,7 @@ export default function MiClubPage() {
     const cuerpo: Record<string, unknown> = conCurp
       ? { nombres: nombrePropio(f.nombres, true), primer_apellido: nombrePropio(f.primer_apellido), segundo_apellido: nombrePropio(f.segundo_apellido) || null, curp_revision: f.curp_revision, datos: {} as Record<string, string> }
       : { nombre: nombrePropio(f.nombre, true), datos: {} as Record<string, string> };
-    for (const k of ['fecha_nacimiento', 'sexo', 'curp', 'grado_grupo', 'correo', 'telefono'] as const) {
+    for (const k of ['fecha_nacimiento', 'sexo', 'curp', 'grado_grupo', 'grado', 'grupo', 'domicilio', 'tutor_nombre', 'correo', 'telefono'] as const) {
       if (pi[k]?.pedir) cuerpo[k] = f[k].trim() || null;
     }
     const datos: Record<string, string> = {};
@@ -472,6 +478,24 @@ export default function MiClubPage() {
                 placeholder="Describe el proyecto de tu club" onChange={(e) => setDatosClub({ ...datosClub, descripcion: e.target.value })} />
             </div>
           )}
+          {/* E79: datos para llenar los formatos institucionales (si la convocatoria los pide). */}
+          {(pc.director_nombre?.pedir || pc.lugar?.pedir) && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {pc.director_nombre?.pedir && (
+                <Campo id="club-director" etiqueta={`Nombre del director(a) de la escuela${pc.director_nombre.obligatorio ? ' *' : ' (opcional)'}`} error={erroresClub['datos.director_nombre']}>
+                  <input id="club-director" className={inputCls} maxLength={150} value={datosClub.director_nombre ?? ''} autoComplete="off"
+                    placeholder="Como aparecerá en los formatos" onChange={(e) => setDatosClub({ ...datosClub, director_nombre: e.target.value })}
+                    onBlur={() => setDatosClub((x) => ({ ...x, director_nombre: nombrePropio(x.director_nombre ?? '', true) }))} />
+                </Campo>
+              )}
+              {pc.lugar?.pedir && (
+                <Campo id="club-lugar" etiqueta={`Lugar para los formatos${pc.lugar.obligatorio ? ' *' : ' (opcional)'}`} error={erroresClub['datos.lugar']}>
+                  <input id="club-lugar" className={inputCls} maxLength={150} value={datosClub.lugar ?? ''} placeholder="Ej. Toluca, Estado de México"
+                    onChange={(e) => setDatosClub({ ...datosClub, lugar: e.target.value })} />
+                </Campo>
+              )}
+            </div>
+          )}
           {camposClub.map((c) => (
             <CampoDinamico key={c.nombre_campo} campo={c} idBase="club" valor={datosClub[c.nombre_campo]} error={erroresClub[`datos.${c.nombre_campo}`]}
               onChange={(v) => setDatosClub({ ...datosClub, [c.nombre_campo]: v })} />
@@ -501,8 +525,21 @@ export default function MiClubPage() {
         <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {d.integrantes.map((i) => {
             const faltaFoto = pi.foto?.obligatorio && !i.foto_url;
+            // E79 (pedido del usuario): cada tarjeta marca de forma visible lo que le falta.
+            const permiso = d.permisos_imagen[String(i.id)];
+            const esMenor = permiso?.tipo === 'menor';
+            const faltas: string[] = [];
+            if (faltaFoto) faltas.push('foto');
+            for (const k of ['fecha_nacimiento', 'sexo', 'curp', 'grado_grupo', 'grado', 'grupo', 'domicilio', 'tutor_nombre', 'correo', 'telefono'] as const) {
+              if (k === 'tutor_nombre' && !esMenor) continue;
+              if (pi[k]?.obligatorio && !(i as unknown as Record<string, unknown>)[k]) faltas.push(k === 'tutor_nombre' ? 'madre, padre o tutor' : (CAMPOS_INTEGRANTE[k] ?? k).toLowerCase());
+            }
+            if (permiso?.obligatorio && !permiso.subido) faltas.push('permiso de imagen firmado');
+            if (permiso?.subido?.estado === 'rechazado') faltas.push('volver a subir el permiso de imagen');
+            const claveImg = `uso_imagen_${i.id}`;
             return (
-              <li key={i.id} className="app-card flex gap-3 p-4">
+              <li key={i.id} className="app-card flex gap-3 p-4" style={faltas.length ? { boxShadow: 'inset 4px 0 0 var(--tile-gold-fg)' } : undefined}
+                aria-label={faltas.length ? `${i.nombre}: le falta ${faltas.join(', ')}` : undefined}>
                 <div className="flex shrink-0 flex-col items-center gap-1.5">
                   <FotoClub src={i.foto_url} alt={`Foto de ${i.nombre}`} className="h-16 w-16 rounded-full" fallback={<User className="h-6 w-6 text-[var(--app-ink-2)]" aria-hidden="true" />} />
                   {pi.foto?.pedir && (
@@ -528,7 +565,43 @@ export default function MiClubPage() {
                       ...camposInt.map((c) => (i.datos?.[c.nombre_campo] ? `${c.etiqueta}: ${valorCampo(c, i.datos[c.nombre_campo])}` : null)),
                     ].filter(Boolean).join(' · ') || 'Sin datos adicionales'}
                   </p>
-                  {faltaFoto && <p className="text-xs font-medium" style={{ color: 'var(--tile-gold-fg)' }}>Falta su foto.</p>}
+                  {faltas.length > 0
+                    ? <p className="inline-flex items-start gap-1.5 rounded-[10px] px-2 py-1 text-xs font-semibold" style={{ backgroundColor: 'var(--tile-gold-bg)', color: 'var(--app-ink)' }}>
+                        <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" style={{ color: 'var(--tile-gold-fg)' }} aria-hidden="true" />Le falta: {faltas.join(', ')}.
+                      </p>
+                    : <p className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: 'var(--tile-emerald-fg)' }}><CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />Completo</p>}
+                  {permiso && (
+                    <div className="space-y-1.5 rounded-[12px] border px-3 py-2" style={{ borderColor: 'var(--app-rule)' }}>
+                      <p className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-[var(--app-ink)]">
+                        <FileDown className="h-3.5 w-3.5" aria-hidden="true" />Permiso de uso de imagen ({esMenor ? 'menor de edad' : 'adulto'}){permiso.obligatorio ? ' *' : ''}
+                        <EstadoDoc subido={permiso.subido} />
+                      </p>
+                      {permiso.subido?.estado === 'rechazado' && permiso.subido.motivo && (
+                        <p className="text-xs" style={{ color: 'var(--auth-danger)' }}>Motivo: {permiso.subido.motivo}</p>
+                      )}
+                      <div className="flex flex-wrap gap-1.5">
+                        <Button size="sm" variant="soft" disabled={ocupado === `img-dl-${i.id}`} onClick={async () => {
+                          setOcupado(`img-dl-${i.id}`);
+                          try { await descargarUsoImagen(club.id, i.id, club.folio); } catch { setAviso({ tipo: 'error', texto: 'No se pudo generar el permiso.' }); } finally { setOcupado(null); }
+                        }}>
+                          {ocupado === `img-dl-${i.id}` ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileDown className="h-4 w-4" aria-hidden="true" />}<span className="text-xs">Descargar permiso</span>
+                        </Button>
+                        <BotonArchivo accept={ACCEPT_FORMATO.pdf} variant={permiso.subido ? 'outline' : 'default'} etiqueta={`Subir permiso de imagen firmado de ${i.nombre}`} disabled={ocupado === claveImg}
+                          onArchivo={(f) => {
+                            if (f.size > 10 * 1024 * 1024) { setAviso({ tipo: 'error', texto: 'El permiso no puede pesar más de 10 MB.' }); return; }
+                            void accion(claveImg, () => subirArchivo(`/club/clubes/${club.id}/documentos`, 'archivo', f, { clave: claveImg }), `Permiso de imagen de ${i.nombre} subido.`);
+                          }}>
+                          {ocupado === claveImg ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}
+                          <span className="text-xs">{permiso.subido ? 'Reemplazar firmado' : 'Subir firmado'}</span>
+                        </BotonArchivo>
+                        {permiso.subido && (
+                          <Button size="sm" variant="outline" onClick={() => void verArchivo({ nombre: permiso.subido?.nombre_original ?? claveImg, cargar: () => archivoDocumentoClub(club.id, claveImg) })} aria-label={`Ver el permiso de ${i.nombre}`}>
+                            <Eye className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <div className="flex gap-1.5 pt-1">
                     <Button size="sm" variant="soft" onClick={() => abrirIntegrante(i)} aria-label={`Editar a ${i.nombre}`}><Pencil className="h-4 w-4" aria-hidden="true" /><span className="max-sm:sr-only">Editar</span></Button>
                     {/* El líder B se quita desde «Acompañantes del club». */}
@@ -553,7 +626,8 @@ export default function MiClubPage() {
           {d.documentos.map((doc) => {
             const formatos = Array.isArray(doc.formatos) && doc.formatos.length ? doc.formatos : ['pdf'];
             const accept = formatos.map((f) => ACCEPT_FORMATO[f] ?? '').filter(Boolean).join(',');
-            const esCarta = doc.clave === CARTA_ESCUELA;
+            // E79: los formatos institucionales se descargan llenos (PDF sin edición) y se suben firmados.
+            const generable = doc.generable === true;
             const clave = `doc-${doc.clave}`;
             return (
               <li key={doc.clave} className="space-y-2 px-4 py-4">
@@ -562,8 +636,9 @@ export default function MiClubPage() {
                     ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" style={{ color: 'var(--tile-emerald-fg)' }} aria-label="Subido" />
                     : <CircleDashed className="mt-0.5 h-5 w-5 shrink-0 text-[var(--app-ink-2)]" aria-label="Sin subir" />}
                   <div className="min-w-0 flex-1">
-                    <p className="break-words text-sm font-semibold text-[var(--app-ink)]">{doc.nombre}{doc.obligatorio ? ' *' : ' (opcional)'}</p>
+                    <p className="flex flex-wrap items-center gap-2 break-words text-sm font-semibold text-[var(--app-ink)]">{doc.nombre}{doc.obligatorio ? ' *' : ' (opcional)'}<EstadoDoc subido={doc.subido} /></p>
                     {doc.descripcion && <p className="break-words text-xs text-[var(--app-ink-2)]">{doc.descripcion}</p>}
+                    {doc.subido?.estado === 'rechazado' && doc.subido.motivo && <p className="text-xs font-medium" style={{ color: 'var(--auth-danger)' }}>Motivo del rechazo: {doc.subido.motivo}</p>}
                     <p className="text-xs text-[var(--app-ink-2)]">
                       {formatos.map((f) => ETIQUETA_FORMATO[f] ?? f).join(' o ')}, hasta {doc.max_mb ?? 5} MB
                       {doc.subido ? ` · Subido: ${doc.subido.nombre_original}` : ''}
@@ -571,12 +646,14 @@ export default function MiClubPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 pl-8">
-                  {esCarta && (
-                    <Button size="sm" variant="soft" disabled={ocupado === 'carta'} onClick={async () => {
-                      setOcupado('carta');
-                      try { await descargarCartaEscuela(club.id, club.folio); } catch { setAviso({ tipo: 'error', texto: 'No se pudo generar la carta.' }); } finally { setOcupado(null); }
+                  {generable && (
+                    <Button size="sm" variant="soft" disabled={ocupado === `fmt-${doc.clave}`} onClick={async () => {
+                      setOcupado(`fmt-${doc.clave}`);
+                      try { await descargarFormatoClub(club.id, doc.clave, club.folio); }
+                      catch (er) { setAviso({ tipo: 'error', texto: (await mensajeDeBlob(er)) ?? 'No se pudo generar el formato.' }); }
+                      finally { setOcupado(null); }
                     }}>
-                      {ocupado === 'carta' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileDown className="h-4 w-4" aria-hidden="true" />} Descargar formato
+                      {ocupado === `fmt-${doc.clave}` ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileDown className="h-4 w-4" aria-hidden="true" />} Descargar formato lleno
                     </Button>
                   )}
                   <BotonArchivo accept={accept} etiqueta={`${doc.subido ? 'Reemplazar' : 'Subir'} ${doc.nombre}`} disabled={ocupado === clave} variant={doc.subido ? 'outline' : 'default'}
@@ -600,8 +677,8 @@ export default function MiClubPage() {
                     </>
                   )}
                 </div>
-                {esCarta && !doc.subido && (
-                  <p className="pl-8 text-xs text-[var(--app-ink-2)]">Descarga el formato con los datos de tu club, pide que la escuela lo firme y selle, y súbelo escaneado o en foto.</p>
+                {generable && !doc.subido && (
+                  <p className="pl-8 text-xs text-[var(--app-ink-2)]">Descarga el formato ya llenado con los datos de tu club (lo que falte, llénalo a mano), recaba firmas y sello, y súbelo escaneado en PDF.</p>
                 )}
               </li>
             );
@@ -753,6 +830,32 @@ export default function MiClubPage() {
                     onChange={(e) => setDialogo({ ...dialogo, form: { ...dialogo.form, grado_grupo: e.target.value } })} />
                 </Campo>
               )}
+              {/* E79: grado y grupo por separado, domicilio y madre/padre/tutor (permiso de imagen de menores). */}
+              {pi.grado?.pedir && (
+                <Campo id="int-grado" etiqueta={`Grado${pi.grado.obligatorio ? ' *' : ''}`} error={erroresInt.grado}>
+                  <input id="int-grado" className={inputCls} maxLength={20} value={dialogo.form.grado} placeholder="Ej. 2°"
+                    onChange={(e) => setDialogo({ ...dialogo, form: { ...dialogo.form, grado: e.target.value } })} />
+                </Campo>
+              )}
+              {pi.grupo?.pedir && (
+                <Campo id="int-grupo" etiqueta={`Grupo${pi.grupo.obligatorio ? ' *' : ''}`} error={erroresInt.grupo}>
+                  <input id="int-grupo" className={inputCls} maxLength={20} value={dialogo.form.grupo} placeholder="Ej. B"
+                    onChange={(e) => setDialogo({ ...dialogo, form: { ...dialogo.form, grupo: e.target.value } })} />
+                </Campo>
+              )}
+              {pi.domicilio?.pedir && (
+                <Campo id="int-dom" etiqueta={`Domicilio${pi.domicilio.obligatorio ? ' *' : ''}`} error={erroresInt.domicilio} className="sm:col-span-2">
+                  <input id="int-dom" className={inputCls} maxLength={300} value={dialogo.form.domicilio} placeholder="Calle, número, colonia, municipio"
+                    onChange={(e) => setDialogo({ ...dialogo, form: { ...dialogo.form, domicilio: e.target.value } })} />
+                </Campo>
+              )}
+              {pi.tutor_nombre?.pedir && !dialogo.lider && (
+                <Campo id="int-tutor" etiqueta={`Madre, padre o tutor${pi.tutor_nombre.obligatorio ? ' * (menores de edad)' : ' (menores de edad)'}`} error={erroresInt.tutor_nombre} className="sm:col-span-2">
+                  <input id="int-tutor" className={inputCls} maxLength={150} value={dialogo.form.tutor_nombre} placeholder="Nombre completo"
+                    onChange={(e) => setDialogo({ ...dialogo, form: { ...dialogo.form, tutor_nombre: e.target.value } })}
+                    onBlur={() => setDialogo((d) => (d ? { ...d, form: { ...d.form, tutor_nombre: nombrePropio(d.form.tutor_nombre, true) } } : d))} />
+                </Campo>
+              )}
               {pi.correo?.pedir && (
                 <Campo id="int-correo" etiqueta={`Correo${pi.correo.obligatorio ? ' *' : ''}`} error={erroresInt.correo}>
                   <input id="int-correo" type="email" className={inputCls} maxLength={255} value={dialogo.form.correo}
@@ -780,6 +883,22 @@ export default function MiClubPage() {
       />
     </div>
   );
+}
+
+/** E79: estado de revisión de un documento subido (por revisar, aprobado o rechazado). */
+function EstadoDoc({ subido }: { subido: DocumentoClub['subido'] }) {
+  if (!subido) return null;
+  const e = ESTADO_DOCUMENTO[subido.estado ?? 'pendiente'] ?? ESTADO_DOCUMENTO.pendiente;
+  return <span className="pill font-semibold" data-tone={e.tono} data-dot="on">{e.etiqueta}</span>;
+}
+
+/** Mensaje del servidor cuando la descarga (blob) falla con 422, p. ej. «Tu escuela está en revisión…». */
+async function mensajeDeBlob(e: unknown): Promise<string | null> {
+  const datos = (e as { response?: { data?: unknown } })?.response?.data;
+  if (datos instanceof Blob) {
+    try { const j = JSON.parse(await datos.text()) as { message?: unknown }; return typeof j.message === 'string' ? j.message : null; } catch { return null; }
+  }
+  return null;
 }
 
 function Campo({ id, etiqueta, error, children, className = '' }: { id: string; etiqueta: string; error?: string; children: React.ReactNode; className?: string }) {

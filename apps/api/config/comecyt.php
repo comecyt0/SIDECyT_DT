@@ -10,6 +10,9 @@
  */
 
 return [
+    // E79 (20/10/2026): titular del COMECYT al que se dirige el Formato A (carta de interés). Si cambia, se ajusta en .env.
+    'director_general' => env('COMECYT_DIRECTOR_GENERAL', 'Dr. Víctor Daniel Ávila Akerberg'),
+
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 💰 MONTOS Y LÍMITES FINANCIEROS
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

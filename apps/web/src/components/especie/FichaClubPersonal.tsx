@@ -21,18 +21,21 @@ export interface DetalleClubPersonal {
   club: ClubApi;
   integrantes: IntegranteApi[];
   documentos: { clave: string; nombre_original: string; subido_at: string | null }[];
+  documentos_requeridos?: DocumentoClub[];
   config: { kit_nombre?: string | null; campos?: unknown; campos_integrante?: unknown; documentos?: { clave: string; nombre: string; obligatorio: boolean }[];
     convocatoria?: { id: number; nombre: string }; acta_comite?: { nombre: string; subida_at: string } | null };
   faltantes: string[];
   historial: EntradaHistorial[];
-  permisos: PermisosRevision & { logistica?: boolean; curp?: boolean };
+  permisos: PermisosRevision & { logistica?: boolean; curp?: boolean; documentos?: boolean };
   logistica: LogisticaEstado | null;
   /** E70: personas asignadas a la etapa actual y aprobaciones que lleva (solo personal). */
   aprobaciones: { requeridas: number; dadas: number; ya_aprobe: boolean; asignados: { nombre: string; aprobo: boolean }[] } | null;
 }
 
-/** Documentos que pide la convocatoria (carta de la escuela + los del programa) con lo que subió el club. */
+/** Documentos que pide la convocatoria con lo que subió el club. E79: el servidor ya manda la lista completa (formatos
+ *  marcados, documentos del programa y permisos de imagen) con su revisión; la versión anterior queda de respaldo. */
 export function documentosDe(d: DetalleClubPersonal): DocumentoClub[] {
+  if (Array.isArray(d.documentos_requeridos)) return d.documentos_requeridos;
   const subidos = new Map(d.documentos.map((x) => [x.clave, x]));
   return [
     { clave: CARTA_ESCUELA, nombre: 'Carta de consentimiento de la escuela', obligatorio: true },
@@ -43,7 +46,7 @@ export function documentosDe(d: DetalleClubPersonal): DocumentoClub[] {
   });
 }
 
-const SIN_PERMISOS: PermisosRevision & { logistica?: boolean; curp?: boolean } = { resolver: false, observar: false, rechazar: false, prorroga: false, visto_bueno: false, comite: false, acta: false, logistica: false, curp: false };
+const SIN_PERMISOS: PermisosRevision & { logistica?: boolean; curp?: boolean; documentos?: boolean } = { resolver: false, observar: false, rechazar: false, prorroga: false, visto_bueno: false, comite: false, acta: false, logistica: false, curp: false, documentos: false };
 
 export function leer(data: unknown): DetalleClubPersonal | null {
   const d = data as Partial<DetalleClubPersonal> | null;
@@ -52,6 +55,7 @@ export function leer(data: unknown): DetalleClubPersonal | null {
     club: d.club,
     integrantes: Array.isArray(d.integrantes) ? d.integrantes : [],
     documentos: Array.isArray(d.documentos) ? d.documentos : [],
+    documentos_requeridos: Array.isArray(d.documentos_requeridos) ? d.documentos_requeridos : undefined,
     config: d.config && typeof d.config === 'object' ? d.config : {},
     faltantes: Array.isArray(d.faltantes) ? d.faltantes.filter((x): x is string => typeof x === 'string') : [],
     historial: Array.isArray(d.historial) ? d.historial : [],
@@ -182,6 +186,21 @@ export default function FichaClubPersonal({ endpoint, volverHref }: { endpoint: 
     finally { setDescargando(null); }
   };
 
+  // E79: aprobar o rechazar (con motivo) un documento subido.
+  const revisarDocumento = async (clave: string, decision: 'aprobar' | 'rechazar', motivo?: string) => {
+    try {
+      const { data } = await api.post(`/revision/clubes/${d.club.id}/documentos/${encodeURIComponent(clave)}/revision`, { decision, motivo });
+      const x = leer(data);
+      if (x) setD(x);
+      setAviso(decision === 'aprobar' ? 'Documento aprobado.' : 'Documento rechazado: el líder verá el motivo. Usa «Observar» para que pueda corregirlo.');
+      setError(null);
+      return true;
+    } catch (e) {
+      setError(mensajeError(e, 'No se pudo guardar la revisión del documento.'));
+      return false;
+    }
+  };
+
   const convId = d.config.convocatoria?.id;
   return (
     <div className="space-y-6">
@@ -226,7 +245,8 @@ export default function FichaClubPersonal({ endpoint, volverHref }: { endpoint: 
       )}
       <ClubResumen club={d.club} integrantes={d.integrantes} documentos={documentos} campos={leerCamposApi(d.config.campos)}
         camposIntegrante={normalizarPredef(d.config.campos_integrante, CAMPOS_INTEGRANTE, {})} kit={d.config.kit_nombre ?? null}
-        onDescargar={descargar} descargando={descargando} />
+        onDescargar={descargar} descargando={descargando}
+        onRevisar={d.permisos.documentos ? revisarDocumento : undefined} />
       <HistorialClub entradas={d.historial} />
     </div>
   );

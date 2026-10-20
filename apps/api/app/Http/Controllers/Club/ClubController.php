@@ -15,6 +15,7 @@ use App\Models\ProgramaDocumento;
 use App\Models\User;
 use App\Support\Audit;
 use App\Support\Especie;
+use App\Support\FormatosClub;
 use App\Support\IdentidadCurp;
 use App\Support\NombrePropio;
 use App\Support\ImagenSegura;
@@ -163,6 +164,17 @@ class ClubController extends Controller
             if ($pc['descripcion']['pedir'] && isset($v['datos']['descripcion'])) {
                 $datos['descripcion'] = mb_substr(strip_tags((string) $v['datos']['descripcion']), 0, 2000);
             }
+            // E79: director(a) de la escuela y lugar, para llenar los formatos institucionales.
+            if ($pc['director_nombre']['pedir'] && isset($v['datos']['director_nombre']) && trim((string) $v['datos']['director_nombre']) !== '') {
+                $dir = NombrePropio::formatear(mb_substr(strip_tags((string) $v['datos']['director_nombre']), 0, 150), true);
+                if (! preg_match(NombrePropio::REGEX, $dir)) {
+                    throw ValidationException::withMessages(['datos.director_nombre' => 'El nombre del director(a) solo puede llevar letras y espacios.']);
+                }
+                $datos['director_nombre'] = $dir;
+            }
+            if ($pc['lugar']['pedir'] && isset($v['datos']['lugar']) && trim((string) $v['datos']['lugar']) !== '') {
+                $datos['lugar'] = mb_substr(trim(strip_tags((string) $v['datos']['lugar'])), 0, 150);
+            }
             $datos += Especie::validarPersonalizados($this->campos($club, 'club'), $v['datos'] ?? [], false);
             $club->datos = $datos;
         }
@@ -228,6 +240,10 @@ class ClubController extends Controller
             return response()->json(['message' => 'El líder B se quita desde «Acompañantes del club» (Quitar acceso).'], 422);
         }
         ImagenSegura::borrar(Especie::DIR_MEDIA, $integrante->foto_path);
+        // E79: su permiso de imagen firmado (el registro se borra en cascada; el archivo, aquí).
+        foreach (ClubDocumento::where('club_id', $club->id)->where('integrante_id', $integrante->id)->get() as $d) {
+            Storage::disk('local')->delete(Especie::DIR_DOCS.'/'.$club->id.'/'.$d->archivo);
+        }
         $integrante->delete();
 
         return response()->json(['message' => 'Integrante quitado.']);
@@ -273,9 +289,14 @@ class ClubController extends Controller
         } else {
             $out = ['nombre' => trim(strip_tags($v['nombre'])), 'nombres' => null, 'primer_apellido' => null, 'segundo_apellido' => null];
         }
-        foreach (['fecha_nacimiento', 'sexo', 'curp', 'grado_grupo', 'correo', 'telefono'] as $k) {
+        foreach (Especie::COLUMNAS_INTEGRANTE as $k) {
             $out[$k] = $pc[$k]['pedir'] ? ($v[$k] ?? null) : null;
         }
+        // E79: textos libres sin etiquetas; el nombre del tutor con mayúscula inicial.
+        foreach (['grado', 'grupo', 'domicilio'] as $k) {
+            if ($out[$k] !== null) $out[$k] = trim(strip_tags((string) $out[$k])) ?: null;
+        }
+        if ($out['tutor_nombre'] !== null) $out['tutor_nombre'] = NombrePropio::formatear((string) $out['tutor_nombre'], true) ?: null;
         // Con CURP y fecha se comparan; si no coincide, el líder corrige o la manda a revisión del admin. El sexo y el
         // estado salen de la CURP.
         $out += ['entidad_nacimiento' => null, 'curp_verificacion' => null, 'curp_problemas' => null];
@@ -305,7 +326,7 @@ class ClubController extends Controller
         $this->editable($request, $club);
         $request->validate(['clave' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9_]+$/'], 'archivo' => 'required|file|max:'.(TiposArchivo::TAMANO_MAX_MB * 1024)]);
         $clave = (string) $request->input('clave');
-        [$formatos, $maxMb, $nombreDoc] = $this->limitesDocumento($club, $clave);
+        [$formatos, $maxMb, $nombreDoc, $integranteId] = $this->limitesDocumento($club, $clave);
         $ext = TiposArchivo::validar($request->file('archivo'), $formatos, $maxMb, 'archivo');
         // E74: imágenes → WebP sin metadatos; el resto tal cual.
         [$ext, $contenido] = TiposArchivo::contenidoSeguro($request->file('archivo'), $ext, 'archivo');
@@ -319,6 +340,8 @@ class ClubController extends Controller
             'club_id' => $club->id, 'clave' => $clave,
             'nombre_original' => mb_substr(preg_replace('/[^\pL\pN ._\-()]/u', '_', (string) $request->file('archivo')->getClientOriginalName()), 0, 200),
             'archivo' => $interno, 'subido_por' => $request->user()->id,
+            // E79: cada archivo nuevo vuelve a revisión.
+            'integrante_id' => $integranteId, 'estado' => 'pendiente', 'motivo' => null, 'revisado_por' => null, 'revisado_at' => null,
         ])->save();
         if ($anterior) Storage::disk('local')->delete(Especie::DIR_DOCS.'/'.$club->id.'/'.$anterior);
         Audit::log('club.documento_subido', $club, ['clave' => $clave]);
@@ -336,32 +359,72 @@ class ClubController extends Controller
         return response()->json(['message' => 'Documento quitado.']);
     }
 
-    /** Límites del documento: la carta de la escuela (PDF o imagen, 10 MB) o uno de los documentos del programa. */
+    /**
+     * Límites del documento: [formatos, MB, nombre, integrante_id]. Formatos institucionales marcados (E79: carta, A, B,
+     * C y el permiso de imagen de un integrante del club; firmados y escaneados, solo PDF) o un documento del programa.
+     */
     private function limitesDocumento(Club $club, string $clave): array
     {
-        if ($clave === Especie::CARTA_ESCUELA) {
-            // Pedido del usuario (02/10/2026): carta firmada y sellada, escaneada, solo en PDF.
-            return [['pdf'], 10, 'Carta de consentimiento de la escuela'];
+        $f = Especie::formatos($this->config($club));
+        if (in_array($clave, Especie::FORMATOS_CLUB, true)) {
+            if (! $f[$clave]['pedir']) {
+                throw ValidationException::withMessages(['clave' => 'Ese documento no se pide en esta convocatoria.']);
+            }
+
+            return [['pdf'], FormatosClub::MAX_MB, Especie::FORMATOS[$clave], null];
+        }
+        if (str_starts_with($clave, Especie::PREFIJO_IMAGEN)) {
+            $id = (int) substr($clave, strlen(Especie::PREFIJO_IMAGEN));
+            $i = $club->integrantes()->whereKey($id)->first();
+            if (! $f['uso_imagen']['pedir'] || ! $i || $clave !== FormatosClub::claveImagen($i)) {
+                throw ValidationException::withMessages(['clave' => 'Ese documento no se pide en esta convocatoria.']);
+            }
+
+            return [['pdf'], FormatosClub::MAX_MB, 'Permiso de uso de imagen de '.$i->nombre, $i->id];
         }
         $d = ProgramaDocumento::where('tipo_programa_id', $club->convocatoria->tipo_programa_id)->where('activo', true)->where('clave', $clave)->first();
         if (! $d) {
             throw ValidationException::withMessages(['clave' => 'Ese documento no se pide en esta convocatoria.']);
         }
 
-        return [TiposArchivo::normalizar($d->formato_permitido), TiposArchivo::limiteMb((int) $d->{'tamaño_maximo_mb'}), $d->nombre];
+        return [TiposArchivo::normalizar($d->formato_permitido), TiposArchivo::limiteMb((int) $d->{'tamaño_maximo_mb'}), $d->nombre, null];
     }
 
-    /** Carta de consentimiento de la escuela generada (PDF): datos del club, escuela e integrantes, para firma y sello. */
+    /** Carta de consentimiento de la escuela generada (PDF sin edición, E79): para firma y sello. */
     public function cartaEscuela(Request $request, Club $club)
     {
+        return $this->formato($request, $club, Especie::CARTA_ESCUELA);
+    }
+
+    /** E79: formato institucional del club (carta, A, B o C) llenado con lo que exista; PDF sin edición. */
+    public function formato(Request $request, Club $club, string $formato)
+    {
         $this->propio($request, $club);
-        if (! $club->escuela_id) {
+        abort_unless(isset(FormatosClub::VISTAS[$formato]), 404);
+        if (! Especie::formatos($this->config($club))[$formato]['pedir']) {
+            return response()->json(['message' => 'Esta convocatoria no pide ese formato.'], 422);
+        }
+        if ($formato === Especie::CARTA_ESCUELA && ! $club->escuela_id) {
             return response()->json(['message' => 'Tu escuela está en revisión: la carta se genera cuando el COMECYT la dé de alta.'], 422);
         }
-        $club->loadMissing(['escuela', 'lider:id,name', 'integrantes', 'convocatoria:id,nombre']);
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.carta_escuela_club', ['club' => $club, 'fecha' => now('America/Mexico_City')]);
+        Audit::log('club.formato_descargado', $club, ['formato' => $formato]);
 
-        return $pdf->download('carta-escuela-'.$club->folio.'.pdf');
+        return FormatosClub::descargar(FormatosClub::VISTAS[$formato], FormatosClub::datos($club), FormatosClub::ARCHIVO[$formato].'-'.$club->folio);
+    }
+
+    /** E79: permiso de uso de imagen de un integrante (infantil si es estudiante menor o sin fecha; si no, de adulto). */
+    public function usoImagen(Request $request, Club $club, ClubIntegrante $integrante)
+    {
+        $this->propio($request, $club);
+        abort_unless((int) $integrante->club_id === (int) $club->id, 404);
+        if (! Especie::formatos($this->config($club))['uso_imagen']['pedir']) {
+            return response()->json(['message' => 'Esta convocatoria no pide el permiso de uso de imagen.'], 422);
+        }
+        $menor = FormatosClub::esMenor($integrante);
+        Audit::log('club.formato_descargado', $club, ['formato' => 'uso_imagen', 'integrante_id' => $integrante->id]);
+
+        return FormatosClub::descargar($menor ? 'pdfs.formatos.uso_imagen_menor' : 'pdfs.formatos.uso_imagen_adulto',
+            FormatosClub::datos($club) + ['persona' => $integrante], 'permiso-uso-de-imagen-'.$club->folio.'-'.$integrante->id);
     }
 
     // ─────────── Enviar a revisión ───────────
@@ -425,8 +488,10 @@ class ClubController extends Controller
         $camposInt = $this->campos($club, 'integrante');
         foreach ($club->integrantes as $i) {
             $falta = [];
-            foreach (['fecha_nacimiento', 'sexo', 'curp', 'grado_grupo', 'correo', 'telefono'] as $k) {
-                if ($pi[$k]['obligatorio'] && empty($i->{$k})) $falta[] = mb_strtolower(Especie::CAMPOS_INTEGRANTE[$k]);
+            foreach (Especie::COLUMNAS_INTEGRANTE as $k) {
+                // E79: el tutor solo se exige a estudiantes menores de edad (o sin fecha de nacimiento).
+                if ($k === 'tutor_nombre' && ! FormatosClub::esMenor($i)) continue;
+                if ($pi[$k]['obligatorio'] && empty($i->{$k})) $falta[] = $k === 'tutor_nombre' ? 'nombre de su madre, padre o tutor' : mb_strtolower(Especie::CAMPOS_INTEGRANTE[$k]);
             }
             if ($pi['foto']['obligatorio'] && ! $i->foto_path) $falta[] = 'foto';
             try {
@@ -439,13 +504,12 @@ class ClubController extends Controller
             // E76: una CURP rechazada en revisión se corrige antes de enviar.
             if ($i->curp_verificacion === IdentidadCurp::RECHAZADA) $f[] = "{$i->nombre}: el COMECYT rechazó su CURP; corrígela con sus datos.";
         }
-        $subidos = $club->documentos->pluck('clave')->all();
-        if (! in_array(Especie::CARTA_ESCUELA, $subidos, true)) $f[] = 'Sube la carta de consentimiento de la escuela (firmada y sellada).';
-        foreach (ProgramaDocumento::where('tipo_programa_id', $club->convocatoria->tipo_programa_id)->where('activo', true)->where('obligatorio', true)->get() as $d) {
-            if (! in_array($d->clave, $subidos, true)) $f[] = "Sube el documento «{$d->nombre}».";
-        }
+        // E79: formatos marcados, documentos del programa y permisos de imagen; los rechazados se vuelven a subir.
+        $pc2 = Especie::camposClub($cfg);
+        if ($pc2['director_nombre']['obligatorio'] && ! FormatosClub::director($club)) $f[] = 'Escribe el nombre del director(a) de la escuela.';
+        if ($pc2['lugar']['obligatorio'] && empty($club->datos['lugar'])) $f[] = 'Escribe el lugar para los formatos.';
 
-        return $f;
+        return array_merge($f, FormatosClub::faltantes($club, $cfg));
     }
 
     // ─────────── Apoyos ───────────
@@ -514,12 +578,8 @@ class ClubController extends Controller
     {
         $club->loadMissing(['escuela:id,cct,nombre,municipio,nivel,sistema,participo_antes', 'integrantes', 'documentos', 'convocatoria.tipoPrograma']);
         $cfg = $this->config($club);
-        $docs = $club->documentos->keyBy('clave');
-        $requeridos = collect([['clave' => Especie::CARTA_ESCUELA, 'nombre' => 'Carta de consentimiento de la escuela', 'descripcion' => 'Descárgala, que la firme y selle la escuela, y súbela escaneada en PDF.', 'obligatorio' => true, 'formatos' => ['pdf'], 'max_mb' => 10]])
-            ->merge(ProgramaDocumento::where('tipo_programa_id', $club->convocatoria->tipo_programa_id)->where('activo', true)->orderBy('orden')->get()
-                ->map(fn ($d) => ['clave' => $d->clave, 'nombre' => $d->nombre, 'descripcion' => $d->descripcion, 'obligatorio' => (bool) $d->obligatorio,
-                    'formatos' => TiposArchivo::normalizar($d->formato_permitido), 'max_mb' => TiposArchivo::limiteMb((int) $d->{'tamaño_maximo_mb'})]))
-            ->map(fn ($d) => $d + ['subido' => isset($docs[$d['clave']]) ? ['nombre_original' => $docs[$d['clave']]->nombre_original, 'subido_at' => $docs[$d['clave']]->updated_at] : null]);
+        // E79: formatos institucionales marcados + documentos del programa, con su estado de revisión.
+        $requeridos = FormatosClub::lista($club, $cfg);
 
         return [
             'club' => [
@@ -534,6 +594,8 @@ class ClubController extends Controller
             ] + self::avance($club),
             'integrantes' => $club->integrantes->values(),
             'documentos' => $requeridos->values(),
+            // E79: permiso de uso de imagen de cada integrante (en su tarjeta): {integrante_id: {tipo, obligatorio, subido}}.
+            'permisos_imagen' => (object) FormatosClub::permisosImagen($club, $cfg),
             'config' => EspecieConfigController::payload($club->convocatoria, $cfg),
             'convocatoria' => [
                 'id' => $club->convocatoria->id, 'nombre' => $club->convocatoria->nombre, 'nombre_corto' => $club->convocatoria->nombre_corto, 'acepta' => $club->convocatoria->aceptaSolicitudes(),

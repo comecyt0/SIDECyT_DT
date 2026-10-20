@@ -18,7 +18,18 @@ describe('ConfigEspecieForm (E52 · F1)', () => {
 
   it('los datos fijos se muestran como siempre obligatorios y no se pueden cambiar', () => {
     render(<Envoltura />);
-    expect(screen.getAllByText('Siempre obligatorio')).toHaveLength(4); // nombre del club, escuela, carta, nombre del integrante
+    expect(screen.getAllByText('Siempre obligatorio')).toHaveLength(3); // nombre del club, escuela, nombre del integrante
+  });
+
+  it('E79: los formatos se configuran; la carta de la escuela sigue obligatoria por defecto', () => {
+    let ultimo: ConfigEspecie | null = null;
+    render(<Envoltura onCambio={(c) => { ultimo = c; }} />);
+    const carta = screen.getByRole('radiogroup', { name: 'Carta de consentimiento de la escuela' });
+    expect(within(carta).getByLabelText('Obligatorio')).toBeChecked();
+    const imagen = screen.getByRole('radiogroup', { name: 'Permiso de uso de imagen (uno por integrante)' });
+    expect(within(imagen).getByLabelText('No pedir')).toBeChecked();
+    fireEvent.click(within(imagen).getByLabelText('Obligatorio'));
+    expect(ultimo!.formatos.uso_imagen).toEqual({ pedir: true, obligatorio: true });
   });
 
   it('cambiar un dato a "Obligatorio" implica pedirlo', () => {

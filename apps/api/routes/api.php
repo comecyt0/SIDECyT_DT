@@ -384,6 +384,9 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::post('clubes/{club}/documentos', [$c, 'subirDocumento'])->middleware('throttle:30,1,club-subidas');
             Route::delete('clubes/{club}/documentos/{clave}', [$c, 'quitarDocumento'])->where('clave', '[a-z0-9_]+');
             Route::get('clubes/{club}/carta-escuela', [$c, 'cartaEscuela'])->middleware('throttle:20,1,club-carta');
+            // E79: formatos institucionales llenos (PDF sin edición) y permiso de uso de imagen de cada integrante.
+            Route::get('clubes/{club}/formatos/{formato}', [$c, 'formato'])->where('formato', 'carta_escuela|formato_a|formato_b|formato_c')->middleware('throttle:30,1,club-carta');
+            Route::get('clubes/{club}/integrantes/{integrante}/uso-imagen', [$c, 'usoImagen'])->middleware('throttle:60,1,club-carta');
             Route::post('clubes/{club}/enviar', [$c, 'enviar'])->middleware('throttle:10,1,club-enviar');
             // E52 · F3 — logística del club aceptado
             $l = \App\Http\Controllers\Club\LogisticaClubController::class;
@@ -421,6 +424,7 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::get('clubes/{club}', [$r, 'show']);
             Route::post('clubes/{club}/resolver', [$r, 'resolver'])->middleware('throttle:60,1,club-revision');
             Route::post('clubes/{club}/integrantes/{integrante}/curp', [$r, 'revisarCurp'])->middleware('throttle:60,1,club-revision'); // E76
+            Route::post('clubes/{club}/documentos/{clave}/revision', [$r, 'revisarDocumento'])->where('clave', '[a-z0-9_]+')->middleware('throttle:120,1,club-revision'); // E79
             Route::post('clubes/{club}/prorroga', [$r, 'prorroga'])->middleware('throttle:30,1,club-revision');
             Route::post('clubes/{club}/visto-bueno', [$r, 'vistoBueno'])->middleware('throttle:60,1,club-revision');
             Route::post('clubes/{club}/comite', [$r, 'comite'])->middleware('throttle:60,1,club-revision');

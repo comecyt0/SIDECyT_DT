@@ -43,6 +43,7 @@ class EspecieConfigController extends Controller
             'kit_descripcion' => 'nullable|string|max:5000',
             'campos_club' => 'nullable|array',
             'campos_integrante' => 'nullable|array',
+            'formatos' => 'nullable|array', // E79
             'campos' => 'present|array|max:100',
             'campos.*.ambito' => 'required|in:club,integrante',
             'campos.*.nombre_campo' => ['required', 'string', 'max:60', $slug],
@@ -79,6 +80,8 @@ class EspecieConfigController extends Controller
                 'kit_descripcion' => isset($v['kit_descripcion']) ? trim(strip_tags($v['kit_descripcion'])) : null,
                 'campos_club' => Especie::normalizarPredefinidos($v['campos_club'] ?? null, Especie::CAMPOS_CLUB, Especie::DEFAULT_CLUB),
                 'campos_integrante' => Especie::normalizarPredefinidos($v['campos_integrante'] ?? null, Especie::CAMPOS_INTEGRANTE, Especie::DEFAULT_INTEGRANTE),
+                // E79: si el panel no manda formatos, se conservan los guardados.
+                'formatos' => Especie::normalizarPredefinidos($v['formatos'] ?? $cfg->formatos, Especie::FORMATOS, Especie::DEFAULT_FORMATOS),
             ]);
             $cfg->convocatoria_id = $convocatoria->id;
             $cfg->save();
@@ -121,7 +124,8 @@ class EspecieConfigController extends Controller
             'kit_descripcion' => $cfg->kit_descripcion,
             'campos_club' => Especie::normalizarPredefinidos($cfg->campos_club, Especie::CAMPOS_CLUB, Especie::DEFAULT_CLUB),
             'campos_integrante' => Especie::normalizarPredefinidos($cfg->campos_integrante, Especie::CAMPOS_INTEGRANTE, Especie::DEFAULT_INTEGRANTE),
-            'etiquetas' => ['club' => Especie::CAMPOS_CLUB, 'integrante' => Especie::CAMPOS_INTEGRANTE],
+            'formatos' => Especie::formatos($cfg),
+            'etiquetas' => ['club' => Especie::CAMPOS_CLUB, 'integrante' => Especie::CAMPOS_INTEGRANTE, 'formatos' => Especie::FORMATOS],
             'campos' => EspecieCampo::where('convocatoria_id', $c->id)->orderBy('orden')->get(['ambito', 'nombre_campo', 'etiqueta', 'tipo_campo', 'opciones_json', 'requerido', 'orden']),
             'documentos' => ProgramaDocumento::where('tipo_programa_id', $c->tipo_programa_id)->where('activo', true)->orderBy('orden')
                 ->get(['clave', 'nombre', 'descripcion', 'obligatorio', 'formato_permitido', 'tamaño_maximo_mb']),

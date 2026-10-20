@@ -89,6 +89,10 @@ class RevisionClubController extends Controller
         if ($v['resultado'] === 'aprobar' && $club->integrantes()->where('curp_verificacion', IdentidadCurp::REVISION)->exists()) {
             return response()->json(['message' => 'Antes de aprobar, revisa las CURP marcadas «por revisar» en la lista de integrantes.'], 422);
         }
+        // E79: cada documento se aprueba o rechaza antes de aprobar el club.
+        if ($v['resultado'] === 'aprobar' && \App\Support\FormatosClub::hayPorRevisar($club)) {
+            return response()->json(['message' => 'Antes de aprobar, marca cada documento como correcto. Si alguno está mal, recházalo con su motivo y usa «Observar» para que el líder lo corrija.'], 422);
+        }
         RevisionClub::resolver($club, $request->user(), $v['resultado'], $v['comentario'] ?? null);
 
         return response()->json(self::detallePersonal($club->fresh(), $request->user()));
@@ -137,6 +141,36 @@ class RevisionClubController extends Controller
         Audit::log('especie.curp_'.($v['decision'] === 'aprobar' ? 'aprobada' : 'rechazada'), $club, ['integrante_id' => $integrante->id]);
 
         return response()->json(self::detallePersonal($club->fresh(), $request->user()));
+    }
+
+    /**
+     * E79 — Revisión de un documento subido (decisión del usuario: aprobar o rechazar cada uno, con motivo). Puede quien
+     * resuelve la etapa del club, el admin o el admin de convocatoria con alcance. Lo rechazado vuelve a «faltantes» del
+     * líder; para que lo corrija, el revisor usa «Observar».
+     */
+    public function revisarDocumento(Request $request, Club $club, string $clave)
+    {
+        $this->exigirVer($request->user(), $club);
+        abort_unless(self::puedeRevisarDocumentos($request->user(), $club), 403);
+        $v = $request->validate([
+            'decision' => 'required|in:aprobar,rechazar',
+            'motivo' => 'nullable|string|max:1000|required_if:decision,rechazar',
+        ], ['motivo.required_if' => 'Escribe el motivo del rechazo (el líder lo verá).'], ['motivo' => 'motivo']);
+        $doc = \App\Models\ClubDocumento::where('club_id', $club->id)->where('clave', $clave)->firstOrFail();
+        $doc->forceFill([
+            'estado' => $v['decision'] === 'aprobar' ? 'aprobado' : 'rechazado',
+            'motivo' => $v['decision'] === 'rechazar' ? trim(strip_tags($v['motivo'])) : null,
+            'revisado_por' => $request->user()->id, 'revisado_at' => now(),
+        ])->save();
+        Audit::log('especie.documento_'.($v['decision'] === 'aprobar' ? 'aprobado' : 'rechazado'), $club, ['clave' => $clave]);
+
+        return response()->json(self::detallePersonal($club->fresh(), $request->user()));
+    }
+
+    public static function puedeRevisarDocumentos(User $u, Club $club): bool
+    {
+        return $club->estado !== 'borrador'
+            && (RevisionClub::puedeResolver($u, $club) || in_array(RevisionClub::rolDe($u), ['admin', 'admin_convocatoria'], true));
     }
 
     // ─────────── Acta del comité (una por convocatoria) ───────────
@@ -207,6 +241,8 @@ class RevisionClubController extends Controller
             ] + ClubController::avance($club),
             'integrantes' => $club->integrantes->values(),
             'documentos' => $club->documentos->map(fn ($d) => ['clave' => $d->clave, 'nombre_original' => $d->nombre_original, 'subido_at' => $d->updated_at])->values(),
+            // E79: lista completa (formatos marcados, documentos del programa y permisos de imagen) con su revisión.
+            'documentos_requeridos' => \App\Support\FormatosClub::lista($club, $cfg, true),
             'config' => EspecieConfigController::payloadPersonal($club->convocatoria, $cfg),
             'faltantes' => $club->estado === 'borrador' ? app(ClubController::class)->faltantes($club) : [],
             'historial' => $club->revisiones()->with(['etapa:id,nombre', 'usuario:id,name'])->get()->map(fn ($r) => [
@@ -236,6 +272,7 @@ class RevisionClubController extends Controller
                 'acta' => RevisionClub::puedeSubirActa($u, (int) $club->convocatoria_id),
                 // E76: aprobar o rechazar una CURP que el líder mandó a revisión (admin o admin de convocatoria).
                 'curp' => in_array(RevisionClub::rolDe($u), ['admin', 'admin_convocatoria'], true),
+                'documentos' => self::puedeRevisarDocumentos($u, $club), // E79
             ],
         ];
     }

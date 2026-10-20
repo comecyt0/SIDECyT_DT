@@ -45,6 +45,10 @@ class ProgramaDocumentoController extends Controller
         }
         $clave = $request->input('clave');
         if (is_string($clave) && preg_match('/^[a-z0-9_]+$/', $clave) && strlen($clave) <= 100) {
+            // E79: las claves de los formatos institucionales del club están reservadas.
+            if (in_array($clave, \App\Support\Especie::FORMATOS_CLUB, true) || str_starts_with($clave, \App\Support\Especie::PREFIJO_IMAGEN)) {
+                $clave = 'doc_'.$clave;
+            }
             $base = substr($clave, 0, 94);
             for ($n = 2; ProgramaDocumento::where('tipo_programa_id', $tipoPrograma->id)->where('clave', $clave)->exists() && $n < 100; $n++) {
                 $clave = $base.'_'.$n;
