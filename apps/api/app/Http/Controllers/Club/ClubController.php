@@ -225,7 +225,7 @@ class ClubController extends Controller
     public function actualizarIntegrante(Request $request, Club $club, ClubIntegrante $integrante)
     {
         $this->editable($request, $club);
-        abort_unless((int) $integrante->club_id === (int) $club->id, 404);
+        abort_unless((int) $integrante->club_id === (int) $club->id && ! $integrante->baja_at, 404); // E92: de baja = historial
         $integrante->fill($this->datosIntegrante($request, $club, $this->config($club)))->save();
         $club->marcarCambioDatos(); // E90
 
@@ -235,7 +235,7 @@ class ClubController extends Controller
     public function quitarIntegrante(Request $request, Club $club, ClubIntegrante $integrante)
     {
         $this->editable($request, $club);
-        abort_unless((int) $integrante->club_id === (int) $club->id, 404);
+        abort_unless((int) $integrante->club_id === (int) $club->id && ! $integrante->baja_at, 404); // E92: de baja = historial
         if ($integrante->es_lider) {
             return response()->json(['message' => 'El líder del club no se puede quitar.'], 422);
         }
@@ -256,7 +256,7 @@ class ClubController extends Controller
     public function subirFoto(Request $request, Club $club, ClubIntegrante $integrante)
     {
         $this->editable($request, $club);
-        abort_unless((int) $integrante->club_id === (int) $club->id, 404);
+        abort_unless((int) $integrante->club_id === (int) $club->id && ! $integrante->baja_at, 404); // E92: de baja = historial
         $request->validate(['imagen' => 'required|file|max:'.(ImagenSegura::MAX_MB * 1024)]);
         $nombre = ImagenSegura::guardarCuadrada($request->file('imagen'), Especie::DIR_MEDIA, 400);
         $anterior = $integrante->foto_path;
@@ -269,19 +269,20 @@ class ClubController extends Controller
     public function quitarFoto(Request $request, Club $club, ClubIntegrante $integrante)
     {
         $this->editable($request, $club);
-        abort_unless((int) $integrante->club_id === (int) $club->id, 404);
+        abort_unless((int) $integrante->club_id === (int) $club->id && ! $integrante->baja_at, 404); // E92: de baja = historial
         ImagenSegura::borrar(Especie::DIR_MEDIA, $integrante->foto_path);
         $integrante->forceFill(['foto_path' => null])->save();
 
         return response()->json(['foto_url' => null]);
     }
 
-    private function datosIntegrante(Request $request, Club $club, EspecieConfig $cfg): array
+    /** Datos validados de un integrante. E92: el cambio de integrante lo usa con `$paraEnvio` (exige los obligatorios). */
+    public static function datosIntegrante(Request $request, Club $club, EspecieConfig $cfg, bool $paraEnvio = false): array
     {
         // E76: nombres con mayúscula inicial; con CURP, nombre por partes y la CURP verificada contra nombre y fecha.
         $request->merge(IdentidadCurp::normalizar($request->only(['nombres', 'primer_apellido', 'segundo_apellido', 'curp'])));
         if ($request->filled('nombre')) $request->merge(['nombre' => NombrePropio::formatear((string) $request->input('nombre'), true)]);
-        $v = $request->validate(Especie::reglasIntegrante($cfg), \App\Support\RegistroRoles::mensajes() + [
+        $v = $request->validate(Especie::reglasIntegrante($cfg, $paraEnvio), \App\Support\RegistroRoles::mensajes() + [
             'nombre.regex' => 'El nombre solo puede llevar letras, espacios, guion o apóstrofo; sin números.',
         ]);
         $pc = Especie::camposIntegrante($cfg);
@@ -318,7 +319,8 @@ class ClubController extends Controller
         if (! $cfg->participan_menores && $out['fecha_nacimiento'] && \Carbon\Carbon::parse($out['fecha_nacimiento'])->age < 18) {
             throw ValidationException::withMessages(['fecha_nacimiento' => 'En esta convocatoria no participan menores de edad.']);
         }
-        $out['datos'] = Especie::validarPersonalizados($this->campos($club, 'integrante'), $v['datos'] ?? [], false);
+        $campos = EspecieCampo::where('convocatoria_id', $club->convocatoria_id)->where('ambito', 'integrante')->orderBy('orden')->get();
+        $out['datos'] = Especie::validarPersonalizados($campos, $v['datos'] ?? [], $paraEnvio);
 
         return $out;
     }
@@ -420,7 +422,7 @@ class ClubController extends Controller
     public function usoImagen(Request $request, Club $club, ClubIntegrante $integrante)
     {
         $this->propio($request, $club);
-        abort_unless((int) $integrante->club_id === (int) $club->id, 404);
+        abort_unless((int) $integrante->club_id === (int) $club->id && ! $integrante->baja_at, 404); // E92: de baja = historial
         if (! Especie::formatos($this->config($club))['uso_imagen']['pedir']) {
             return response()->json(['message' => 'Esta convocatoria no pide el permiso de uso de imagen.'], 422);
         }
@@ -615,6 +617,8 @@ class ClubController extends Controller
             'logistica' => \App\Support\LogisticaClub::aplica($club) ? \App\Support\LogisticaClub::estado($club) : null,
             // E86: qué kit le toca al club (perfil, cuántos y qué incluye), visible desde la captura.
             'kit' => \App\Support\KitClub::resumen($club, $cfg),
+            // E92: solicitudes de cambio de integrante, bajas (historial) y si hoy se puede pedir.
+            'cambios' => \App\Support\CambioIntegrante::payload($club, $cfg, false),
             // Historial para el líder: qué pasó y el comentario general; sin datos de quién revisó (lista blanca).
             'historial' => $club->revisiones()->with('etapa:id,nombre')->get()
                 ->filter(fn ($r) => in_array($r->resultado, ['enviado', 'aprobado', 'observado', 'rechazado', 'prorroga', 'subsanado', 'comite_aceptado', 'comite_no_aceptado'], true))

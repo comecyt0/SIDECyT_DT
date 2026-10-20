@@ -259,6 +259,7 @@ class RevisionClubController extends Controller
             // E79: lista completa (formatos marcados, documentos del programa y permisos de imagen) con su revisión.
             'documentos_requeridos' => \App\Support\FormatosClub::lista($club, $cfg, true),
             'kit' => \App\Support\KitClub::resumen($club, $cfg), // E86
+            'cambios' => \App\Support\CambioIntegrante::payload($club, $cfg, true), // E92
             'config' => EspecieConfigController::payloadPersonal($club->convocatoria, $cfg),
             'faltantes' => $club->estado === 'borrador' ? app(ClubController::class)->faltantes($club) : [],
             'historial' => $club->revisiones()->with(['etapa:id,nombre', 'usuario:id,name'])->get()->map(fn ($r) => [
@@ -290,6 +291,7 @@ class RevisionClubController extends Controller
                 'curp' => in_array(RevisionClub::rolDe($u), ['admin', 'admin_convocatoria'], true),
                 'documentos' => self::puedeRevisarDocumentos($u, $club), // E79
                 'kit_perfil' => $puedeAceptar && (bool) $cfg->kit_diferenciado, // E86
+                'cambios' => in_array(RevisionClub::rolDe($u), ['admin', 'admin_convocatoria'], true), // E92
             ],
         ];
     }

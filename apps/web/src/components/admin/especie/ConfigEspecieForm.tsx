@@ -271,6 +271,15 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
             <span className="block text-xs text-[var(--app-ink-2)]">Si lo desactivas, el sistema rechaza integrantes menores de 18 años (por su fecha de nacimiento).</span>
           </span>
         </label>
+        {/* E92 (pedido del usuario): cambios de integrante desde el envío y hasta esta fecha. */}
+        <div className="space-y-1.5 sm:max-w-xs">
+          <Label htmlFor={`${idBase}-fcambios`} className={labelCls}>Fecha límite para cambios de integrante</Label>
+          <input id={`${idBase}-fcambios`} type="date" value={c.fecha_limite_cambios} onChange={(e) => set({ fecha_limite_cambios: e.target.value })} className={inputCls}
+            aria-describedby={`${idBase}-fcambios-ayuda`} />
+          <p id={`${idBase}-fcambios-ayuda`} className="text-xs text-[var(--app-ink-2)]">
+            Desde que el club se envía y hasta esta fecha, el líder puede pedir cambiar a un integrante (con justificación y sus documentos); lo aprueba el admin o el admin de convocatoria. Vacío = no se permiten cambios.
+          </p>
+        </div>
       </Seccion>
       </>)}
 

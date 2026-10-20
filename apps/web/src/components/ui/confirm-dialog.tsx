@@ -19,6 +19,9 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'default' | 'destructive';
+  /** 20/10/2026: contenido extra (p. ej. el motivo de un rechazo) y botón de confirmar deshabilitado mientras falte. */
+  children?: React.ReactNode;
+  confirmDisabled?: boolean;
 }
 
 export function ConfirmDialog({
@@ -30,6 +33,8 @@ export function ConfirmDialog({
   confirmLabel = 'Confirmar',
   cancelLabel = 'Cancelar',
   variant = 'default',
+  children,
+  confirmDisabled = false,
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}>
@@ -38,11 +43,12 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+        {children}
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button variant={variant} onClick={onConfirm}>
+          <Button variant={variant} onClick={onConfirm} disabled={confirmDisabled}>
             {confirmLabel}
           </Button>
         </DialogFooter>

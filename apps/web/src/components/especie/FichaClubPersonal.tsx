@@ -15,8 +15,9 @@ import { descargarDocumentoClub } from '@/lib/especie-api';
 import { mensajeError } from '@/lib/errores-formulario';
 import {
   CARTA_ESCUELA, leerCamposApi, leerResumenKit, type ResumenKit, normalizarPredef, CAMPOS_INTEGRANTE, leerLogistica, type LogisticaEstado,
-  type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi,
+  type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi, leerCambios, type CambiosClub,
 } from '@/lib/especie';
+import CambiosIntegrantePersonal from '@/components/especie/CambiosIntegrantePersonal';
 
 export interface DetalleClubPersonal {
   club: ClubApi;
@@ -27,9 +28,11 @@ export interface DetalleClubPersonal {
     convocatoria?: { id: number; nombre: string }; acta_comite?: { nombre: string; subida_at: string } | null };
   faltantes: string[];
   historial: EntradaHistorial[];
-  permisos: PermisosRevision & { logistica?: boolean; curp?: boolean; documentos?: boolean; kit_perfil?: boolean };
+  permisos: PermisosRevision & { logistica?: boolean; curp?: boolean; documentos?: boolean; kit_perfil?: boolean; cambios?: boolean };
   /** E86: qué kit le toca al club. */
   kit?: ResumenKit | null;
+  /** E92: solicitudes de cambio de integrante y bajas. */
+  cambios?: CambiosClub | null;
   logistica: LogisticaEstado | null;
   /** E70: personas asignadas a la etapa actual y aprobaciones que lleva (solo personal). */
   aprobaciones: { requeridas: number; dadas: number; ya_aprobe: boolean; asignados: { nombre: string; aprobo: boolean }[] } | null;
@@ -66,6 +69,7 @@ export function leer(data: unknown): DetalleClubPersonal | null {
     logistica: leerLogistica(d.logistica),
     aprobaciones: leerAprobaciones((d as { aprobaciones?: unknown }).aprobaciones),
     kit: leerResumenKit((d as { kit?: unknown }).kit),
+    cambios: leerCambios((d as { cambios?: unknown }).cambios),
   };
 }
 
@@ -254,6 +258,13 @@ export default function FichaClubPersonal({ endpoint, volverHref }: { endpoint: 
             if (det) setD(det);
             else if (log) setD((x) => (x ? { ...x, logistica: log } : x));
             else void cargar();
+          }} />
+      )}
+      {d.cambios && (
+        <CambiosIntegrantePersonal clubId={d.club.id} cambios={d.cambios} puede={Boolean(d.permisos.cambios)}
+          onHecho={(nuevo, mensaje, ok) => {
+            const x = ok && nuevo ? leer(nuevo) : null;
+            if (x) { setD(x); setAviso(mensaje); setError(null); window.scrollTo({ top: 0, behavior: 'smooth' }); } else { setError(mensaje); }
           }} />
       )}
       <ClubResumen club={d.club} integrantes={d.integrantes} documentos={documentos} campos={leerCamposApi(d.config.campos)}

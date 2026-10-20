@@ -26,7 +26,9 @@ import {
   leerCamposApi, normalizarPredef, CAMPOS_CLUB, valorCampo,
   leerLogistica, type LogisticaEstado,
   type CampoApi, type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi, type PermisoImagen, type Predef, type ResumenKit, leerResumenKit,
+  leerCambios, type CambiosClub,
 } from '@/lib/especie';
+import CambiosIntegrante from '@/components/especie/CambiosIntegrante';
 import { PATRON_CURP, PATRON_TELEFONO, PATRON_CORREO, fechaDeCurp } from '@/lib/registro';
 import { textoLegible } from '@/lib/errores-formulario';
 import { nombrePropio, problemaNombre, revisarIdentidad } from '@/lib/curp';
@@ -64,6 +66,8 @@ interface Detalle {
   permisos_imagen: Record<string, PermisoImagen>;
   /** E86: qué kit le toca al club. */
   kit: ResumenKit | null;
+  /** E92: solicitudes de cambio de integrante, bajas y si hoy se puede pedir. */
+  cambios: CambiosClub | null;
 }
 
 const ACCESO_TEXTO: Record<string, string> = {
@@ -117,6 +121,7 @@ function leerDetalle(data: unknown): Detalle | null {
     dueno_director: d.dueno_director === true,
     permisos_imagen: d.permisos_imagen && typeof d.permisos_imagen === 'object' ? d.permisos_imagen : {},
     kit: leerResumenKit((d as { kit?: unknown }).kit),
+    cambios: leerCambios((d as { cambios?: unknown }).cambios),
   };
 }
 
@@ -409,6 +414,14 @@ export default function MiClubPage() {
         )}
         <ClubResumen club={club} integrantes={d.integrantes} documentos={d.documentos} campos={config.campos} camposIntegrante={pi}
           kit={config.kit_nombre} onDescargar={descargarDoc} descargando={ocupado?.startsWith('dl-') ? ocupado.slice(3) : null} />
+        {/* E92 (pedido del usuario): cambio de integrante con justificación, documentos e historial. */}
+        {d.cambios && (
+          <CambiosIntegrante clubId={club.id} folio={club.folio} integrantes={d.integrantes} cambios={d.cambios} pi={pi} camposInt={camposInt}
+            permisoImagen={Object.values(d.permisos_imagen)[0] ? { obligatorio: Object.values(d.permisos_imagen)[0].obligatorio } : null}
+            puedeOperar={d.acceso === 'lider' || d.acceso.endsWith('_colider')}
+            onCambio={() => void cargar()}
+            onAviso={(ok, texto) => { setAviso({ tipo: ok ? 'success' : 'error', texto }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+        )}
         {seccionAccesos}
         <HistorialClub entradas={d.historial} />
       </div>

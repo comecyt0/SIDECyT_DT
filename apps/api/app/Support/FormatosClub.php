@@ -293,6 +293,8 @@ class FormatosClub
     /** ¿Hay documentos subidos sin aprobar? (el club no se aprueba así). */
     public static function hayPorRevisar(Club $club): bool
     {
-        return $club->documentos()->where('estado', '!=', 'aprobado')->exists();
+        // E92: el permiso de imagen de quien salió por un cambio aprobado ya no cuenta.
+        return $club->documentos()->where('estado', '!=', 'aprobado')
+            ->where(fn ($q) => $q->whereNull('integrante_id')->orWhereIn('integrante_id', $club->integrantes()->select('id')))->exists();
     }
 }

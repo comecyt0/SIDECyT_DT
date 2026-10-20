@@ -34,6 +34,7 @@ class EspecieConfig extends Model
         // E71: apoyos que da la convocatoria y salida del transporte (solo los escribe ApoyosLogistica con forceFill).
         'incluye_transporte' => 'boolean', 'incluye_lunch' => 'boolean',
         'transporte_salida_hora' => 'datetime', 'transporte_regreso_hora' => 'datetime',
+        'fecha_limite_cambios' => 'date:Y-m-d', // E92 (solo la escribe el PUT de configuración con forceFill)
     ];
 
     public function eventos()

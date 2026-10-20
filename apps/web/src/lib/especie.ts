@@ -83,6 +83,8 @@ export interface ConfigEspecie {
   transporte_regreso_maps: string;
   /** 'AAAA-MM-DD' o '' (sin límite). */
   fecha_limite_logistica: string;
+  /** E92: hasta cuándo el líder puede pedir cambios de integrante ('' = no se permiten). */
+  fecha_limite_cambios: string;
 }
 
 /** Predefinidos (mismas claves y etiquetas que `App\Support\Especie`). */
@@ -240,6 +242,7 @@ export function configVacia(): ConfigEspecie {
     transporte_regreso_hora: '',
     transporte_regreso_maps: '',
     fecha_limite_logistica: '',
+    fecha_limite_cambios: '',
   };
 }
 
@@ -321,6 +324,7 @@ export function leerConfig(datos: unknown): ConfigEspecie {
     transporte_regreso_hora: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(txt(d.transporte_regreso_hora)) ? txt(d.transporte_regreso_hora) : '',
     transporte_regreso_maps: txt(d.transporte_regreso_maps).slice(0, 500),
     fecha_limite_logistica: /^\d{4}-\d{2}-\d{2}$/.test(txt(d.fecha_limite_logistica)) ? txt(d.fecha_limite_logistica) : '',
+    fecha_limite_cambios: /^\d{4}-\d{2}-\d{2}$/.test(txt(d.fecha_limite_cambios)) ? txt(d.fecha_limite_cambios) : '',
   };
 }
 
@@ -351,6 +355,7 @@ export function payloadConfig(c: ConfigEspecie) {
     transporte_regreso_hora: c.incluye_transporte && /T\d{2}:\d{2}$/.test(c.transporte_regreso_hora) ? c.transporte_regreso_hora : null,
     transporte_regreso_maps: c.incluye_transporte ? c.transporte_regreso_maps.trim() || null : null,
     fecha_limite_logistica: c.fecha_limite_logistica || null,
+    fecha_limite_cambios: c.fecha_limite_cambios || null, // E92
     etapas: c.etapas.map((e) => ({
       ...(e.id ? { id: e.id } : {}), nombre: e.nombre.trim(), revisa: e.revisa, plazo_horas: e.plazo_horas, max_subsanaciones: e.max_subsanaciones,
       revisores: e.revisores ?? [], aprobaciones_requeridas: Math.max(1, e.aprobaciones_requeridas ?? 1),
@@ -638,4 +643,39 @@ export function valorCampo(c: CampoApi, v: unknown): string {
 /** Solo se pintan imágenes servidas por la API del propio sistema (sesión + permiso), nunca URLs arbitrarias. */
 export function mediaClubSegura(u: unknown): string | null {
   return typeof u === 'string' && /^\/api\/media\/club\/[A-Za-z0-9]{40}\.webp$/.test(u) ? u : null;
+}
+
+/** E92 — Solicitudes de cambio de integrante y bajas del club (lista blanca del servidor). */
+export type EstadoCambio = 'pendiente' | 'aprobada' | 'rechazada' | 'cancelada';
+export interface SolicitudCambio {
+  id: number; estado: EstadoCambio; sale: string; integrante_sale_id: number | null;
+  entra: Record<string, string>; justificacion: string; motivo: string | null;
+  tiene_foto: boolean; tiene_permiso: boolean; fecha: string | null; resuelto_at: string | null; resolvio?: string | null;
+}
+export interface CambiosClub {
+  ventana: { abierta: boolean; hasta: string | null; motivo: string | null };
+  solicitudes: SolicitudCambio[];
+  bajas: { id: number; nombre: string; baja_at: string | null; motivo: string | null }[];
+}
+export const ESTADO_CAMBIO: Record<EstadoCambio, { etiqueta: string; tono: string }> = {
+  pendiente: { etiqueta: 'Por resolver', tono: 'gold' },
+  aprobada: { etiqueta: 'Aprobada', tono: 'emerald' },
+  rechazada: { etiqueta: 'No aprobada', tono: 'red' },
+  cancelada: { etiqueta: 'Cancelada', tono: 'neutral' },
+};
+export function leerCambios(v: unknown): CambiosClub | null {
+  const d = v as Partial<CambiosClub> | null;
+  if (!d || typeof d !== 'object' || !d.ventana) return null;
+  const s = (x: unknown) => (typeof x === 'string' ? x : null);
+  return {
+    ventana: { abierta: d.ventana.abierta === true, hasta: s(d.ventana.hasta), motivo: s(d.ventana.motivo) },
+    solicitudes: (Array.isArray(d.solicitudes) ? d.solicitudes : []).filter((x) => x && typeof x.id === 'number').map((x) => ({
+      id: x.id, estado: (['pendiente', 'aprobada', 'rechazada', 'cancelada'] as const).includes(x.estado) ? x.estado : 'pendiente',
+      sale: String(x.sale ?? ''), integrante_sale_id: typeof x.integrante_sale_id === 'number' ? x.integrante_sale_id : null,
+      entra: Object.fromEntries(Object.entries(x.entra && typeof x.entra === 'object' ? x.entra : {}).filter(([, val]) => typeof val === 'string' || typeof val === 'number').map(([k, val]) => [k, String(val)])),
+      justificacion: String(x.justificacion ?? ''), motivo: s(x.motivo), tiene_foto: x.tiene_foto === true, tiene_permiso: x.tiene_permiso === true,
+      fecha: s(x.fecha), resuelto_at: s(x.resuelto_at), resolvio: s(x.resolvio),
+    })),
+    bajas: (Array.isArray(d.bajas) ? d.bajas : []).filter((x) => x && typeof x.id === 'number').map((x) => ({ id: x.id, nombre: String(x.nombre ?? ''), baja_at: s(x.baja_at), motivo: s(x.motivo) })),
+  };
 }

@@ -24,7 +24,7 @@ class ClubAviso extends Notification implements ShouldQueue
     public bool $deleteWhenMissingModels = true;
 
     /** Eventos que además van por correo al líder. */
-    public const CON_CORREO = ['observado', 'prorroga', 'aceptado', 'qr_habilitado', 'kit_asignado', 'acceso_otorgado', 'colider_activado', 'lugar_cedido', 'logistica_ajustada'];
+    public const CON_CORREO = ['observado', 'prorroga', 'aceptado', 'qr_habilitado', 'kit_asignado', 'acceso_otorgado', 'colider_activado', 'lugar_cedido', 'logistica_ajustada', 'cambio_aprobado', 'cambio_rechazado'];
 
     public function __construct(public readonly Club $club, public readonly string $evento, public readonly array $extra = []) {}
 
@@ -65,6 +65,10 @@ class ClubAviso extends Notification implements ShouldQueue
             'logistica_ajustada' => ['Cambió la logística de tu club', "La convocatoria de «{$c->nombre}» ya no incluye ".($x['que'] ?? 'uno de los apoyos').'. Ajustamos tu solicitud; si queda algo pendiente, vuelve a firmar el formato desde la logística de tu club.'],
             // 08/10/2026: ceder = intercambiar lugar, rol y permisos.
             'lugar_cedido' => ['Te cedieron su lugar en el club', ($x['quien'] ?? 'Un responsable')." te cedió su lugar en «{$c->nombre}» ({$c->folio}): intercambiaron rol y permisos. Revisa en tu panel lo que ahora puedes hacer."],
+            // E92: solicitud de cambio de integrante.
+            'cambio_solicitado' => ['Solicitud de cambio de integrante', "El club «{$c->nombre}» ({$c->folio}) pide cambiar a ".($x['sale'] ?? 'un integrante').' por '.($x['entra'] ?? 'otra persona').'. Ábrelo para revisar la justificación y los documentos.'],
+            'cambio_aprobado' => ['Cambio de integrante aprobado', 'Se aprobó el cambio en «'.$c->nombre.'»: '.($x['entra'] ?? 'el nuevo integrante').' entra en lugar de '.($x['sale'] ?? 'quien sale').'. Descarga de nuevo los formatos que listan a los integrantes, fírmalos y súbelos.'],
+            'cambio_rechazado' => ['Cambio de integrante no aprobado', 'No se aprobó el cambio de '.($x['sale'] ?? 'un integrante')." en «{$c->nombre}»".(! empty($x['motivo']) ? '. Motivo: '.$x['motivo'] : '').'.'],
             default => ['Aviso de tu club', "Hay novedades en «{$c->nombre}»."],
         };
     }

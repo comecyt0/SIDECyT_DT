@@ -238,6 +238,7 @@ class AsistenteConvocatoriaController extends Controller
                     'kits' => $e['kits'] ?? null,
                 ]);
                 $cfg->kits = \App\Support\KitClub::kits($cfg);
+                $cfg->forceFill(['fecha_limite_cambios' => ($e['fecha_limite_cambios'] ?? null) ?: null]); // E92
                 $cfg->convocatoria_id = $convocatoria->id;
                 \App\Support\ApoyosLogistica::aplicar($cfg, $e); // E71: transporte / box lunch, salida y fecha límite
                 $cfg->save();
@@ -329,6 +330,7 @@ class AsistenteConvocatoriaController extends Controller
         $r['especie.campos_club'] = 'nullable|array';
         $r['especie.campos_integrante'] = 'nullable|array';
         $r['especie.formatos'] = 'nullable|array'; // E79
+        $r['especie.fecha_limite_cambios'] = 'nullable|date_format:Y-m-d'; // E92
         $r += \App\Support\KitClub::reglas('especie.'); // E86
         $r += array_map(fn ($x) => str_replace('required|array', 'sometimes|array', $x), \App\Support\EtapasEspecie::reglas('especie.etapas'));
         $r += \App\Support\ApoyosLogistica::reglas('especie');

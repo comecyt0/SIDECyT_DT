@@ -396,6 +396,11 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::get('clubes/{club}/formatos/{formato}', [$c, 'formato'])->where('formato', 'carta_escuela|formato_a|formato_b|formato_c')->middleware('throttle:30,1,club-carta');
             Route::get('clubes/{club}/integrantes/{integrante}/uso-imagen', [$c, 'usoImagen'])->middleware('throttle:60,1,club-carta');
             Route::post('clubes/{club}/enviar', [$c, 'enviar'])->middleware('throttle:10,1,club-enviar');
+            // E92 — solicitud de cambio de integrante (desde el envío y hasta la fecha límite de la convocatoria).
+            $ci = \App\Http\Controllers\Club\CambioIntegranteController::class;
+            Route::post('clubes/{club}/cambios-integrante', [$ci, 'store'])->middleware('throttle:10,10,club-cambio');
+            Route::post('clubes/{club}/cambios-integrante/permiso-previo', [$ci, 'permisoPrevio'])->middleware('throttle:30,1,club-carta');
+            Route::delete('clubes/{club}/cambios-integrante/{cambio}', [$ci, 'cancelar'])->middleware('throttle:20,10,club-cambio-baja');
             // E52 · F3 — logística del club aceptado
             $l = \App\Http\Controllers\Club\LogisticaClubController::class;
             Route::post('clubes/{club}/logistica', [$l, 'solicitar'])->middleware('throttle:30,1,club-logistica');
@@ -434,6 +439,7 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::post('clubes/{club}/resolver', [$r, 'resolver'])->middleware('throttle:60,1,club-revision');
             Route::post('clubes/{club}/integrantes/{integrante}/curp', [$r, 'revisarCurp'])->middleware('throttle:60,1,club-revision'); // E76
             Route::post('clubes/{club}/kit-perfil', [$r, 'kitPerfil'])->middleware('throttle:60,1,club-revision'); // E86
+            Route::post('clubes/{club}/cambios-integrante/{cambio}/resolver', [\App\Http\Controllers\Club\CambioIntegranteController::class, 'resolver'])->middleware('throttle:60,1,club-revision'); // E92
             Route::post('clubes/{club}/documentos/{clave}/revision', [$r, 'revisarDocumento'])->where('clave', '[a-z0-9_]+')->middleware('throttle:120,1,club-revision'); // E79
             Route::post('clubes/{club}/prorroga', [$r, 'prorroga'])->middleware('throttle:30,1,club-revision');
             Route::post('clubes/{club}/visto-bueno', [$r, 'vistoBueno'])->middleware('throttle:60,1,club-revision');
@@ -457,6 +463,9 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             ->whereNumber('firmado')->middleware('throttle:120,1,club-docs');
         Route::get('clubes/{club}/documentos/{clave}', [\App\Http\Controllers\Club\ClubArchivoController::class, 'documento'])
             ->where('clave', '[a-z0-9_]+')->middleware('throttle:120,1,club-docs');
+        // E92: foto y permiso de imagen del nuevo integrante de una solicitud de cambio.
+        Route::get('clubes/{club}/cambios-integrante/{cambio}/{tipo}', [\App\Http\Controllers\Club\CambioIntegranteController::class, 'archivo'])
+            ->whereNumber('cambio')->where('tipo', 'foto|permiso')->middleware('throttle:120,1,club-docs');
 
         // ═══ PERFIL (E45): todos los roles. ═══
         // E52: mis roles (ver, cambiar de rol activo, pedir otro rol con aprobación de admin).

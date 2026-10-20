@@ -77,6 +77,18 @@ export async function descargarUsoImagen(clubId: number, integranteId: number, f
   guardarBlob(r.data, `permiso-uso-de-imagen-${folio}-${integranteId}.pdf`);
 }
 
+/** E92: permiso de uso de imagen prellenado con los datos del NUEVO integrante de una solicitud de cambio. */
+export async function descargarPermisoNuevo(clubId: number, datos: Record<string, unknown>, folio: string) {
+  const r = await api.post(`/club/clubes/${clubId}/cambios-integrante/permiso-previo`, datos, { responseType: 'blob' });
+  guardarBlob(r.data, `permiso-uso-de-imagen-${folio}-nuevo.pdf`);
+}
+
+/** E92: foto o permiso del nuevo integrante de una solicitud de cambio (vista previa dentro de la página). */
+export async function archivoCambio(clubId: number, cambioId: number, tipo: 'foto' | 'permiso') {
+  const r = await api.get(`/clubes/${clubId}/cambios-integrante/${cambioId}/${tipo}`, { responseType: 'blob' });
+  return { data: r.data as BlobPart, tipo: tipo === 'foto' ? 'image/webp' : 'application/pdf' };
+}
+
 /** Carta de consentimiento generada para que la escuela la firme y selle (solo el líder del club). */
 export async function descargarCartaEscuela(clubId: number, folio: string) {
   const r = await api.get(`/club/clubes/${clubId}/carta-escuela`, { responseType: 'blob' });

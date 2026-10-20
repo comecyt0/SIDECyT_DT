@@ -82,9 +82,22 @@ class Club extends Model
         return $this->belongsTo(User::class, 'lider_id');
     }
 
+    /** Integrantes ACTIVOS (E92: quien salió por un cambio aprobado queda de baja y solo aparece en el historial). */
     public function integrantes()
     {
-        return $this->hasMany(ClubIntegrante::class)->orderByDesc('es_lider')->orderByDesc('es_lider_b')->orderBy('orden')->orderBy('id');
+        return $this->hasMany(ClubIntegrante::class)->whereNull('baja_at')->orderByDesc('es_lider')->orderByDesc('es_lider_b')->orderBy('orden')->orderBy('id');
+    }
+
+    /** E92 — Integrantes dados de baja por un cambio aprobado (historial). */
+    public function integrantesBaja()
+    {
+        return $this->hasMany(ClubIntegrante::class)->whereNotNull('baja_at')->orderByDesc('baja_at');
+    }
+
+    /** E92 — Solicitudes de cambio de integrante (la más reciente primero). */
+    public function cambiosIntegrante()
+    {
+        return $this->hasMany(ClubCambioIntegrante::class)->orderByDesc('id');
     }
 
     /** E61 — líder B y director (acompañantes del club). */

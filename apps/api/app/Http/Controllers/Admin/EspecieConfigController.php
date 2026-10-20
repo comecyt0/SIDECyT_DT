@@ -44,6 +44,7 @@ class EspecieConfigController extends Controller
             'campos_club' => 'nullable|array',
             'campos_integrante' => 'nullable|array',
             'formatos' => 'nullable|array', // E79
+            'fecha_limite_cambios' => 'sometimes|nullable|date_format:Y-m-d', // E92
             'campos' => 'present|array|max:100',
             'campos.*.ambito' => 'required|in:club,integrante',
             'campos.*.nombre_campo' => ['required', 'string', 'max:60', $slug],
@@ -86,6 +87,8 @@ class EspecieConfigController extends Controller
             ]);
             // E86: kit diferenciado (si el panel no lo manda, se conserva lo guardado). Se guarda ya normalizado.
             if (array_key_exists('kit_diferenciado', $v)) $cfg->kit_diferenciado = (bool) $v['kit_diferenciado'];
+            // E92: hasta cuándo el líder puede pedir cambios de integrante (vacío = no se permiten).
+            if (array_key_exists('fecha_limite_cambios', $v)) $cfg->forceFill(['fecha_limite_cambios' => $v['fecha_limite_cambios'] ?: null]);
             if (array_key_exists('kits', $v)) {
                 $cfg->kits = $v['kits'];
                 $cfg->kits = \App\Support\KitClub::kits($cfg);
@@ -159,6 +162,7 @@ class EspecieConfigController extends Controller
             'formatos' => Especie::formatos($cfg),
             'kit_diferenciado' => (bool) $cfg->kit_diferenciado, // E86
             'kits' => \App\Support\KitClub::kits($cfg),
+            'fecha_limite_cambios' => $cfg->fecha_limite_cambios?->format('Y-m-d'), // E92
             'etiquetas' => ['club' => Especie::CAMPOS_CLUB, 'integrante' => Especie::CAMPOS_INTEGRANTE, 'formatos' => Especie::FORMATOS],
             'campos' => EspecieCampo::where('convocatoria_id', $c->id)->orderBy('orden')->get(['ambito', 'nombre_campo', 'etiqueta', 'tipo_campo', 'opciones_json', 'requerido', 'orden']),
             'documentos' => ProgramaDocumento::where('tipo_programa_id', $c->tipo_programa_id)->where('activo', true)->orderBy('orden')
