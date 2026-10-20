@@ -111,8 +111,10 @@ export default function DocumentosPrograma({ programaId }: { programaId: string 
             <section key={d.id} className="perfil-tarjeta space-y-4" aria-label={d.nombre}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--app-ink)]"><FileText className="h-4 w-4 text-[var(--sg-vino)]" aria-hidden="true" />{d.nombre}</h3>
-                  <p className="mt-0.5 text-xs text-[var(--app-ink-2)]">{etiquetas(d.lista)} · hasta {d.mb} MB · <code className="font-mono">{d.clave}</code></p>
+                  {/* 20/10/2026 (reporte del usuario: texto desfasado): el ícono no se encoge con títulos largos y queda
+                      alineado a la primera línea; la clave técnica se parte para no salirse de la tarjeta. */}
+                  <h3 className="flex items-start gap-2 text-sm font-semibold leading-snug text-[var(--app-ink)]"><FileText className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sg-vino)]" aria-hidden="true" /><span className="min-w-0 [overflow-wrap:anywhere]">{d.nombre}</span></h3>
+                  <p className="mt-1 text-xs text-[var(--app-ink-2)] [overflow-wrap:anywhere]">{etiquetas(d.lista)} · hasta {d.mb} MB · <code className="break-all font-mono">{d.clave}</code></p>
                   <p className="mt-1 flex flex-wrap gap-1">
                     {!d.activo && <span className="pill" data-tone="neutral">Oculto</span>}
                     {d.en_uso && <span className="pill" data-tone="sky" title="Ya hay archivos subidos con este documento">Tiene archivos</span>}

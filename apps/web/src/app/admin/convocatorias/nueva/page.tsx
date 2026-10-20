@@ -1178,7 +1178,7 @@ export default function ConvocatoriasNuevaPage() {
                             placeholder="Ej. Título del proyecto"
                             className={wizInputCls}
                           />
-                          <p className="text-xs text-[var(--app-ink-2)]">Identificador interno: <code className="font-mono">{campoForm.nombre_campo || '—'}</code></p>
+                          <p className="text-xs text-[var(--app-ink-2)]">Identificador interno: <code className="break-all font-mono">{campoForm.nombre_campo || '—'}</code></p>
                         </div>
                       </>
                     ),
@@ -1312,7 +1312,7 @@ export default function ConvocatoriasNuevaPage() {
                             placeholder="Ej. Ficha técnica del proyecto"
                             className={wizInputCls}
                           />
-                          <p className="text-xs text-[var(--app-ink-2)]">Identificador interno: <code className="font-mono">{documentoForm.clave || '—'}</code></p>
+                          <p className="text-xs text-[var(--app-ink-2)]">Identificador interno: <code className="break-all font-mono">{documentoForm.clave || '—'}</code></p>
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="doc_descripcion" className={wizLabelCls}>Qué debe contener (opcional)</Label>
@@ -1431,7 +1431,7 @@ export default function ConvocatoriasNuevaPage() {
                             placeholder="Ej. Equipo de cómputo"
                             className={wizInputCls}
                           />
-                          <p className="text-xs text-[var(--app-ink-2)]">Identificador interno: <code className="font-mono">{rubroForm.clave || '—'}</code></p>
+                          <p className="text-xs text-[var(--app-ink-2)]">Identificador interno: <code className="break-all font-mono">{rubroForm.clave || '—'}</code></p>
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="rubro_descripcion" className={wizLabelCls}>Qué incluye (opcional)</Label>
