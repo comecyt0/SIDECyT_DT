@@ -321,10 +321,19 @@ export default function EscanerEventos() {
                 ficha.kit.entregado_at ? (
                   <p className="text-sm text-[var(--app-ink)]">Kit ya entregado el {fechaHora(ficha.kit.entregado_at)}{ficha.kit.lugar ? ` en ${ficha.kit.lugar}` : ''}{ficha.kit.recibio ? ` · recibió ${ficha.kit.recibio}` : ''}.</p>
                 ) : (
+                  <>
+                  {/* E86: qué kit entregar y cuántos (Kit Nueva escuela por integrante / Kit). */}
+                  {ficha.kit.resumen && (
+                    <p className="rounded-[12px] px-3 py-2 text-sm text-[var(--app-ink)]" style={{ backgroundColor: ficha.kit.resumen.perfil === 'nueva' ? 'var(--tile-sky-bg)' : 'var(--tile-gold-bg)' }}>
+                      Entregar: <strong>{ficha.kit.resumen.etiqueta} × {ficha.kit.resumen.cantidad}</strong>{ficha.kit.resumen.por === 'integrante' ? ' (uno por integrante)' : ''}
+                      {ficha.kit.resumen.articulos.length > 0 && <span className="block text-xs text-[var(--app-ink-2)]">Cada kit: {ficha.kit.resumen.articulos.map((a) => `${a.cantidad} × ${a.articulo}`).join(', ')}</span>}
+                    </p>
+                  )}
                   <label className="block space-y-1.5">
                     <span className={labelCls}>Quién recibe el kit{ficha.kit.nombre ? ` «${ficha.kit.nombre}»` : ''} <Asterisco /></span>
                     <input className={inputCls} maxLength={150} value={recibio} onChange={(e) => setRecibio(e.target.value)} placeholder="Nombre de quien lo recibe" autoComplete="off" />
                   </label>
+                  </>
                 )
               ) : bloqueo ? (
                 <p className="flex items-start gap-2 rounded-[12px] px-3 py-2 text-sm font-semibold" style={{ backgroundColor: 'var(--tile-gold-bg)', color: 'var(--app-ink)' }}>

@@ -66,6 +66,9 @@ export interface ConfigEspecie {
   campos_integrante: Record<string, Predef>;
   /** E79: formatos institucionales pedidos / obligatorios. */
   formatos: Record<string, Predef>;
+  /** E86: kit diferenciado («Kit Nueva escuela» por integrante y «Kit» para escuelas que ya participaron). */
+  kit_diferenciado: boolean;
+  kits: KitsConfig;
   campos: CampoEspecie[];
   /** E71: apoyos de logística de la convocatoria y salida del transporte ('AAAA-MM-DDTHH:mm', hora del centro). */
   incluye_transporte: boolean;
@@ -138,6 +141,45 @@ const DEFAULT_FORMATOS: Record<string, Predef> = {
   formato_c: { pedir: false, obligatorio: false },
   uso_imagen: { pedir: false, obligatorio: false },
 };
+/** E86 — Kit diferenciado: lista personalizable de artículos por perfil. */
+export interface ArticuloKit { articulo: string; cantidad: number }
+export interface KitsConfig {
+  nueva: { nombre: string; articulos: ArticuloKit[] };
+  participo: { nombre: string; articulos: ArticuloKit[]; cantidad_por_club: number };
+}
+export const PERFIL_KIT: Record<string, string> = { nueva: 'Kit Nueva escuela', participo: 'Kit' };
+export function kitsVacios(): KitsConfig {
+  return { nueva: { nombre: 'Kit Nueva escuela', articulos: [] }, participo: { nombre: 'Kit', articulos: [], cantidad_por_club: 1 } };
+}
+export function leerKits(v: unknown): KitsConfig {
+  const o = (v && typeof v === 'object' ? v : {}) as Record<string, Record<string, unknown> | undefined>;
+  const arts = (x: unknown): ArticuloKit[] => (Array.isArray(x) ? x : []).slice(0, 50).map((a) => {
+    const r = (a && typeof a === 'object' ? a : {}) as Record<string, unknown>;
+    return { articulo: typeof r.articulo === 'string' ? r.articulo.slice(0, 150) : '', cantidad: typeof r.cantidad === 'number' && Number.isInteger(r.cantidad) ? r.cantidad : 1 };
+  });
+  const base = kitsVacios();
+  const n = o.nueva ?? {}; const p = o.participo ?? {};
+  return {
+    nueva: { nombre: typeof n.nombre === 'string' && n.nombre ? n.nombre : base.nueva.nombre, articulos: arts(n.articulos) },
+    participo: { nombre: typeof p.nombre === 'string' && p.nombre ? p.nombre : base.participo.nombre, articulos: arts(p.articulos),
+      cantidad_por_club: typeof p.cantidad_por_club === 'number' && Number.isInteger(p.cantidad_por_club) ? p.cantidad_por_club : 1 },
+  };
+}
+/** Qué kit le toca a un club (respuesta de KitClub::resumen). */
+export interface ResumenKit {
+  diferenciado: boolean; perfil: 'nueva' | 'participo' | null; etiqueta: string; nombre: string; cantidad: number; por: 'club' | 'integrante';
+  articulos: ArticuloKit[]; descripcion: string | null; forzado: boolean;
+}
+export function leerResumenKit(v: unknown): ResumenKit | null {
+  const r = (v && typeof v === 'object' ? v : null) as Record<string, unknown> | null;
+  if (!r || typeof r.etiqueta !== 'string') return null;
+  return {
+    diferenciado: r.diferenciado === true, perfil: r.perfil === 'nueva' || r.perfil === 'participo' ? r.perfil : null, etiqueta: r.etiqueta,
+    nombre: typeof r.nombre === 'string' ? r.nombre : '', cantidad: typeof r.cantidad === 'number' ? r.cantidad : 1, por: r.por === 'integrante' ? 'integrante' : 'club',
+    articulos: leerKits({ nueva: { articulos: r.articulos } }).nueva.articulos, descripcion: typeof r.descripcion === 'string' ? r.descripcion : null, forzado: r.forzado === true,
+  };
+}
+
 /** Estado de revisión de un documento subido (E79). */
 export const ESTADO_DOCUMENTO: Record<string, { etiqueta: string; tono: string }> = {
   pendiente: { etiqueta: 'Por revisar', tono: 'violet' },
@@ -164,6 +206,8 @@ export function configVacia(): ConfigEspecie {
     campos_club: structuredClone(DEFAULT_CLUB),
     campos_integrante: structuredClone(DEFAULT_INTEGRANTE),
     formatos: structuredClone(DEFAULT_FORMATOS),
+    kit_diferenciado: false,
+    kits: kitsVacios(),
     campos: [],
     incluye_transporte: true,
     incluye_lunch: true,
@@ -230,6 +274,8 @@ export function leerConfig(datos: unknown): ConfigEspecie {
     campos_club: normalizarPredef(d.campos_club, CAMPOS_CLUB, DEFAULT_CLUB),
     campos_integrante: normalizarPredef(d.campos_integrante, CAMPOS_INTEGRANTE, DEFAULT_INTEGRANTE),
     formatos: normalizarPredef(d.formatos, FORMATOS, DEFAULT_FORMATOS),
+    kit_diferenciado: d.kit_diferenciado === true,
+    kits: leerKits(d.kits),
     campos: (Array.isArray(d.campos) ? d.campos : []).slice(0, LIMITES_ESPECIE.campos).map((c) => {
       const x = obj(c);
       const tipo = txt(x.tipo_campo);
@@ -265,6 +311,11 @@ export function payloadConfig(c: ConfigEspecie) {
     campos_club: c.campos_club,
     campos_integrante: c.campos_integrante,
     formatos: c.formatos,
+    kit_diferenciado: c.kit_diferenciado,
+    kits: c.kit_diferenciado ? {
+      nueva: { nombre: c.kits.nueva.nombre.trim(), articulos: c.kits.nueva.articulos.filter((a) => a.articulo.trim()).map((a) => ({ articulo: a.articulo.trim(), cantidad: a.cantidad })) },
+      participo: { nombre: c.kits.participo.nombre.trim(), cantidad_por_club: c.kits.participo.cantidad_por_club, articulos: c.kits.participo.articulos.filter((a) => a.articulo.trim()).map((a) => ({ articulo: a.articulo.trim(), cantidad: a.cantidad })) },
+    } : undefined,
     // E71: apoyos (con transporte apagado el servidor borra la salida).
     incluye_transporte: c.incluye_transporte,
     incluye_lunch: c.incluye_lunch,
@@ -308,6 +359,12 @@ export function validarConfig(c: ConfigEspecie): Record<string, string> {
   // E71: el regreso no puede ser antes de la salida (las dos en hora del centro, mismo formato → se comparan como texto).
   if (c.incluye_transporte && c.transporte_salida_hora && c.transporte_regreso_hora && c.transporte_regreso_hora < c.transporte_salida_hora) {
     e.transporte_regreso_hora = 'El regreso no puede ser antes de la salida.';
+  }
+  // E86: cantidades válidas en los kits diferenciados.
+  if (c.kit_diferenciado) {
+    const malas = [...c.kits.nueva.articulos, ...c.kits.participo.articulos].some((a) => a.articulo.trim() && (!Number.isInteger(a.cantidad) || a.cantidad < 1 || a.cantidad > 9999));
+    if (malas) e.kits = 'Cada artículo necesita una cantidad de 1 a 9999.';
+    else if (!Number.isInteger(c.kits.participo.cantidad_por_club) || c.kits.participo.cantidad_por_club < 1 || c.kits.participo.cantidad_por_club > 999) e.kits = 'Kits por club (escuelas que ya participaron): de 1 a 999.';
   }
   if (c.etapas.length < 1) e.etapas = 'Agrega al menos una etapa de revisión.';
   else if (c.etapas.length > MAX_ETAPAS) e.etapas = `Máximo ${MAX_ETAPAS} etapas.`;

@@ -79,7 +79,7 @@ class FoliosReporte
         if ($idsSol !== null) $qs->whereIn('id', $idsSol ?: [0]);
 
         $qc = Alcance::aplicar(Club::query(), $u)
-            ->with(['lider:id,name,email,avatar_path', 'escuela:id,nombre,cct,participo_antes', 'convocatoria:id,nombre,periodo_id', 'convocatoria.periodo:id,nombre', 'integrantes:id,club_id']);
+            ->with(['lider:id,name,email,avatar_path', 'escuela:id,nombre,cct,participo_antes', 'convocatoria:id,nombre,periodo_id', 'convocatoria.periodo:id,nombre', 'convocatoria.especieConfig', 'integrantes:id,club_id']);
         self::filtrar($qc, $f, 'nombre');
         if ($idsClub !== null) $qc->whereIn('id', $idsClub ?: [0]);
 
@@ -109,6 +109,8 @@ class FoliosReporte
             'publicado_en_landing' => in_array($c->id, $pubClub, true),
             // 08/10/2026 (acuerdo con el usuario): identificador de escuela en todo lugar donde aparece.
             'escuela_nueva' => $c->escuela ? ! $c->escuela->participo_antes : null, 'integrantes' => $c->integrantes->count(),
+            // E86: qué kit le toca (Kit / Kit Nueva escuela × cantidad).
+            'kit' => KitClub::texto(KitClub::resumen($c)),
         ]))->sortByDesc(fn ($x) => (string) $x['updated_at'])->values();
 
         return $grupo === 'todos' ? $items : $items->filter(fn ($x) => self::grupoDe($x['tipo'], $x['estado']) === $grupo)->values();
@@ -155,6 +157,8 @@ class FoliosReporte
         $etiquetas[] = ['texto' => ucfirst($cfg->modalidad ?? 'estatal'), 'tono' => 'neutral'];
         if ($menores) $etiquetas[] = ['texto' => "{$menores} menor(es) de edad", 'tono' => 'sky'];
         if (FolioPublicado::where('club_id', $c->id)->exists()) $etiquetas[] = ['texto' => 'En la página pública', 'tono' => 'emerald'];
+        $kit = KitClub::resumen($c, $cfg); // E86
+        $etiquetas[] = ['texto' => KitClub::texto($kit), 'tono' => $kit['perfil'] === 'nueva' ? 'mint' : 'gold'];
         $nivel = ['primaria' => 'Primaria', 'secundaria' => 'Secundaria', 'media_superior' => 'Media superior', 'superior' => 'Superior'];
         $docs = FormatosClub::lista($c, $cfg, true);
 
@@ -177,6 +181,11 @@ class FoliosReporte
                     ['etiqueta' => 'Nivel', 'valor' => $nivel[$e?->nivel ?? ''] ?? null], ['etiqueta' => 'Subsistema', 'valor' => ['estatal' => 'Estatal', 'federal' => 'Federalizado'][$e?->sistema ?? ''] ?? null],
                     ['etiqueta' => 'Participación', 'valor' => $e ? ($e->participo_antes ? 'Ya participó' : 'Nueva escuela') : 'En revisión'],
                     ['etiqueta' => 'Director(a)', 'valor' => FormatosClub::director($c)],
+                ]],
+                ['titulo' => 'Kit', 'campos' => [
+                    ['etiqueta' => 'Tipo', 'valor' => $kit['etiqueta'].($kit['forzado'] ? ' (asignado por el COMECYT)' : '')], ['etiqueta' => 'Nombre', 'valor' => $kit['nombre']],
+                    ['etiqueta' => 'Cantidad', 'valor' => $kit['cantidad'].' kit(s)'.($kit['por'] === 'integrante' ? ', uno por integrante' : ' por club')],
+                    ['etiqueta' => 'Incluye', 'valor' => KitClub::contenido($kit) ?: null],
                 ]],
                 ['titulo' => 'Líder del club', 'campos' => [
                     ['etiqueta' => 'Nombre', 'valor' => $c->lider?->name], ['etiqueta' => 'Correo', 'valor' => $c->lider?->email], ['etiqueta' => 'Cargo', 'valor' => $c->lider?->cargo],

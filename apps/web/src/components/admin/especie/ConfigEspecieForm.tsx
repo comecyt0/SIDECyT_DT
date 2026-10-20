@@ -18,7 +18,7 @@ import StepFrame from '@/components/ui/step-frame';
 import RevisoresEtapa from '@/components/admin/especie/RevisoresEtapa';
 import FechaHoraAmPm from '@/components/ui/fecha-hora-ampm';
 import {
-  CAMPOS_CLUB, CAMPOS_INTEGRANTE, FORMATOS, LIMITES_ESPECIE, MAX_ETAPAS, MODALIDADES, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, slugCampo,
+  CAMPOS_CLUB, CAMPOS_INTEGRANTE, FORMATOS, LIMITES_ESPECIE, PERFIL_KIT, MAX_ETAPAS, MODALIDADES, REVISA_ETIQUETA, TIPO_CAMPO_ETIQUETA, slugCampo,
   type Ambito, type Modalidad, type CampoEspecie, type ConfigEspecie, type EtapaEspecie, type Predef, type Revisa, type TipoCampoEspecie,
 } from '@/lib/especie';
 
@@ -71,6 +71,57 @@ function FilaFija({ etiqueta }: { etiqueta: string }) {
     <div className="flex items-center justify-between gap-2 py-2.5">
       <span className="text-sm font-medium text-[var(--app-ink)]">{etiqueta}</span>
       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--app-ink-2)]"><Lock className="h-3.5 w-3.5" aria-hidden="true" />Siempre obligatorio</span>
+    </div>
+  );
+}
+
+/** E86 — Un perfil de kit: nombre, (en «Kit») cuántos por club y la lista personalizable de artículos. */
+function EditorKit({ idBase, perfil, valor, onChange }: {
+  idBase: string; perfil: 'nueva' | 'participo';
+  valor: ConfigEspecie['kits']['nueva'] & { cantidad_por_club?: number };
+  onChange: (v: ConfigEspecie['kits']['nueva'] & { cantidad_por_club?: number }) => void;
+}) {
+  const setArt = (i: number, p: Partial<{ articulo: string; cantidad: number }>) =>
+    onChange({ ...valor, articulos: valor.articulos.map((a, j) => (j === i ? { ...a, ...p } : a)) });
+  return (
+    <div className="space-y-3 rounded-[16px] border p-4" style={{ borderColor: 'var(--app-rule)' }}>
+      <p className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]">
+        <span className="pill" data-tone={perfil === 'nueva' ? 'mint' : 'gold'}>{PERFIL_KIT[perfil]}</span>
+        {perfil === 'nueva' ? 'Uno por integrante' : 'Escuelas que ya participaron'}
+      </p>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idBase}-nombre`} className={labelCls}>Nombre</Label>
+        <input id={`${idBase}-nombre`} maxLength={255} value={valor.nombre} onChange={(e) => onChange({ ...valor, nombre: e.target.value })} className={inputCls} />
+      </div>
+      {perfil === 'participo' && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idBase}-cant`} className={labelCls}>Kits por club</Label>
+          <input id={`${idBase}-cant`} type="number" inputMode="numeric" min={1} max={999} value={Number.isNaN(valor.cantidad_por_club) ? '' : valor.cantidad_por_club}
+            onChange={(e) => onChange({ ...valor, cantidad_por_club: e.target.value === '' ? Number.NaN : Number(e.target.value) })} className={inputCls} />
+        </div>
+      )}
+      <div className="space-y-2">
+        <p className={labelCls}>Cada kit incluye</p>
+        {valor.articulos.length === 0 && <p className="text-xs text-[var(--app-ink-2)]">Agrega los artículos y su cantidad (p. ej. 1 × tarjeta Arduino).</p>}
+        <ul className="space-y-2">
+          {valor.articulos.map((a, i) => (
+            <li key={i} className="flex items-center gap-2">
+              <label className="sr-only" htmlFor={`${idBase}-c-${i}`}>Cantidad del artículo {i + 1}</label>
+              <input id={`${idBase}-c-${i}`} type="number" inputMode="numeric" min={1} max={9999} value={Number.isNaN(a.cantidad) ? '' : a.cantidad}
+                onChange={(e) => setArt(i, { cantidad: e.target.value === '' ? Number.NaN : Number(e.target.value) })} className={`${inputCls} !w-20 !pl-3`} />
+              <label className="sr-only" htmlFor={`${idBase}-a-${i}`}>Artículo {i + 1}</label>
+              <input id={`${idBase}-a-${i}`} maxLength={150} value={a.articulo} placeholder="Artículo" onChange={(e) => setArt(i, { articulo: e.target.value })} className={`${inputCls} min-w-0 flex-1`} />
+              <Button variant="destructive" size="icon-sm" aria-label={`Quitar el artículo ${a.articulo || i + 1}`}
+                onClick={() => onChange({ ...valor, articulos: valor.articulos.filter((_, j) => j !== i) })}><Trash2 /></Button>
+            </li>
+          ))}
+        </ul>
+        {valor.articulos.length < 50 && (
+          <Button variant="outline" size="sm" onClick={() => onChange({ ...valor, articulos: [...valor.articulos, { articulo: '', cantidad: 1 }] })}>
+            <Plus className="h-4 w-4" aria-hidden="true" />Agregar artículo
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -174,6 +225,23 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
             placeholder="Contenido del kit, para qué sirve, cuidados…" className={`${inputCls} !h-auto min-h-[96px] resize-y py-3`} />
           {errores.kit_descripcion && <p className="text-xs font-medium" style={errStyle}>{errores.kit_descripcion}</p>}
         </div>
+        {/* E86 (20/10/2026, pedido del usuario): kit diferenciado por escuela. */}
+        <label className="flex cursor-pointer items-start gap-3 rounded-[14px] border px-4 py-3" style={{ borderColor: c.kit_diferenciado ? 'var(--auth-vino)' : 'var(--app-rule)', backgroundColor: c.kit_diferenciado ? 'var(--auth-vino-soft)' : 'var(--auth-field)' }}>
+          <Checkbox id={`${idBase}-kitdif`} checked={c.kit_diferenciado} onCheckedChange={(v) => set({ kit_diferenciado: v === true })} />
+          <span className="flex-1">
+            <span className="block text-sm font-semibold text-[var(--app-ink)]">Entregar kit diferenciado</span>
+            <span className="block text-xs text-[var(--app-ink-2)]">«Kit Nueva escuela»: uno para cada integrante. «Kit»: para escuelas que ya participaron (marca de Escuelas), el número que elijas por club. El perfil de un club se puede cambiar en su ficha.</span>
+          </span>
+        </label>
+        {c.kit_diferenciado && (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {(['nueva', 'participo'] as const).map((p) => (
+              <EditorKit key={p} idBase={`${idBase}-kit-${p}`} perfil={p} valor={c.kits[p]}
+                onChange={(v) => set({ kits: { ...c.kits, [p]: v } as ConfigEspecie['kits'] })} />
+            ))}
+          </div>
+        )}
+        {errores.kits && <p className="text-xs font-medium" style={errStyle}>{errores.kits}</p>}
       </Seccion>
 
       {/* E71 (pedido del usuario): qué apoyos de logística da la convocatoria. Lo que no da desaparece para el líder. */}

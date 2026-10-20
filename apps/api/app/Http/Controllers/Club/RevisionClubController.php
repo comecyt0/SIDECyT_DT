@@ -167,6 +167,20 @@ class RevisionClubController extends Controller
         return response()->json(self::detallePersonal($club->fresh(), $request->user()));
     }
 
+    /**
+     * E86 — El admin o el admin de convocatoria cambian el perfil de kit de un club (decisión del usuario: se toma de la
+     * marca de la escuela, pero se puede cambiar por club). `auto` vuelve a la marca de la escuela.
+     */
+    public function kitPerfil(Request $request, Club $club)
+    {
+        $this->exigirAceptar($request->user(), $club);
+        $v = $request->validate(['perfil' => 'required|in:auto,nueva,participo']);
+        $club->forceFill(['kit_perfil' => $v['perfil'] === 'auto' ? null : $v['perfil']])->save();
+        Audit::log('especie.kit_perfil', $club, ['perfil' => $v['perfil']]);
+
+        return response()->json(self::detallePersonal($club->fresh(), $request->user()));
+    }
+
     public static function puedeRevisarDocumentos(User $u, Club $club): bool
     {
         return $club->estado !== 'borrador'
@@ -243,6 +257,7 @@ class RevisionClubController extends Controller
             'documentos' => $club->documentos->map(fn ($d) => ['clave' => $d->clave, 'nombre_original' => $d->nombre_original, 'subido_at' => $d->updated_at])->values(),
             // E79: lista completa (formatos marcados, documentos del programa y permisos de imagen) con su revisión.
             'documentos_requeridos' => \App\Support\FormatosClub::lista($club, $cfg, true),
+            'kit' => \App\Support\KitClub::resumen($club, $cfg), // E86
             'config' => EspecieConfigController::payloadPersonal($club->convocatoria, $cfg),
             'faltantes' => $club->estado === 'borrador' ? app(ClubController::class)->faltantes($club) : [],
             'historial' => $club->revisiones()->with(['etapa:id,nombre', 'usuario:id,name'])->get()->map(fn ($r) => [
@@ -273,6 +288,7 @@ class RevisionClubController extends Controller
                 // E76: aprobar o rechazar una CURP que el líder mandó a revisión (admin o admin de convocatoria).
                 'curp' => in_array(RevisionClub::rolDe($u), ['admin', 'admin_convocatoria'], true),
                 'documentos' => self::puedeRevisarDocumentos($u, $club), // E79
+                'kit_perfil' => $puedeAceptar && (bool) $cfg->kit_diferenciado, // E86
             ],
         ];
     }

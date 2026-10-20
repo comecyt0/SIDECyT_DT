@@ -32,6 +32,8 @@ interface Folio {
   clave?: string;
   escuela_nueva?: boolean | null;
   integrantes?: number | null;
+  /** E86: «Kit Nueva escuela × 8» / «Kit × 1». */
+  kit?: string | null;
   user?: { id: number; name: string; avatar_url?: string | null } | null;
   empresa?: { nombre: string } | null;
   convocatoria?: { id: number; nombre: string; periodo?: { nombre: string } | null } | null;
@@ -312,6 +314,7 @@ export default function FoliosPage() {
                     <span className="pill" data-tone={f.escuela_nueva ? 'mint' : 'gold'}>{f.escuela_nueva ? 'Nueva escuela' : 'Ya participó'}</span>
                   )}
                   {esClub && typeof f.integrantes === 'number' && <span className="pill" data-tone="neutral">{f.integrantes} integrante{f.integrantes === 1 ? '' : 's'}</span>}
+                  {esClub && f.kit && <span className="pill" data-tone={f.kit.startsWith('Kit Nueva') ? 'mint' : 'gold'}>{f.kit}</span>}
                   {f.publicado_en_landing && (
                     <span className="pill inline-flex items-center gap-1" data-tone="emerald"><Globe className="h-3 w-3" aria-hidden="true" />En la página pública</span>
                   )}

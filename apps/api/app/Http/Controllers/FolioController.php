@@ -113,12 +113,12 @@ class FolioController extends Controller
         $filas = $items->map(fn ($x) => [
             $s($x['folio']), $x['tipo'] === 'club' ? 'Club' : 'Solicitud', $s($x['convocatoria']['nombre'] ?? ''), $s($x['convocatoria']['periodo']['nombre'] ?? ''),
             $s($x['user']['name'] ?? ''), $s($x['titulo_proyecto']), $s($x['empresa']['nombre'] ?? ''),
-            $x['escuela_nueva'] === null ? '' : ($x['escuela_nueva'] ? 'Nueva escuela' : 'Ya participó'), $x['integrantes'] ?? '',
+            $x['escuela_nueva'] === null ? '' : ($x['escuela_nueva'] ? 'Nueva escuela' : 'Ya participó'), $x['integrantes'] ?? '', $s($x['kit'] ?? ''),
             $s($x['estado_texto']), $x['publicado_en_landing'] ? 'Sí' : 'No', $x['updated_at'] ? \Carbon\Carbon::parse($x['updated_at'])->setTimezone('America/Mexico_City')->format('d/m/Y H:i') : '',
         ])->all();
 
         return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\ReporteInstitucional('Folios', $titulo, $filtrosTexto, $fecha,
-            ['Folio', 'Tipo', 'Convocatoria', 'Periodo', 'Solicitante / líder', 'Proyecto / club', 'Empresa / escuela', 'Participación de la escuela', 'Integrantes', 'Estado', 'En la página pública', 'Última actualización'],
+            ['Folio', 'Tipo', 'Convocatoria', 'Periodo', 'Solicitante / líder', 'Proyecto / club', 'Empresa / escuela', 'Participación de la escuela', 'Integrantes', 'Kit', 'Estado', 'En la página pública', 'Última actualización'],
             $filas), $nombre.'.xlsx');
     }
 

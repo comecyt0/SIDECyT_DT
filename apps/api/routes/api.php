@@ -429,6 +429,7 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::get('clubes/{club}', [$r, 'show']);
             Route::post('clubes/{club}/resolver', [$r, 'resolver'])->middleware('throttle:60,1,club-revision');
             Route::post('clubes/{club}/integrantes/{integrante}/curp', [$r, 'revisarCurp'])->middleware('throttle:60,1,club-revision'); // E76
+            Route::post('clubes/{club}/kit-perfil', [$r, 'kitPerfil'])->middleware('throttle:60,1,club-revision'); // E86
             Route::post('clubes/{club}/documentos/{clave}/revision', [$r, 'revisarDocumento'])->where('clave', '[a-z0-9_]+')->middleware('throttle:120,1,club-revision'); // E79
             Route::post('clubes/{club}/prorroga', [$r, 'prorroga'])->middleware('throttle:30,1,club-revision');
             Route::post('clubes/{club}/visto-bueno', [$r, 'vistoBueno'])->middleware('throttle:60,1,club-revision');

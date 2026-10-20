@@ -14,7 +14,7 @@ class EspecieConfig extends Model
 
     protected $fillable = [
         'min_integrantes', 'max_integrantes', 'clubes_por_escuela', 'participan_menores',
-        'kit_nombre', 'kit_descripcion', 'campos_club', 'campos_integrante', 'modalidad', 'formatos',
+        'kit_nombre', 'kit_descripcion', 'campos_club', 'campos_integrante', 'modalidad', 'formatos', 'kit_diferenciado', 'kits',
     ];
 
     protected $casts = [
@@ -22,6 +22,7 @@ class EspecieConfig extends Model
         'campos_club' => 'array',
         'campos_integrante' => 'array',
         'formatos' => 'array', // E79
+        'kit_diferenciado' => 'boolean', 'kits' => 'array', // E86
         'min_integrantes' => 'integer',
         'max_integrantes' => 'integer',
         'clubes_por_escuela' => 'integer',

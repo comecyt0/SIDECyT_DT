@@ -51,7 +51,8 @@ class EspecieConfigController extends Controller
             'campos.*.tipo_campo' => 'required|in:'.implode(',', Especie::TIPOS_CAMPO),
             'campos.*.requerido' => 'boolean',
             'campos.*.opciones' => 'nullable|string|max:10000|required_if:campos.*.tipo_campo,select',
-        ] + array_map(fn ($r) => str_replace('required|array', 'sometimes|array', $r), \App\Support\EtapasEspecie::reglas())
+        ] + \App\Support\KitClub::reglas() // E86
+            + array_map(fn ($r) => str_replace('required|array', 'sometimes|array', $r), \App\Support\EtapasEspecie::reglas())
             + \App\Support\ApoyosLogistica::reglas(),
             ['max_integrantes.gte' => 'El máximo de integrantes no puede ser menor que el mínimo.'],
             \App\Support\EtapasEspecie::atributos() + \App\Support\ApoyosLogistica::atributos());
@@ -83,6 +84,12 @@ class EspecieConfigController extends Controller
                 // E79: si el panel no manda formatos, se conservan los guardados.
                 'formatos' => Especie::normalizarPredefinidos($v['formatos'] ?? $cfg->formatos, Especie::FORMATOS, Especie::DEFAULT_FORMATOS),
             ]);
+            // E86: kit diferenciado (si el panel no lo manda, se conserva lo guardado). Se guarda ya normalizado.
+            if (array_key_exists('kit_diferenciado', $v)) $cfg->kit_diferenciado = (bool) $v['kit_diferenciado'];
+            if (array_key_exists('kits', $v)) {
+                $cfg->kits = $v['kits'];
+                $cfg->kits = \App\Support\KitClub::kits($cfg);
+            }
             $cfg->convocatoria_id = $convocatoria->id;
             $cfg->save();
 
@@ -125,6 +132,8 @@ class EspecieConfigController extends Controller
             'campos_club' => Especie::normalizarPredefinidos($cfg->campos_club, Especie::CAMPOS_CLUB, Especie::DEFAULT_CLUB),
             'campos_integrante' => Especie::normalizarPredefinidos($cfg->campos_integrante, Especie::CAMPOS_INTEGRANTE, Especie::DEFAULT_INTEGRANTE),
             'formatos' => Especie::formatos($cfg),
+            'kit_diferenciado' => (bool) $cfg->kit_diferenciado, // E86
+            'kits' => \App\Support\KitClub::kits($cfg),
             'etiquetas' => ['club' => Especie::CAMPOS_CLUB, 'integrante' => Especie::CAMPOS_INTEGRANTE, 'formatos' => Especie::FORMATOS],
             'campos' => EspecieCampo::where('convocatoria_id', $c->id)->orderBy('orden')->get(['ambito', 'nombre_campo', 'etiqueta', 'tipo_campo', 'opciones_json', 'requerido', 'orden']),
             'documentos' => ProgramaDocumento::where('tipo_programa_id', $c->tipo_programa_id)->where('activo', true)->orderBy('orden')

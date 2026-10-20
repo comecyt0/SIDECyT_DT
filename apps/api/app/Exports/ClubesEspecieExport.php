@@ -34,11 +34,11 @@ class ClubesEspecieExport implements WithMultipleSheets
         $s = fn ($v) => SolicitudesExport::celda($v === null ? '' : (string) $v);
 
         // 08/10/2026: «Ya participó» / «Nueva escuela» en todo lugar donde aparece la escuela (pedido del usuario).
-        $hClubes = ['Folio', 'Club', 'Estado', 'Escuela', 'CCT', 'Municipio', 'Sistema', 'Participación', 'Líder', 'Correo del líder', 'Teléfono del líder', 'Integrantes', 'QR habilitado', 'Kit entregado'];
+        $hClubes = ['Folio', 'Club', 'Estado', 'Escuela', 'CCT', 'Municipio', 'Sistema', 'Participación', 'Líder', 'Correo del líder', 'Teléfono del líder', 'Integrantes', 'Kit', 'Kit incluye', 'QR habilitado', 'Kit entregado'];
         $rClubes = $clubes->map(fn (Club $x) => [
             $s($x->folio), $s($x->nombre), $x->estado === 'kit_entregado' ? 'Kit entregado' : 'Aceptado', $s($x->escuela?->nombre), $s($x->escuela?->cct),
             $s($x->escuela?->municipio), $s($x->escuela?->sistema), $x->escuela ? ($x->escuela->participo_antes ? 'Ya participó' : 'Nueva escuela') : '', $s($x->lider?->name), $s($x->lider?->email), $s($x->lider?->telefono),
-            $x->integrantes->count(), QrClub::habilitado($x) ? 'Sí' : 'No', $x->kit_entregado_at ? 'Sí' : 'No',
+            $x->integrantes->count(), $s(\App\Support\KitClub::texto($kr = \App\Support\KitClub::resumen($x, $c->especieConfig))), $s(\App\Support\KitClub::contenido($kr)), QrClub::habilitado($x) ? 'Sí' : 'No', $x->kit_entregado_at ? 'Sí' : 'No',
         ])->all();
 
         $hInt = ['Folio del club', 'Club', 'Nombre', 'Papel', 'Fecha de nacimiento', 'Sexo', 'CURP', 'Grado y grupo', 'Correo', 'Teléfono', 'Otros datos'];
@@ -87,7 +87,7 @@ class ClubesEspecieExport implements WithMultipleSheets
 
         $hKit = ['Folio', 'Club', 'Kit', 'Entrega programada', 'Lugar programado', 'Entregado', 'Lugar de entrega', 'Entregó', 'Recibió', 'Registró'];
         $rKit = $clubes->filter(fn ($x) => $x->kit_entregado_at)->map(fn (Club $x) => [
-            $s($x->folio), $s($x->nombre), $s($cfg->kit_nombre), $f($x->kit_fecha), $s($x->kit_lugar), $f($x->kit_entregado_at), $s($x->kit_entregado_lugar),
+            $s($x->folio), $s($x->nombre), $s(\App\Support\KitClub::texto(\App\Support\KitClub::resumen($x, $c->especieConfig))), $f($x->kit_fecha), $s($x->kit_lugar), $f($x->kit_entregado_at), $s($x->kit_entregado_lugar),
             $s($x->kit_entrego), $s($x->kit_recibio), $s($x->kitRegistrador?->name),
         ])->values()->all();
 

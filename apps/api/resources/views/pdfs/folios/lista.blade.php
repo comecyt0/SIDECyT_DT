@@ -14,7 +14,7 @@
                     <td>{{ $x['tipo'] === 'club' ? 'Club' : 'Solicitud' }}</td>
                     <td>{{ $x['convocatoria']['nombre'] ?? '—' }}{{ ! empty($x['convocatoria']['periodo']['nombre']) ? ' · '.$x['convocatoria']['periodo']['nombre'] : '' }}</td>
                     <td>{{ $x['user']['name'] ?? '—' }}</td>
-                    <td>{{ $x['titulo_proyecto'] ?? '—' }}</td>
+                    <td>{{ $x['titulo_proyecto'] ?? '—' }}@if (! empty($x['kit']))<br><span class="pill">{{ $x['kit'] }}</span>@endif</td>
                     <td>
                         {{ $x['empresa']['nombre'] ?? '—' }}
                         @if ($x['escuela_nueva'] !== null)

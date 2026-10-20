@@ -609,6 +609,8 @@ class ClubController extends Controller
             'dueno_director' => (bool) $club->dueno_director,
             // E52 · F3: logística (solo clubes aceptados; se manda siempre para que el panel sepa si aplica).
             'logistica' => \App\Support\LogisticaClub::aplica($club) ? \App\Support\LogisticaClub::estado($club) : null,
+            // E86: qué kit le toca al club (perfil, cuántos y qué incluye), visible desde la captura.
+            'kit' => \App\Support\KitClub::resumen($club, $cfg),
             // Historial para el líder: qué pasó y el comentario general; sin datos de quién revisó (lista blanca).
             'historial' => $club->revisiones()->with('etapa:id,nombre')->get()
                 ->filter(fn ($r) => in_array($r->resultado, ['enviado', 'aprobado', 'observado', 'rechazado', 'prorroga', 'subsanado', 'comite_aceptado', 'comite_no_aceptado'], true))

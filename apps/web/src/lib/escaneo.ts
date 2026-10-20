@@ -1,3 +1,4 @@
+import { leerResumenKit, type ResumenKit } from '@/lib/especie';
 /**
  * E52 · F4 — Escaneo en eventos: tipos y validación de las respuestas de /escaneo/* (se validan antes de pintarlas,
  * CLAUDE.md §0). El QR solo lleva un token opaco; el servidor decide qué club es y qué datos ve cada rol.
@@ -44,7 +45,7 @@ export interface FichaEscaneo {
   tr_llegada: Registro | null;
   tr_regreso: Registro | null;
   transporte_aprobado: number | null;
-  kit: { nombre: string | null; entregado_at: string | null; recibio: string | null; entrego: string | null; lugar: string | null };
+  kit: { nombre: string | null; entregado_at: string | null; recibio: string | null; entrego: string | null; lugar: string | null; resumen?: ResumenKit | null };
   ficha_completa: string | null;
 }
 export interface ResultadoBusqueda { id: number; folio: string; nombre: string; escuela: string | null; municipio: string | null }
@@ -101,7 +102,7 @@ export function leerFicha(v: unknown): FichaEscaneo | null {
     tr_llegada: registro(d.tr_llegada),
     tr_regreso: registro(d.tr_regreso),
     transporte_aprobado: num(d.transporte_aprobado),
-    kit: { nombre: txtN(kit.nombre), entregado_at: txtN(kit.entregado_at, 40), recibio: txtN(kit.recibio, 150), entrego: txtN(kit.entrego, 150), lugar: txtN(kit.lugar) },
+    kit: { nombre: txtN(kit.nombre), entregado_at: txtN(kit.entregado_at, 40), recibio: txtN(kit.recibio, 150), entrego: txtN(kit.entrego, 150), lugar: txtN(kit.lugar), resumen: leerResumenKit(kit.resumen) }, // E86
     // Solo rutas internas de la ficha del club (nunca una URL arbitraria).
     ficha_completa: typeof d.ficha_completa === 'string' && /^\/admin\/clubes\/\d+$/.test(d.ficha_completa) ? d.ficha_completa : null,
   };

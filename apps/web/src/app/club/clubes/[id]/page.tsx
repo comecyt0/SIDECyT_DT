@@ -25,7 +25,7 @@ import {
   ACCEPT_FORMATO, ACCEPT_IMAGEN, CAMPOS_INTEGRANTE, ESTADO_CLUB, ESTADO_DOCUMENTO, ETIQUETA_FORMATO, IMAGEN_MAX_MB, SEXO,
   leerCamposApi, normalizarPredef, CAMPOS_CLUB, valorCampo,
   leerLogistica, type LogisticaEstado,
-  type CampoApi, type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi, type PermisoImagen, type Predef,
+  type CampoApi, type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi, type PermisoImagen, type Predef, type ResumenKit, leerResumenKit,
 } from '@/lib/especie';
 import { PATRON_CURP, PATRON_TELEFONO, PATRON_CORREO, fechaDeCurp } from '@/lib/registro';
 import { textoLegible } from '@/lib/errores-formulario';
@@ -41,6 +41,7 @@ import CelebracionAceptado from '@/components/especie/CelebracionAceptado';
 import Folio from '@/components/ui/folio';
 import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
 import AccesosClub, { leerAccesos, type AccesosClubApi } from '@/components/especie/AccesosClub';
+import TarjetaKit from '@/components/especie/TarjetaKit';
 
 interface Detalle {
   club: ClubApi;
@@ -61,6 +62,8 @@ interface Detalle {
   dueno_director: boolean;
   /** E79: permiso de uso de imagen de cada integrante (si la convocatoria lo pide). */
   permisos_imagen: Record<string, PermisoImagen>;
+  /** E86: qué kit le toca al club. */
+  kit: ResumenKit | null;
 }
 
 const ACCESO_TEXTO: Record<string, string> = {
@@ -113,6 +116,7 @@ function leerDetalle(data: unknown): Detalle | null {
     accesos: leerAccesos(d.accesos),
     dueno_director: d.dueno_director === true,
     permisos_imagen: d.permisos_imagen && typeof d.permisos_imagen === 'object' ? d.permisos_imagen : {},
+    kit: leerResumenKit((d as { kit?: unknown }).kit),
   };
 }
 
@@ -397,6 +401,7 @@ export default function MiClubPage() {
             onVerSiguiente={() => document.getElementById('sec-logistica')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
         )}
         <AvisoEstadoClub estado={club.estado} avance={club} nombreClub={club.nombre} onVence={() => void cargar()} />
+        {d.kit && <TarjetaKit kit={d.kit} />}
         {d.logistica && (
           <LogisticaLider clubId={club.id} folio={club.folio} logistica={d.logistica} soloLectura={d.acceso === 'lider_b' || d.acceso === 'director'}
             onCambio={(logistica) => setD((x) => (x ? { ...x, logistica } : x))}
@@ -430,6 +435,8 @@ export default function MiClubPage() {
         )}
       </section>
       {subsanando && <AvisoEstadoClub estado={club.estado} avance={club} onVence={() => void cargar()} />}
+      {/* E86: el líder ve desde la captura qué kit le toca (perfil, cuántos y qué incluye). */}
+      {d.kit && <TarjetaKit kit={d.kit} />}
 
       {/* ── Datos del club ── */}
       <section className="app-card space-y-5 p-5" aria-labelledby="sec-datos">

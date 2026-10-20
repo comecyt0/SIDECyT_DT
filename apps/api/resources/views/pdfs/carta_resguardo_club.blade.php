@@ -1,4 +1,5 @@
 @php
+    $kitR = \App\Support\KitClub::resumen($club, $cfg); // E86
     // E52 · F3 — Carta de resguardo del kit. Identidad oficial (E50): franja en el encabezado como data URI (DomPDF sin red).
     $franja = @file_get_contents(base_path('../web/public/identidad/convivencia-color.png'));
     $franjaUri = $franja ? 'data:image/png;base64,'.base64_encode($franja) : null;
@@ -40,7 +41,7 @@
         <p>
             Quien suscribe, <strong>{{ $club->lider->name }}</strong>, líder del club <strong>«{{ $club->nombre }}»</strong> de la escuela
             <strong>{{ $club->escuela->nombre }}</strong> (CCT <strong>{{ $club->escuela->cct }}</strong>), {{ $club->escuela->municipio }},
-            Estado de México, <strong>recibe en resguardo</strong> el kit <strong>«{{ $cfg->kit_nombre ?: 'Kit de la convocatoria' }}»</strong>
+            Estado de México, <strong>recibe en resguardo</strong> el kit <strong>«{{ $kitR['nombre'] }}»</strong>{{ $kitR['diferenciado'] ? ' ('.$kitR['etiqueta'].', '.$kitR['cantidad'].' kit(s)'.($kitR['por'] === 'integrante' ? ', uno por integrante' : '').')' : '' }}
             otorgado por el Consejo Mexiquense de Ciencia y Tecnología (COMECYT) en la convocatoria {{ $club->convocatoria->nombre }}, y se
             compromete a <strong>usarlo exclusivamente para las actividades del club</strong>, conservarlo en buen estado y ponerlo a
             disposición del COMECYT cuando lo solicite.
@@ -50,8 +51,11 @@
     <div class="bloque">
         <div class="titulo">Kit</div>
         <table>
-            <tr><th>Nombre</th><td>{{ $cfg->kit_nombre ?: '—' }}</td></tr>
-            @if ($cfg->kit_descripcion)<tr><th>Contenido</th><td>{{ $cfg->kit_descripcion }}</td></tr>@endif
+            {{-- E86: perfil, cantidad y artículos del kit diferenciado --}}
+            <tr><th>Nombre</th><td>{{ $kitR['nombre'] }}</td></tr>
+            @if ($kitR['diferenciado'])<tr><th>Tipo de kit</th><td>{{ $kitR['etiqueta'] }} · {{ $kitR['cantidad'] }} kit(s){{ $kitR['por'] === 'integrante' ? ' (uno por integrante)' : '' }}</td></tr>@endif
+            @if (count($kitR['articulos']))<tr><th>Cada kit incluye</th><td>@foreach ($kitR['articulos'] as $art){{ $art['cantidad'] }} × {{ $art['articulo'] }}@if (! $loop->last)<br>@endif @endforeach</td></tr>
+            @elseif ($kitR['descripcion'])<tr><th>Contenido</th><td>{{ $kitR['descripcion'] }}</td></tr>@endif
             <tr><th>Entrega programada</th><td>{{ $club->kit_fecha ? \App\Support\RevisionClub::fechaLegible($club->kit_fecha) : 'Por asignar' }}{{ $club->kit_lugar ? ' · '.$club->kit_lugar : '' }}</td></tr>
         </table>
     </div>

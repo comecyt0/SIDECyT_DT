@@ -150,7 +150,7 @@ class EventoClub
             // E71: modos que se muestran en el escáner.
             'incluye_transporte' => (bool) ($cfg->incluye_transporte ?? true),
             'incluye_lunch' => (bool) ($cfg->incluye_lunch ?? true),
-            'kit' => ['nombre' => $cfg->kit_nombre, 'entregado_at' => $club->kit_entregado_at, 'recibio' => $club->kit_recibio, 'entrego' => $club->kit_entrego, 'lugar' => $club->kit_entregado_lugar ?: $club->kit_lugar],
+            'kit' => ['resumen' => KitClub::resumen($club, $cfg), 'nombre' => $cfg->kit_nombre, 'entregado_at' => $club->kit_entregado_at, 'recibio' => $club->kit_recibio, 'entrego' => $club->kit_entrego, 'lugar' => $club->kit_entregado_lugar ?: $club->kit_lugar],
             'ficha_completa' => $todo ? '/admin/clubes/'.$club->id : null,
         ];
     }

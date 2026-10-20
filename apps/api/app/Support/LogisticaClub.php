@@ -283,6 +283,8 @@ class LogisticaClub
             'kit' => [
                 'nombre' => $cfg->kit_nombre, 'fecha' => $club->kit_fecha, 'lugar' => $club->kit_lugar, 'asignado_at' => $club->kit_asignado_at,
                 'entregado_at' => $club->kit_entregado_at, 'entregado_lugar' => $club->kit_entregado_lugar, 'entrego' => $club->kit_entrego, 'recibio' => $club->kit_recibio,
+                // E86: qué kit le toca (perfil, cuántos y qué incluye).
+                'resumen' => KitClub::resumen($club, $cfg),
             ],
             // F4 — QR del club: habilitado o, si no, qué le falta (el token nunca viaja aquí).
             'qr' => ['habilitado' => QrClub::habilitado($club), 'habilitado_at' => $club->qr_habilitado_at, 'falta' => QrClub::habilitado($club) ? null : QrClub::impedimento($club)],

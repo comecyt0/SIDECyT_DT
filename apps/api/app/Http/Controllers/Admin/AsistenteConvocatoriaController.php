@@ -234,7 +234,10 @@ class AsistenteConvocatoriaController extends Controller
                     'campos_club' => \App\Support\Especie::normalizarPredefinidos($e['campos_club'] ?? null, \App\Support\Especie::CAMPOS_CLUB, \App\Support\Especie::DEFAULT_CLUB),
                     'campos_integrante' => \App\Support\Especie::normalizarPredefinidos($e['campos_integrante'] ?? null, \App\Support\Especie::CAMPOS_INTEGRANTE, \App\Support\Especie::DEFAULT_INTEGRANTE),
                     'formatos' => \App\Support\Especie::normalizarPredefinidos($e['formatos'] ?? null, \App\Support\Especie::FORMATOS, \App\Support\Especie::DEFAULT_FORMATOS), // E79
+                    'kit_diferenciado' => (bool) ($e['kit_diferenciado'] ?? false), // E86
+                    'kits' => $e['kits'] ?? null,
                 ]);
+                $cfg->kits = \App\Support\KitClub::kits($cfg);
                 $cfg->convocatoria_id = $convocatoria->id;
                 \App\Support\ApoyosLogistica::aplicar($cfg, $e); // E71: transporte / box lunch, salida y fecha límite
                 $cfg->save();
@@ -326,6 +329,7 @@ class AsistenteConvocatoriaController extends Controller
         $r['especie.campos_club'] = 'nullable|array';
         $r['especie.campos_integrante'] = 'nullable|array';
         $r['especie.formatos'] = 'nullable|array'; // E79
+        $r += \App\Support\KitClub::reglas('especie.'); // E86
         $r += array_map(fn ($x) => str_replace('required|array', 'sometimes|array', $x), \App\Support\EtapasEspecie::reglas('especie.etapas'));
         $r += \App\Support\ApoyosLogistica::reglas('especie');
 

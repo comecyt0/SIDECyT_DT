@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import PageHeader from '@/components/ui/page-header';
 import { AlertBox } from '@/components/ui/alert-box';
 import ClubResumen from '@/components/especie/ClubResumen';
+import TarjetaKit from '@/components/especie/TarjetaKit';
 import LineaAvanceClub, { quienesDeHistorial } from '@/components/especie/LineaAvanceClub';
 import HistorialClub from '@/components/especie/HistorialClub';
 import RevisionClubPanel, { type PermisosRevision } from '@/components/especie/RevisionClubPanel';
@@ -13,7 +14,7 @@ import LogisticaPersonal from '@/components/especie/LogisticaPersonal';
 import { descargarDocumentoClub } from '@/lib/especie-api';
 import { mensajeError } from '@/lib/errores-formulario';
 import {
-  CARTA_ESCUELA, leerCamposApi, normalizarPredef, CAMPOS_INTEGRANTE, leerLogistica, type LogisticaEstado,
+  CARTA_ESCUELA, leerCamposApi, leerResumenKit, type ResumenKit, normalizarPredef, CAMPOS_INTEGRANTE, leerLogistica, type LogisticaEstado,
   type ClubApi, type DocumentoClub, type EntradaHistorial, type IntegranteApi,
 } from '@/lib/especie';
 
@@ -26,7 +27,9 @@ export interface DetalleClubPersonal {
     convocatoria?: { id: number; nombre: string }; acta_comite?: { nombre: string; subida_at: string } | null };
   faltantes: string[];
   historial: EntradaHistorial[];
-  permisos: PermisosRevision & { logistica?: boolean; curp?: boolean; documentos?: boolean };
+  permisos: PermisosRevision & { logistica?: boolean; curp?: boolean; documentos?: boolean; kit_perfil?: boolean };
+  /** E86: qué kit le toca al club. */
+  kit?: ResumenKit | null;
   logistica: LogisticaEstado | null;
   /** E70: personas asignadas a la etapa actual y aprobaciones que lleva (solo personal). */
   aprobaciones: { requeridas: number; dadas: number; ya_aprobe: boolean; asignados: { nombre: string; aprobo: boolean }[] } | null;
@@ -62,6 +65,7 @@ export function leer(data: unknown): DetalleClubPersonal | null {
     permisos: { ...SIN_PERMISOS, ...(d.permisos ?? {}) },
     logistica: leerLogistica(d.logistica),
     aprobaciones: leerAprobaciones((d as { aprobaciones?: unknown }).aprobaciones),
+    kit: leerResumenKit((d as { kit?: unknown }).kit),
   };
 }
 
@@ -216,6 +220,15 @@ export default function FichaClubPersonal({ endpoint, volverHref }: { endpoint: 
           <p className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><AlertTriangle className="h-4 w-4" aria-hidden="true" />El líder aún no envía el club. Le falta:</p>
           <ul className="mt-2 list-disc space-y-0.5 pl-6 text-sm text-[var(--app-ink)]">{d.faltantes.map((f) => <li key={f}>{f}</li>)}</ul>
         </section>
+      )}
+      {d.kit && (
+        <TarjetaKit kit={d.kit} onCambiarPerfil={d.permisos.kit_perfil ? async (perfil) => {
+          try {
+            const { data } = await api.post(`/revision/clubes/${d.club.id}/kit-perfil`, { perfil });
+            const x = leer(data); if (x) setD(x);
+            setAviso('Perfil de kit actualizado.'); setError(null);
+          } catch (e) { setError(mensajeError(e, 'No se pudo cambiar el perfil de kit.')); }
+        } : undefined} />
       )}
       <CurpPorRevisar clubId={d.club.id} integrantes={d.integrantes} puede={Boolean(d.permisos.curp)}
         onHecho={(nuevo, mensaje, ok) => {

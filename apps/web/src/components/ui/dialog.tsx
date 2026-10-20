@@ -60,19 +60,13 @@ function DialogContent({
       >
         {children}
         {showCloseButton && (
+          // 20/10/2026 (reporte del usuario: la X salía abajo): botón propio, fijo arriba a la derecha de la ventana.
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            render={
-              <Button
-                variant="ghost"
-                className="absolute top-2 right-2"
-                size="icon-sm"
-              />
-            }
+            aria-label="Cerrar"
+            className="absolute top-3 right-3 z-10 grid h-9 w-9 place-items-center rounded-full text-[var(--app-ink-2)] transition-colors duration-150 hover:bg-[var(--sg-canvas,rgba(0,0,0,0.05))] hover:text-[var(--app-ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sg-vino)] active:scale-95"
           >
-            <XIcon
-            />
-            <span className="sr-only">Close</span>
+            <XIcon className="h-4 w-4" aria-hidden="true" />
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>
@@ -110,7 +104,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close render={<Button variant="outline" />}>
-          Close
+          Cerrar
         </DialogPrimitive.Close>
       )}
     </div>
