@@ -461,6 +461,48 @@ temporadas).
 **Técnico:** ver `CLAUDE.md` E57 (`especie_config.modalidad`, `LogisticaClub::limitesClub`, `useConfetiAlVer` con
 `ultimo = -Infinity`, `ModalidadChip`, `.celebra-club`).
 
+## 17. E79–E92 — Formatos, kit diferenciado, logística, edición por pasos y cambio de integrante (20/10/2026)
+
+Decisiones del usuario de esta jornada (detalle técnico en `CLAUDE.md`, entradas E79 a E92):
+- **Formatos institucionales (E79):** carta de la escuela, Formato A, B, C y permiso de uso de imagen (infantil o adulto,
+  uno por integrante). Se descargan llenos con lo que exista (lo demás, línea para llenar a mano), con la franja de
+  convivencia, en PDF sin edición; el líder los firma y sube; cada uno se aprueba o rechaza con motivo. Casillas «Pedir» y
+  «Obligatorio» por convocatoria. Datos nuevos: director(a), lugar, grado, grupo, domicilio y tutor. Texto justificado y
+  nombre del director donde firma la autoridad escolar, o línea para escribirlo (E91). **Vista previa** de cada formato
+  con un club de ejemplo al crear o editar la convocatoria (20/10). Los textos son plantillas del código: cambiar su
+  redacción es un cambio de desarrollo (no se editan desde el panel).
+- **Folios (E80/E81):** incluyen los clubes (también en captura) y se publican; vista previa con todos los datos y la
+  etiqueta Nueva escuela / Ya participó; exportación PDF y Excel completa, parcial o individual.
+- **Kit diferenciado (E86):** «Kit Nueva escuela» (uno por integrante) y «Kit» para escuelas que ya participaron (número
+  fijo por club), con lista de artículos editable; el perfil sale de la escuela y se cambia por club. **Sin kit en
+  nacional ni internacional (E89).**
+- **Transporte y box lunch (E87/E91):** salida definida por el líder (lugar, Google Maps y hora propuesta), regreso por el
+  COMECYT; formato «Solicitud de Transporte y Box Lunch» (o «y/o» con un solo apoyo) con los dos renglones y «para
+  cuántos»; no aparece al líder hasta que el personal lo habilita para toda la convocatoria.
+- **Formatos siempre al día (E90):** líderes A y B cuentan como integrantes; si cambian los datos, lo firmado antes se
+  marca «Desactualizado» y se pide de nuevo.
+- **Configuración editable y por pasos (E88, 20/10):** datos propios por columna, etapas que se agregan, reordenan y quitan
+  (salvo las que tienen clubes o historial). Editar la convocatoria es un marco por pasos (datos generales, modalidad e
+  integrantes, kit, transporte, etapas, datos, formatos y documentos) y los pasos se pueden pulsar; también en el
+  asistente de alta.
+- **Cambio de integrante (E92):** ver la sección siguiente.
+
+## 18. E92 — Solicitud de cambio de integrante (20/10/2026)
+
+**Decisiones del usuario (cuestionario):**
+- Se pide **desde que el club se envía y hasta una fecha límite** que define el admin en la convocatoria
+  («Modalidad e integrantes» → «Fecha límite para cambios de integrante»). Sin fecha, no hay cambios. Mientras el club
+  se puede editar (captura u observaciones en plazo), los integrantes se cambian directo.
+- **Aprueban o rechazan el admin y el admin de convocatoria** (con alcance); rechazar exige motivo, que ve el líder.
+- El nuevo integrante entrega **lo mismo que el anterior y sus formatos**: los datos que pide la convocatoria
+  (obligatorios incluidos, CURP comparada con nombre y fecha), foto si se pide y el permiso de uso de imagen firmado, que
+  se descarga ya lleno con sus datos.
+- Quien sale queda de **baja con historial** (fecha y justificación), no se borra.
+- Los líderes A y B no se cambian con esta solicitud (se cambian en «Acompañantes del club»). Una solicitud pendiente por
+  club; el líder la puede cancelar.
+- Al aprobar, el nuevo integrante entra con su permiso ya aprobado y los formatos que listan integrantes (carta, A, B, C)
+  quedan desactualizados para volver a firmarlos.
+
 ## 8. Modelo de datos (borrador técnico, a validar en F1)
 
 - `escuelas` (cct único, nombre, municipio, nivel, sistema `estatal|federal`, activo).

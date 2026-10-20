@@ -509,7 +509,7 @@ bash deploy.sh                             # Script completo: migrate, cache, cr
 
 # ── Ruta de instalación (Windows Server) ──────────────────────────
 # Ruta real:    F:\Desarrollo Tecnologico\
-# Junction:     F:\comecyt → F:\Desarrollo Tecnologico  (sin espacios, para NSSM)
+# (La junction F:\comecyt se retiró el 20/10/2026, E78: NSSM usa la ruta real con comillas en AppParameters.)
 # Pruebas:      https://10.250.36.241/  (VPN interna; mismo build que producción)
 # Producción:   https://sidecyt-comecyt.edomex.gob.mx/  (detrás del balanceador, ver E22)
 
@@ -2363,6 +2363,99 @@ Duda del usuario: en F: se veían dos carpetas con lo mismo.
   - Se borraron con `cmd /c rmdir /s /q`, que no sigue las junctions internas de pnpm. **Nunca uses `Remove-Item
     -Recurse` en carpetas con junctions:** en PowerShell 5.1 puede borrar el destino.
   - Se conservan el `.next.bak` más reciente (regla de deploy), `backups\` y `logs\`.
+
+### E79 — Formatos institucionales de clubes [publicado 20-10-2026]
+Decisiones del usuario: `docs/APOYO_EN_ESPECIE.md` §17. Para desarrollo:
+- **`App\Support\FormatosClub`** es el centro: `VISTAS` (`pdfs/formatos/*`, carta en `pdfs/carta_escuela_club`), `datos()`,
+  `campo()` (dato o línea en blanco, siempre escapado), `casilla()`, `franja()` (data URI: DomPDF no tiene red),
+  `descargar()` (PDF **cifrado con contraseña de propietario aleatoria, solo imprimir**, `no-store`), `lista()`,
+  `permisosImagen()`, `faltantes()`, `hayPorRevisar()`, `ultimoCambio()` y `ejemplo()` (club en memoria para la vista
+  previa). Casillas por convocatoria en `especie_config.formatos` (`Especie::FORMATOS`, `DEFAULT_FORMATOS`).
+- Permiso de imagen = un `club_documentos` por integrante con clave `uso_imagen_{id}` (`Especie::PREFIJO_IMAGEN`).
+  Infantil si es estudiante menor o sin fecha; adulto para docentes (líder A y B) y mayores.
+- Revisión por documento: `club_documentos.estado` (pendiente | aprobado | rechazado) + motivo;
+  `POST revision/clubes/{club}/documentos/{clave}/revision`. Lo subido antes de E79 quedó «pendiente».
+- Datos nuevos: `Especie::CAMPOS_CLUB` (director_nombre, lugar → `clubes.datos`) y `CAMPOS_INTEGRANTE` (grado, grupo,
+  domicilio, tutor_nombre). Las cartas muestran grado y grupo separados (o el `grado_grupo` anterior) y «Líder A/B».
+- **Vista previa (20/10):** `GET admin/formatos-club/{formato}/vista-previa` (admin y admin de convocatoria, throttle,
+  formato en lista blanca, 404 fuera de ella, 401 sin sesión) → PDF inline con `FormatosClub::ejemplo()`; botón por
+  formato en `ConfigEspecieForm`. Los textos son plantillas Blade: editarlos desde el panel no está implementado.
+- Los 3 documentos del programa STEAM (Formato A/B/C) duplican los formatos nuevos: **el usuario los desactiva**.
+
+### E80/E81 — Folios con clubes, vista previa y exportación [publicado 20-10-2026]
+- `App\Support\FoliosReporte`: `items()` (solicitudes y clubes, incluidos borradores; filtro `escuela_id`; kit y
+  `escuela_nueva`), `conteos()`, `ficha()`. `folios_publicados.club_id` (los aceptados se publican).
+- `GET admin/folios/exportar` (PDF/Excel, completo, parcial por ids o individual) y `GET admin/folios/{tipo}/{id}/ficha`.
+  Excel con `Exports\ReporteInstitucional` (franja dibujada, encabezados vino, celdas con `SolicitudesExport::celda`
+  contra inyección de fórmulas). PDF con `pdfs/reportes/_base` y `pdfs/folios/{lista,ficha}`.
+- Front: `admin/folios/VistaPreviaFolio.tsx`, `lib/folios-api.ts`.
+
+### E82–E84 — Historial por día, usuarios por tipo, escuelas en ventanas [publicado 20-10-2026]
+- Historial: `Admin\AuditLogController::consulta()` + `exportar` (PDF/Excel, completo o parcial), agrupado por día
+  (`<details>`), `per_page` con tope, filtro «hasta» incluye el día completo. Etiquetas en `App\Support\Bitacora`.
+- Usuarios: `UserController` devuelve `por_rol`; pestañas «Tipo de cuenta» con `?rol_id=` en la URL.
+- Escuelas: «Agregar escuela» y «Cargar desde Excel» en diálogos; cada escuela lista los folios de sus clubes con enlace
+  a `/admin/folios?escuela_id=` o `?search=<folio>`.
+
+### E85 — Solo el Administrador elimina; los demás desactivan o retiran [publicado 20-10-2026]
+Regla del usuario para SIGAE y SICEI (SICEI: D90, superadmin). `asignaciones_evaluador.retirada_at/retirada_por` con
+scope global `vigentes` (lo retirado se oculta, no se borra; volver a asignar lo reactiva). Admin de convocatoria: retira
+asignaciones, no reabre dictámenes, no borra convenios, ministraciones, informes, eventos ni lista negra
+(`except(['destroy'])`). Dashboard cuenta solo asignaciones vigentes.
+
+### E86–E89 — Kit diferenciado, transporte, configuración editable y sin kit fuera de estatal [publicado 20-10-2026]
+- **E86:** `especie_config.kit_diferenciado` y `kits` (JSON normalizado por `App\Support\KitClub::kits`). `KitClub::perfil`
+  sale de `escuelas.participo_antes` y se cambia por club (`POST revision/clubes/{club}/kit-perfil`). `resumen()` se
+  muestra en líder (`TarjetaKit`), carta de resguardo, folios, reportes y escaneo. **E89:** `KitClub::aplica()` = solo
+  modalidad estatal; nacional/internacional sin kit ni carta de resguardo (el QR no la exige).
+- **E87:** salida del transporte por club (`clubes.transporte_salida_*`, `PUT club/clubes/{club}/salida-transporte`) y
+  regreso de la convocatoria con Maps. Enlaces de Maps en lista blanca (`ApoyosLogistica::esMapa`, `urlMapa` en TS:
+  solo https de maps.app.goo.gl, maps.google.com(.mx), goo.gl/maps y google.com(.mx)/maps). Formato «Y»/«Y/O» con los dos
+  renglones (el no incluido como respaldo) y «para cuántos».
+- **E88:** datos propios por columna en `ConfigEspecieForm`; `EtapasEspecie::guardar` permite agregar, reordenar y quitar
+  (salvo `en_uso`); el reordenamiento sube primero `orden + 1000` para no chocar con el único (convocatoria, orden).
+- Todas las ventanas (`ui/dialog.tsx`) llevan la X arriba a la derecha.
+
+### E90/E91 — Formatos siempre al día; logística habilitada por convocatoria [publicado 20-10-2026]
+- `clubes.datos_cambiados_at` + `Club::marcarCambioDatos()`; `FormatosClub::subido()` marca `desactualizado` si el
+  archivo es anterior a `ultimoCambio()`. Líder A y B se sincronizan con su cuenta (`LiderBIntegrante::actualizarDesdeCuenta`
+  desde el `updated` de `User`). PDFs con `no-store`.
+- `especie_config.logistica_habilitada` (existentes = true): sin ella el líder no ve la solicitud ni el formato.
+  Credencial con líder A y B junto al QR y el director debajo. Firmas de autoridad escolar con el nombre del director.
+
+### Editar la convocatoria por pasos; pasos clicables [publicado 20-10-2026]
+Pedido del usuario («la parte de abajo está saturada»). `admin/convocatorias/[id]/editar` es **un solo `StepFrame`**:
+nombre, fechas, estado/montos, y luego (en especie) un paso por sección de `ConfigEspecieForm` (prop `secciones`,
+`SECCIONES_ESPECIE`, `SECCION_DE_ERROR`) y Documentos; en económico, Preguntas, Documentos, Conceptos de gasto y
+Criterios (`EstructuraPrograma` con una pestaña, que se guarda al momento). «Guardar cambios» valida todo lo de clubes y
+manda los dos PUT; un error lleva a su paso. `StepFrame` ganó `libre` (cualquier paso) y, sin él, los pasos visitados son
+clicables; avanzar con un clic valida el paso actual; la lista de pasos queda fija al desplazarse. En el asistente
+(`nueva`) los círculos son botones (`irAPaso`: atrás directo, adelante valida los pasos intermedios).
+Portal `/`: se quitó «Accesos rápidos» (pedido del usuario).
+
+### E92 — Solicitud de cambio de integrante [publicado 20-10-2026]
+Decisiones del usuario: `docs/APOYO_EN_ESPECIE.md` §18. Para desarrollo:
+- Migración `2026_10_20_000008`: `especie_config.fecha_limite_cambios`, `club_integrantes.baja_at/baja_motivo` y tabla
+  `club_cambios_integrante` (estado pendiente | aprobada | rechazada | cancelada, `nuevo` JSON, foto y permiso en disco
+  privado `clubes_cambios/`). Índice único parcial: **una pendiente por club**.
+- **`Club::integrantes()` ahora filtra `whereNull('baja_at')`** (padrón activo); `integrantesBaja()` y
+  `cambiosIntegrante()` para el historial. Todo código nuevo que lea integrantes directo de la tabla debe filtrar bajas.
+  Un integrante de baja da 404 en editar, quitar, foto y permiso; su permiso ya no cuenta en `hayPorRevisar()`.
+- `App\Support\CambioIntegrante`: `ventana()` (desde el envío, no editable, no rechazado y hasta la fecha, hora del
+  centro), `solicitar()` (reusa `ClubController::datosIntegrante($request, $club, $cfg, true)`: mismos datos y
+  obligatorios; tutor si es menor; CURP no repetida; foto → WebP; permiso solo PDF por contenido), `cancelar()`,
+  `resolver()` (transacción con bloqueo: baja de quien sale, alta del nuevo en su `orden`, foto y permiso movidos, permiso
+  aprobado), `payload()` (lista blanca; el personal ve quién resolvió; la CURP del nuevo solo con sus 4 letras).
+- Rutas: líder `POST club/clubes/{club}/cambios-integrante`, `POST …/permiso-previo` (PDF lleno con los datos sin
+  guardar), `DELETE …/{cambio}`; personal `POST revision/clubes/{club}/cambios-integrante/{cambio}/resolver` (admin y admin
+  de convocatoria con alcance; otro rol 403/404); archivos `GET clubes/{club}/cambios-integrante/{cambio}/{foto|permiso}`.
+- Avisos `ClubAviso`: `cambio_solicitado` (personal, campana) y `cambio_aprobado`/`cambio_rechazado` (líder, con correo).
+- Front: `components/especie/CambiosIntegrante.tsx` (líder, `StepFrame` de 3 pasos) y `CambiosIntegrantePersonal.tsx`
+  (ficha del personal); `ConfirmDialog` acepta `children` y `confirmDisabled`.
+- **Verificado:** `e2e_cambio_integrante.php` 24/24 en transacción (ventana, líder A, integrante ajeno, justificación,
+  permiso faltante, HTML disfrazado de PDF, nombre con HTML, una pendiente, rechazo sin motivo, líder sin permiso de
+  resolver, aprobación con baja e historial, integrante de baja no editable, rechazo y cancelación con archivos borrados);
+  navegador 36/36 (líder y personal a 1440 y 390 px) con datos temporales borrados al final, sin avisos generados.
 
 ### Correos del líder también al líder B y al director [08-10-2026]
 Pedido del usuario: todo aviso/correo que recibe el líder A lo reciben también el líder B y el director (y el líder A de
