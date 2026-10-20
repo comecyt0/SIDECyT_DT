@@ -24,6 +24,8 @@ class QrClub
     public static function impedimento(Club $club): ?string
     {
         if (! in_array($club->estado, Club::ACEPTADOS, true)) return 'el club no está aceptado';
+        // 20/10/2026 (decisión del usuario): en modalidad nacional e internacional no hay kit ni carta de resguardo.
+        if (! KitClub::aplica($club->convocatoria?->especieConfig)) return null;
         $aprobada = ClubFirmado::where('club_id', $club->id)->where('tipo', 'resguardo')->where('estado', 'aprobado')->exists();
 
         return $aprobada ? null : 'su carta de resguardo no está aprobada';

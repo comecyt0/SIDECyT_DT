@@ -188,6 +188,8 @@ export function leerKits(v: unknown): KitsConfig {
 }
 /** Qué kit le toca a un club (respuesta de KitClub::resumen). */
 export interface ResumenKit {
+  /** 20/10/2026: false en modalidad nacional e internacional (sin kit). */
+  aplica: boolean;
   diferenciado: boolean; perfil: 'nueva' | 'participo' | null; etiqueta: string; nombre: string; cantidad: number; por: 'club' | 'integrante';
   articulos: ArticuloKit[]; descripcion: string | null; forzado: boolean;
 }
@@ -195,7 +197,7 @@ export function leerResumenKit(v: unknown): ResumenKit | null {
   const r = (v && typeof v === 'object' ? v : null) as Record<string, unknown> | null;
   if (!r || typeof r.etiqueta !== 'string') return null;
   return {
-    diferenciado: r.diferenciado === true, perfil: r.perfil === 'nueva' || r.perfil === 'participo' ? r.perfil : null, etiqueta: r.etiqueta,
+    aplica: r.aplica !== false, diferenciado: r.diferenciado === true, perfil: r.perfil === 'nueva' || r.perfil === 'participo' ? r.perfil : null, etiqueta: r.etiqueta,
     nombre: typeof r.nombre === 'string' ? r.nombre : '', cantidad: typeof r.cantidad === 'number' ? r.cantidad : 1, por: r.por === 'integrante' ? 'integrante' : 'club',
     articulos: leerKits({ nueva: { articulos: r.articulos } }).nueva.articulos, descripcion: typeof r.descripcion === 'string' ? r.descripcion : null, forzado: r.forzado === true,
   };
@@ -378,7 +380,8 @@ export function validarConfig(c: ConfigEspecie): Record<string, string> {
   if (c.clubes_por_escuela !== '' && (!Number.isInteger(c.clubes_por_escuela) || c.clubes_por_escuela < 1 || c.clubes_por_escuela > L.clubesPorEscuela)) {
     e.clubes_por_escuela = `Deja vacío para no limitar, o pon de 1 a ${L.clubesPorEscuela}.`;
   }
-  if (!c.kit_nombre.trim()) e.kit_nombre = 'Escribe el nombre del kit.';
+  // 20/10/2026: en nacional e internacional no se entrega kit.
+  if (c.modalidad === 'estatal' && !c.kit_nombre.trim()) e.kit_nombre = 'Escribe el nombre del kit.';
   else if (c.kit_nombre.length > L.kitNombre) e.kit_nombre = `Máximo ${L.kitNombre} caracteres.`;
   if (c.kit_descripcion.length > L.kitDescripcion) e.kit_descripcion = `Máximo ${L.kitDescripcion} caracteres.`;
   // E71: el regreso no puede ser antes de la salida (las dos en hora del centro, mismo formato → se comparan como texto).
@@ -469,7 +472,7 @@ export interface LogisticaEstado {
   salida: { lugar: string | null; maps: string | null; hora: string | null };
   solicitudes: SolicitudLogistica[];
   resguardo: VersionFirmada[];
-  kit: { nombre: string | null; fecha: string | null; lugar: string | null; asignado_at: string | null; entregado_at: string | null;
+  kit: { resumen?: ResumenKit | null; nombre: string | null; fecha: string | null; lugar: string | null; asignado_at: string | null; entregado_at: string | null;
     entregado_lugar: string | null; entrego: string | null; recibio: string | null };
   /** F4 — QR del club: habilitado o qué le falta (el token nunca llega al front en JSON). */
   qr: { habilitado: boolean; habilitado_at: string | null; falta: string | null };
@@ -500,7 +503,7 @@ export function leerLogistica(v: unknown): LogisticaEstado | null {
     })(),
     solicitudes: Array.isArray(d.solicitudes) ? d.solicitudes : [],
     resguardo: Array.isArray(d.resguardo) ? d.resguardo : [],
-    kit: d.kit ?? { nombre: null, fecha: null, lugar: null, asignado_at: null, entregado_at: null, entregado_lugar: null, entrego: null, recibio: null },
+    kit: { ...(d.kit ?? { nombre: null, fecha: null, lugar: null, asignado_at: null, entregado_at: null, entregado_lugar: null, entrego: null, recibio: null }), resumen: leerResumenKit((d.kit as { resumen?: unknown } | undefined)?.resumen) },
     qr: {
       habilitado: d.qr?.habilitado === true,
       habilitado_at: typeof d.qr?.habilitado_at === 'string' ? d.qr.habilitado_at : null,

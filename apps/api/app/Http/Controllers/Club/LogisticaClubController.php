@@ -84,6 +84,8 @@ class LogisticaClubController extends Controller
     {
         $this->propio($request, $club);
         abort_unless(LogisticaClub::aplica($club), 404);
+        // 20/10/2026: nacional e internacional, sin kit ni carta de resguardo.
+        abort_unless(\App\Support\KitClub::aplica(LogisticaClub::config($club)), 404);
         $club->loadMissing(['escuela', 'lider:id,name', 'integrantes', 'convocatoria:id,nombre']);
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.carta_resguardo_club', ['club' => $club, 'cfg' => LogisticaClub::config($club), 'fecha' => now('America/Mexico_City')]);
 
@@ -98,6 +100,9 @@ class LogisticaClubController extends Controller
             'logistica_id' => 'nullable|integer|required_if:tipo,solicitud',
             'archivo' => 'required|file|max:'.(LogisticaClub::MAX_MB * 1024),
         ]);
+        if ($v['tipo'] === 'resguardo' && ! \App\Support\KitClub::aplica(LogisticaClub::config($club))) {
+            return response()->json(['message' => 'En la modalidad nacional e internacional no hay kit ni carta de resguardo.'], 422);
+        }
         $log = $v['tipo'] === 'solicitud' ? ClubLogistica::where('club_id', $club->id)->find($v['logistica_id']) ?? abort(404) : null;
         LogisticaClub::subirFirmado($club, $request->user(), $v['tipo'], $log, $request->file('archivo'));
 

@@ -116,7 +116,8 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
       {/* F4 — QR y credencial */}
       <QrLider clubId={clubId} folio={folio} qr={l.qr} onAviso={onAviso} />
 
-      {/* Kit */}
+      {/* Kit — 20/10/2026: nacional e internacional, sin kit ni carta de resguardo */}
+      {l.kit.resumen?.aplica !== false && (<>
       <div className="app-card space-y-2 p-5">
         <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><Package className="h-4 w-4" aria-hidden="true" />Tu kit{l.kit.nombre ? `: ${l.kit.nombre}` : ''}<ModalidadChip modalidad={l.modalidad} className="ml-auto" /></h3>
         {l.kit.entregado_at ? (
@@ -147,6 +148,7 @@ export default function LogisticaLider({ clubId, folio, logistica, onCambio, onA
         </div>
         <VersionesFirmadas clubId={clubId} versiones={l.resguardo} onDescargar={(v) => void descargar(`f-${v.id}`, () => descargarFirmado(clubId, v.id, v.nombre_original))} />
       </div>
+      </>)}
 
       {/* Transporte y box lunch — E71: solo lo que da la convocatoria; si no da ninguno, el apartado desaparece. */}
       {(daT || daL) && (

@@ -229,7 +229,7 @@ class AsistenteConvocatoriaController extends Controller
                     'clubes_por_escuela' => isset($e['clubes_por_escuela']) && $e['clubes_por_escuela'] !== '' ? (int) $e['clubes_por_escuela'] : null,
                     'participan_menores' => (bool) ($e['participan_menores'] ?? true),
                     'modalidad' => $e['modalidad'] ?? 'estatal',
-                    'kit_nombre' => trim(strip_tags($e['kit_nombre'])),
+                    'kit_nombre' => trim(strip_tags((string) ($e['kit_nombre'] ?? ''))),
                     'kit_descripcion' => isset($e['kit_descripcion']) ? trim(strip_tags($e['kit_descripcion'])) : null,
                     'campos_club' => \App\Support\Especie::normalizarPredefinidos($e['campos_club'] ?? null, \App\Support\Especie::CAMPOS_CLUB, \App\Support\Especie::DEFAULT_CLUB),
                     'campos_integrante' => \App\Support\Especie::normalizarPredefinidos($e['campos_integrante'] ?? null, \App\Support\Especie::CAMPOS_INTEGRANTE, \App\Support\Especie::DEFAULT_INTEGRANTE),
@@ -324,7 +324,7 @@ class AsistenteConvocatoriaController extends Controller
         $r['especie.clubes_por_escuela'] = 'nullable|integer|min:1|max:1000';
         $r['especie.participan_menores'] = 'boolean';
         $r['especie.modalidad'] = 'sometimes|in:'.implode(',', \App\Models\EspecieConfig::MODALIDADES);
-        $r['especie.kit_nombre'] = 'required|string|max:255';
+        $r['especie.kit_nombre'] = 'nullable|required_unless:especie.modalidad,nacional,internacional|string|max:255'; // 20/10/2026
         $r['especie.kit_descripcion'] = 'nullable|string|max:5000';
         $r['especie.campos_club'] = 'nullable|array';
         $r['especie.campos_integrante'] = 'nullable|array';

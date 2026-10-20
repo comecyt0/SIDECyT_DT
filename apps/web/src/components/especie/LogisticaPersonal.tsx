@@ -115,6 +115,8 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
     <section className="space-y-4" aria-labelledby="log-personal">
       <h2 id="log-personal" className="flex items-center gap-2 text-base font-bold text-[var(--app-ink)]"><Package className="h-5 w-5" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Logística</h2>
 
+      {/* 20/10/2026: nacional e internacional, sin kit ni carta de resguardo */}
+      {l.kit.resumen?.aplica !== false && (
       <div className="app-card space-y-3 p-5">
         <h3 className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><Package className="h-4 w-4" aria-hidden="true" />Kit{l.kit.nombre ? `: ${l.kit.nombre}` : ''}</h3>
         {l.kit.entregado_at ? (
@@ -134,6 +136,7 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
           </div>
         )}
       </div>
+      )}
 
       {/* F4 — QR del club */}
       <div className="app-card space-y-3 p-5">
@@ -153,10 +156,12 @@ export default function LogisticaPersonal({ clubId, estadoClub, logistica, puede
         )}
       </div>
 
+      {l.kit.resumen?.aplica !== false && (
       <div className="app-card space-y-3 p-5">
         <h3 className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><FileSignature className="h-4 w-4" aria-hidden="true" />Carta de resguardo</h3>
         <VersionesFirmadas clubId={clubId} versiones={l.resguardo} onDescargar={descargar} onRevisar={revisarProp} ocupado={enviando} />
       </div>
+      )}
 
       <div className="app-card space-y-3 p-5">
         <h3 className="flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]"><Bus className="h-4 w-4" aria-hidden="true" />Transporte y box lunch</h3>

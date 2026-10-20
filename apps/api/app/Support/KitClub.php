@@ -16,6 +16,12 @@ class KitClub
 {
     public const PERFILES = ['nueva' => 'Kit Nueva escuela', 'participo' => 'Kit'];
 
+    /** 20/10/2026 (decisión del usuario): el kit solo se entrega en modalidad estatal; nacional e internacional, sin kit. */
+    public static function aplica(?EspecieConfig $cfg): bool
+    {
+        return ($cfg?->modalidad ?? 'estatal') === 'estatal';
+    }
+
     /** Configuración normalizada de los dos perfiles (nunca confía en el JSON guardado). */
     public static function kits(EspecieConfig $cfg): array
     {
@@ -70,8 +76,12 @@ class KitClub
     public static function resumen(Club $club, ?EspecieConfig $cfg = null): array
     {
         $cfg ??= $club->convocatoria?->especieConfig ?? new EspecieConfig();
+        if (! self::aplica($cfg)) {
+            return ['aplica' => false, 'diferenciado' => false, 'perfil' => null, 'etiqueta' => 'Sin kit', 'nombre' => 'Sin kit (modalidad '.($cfg->modalidad ?? '').')',
+                'cantidad' => 0, 'por' => 'club', 'articulos' => [], 'descripcion' => null, 'forzado' => false];
+        }
         if (! $cfg->kit_diferenciado) {
-            return ['diferenciado' => false, 'perfil' => null, 'etiqueta' => 'Kit', 'nombre' => $cfg->kit_nombre ?: 'Kit de la convocatoria',
+            return ['aplica' => true, 'diferenciado' => false, 'perfil' => null, 'etiqueta' => 'Kit', 'nombre' => $cfg->kit_nombre ?: 'Kit de la convocatoria',
                 'cantidad' => 1, 'por' => 'club', 'articulos' => [], 'descripcion' => $cfg->kit_descripcion, 'forzado' => false];
         }
         $club->loadMissing(['escuela:id,participo_antes', 'integrantes:id,club_id']);
@@ -80,7 +90,7 @@ class KitClub
         $cantidad = $perfil === 'nueva' ? max(1, $club->integrantes->count()) : $k['cantidad_por_club'];
 
         return [
-            'diferenciado' => true, 'perfil' => $perfil, 'etiqueta' => self::PERFILES[$perfil], 'nombre' => $k['nombre'],
+            'aplica' => true, 'diferenciado' => true, 'perfil' => $perfil, 'etiqueta' => self::PERFILES[$perfil], 'nombre' => $k['nombre'],
             'cantidad' => $cantidad, 'por' => $perfil === 'nueva' ? 'integrante' : 'club', 'articulos' => $k['articulos'],
             'descripcion' => $cfg->kit_descripcion, 'forzado' => in_array($club->kit_perfil, ['nueva', 'participo'], true),
         ];
@@ -89,7 +99,7 @@ class KitClub
     /** Texto corto: «Kit Nueva escuela × 8» / «Kit × 1». */
     public static function texto(array $r): string
     {
-        return $r['etiqueta'].' × '.$r['cantidad'];
+        return ($r['aplica'] ?? true) ? $r['etiqueta'].' × '.$r['cantidad'] : 'Sin kit';
     }
 
     /** Contenido en una línea: «2 × Arduino, 10 × Sensor…». */

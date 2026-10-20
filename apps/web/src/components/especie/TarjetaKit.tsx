@@ -14,6 +14,8 @@ export default function TarjetaKit({ kit, onCambiarPerfil }: {
   onCambiarPerfil?: (perfil: 'auto' | 'nueva' | 'participo') => Promise<void>;
 }) {
   const [guardando, setGuardando] = useState(false);
+  // 20/10/2026: nacional e internacional, sin kit.
+  if (!kit.aplica) return null;
   const tono = kit.perfil === 'nueva' ? 'mint' : kit.perfil === 'participo' ? 'gold' : 'neutral';
   return (
     <section className="app-card space-y-3 p-5" aria-labelledby="tarjeta-kit">

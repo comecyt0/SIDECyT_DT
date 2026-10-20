@@ -240,6 +240,10 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
       </Seccion>
 
       <Seccion icon={<Package />} titulo="Kit que se entrega" ayuda="Lo ven los líderes al registrar su club. La fecha y el lugar de entrega se asignan después, por club.">
+        {/* 20/10/2026 (decisión del usuario): en nacional e internacional no se entrega kit. */}
+        {c.modalidad !== 'estatal' ? (
+          <p className="rounded-[12px] px-3 py-2 text-sm text-[var(--app-ink)]" style={{ backgroundColor: 'var(--tile-sky-bg)' }}>En la modalidad {MODALIDADES[c.modalidad].toLowerCase()} no se entrega kit ni carta de resguardo.</p>
+        ) : (<>
         <div className="space-y-1.5">
           <Label htmlFor={`${idBase}-kit`} className={labelCls}>Nombre del kit <Asterisco /></Label>
           <input id={`${idBase}-kit`} maxLength={LIMITES_ESPECIE.kitNombre} value={c.kit_nombre} onChange={(e) => set({ kit_nombre: e.target.value })}
@@ -269,6 +273,7 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
           </div>
         )}
         {errores.kits && <p className="text-xs font-medium" style={errStyle}>{errores.kits}</p>}
+        </>)}
       </Seccion>
 
       {/* E71 (pedido del usuario): qué apoyos de logística da la convocatoria. Lo que no da desaparece para el líder. */}

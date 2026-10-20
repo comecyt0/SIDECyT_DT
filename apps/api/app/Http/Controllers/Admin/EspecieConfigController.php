@@ -39,7 +39,7 @@ class EspecieConfigController extends Controller
             'clubes_por_escuela' => 'nullable|integer|min:1|max:1000',
             'participan_menores' => 'boolean',
             'modalidad' => 'sometimes|in:'.implode(',', EspecieConfig::MODALIDADES),
-            'kit_nombre' => 'required|string|max:255',
+            'kit_nombre' => 'nullable|required_unless:modalidad,nacional,internacional|string|max:255', // 20/10/2026: sin kit fuera de estatal
             'kit_descripcion' => 'nullable|string|max:5000',
             'campos_club' => 'nullable|array',
             'campos_integrante' => 'nullable|array',
@@ -77,7 +77,7 @@ class EspecieConfigController extends Controller
                 'clubes_por_escuela' => $v['clubes_por_escuela'] ?? null,
                 'participan_menores' => (bool) ($v['participan_menores'] ?? true),
                 'modalidad' => $v['modalidad'] ?? ($cfg->modalidad ?? 'estatal'),
-                'kit_nombre' => trim(strip_tags($v['kit_nombre'])),
+                'kit_nombre' => trim(strip_tags((string) ($v['kit_nombre'] ?? ''))),
                 'kit_descripcion' => isset($v['kit_descripcion']) ? trim(strip_tags($v['kit_descripcion'])) : null,
                 'campos_club' => Especie::normalizarPredefinidos($v['campos_club'] ?? null, Especie::CAMPOS_CLUB, Especie::DEFAULT_CLUB),
                 'campos_integrante' => Especie::normalizarPredefinidos($v['campos_integrante'] ?? null, Especie::CAMPOS_INTEGRANTE, Especie::DEFAULT_INTEGRANTE),

@@ -216,6 +216,7 @@ class LogisticaClub
         foreach ($clubes as $c) {
             if (! Alcance::puedeVerConvocatoria($u, (int) $c->convocatoria_id) || ! RevisionClub::puedeAceptar($u, (int) $c->convocatoria_id)) continue;
             if ($c->estado !== 'aceptado') continue; // entregados o no aceptados se omiten
+            if (! KitClub::aplica($c->convocatoria?->especieConfig)) continue; // 20/10/2026: nacional e internacional, sin kit
             $c->forceFill(['kit_fecha' => $fecha, 'kit_lugar' => $lugar, 'kit_asignado_at' => now()])->save();
             Audit::log('club.kit_asignado', $c, ['fecha' => $fecha->toIso8601String()]);
             $c->loadMissing('lider');
@@ -231,6 +232,7 @@ class LogisticaClub
     {
         DB::transaction(function () use ($club, $u, $fecha, $lugar, $entrego, $recibio) {
             $c = Club::whereKey($club->id)->lockForUpdate()->first();
+            if (! KitClub::aplica($c->convocatoria?->especieConfig)) self::falla('En la modalidad nacional e internacional no se entrega kit.');
             if ($c->estado !== 'aceptado') self::falla($c->estado === 'kit_entregado' ? 'El kit de este club ya se registró como entregado.' : 'Solo se entrega el kit a clubes aceptados.');
             $c->forceFill(['estado' => 'kit_entregado', 'kit_entregado_at' => $fecha, 'kit_entregado_lugar' => trim(strip_tags($lugar)),
                 'kit_entrego' => trim(strip_tags($entrego)), 'kit_recibio' => trim(strip_tags($recibio)), 'kit_registrado_por' => $u->id])->save();
