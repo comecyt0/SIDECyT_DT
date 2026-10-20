@@ -62,6 +62,9 @@ class FormatosClub
     /** Nombre de la persona titular de la escuela: su cuenta en el club, lo capturado o la solicitud de la escuela. */
     public static function director(Club $club): ?string
     {
+        if (! $club->exists) {
+            return trim((string) ($club->datos['director_nombre'] ?? '')) ?: null; // club de ejemplo (vista previa)
+        }
         if ($club->dueno_director) {
             return $club->lider?->name;
         }
@@ -122,6 +125,36 @@ class FormatosClub
         $meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
         return $f->day.' de '.$meses[$f->month - 1].' de '.$f->year;
+    }
+
+    /**
+     * 20/10/2026 (pedido del usuario: vista previa al crear o editar la convocatoria) — Club de ejemplo en memoria (no se
+     * guarda) para ver cómo sale cada formato. Datos ficticios y evidentes; los vacíos muestran la línea para llenar a mano.
+     */
+    public static function ejemplo(): Club
+    {
+        $club = new Club(['nombre' => 'Club de ejemplo', 'datos' => ['director_nombre' => 'Nombre del Director(a) de Ejemplo', 'lugar' => 'Toluca, Estado de México']]);
+        $club->forceFill(['id' => 0, 'folio' => 'CLUB-EJEMPLO-000000', 'dueno_director' => false]);
+        $club->setRelation('escuela', new \App\Models\Escuela(['nombre' => 'Escuela de ejemplo', 'cct' => '15EPR0000A', 'municipio' => 'Toluca', 'nivel' => 'primaria', 'sistema' => 'estatal']));
+        $club->setRelation('escuelaSolicitud', null);
+        $club->setRelation('lider', new \App\Models\User(['name' => 'Docente Líder A de Ejemplo']));
+        $club->setRelation('convocatoria', new \App\Models\Convocatoria(['nombre' => 'Convocatoria de ejemplo']));
+        $mk = function (int $id, string $nombre, array $extra = []) {
+            $i = new ClubIntegrante(['nombre' => $nombre] + $extra);
+            $i->forceFill(['id' => $id, 'es_lider' => $extra['_a'] ?? false, 'es_lider_b' => $extra['_b'] ?? false]);
+            unset($i->_a, $i->_b);
+
+            return $i;
+        };
+        $club->setRelation('integrantes', new \Illuminate\Database\Eloquent\Collection([
+            $mk(1, 'Docente Líder A de Ejemplo', ['_a' => true]),
+            $mk(2, 'Docente Líder B de Ejemplo', ['_b' => true]),
+            $mk(3, 'Estudiante Uno de Ejemplo', ['grado' => '5°', 'grupo' => 'A', 'fecha_nacimiento' => now()->subYears(11)->toDateString(), 'tutor_nombre' => 'Madre o Padre de Ejemplo', 'domicilio' => 'Calle Ejemplo 123, Toluca']),
+            $mk(4, 'Estudiante Dos de Ejemplo', ['grado' => '5°', 'grupo' => 'B']),
+        ]));
+        $club->setRelation('documentos', new \Illuminate\Database\Eloquent\Collection());
+
+        return $club;
     }
 
     /** Franja de convivencia como data URI (DomPDF no tiene red). */

@@ -67,7 +67,7 @@
             <thead><tr><th style="width:6%">#</th><th>Nombre</th><th style="width:22%">Grado y grupo</th><th style="width:18%">Papel</th></tr></thead>
             <tbody>
                 @foreach ($club->integrantes as $n => $i)
-                    <tr><td>{{ $n + 1 }}</td><td>{{ $i->nombre }}</td><td>{{ $i->grado_grupo ?: '—' }}</td><td>{{ $i->es_lider ? 'Líder' : 'Integrante' }}</td></tr>
+                    <tr><td>{{ $n + 1 }}</td><td>{{ $i->nombre }}</td><td>{{ trim(implode(' ', array_filter([$i->grado, $i->grupo]))) ?: ($i->grado_grupo ?: '—') }}</td><td>{{ $i->es_lider ? 'Líder A' : ($i->es_lider_b ? 'Líder B' : 'Integrante') }}</td></tr>
                 @endforeach
             </tbody>
         </table>

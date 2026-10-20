@@ -195,6 +195,9 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
 
         // (b) OPERACIÓN con alcance: admin y admin de convocatoria.
         Route::group(['prefix' => 'admin', 'middleware' => ['rol:admin,admin_convocatoria', 'alcance']], function () {
+            // 20/10/2026: vista previa de un formato institucional con un club de ejemplo (no guarda nada).
+            Route::get('formatos-club/{formato}/vista-previa', [\App\Http\Controllers\Admin\EspecieConfigController::class, 'vistaPreviaFormato'])
+                ->where('formato', 'formato_a|formato_b|formato_c|carta_escuela|uso_imagen|uso_imagen_adulto')->middleware('throttle:30,1,formato-previa');
             Route::apiResource('convenios', ConvenioController::class)->except(['store']);
             Route::apiResource('ministraciones', MinistracionController::class)->parameters(['ministraciones' => 'ministracion']);
             Route::apiResource('informes', InformeController::class)->parameters(['informes' => 'informe']);

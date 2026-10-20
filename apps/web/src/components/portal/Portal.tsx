@@ -4,8 +4,8 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type R
 import Link from 'next/link';
 import { AnimatePresence, animate, motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowDown, ArrowRight, ArrowUpRight, BookOpen, Briefcase, Building2, Check, CircleCheck, FlaskConical, Globe, GraduationCap, Lightbulb,
-  LogIn, MapPin, Megaphone, Phone, Sparkles, UserPlus,
+  ArrowDown, ArrowRight, ArrowUpRight, Briefcase, Building2, Check, CircleCheck, FlaskConical, Globe, GraduationCap, Lightbulb,
+  MapPin, Megaphone, Phone, Sparkles, UserPlus,
 } from 'lucide-react';
 import { INSTITUTION, copyrightLine } from '@/lib/institution';
 import { useSitio } from '@/lib/sitio';
@@ -79,30 +79,6 @@ function EnlaceSistema({ href, children, ...resto }: { href: string; children: R
   if (href === '/sicei' || href.startsWith('/sicei/') || href.startsWith('/sicei#')) return <a href={href} {...resto}>{children}</a>;
   return <Link href={href} {...resto}>{children}</Link>;
 }
-
-/**
- * Accesos rápidos por sistema (pedido del usuario 15/10/2026): solo botones a apartados que existen.
- * SIGAE: secciones de /sigae, /login y /registro. SICEI (otra app): secciones de su landing (#convocatorias,
- * #programas) y /sicei/portal, donde se entra o se crea la cuenta.
- */
-const ACCESOS: { sistema: SistemaId; sigla: string; detalle: string; icono: ReactNode; items: { href: string; etiqueta: string; detalle: string; icono: ReactNode }[] }[] = [
-  {
-    sistema: 'sigae', sigla: 'SIGAE', detalle: 'Apoyo Empresarial', icono: <Briefcase aria-hidden="true" />,
-    items: [
-      { href: '/sigae#convocatorias', etiqueta: 'Convocatorias abiertas', detalle: 'Qué puedes postular hoy', icono: <Megaphone aria-hidden="true" /> },
-      { href: '/login', etiqueta: 'Iniciar sesión', detalle: 'Si ya tienes cuenta en SIGAE', icono: <LogIn aria-hidden="true" /> },
-      { href: '/registro', etiqueta: 'Crear cuenta', detalle: 'Participante, líder de club o evaluador', icono: <UserPlus aria-hidden="true" /> },
-    ],
-  },
-  {
-    sistema: 'sicei', sigla: 'SICEI', detalle: 'Ciencia, Educación e Innovación', icono: <FlaskConical aria-hidden="true" />,
-    items: [
-      { href: '/sicei#convocatorias', etiqueta: 'Convocatorias', detalle: 'Becas y estímulos vigentes', icono: <Megaphone aria-hidden="true" /> },
-      { href: '/sicei#programas', etiqueta: 'Programas', detalle: 'Becas a estudiantes e impulso a la investigación', icono: <BookOpen aria-hidden="true" /> },
-      { href: '/sicei/portal', etiqueta: 'Entrar o crear cuenta', detalle: 'Tu registro y el seguimiento de tus solicitudes', icono: <LogIn aria-hidden="true" /> },
-    ],
-  },
-];
 
 /** "Cómo funciona": secuencia real del sistema (por eso va numerada). Sin datos inventados. */
 const PASOS: PasoSecuencia[] = [
@@ -487,36 +463,7 @@ export default function Portal() {
           </div>
           <PasosSecuencia pasos={PASOS} />
         </section>
-
-        <section className="pt-wrap pt-seccion pt-accesos" aria-labelledby="pt-accesos-titulo">
-          <div className="pt-seccion-cabeza">
-            <TextoScroll id="pt-accesos-titulo" className="pt-h2" texto="Accesos rápidos" />
-          </div>
-          <div className="pt-accesos-sistemas">
-            {ACCESOS.map((g) => (
-              <AparecerScroll key={g.sistema}><div className="pt-accesos-grupo" data-sistema={g.sistema}>
-                <div className="pt-accesos-cabeza">
-                  <span className="pt-sistema-icono">{g.icono}</span>
-                  <span className="pt-accesos-sigla"><strong>{g.sigla}</strong><span>{g.detalle}</span></span>
-                </div>
-                <ul className="pt-accesos-lista" aria-label={`Accesos de ${g.sigla}`}>
-                  {g.items.map((a) => (
-                    <li key={a.href}>
-                      <EnlaceSistema href={a.href} className="pt-acceso">
-                        <span className="pt-acceso-icono">{a.icono}</span>
-                        <span className="pt-acceso-texto">
-                          <span className="pt-acceso-etiqueta">{a.etiqueta}</span>
-                          <span className="pt-acceso-detalle">{a.detalle}</span>
-                        </span>
-                        <ArrowRight className="pt-acceso-flecha" aria-hidden="true" />
-                      </EnlaceSistema>
-                    </li>
-                  ))}
-                </ul>
-              </div></AparecerScroll>
-            ))}
-          </div>
-        </section>
+        {/* 20/10/2026 (pedido del usuario): se quitó la sección «Accesos rápidos» (SIGAE y SICEI). */}
       </main>
 
       <PiePortal />

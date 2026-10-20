@@ -117,6 +117,31 @@ class EspecieConfigController extends Controller
         return response()->json(self::payloadPersonal($convocatoria->fresh(), $convocatoria->fresh()->especieConfig));
     }
 
+    /**
+     * 20/10/2026 (pedido del usuario) — Vista previa de un formato institucional con un club de ejemplo (no se guarda nada),
+     * para verlo al crear o editar la convocatoria. Se muestra dentro de la página (inline).
+     */
+    public function vistaPreviaFormato(Request $request, string $formato)
+    {
+        $club = \App\Support\FormatosClub::ejemplo();
+        $datos = \App\Support\FormatosClub::datos($club);
+        [$vista, $extra] = match ($formato) {
+            'formato_a', 'formato_b', 'formato_c' => [\App\Support\FormatosClub::VISTAS[$formato], []],
+            'carta_escuela' => ['pdfs.carta_escuela_club', []],
+            'uso_imagen' => ['pdfs.formatos.uso_imagen_menor', ['persona' => $club->integrantes[2]]],
+            'uso_imagen_adulto' => ['pdfs.formatos.uso_imagen_adulto', ['persona' => $club->integrantes[0]]],
+            default => abort(404),
+        };
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($vista, $datos + $extra + ['franja' => \App\Support\FormatosClub::franja()])->setPaper('letter');
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="vista-previa-'.$formato.'.pdf"',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
     /** Forma común (admin y líder) de la configuración con etiquetas de los predefinidos. */
     public static function payload(Convocatoria $c, EspecieConfig $cfg): array
     {

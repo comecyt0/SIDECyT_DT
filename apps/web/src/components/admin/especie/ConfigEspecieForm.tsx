@@ -8,7 +8,9 @@
  */
 
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Lock, Users, Package, ListChecks, MessageSquarePlus, ClipboardCheck, ArrowUp, ArrowDown, Globe2, Bus, Sandwich, FileSignature } from 'lucide-react';
+import { Plus, Edit2, Trash2, Lock, Users, Package, ListChecks, MessageSquarePlus, ClipboardCheck, ArrowUp, ArrowDown, Globe2, Bus, Sandwich, FileSignature, Eye } from 'lucide-react';
+import api from '@/lib/api';
+import { useVistaPrevia } from '@/components/ui/VistaPreviaProvider';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Asterisco } from '@/components/ui/obligatorio';
@@ -47,13 +49,16 @@ function Seccion({ icon, titulo, ayuda, children }: { icon: React.ReactNode; tit
 }
 
 /** Fila "dato → No pedir / Opcional / Obligatorio" (radios nativos: teclado y lector de pantalla). */
-function FilaPredef({ id, etiqueta, valor, onChange }: { id: string; etiqueta: string; valor: Predef; onChange: (p: Predef) => void }) {
+function FilaPredef({ id, etiqueta, valor, onChange, accion }: { id: string; etiqueta: string; valor: Predef; onChange: (p: Predef) => void; accion?: React.ReactNode }) {
   const actual = nivelDe(valor);
   return (
     // 20/10/2026 (reporte del usuario: «Obligatorio» se salía del margen y las etiquetas se partían palabra por palabra):
     // la etiqueta va arriba y el selector ocupa todo el ancho de la columna, con tres partes iguales.
     <div className="flex flex-col gap-2 py-2.5">
-      <span id={`${id}-lbl`} className="text-sm font-medium text-[var(--app-ink)]">{etiqueta}</span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span id={`${id}-lbl`} className="text-sm font-medium text-[var(--app-ink)]">{etiqueta}</span>
+        {accion}
+      </div>
       <div role="radiogroup" aria-labelledby={`${id}-lbl`} className="grid w-full grid-cols-3 rounded-full border p-0.5" style={{ borderColor: 'var(--app-rule)', backgroundColor: 'var(--auth-field)' }}>
         {NIVELES.map((n) => (
           <label key={n.v} className="min-w-0 cursor-pointer">
@@ -149,6 +154,12 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
   const [dialogo, setDialogo] = useState<{ idx: number | null; campo: CampoEspecie } | null>(null);
   const [errDialogo, setErrDialogo] = useState<string | null>(null);
   const [borrar, setBorrar] = useState<number | null>(null);
+  // 20/10/2026 (pedido del usuario): vista previa de cada formato dentro de la página, con un club de ejemplo.
+  const { ver } = useVistaPrevia();
+  const verFormato = (formato: string, nombre: string) => void ver({ nombre: `${nombre} (ejemplo).pdf`, cargar: async () => {
+    const r = await api.get(`/admin/formatos-club/${formato}/vista-previa`, { responseType: 'blob' });
+    return { data: r.data as BlobPart, tipo: 'application/pdf' };
+  } });
   const numero = (s: string) => (s === '' ? NaN : Math.trunc(Number(s)));
 
   const guardarCampo = () => {
@@ -428,10 +439,23 @@ export default function ConfigEspecieForm({ value, onChange, errores = {}, idBas
           <div className="divide-y" style={{ borderColor: 'var(--app-rule)' }}>
             {Object.entries(FORMATOS).map(([k, t]) => (
               <FilaPredef key={k} id={`${idBase}-fmt-${k}`} etiqueta={t} valor={c.formatos?.[k] ?? { pedir: false, obligatorio: false }}
-                onChange={(p) => set({ formatos: { ...c.formatos, [k]: p } })} />
+                onChange={(p) => set({ formatos: { ...c.formatos, [k]: p } })}
+                accion={
+                  <span className="flex flex-wrap gap-1.5">
+                    {(k === 'uso_imagen' ? [['uso_imagen', 'Infantil'], ['uso_imagen_adulto', 'Adulto']] : [[k, '']]).map(([f, sub]) => (
+                      <Button key={f} type="button" size="sm" variant="outline" onClick={() => verFormato(f, sub ? `${t} (${sub.toLowerCase()})` : t)}
+                        aria-label={`Vista previa de ${t}${sub ? ` (${sub.toLowerCase()})` : ''}`}>
+                        <Eye className="h-4 w-4" aria-hidden="true" />Vista previa{sub ? ` · ${sub}` : ''}
+                      </Button>
+                    ))}
+                  </span>
+                } />
             ))}
           </div>
         </div>
+        <p className="text-xs text-[var(--app-ink-2)]">
+          La vista previa usa un club de ejemplo con datos ficticios; lo que no exista sale como línea para llenar a mano.
+        </p>
         <p className="text-xs text-[var(--app-ink-2)]">
           Los formatos A, B y C son los del STEAM EDOMEX. El permiso de uso de imagen es uno por integrante: infantil para estudiantes menores
           de edad y de adulto para docentes. Para llenarlos solos, pide también el director(a), el lugar, grado, grupo, domicilio y tutor.

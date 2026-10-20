@@ -533,53 +533,16 @@
   pointer-events: none;
 }
 .pt-palabra { display: inline-block; }
-/* ─────────── Accesos rápidos por sistema: tarjeta blanca por sistema con filas arena (Family "Light Tag Surface") ── */
-.pt-accesos { margin-bottom: clamp(72px, 9vw, 112px); }
-.pt-accesos-sistemas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-@media (min-width: 880px) { .pt-accesos-sistemas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.pt-accesos-grupo {
-  --tono: var(--pt-azul);
-  display: grid; align-content: start; gap: 14px; padding: 20px; border-radius: var(--pt-radio);
-  background: var(--pt-blanco); box-shadow: var(--pt-hairline);
-}
-.pt-accesos-grupo[data-sistema='sicei'] { --tono: var(--pt-ciruela); --pastel: var(--pt-pastel-lavanda); }
-.pt-accesos-cabeza { display: flex; align-items: center; gap: 12px; padding-inline: 4px; }
-.pt-accesos-cabeza .pt-sistema-icono { width: 40px; height: 40px; }
-.pt-accesos-cabeza .pt-sistema-icono svg { width: 19px; height: 19px; }
-.pt-accesos-sigla { display: grid; line-height: 1.2; }
-.pt-accesos-sigla strong { font-family: var(--pt-display); font-weight: 600; font-size: 19px; letter-spacing: -0.02em; color: var(--pt-oscuro); }
-.pt-accesos-sigla span { font-size: 13px; color: var(--pt-tenue); }
-.pt-accesos-lista { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
-.pt-acceso .pt-acceso-icono { color: var(--tono); }
+/* (20/10/2026) «Accesos rápidos» se quitó del portal a pedido del usuario; «Cómo funciona» cierra la página. */
+.pt-pasos { margin-bottom: clamp(72px, 9vw, 112px); }
 /* Teléfonos angostos (≤ 360 px): menos relleno para que ninguna etiqueta se parta en dos líneas. */
 @media (max-width: 360px) {
-  .pt-accesos .pt-accesos-grupo { padding: 12px; }
-  .pt-accesos .pt-acceso { gap: 10px; padding: 12px 10px; }
-  .pt-accesos .pt-acceso-icono { width: 34px; height: 34px; }
-  .pt-accesos .pt-acceso-etiqueta { font-size: 14.5px; }
-  .pt-accesos .pt-acceso-flecha { display: none; }
   .pt-guia-caja { padding: 4px; }
   .pt-chip { gap: 10px; padding-inline: 10px; }
   .pt-chip-contenido { gap: 10px; }
   .pt-chip-icono { width: 34px; height: 34px; }
   .pt-chip-etiqueta { font-size: 15px; }
 }
-.pt-acceso {
-  display: flex; align-items: center; gap: 14px; height: 100%; padding: 14px 18px 14px 14px; border-radius: 12px;
-  background: var(--pt-arena-sup); transition: background-color 180ms ease, transform 160ms var(--pt-ease);
-}
-.pt-acceso-icono { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 40px; background: var(--pt-blanco); color: var(--pt-vino); box-shadow: var(--pt-hairline-fuerte); }
-.pt-acceso-icono svg { width: 18px; height: 18px; }
-.pt-acceso-texto { display: grid; min-width: 0; flex: 1; }
-.pt-acceso-etiqueta { font-weight: 600; font-size: 15px; color: var(--pt-oscuro); }
-.pt-acceso-detalle { font-size: 13.5px; color: var(--pt-tenue); }
-.pt-acceso-flecha { width: 16px; height: 16px; color: var(--pt-tenue); transition: transform 220ms var(--pt-ease), color 180ms ease; }
-@media (hover: hover) and (pointer: fine) {
-  .pt-acceso:hover { background: var(--pt-piedra); }
-  .pt-acceso:hover .pt-acceso-flecha { transform: translateX(3px); color: var(--pt-vino); }
-}
-.pt-acceso:active { transform: scale(0.985); }
-
 .pt-root :where(section[id]) { scroll-margin-top: 100px; }
 
 /* ─────────── Pie en vino oficial, plano (sin degradado), con logo negativo ─────────── */
@@ -673,12 +636,6 @@
 .pt-root .pt-programas { background: var(--pt-pastel-cielo); }
 .pt-root .pt-puntos li svg { color: var(--tono); }
 .pt-root .pt-senal[data-tipo='proximas'] { background: var(--pt-pastel-mantequilla); }
-/* Filas de acceso: pastel del sistema en lugar de arena. */
-.pt-root .pt-accesos-grupo { --pastel: var(--pt-pastel-cielo); }
-.pt-root .pt-accesos-grupo[data-sistema='sicei'] { --pastel: var(--pt-pastel-lavanda); }
-.pt-root .pt-acceso { background: var(--pastel); }
-@media (hover: hover) and (pointer: fine) { .pt-root .pt-acceso:hover { background: color-mix(in oklab, var(--pastel) 80%, var(--tono)); } }
-.pt-root .pt-acceso-icono { box-shadow: none; }
 /* Secuencia: tarjeta con un pastel muy tenue y estaciones en tono profundo. */
 .pt-root .pt-secuencia { background: color-mix(in oklab, var(--pt-pastel-cielo) 45%, var(--pt-blanco)); }
 /* Panel vino de "¿Cuál es para mí?": formas pastel translúcidas detrás del vidrio (más luz, menos vino). */
