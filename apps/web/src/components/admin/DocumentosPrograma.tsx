@@ -7,6 +7,7 @@ import { AlertBox } from '@/components/ui/alert-box';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import SelectorFormatos, { normalizarFormatos, TIPOS_ARCHIVO } from '@/components/admin/SelectorFormatos';
+import { textoLegible } from '@/lib/errores-formulario';
 
 interface Doc {
   id: number;
@@ -20,7 +21,7 @@ interface Doc {
   /** E56: ya hay archivos subidos con este documento (quitarlo lo oculta en vez de borrarlo). */
   en_uso?: boolean;
 }
-type Editable = Doc & { lista: string[]; mb: number; cambiado?: boolean };
+type Editable = Doc & { lista: string[]; mb: number; cambiado?: boolean; error?: string; guardado?: boolean };
 
 const slug = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 50);
 
@@ -35,6 +36,7 @@ export default function DocumentosPrograma({ programaId }: { programaId: string 
   const [aviso, setAviso] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
   const [nuevo, setNuevo] = useState({ nombre: '', obligatorio: true, lista: ['pdf'], mb: 5 });
   const [borrar, setBorrar] = useState<Editable | null>(null);
+  const [errorNuevo, setErrorNuevo] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     try {
@@ -50,15 +52,18 @@ export default function DocumentosPrograma({ programaId }: { programaId: string 
   useEffect(() => { void cargar(); }, [cargar]);
 
   const guardar = async (d: Editable) => {
+    if (!d.nombre.trim()) { setAviso({ tipo: 'error', texto: 'El nombre del documento no puede quedar vacío.' }); return; }
     setGuardando(d.id);
     try {
       await api.put(`/admin/programas/${programaId}/documentos/${d.id}`, {
-        nombre: d.nombre, obligatorio: d.obligatorio, activo: d.activo, formato_permitido: d.lista, 'tamaño_maximo_mb': d.mb,
+        nombre: d.nombre.trim(), obligatorio: d.obligatorio, activo: d.activo, formato_permitido: d.lista, 'tamaño_maximo_mb': d.mb,
       });
-      setDocs((ds) => ds.map((x) => (x.id === d.id ? { ...x, cambiado: false } : x)));
-      setAviso({ tipo: 'success', texto: `«${d.nombre}» guardado.` });
-    } catch {
-      setAviso({ tipo: 'error', texto: 'No se pudo guardar el documento.' });
+      setDocs((ds) => ds.map((x) => (x.id === d.id ? { ...x, nombre: d.nombre.trim(), cambiado: false, error: undefined, guardado: true } : x)));
+    } catch (er) {
+      // El resultado se muestra en la misma tarjeta (el aviso general queda fuera de la vista).
+      const r = (er as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
+      const error = textoLegible((r?.errors ? Object.values(r.errors)[0]?.[0] : undefined) || r?.message || '') || 'No se pudo guardar el documento.';
+      setDocs((ds) => ds.map((x) => (x.id === d.id ? { ...x, error, guardado: false } : x)));
     } finally {
       setGuardando(null);
     }
@@ -67,7 +72,8 @@ export default function DocumentosPrograma({ programaId }: { programaId: string 
   const crear = async (e: React.FormEvent) => {
     e.preventDefault();
     const clave = slug(nuevo.nombre);
-    if (!clave) { setAviso({ tipo: 'error', texto: 'Escribe el nombre del documento.' }); return; }
+    if (!clave) { setErrorNuevo('Escribe el nombre del documento.'); return; }
+    setErrorNuevo(null);
     setGuardando('nuevo');
     try {
       await api.post(`/admin/programas/${programaId}/documentos`, {
@@ -78,8 +84,10 @@ export default function DocumentosPrograma({ programaId }: { programaId: string 
       setAviso({ tipo: 'success', texto: 'Documento agregado.' });
       void cargar();
     } catch (er) {
-      const m = (er as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setAviso({ tipo: 'error', texto: m || 'No se pudo agregar (¿ya existe uno con ese nombre?).' });
+      // 20/10/2026: el error va junto al formulario (el aviso de arriba quedaba fuera de la vista) y sin texto técnico.
+      const d = (er as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
+      const primero = d?.errors ? Object.values(d.errors)[0]?.[0] : undefined;
+      setErrorNuevo(textoLegible(primero || d?.message || '') || 'No se pudo agregar el documento. Inténtalo de nuevo.');
     } finally {
       setGuardando(null);
     }
@@ -110,10 +118,19 @@ export default function DocumentosPrograma({ programaId }: { programaId: string 
           {docs.map((d) => (
             <section key={d.id} className="perfil-tarjeta space-y-4" aria-label={d.nombre}>
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   {/* 20/10/2026 (reporte del usuario: texto desfasado): el ícono no se encoge con títulos largos y queda
                       alineado a la primera línea; la clave técnica se parte para no salirse de la tarjeta. */}
-                  <h3 className="flex items-start gap-2 text-sm font-semibold leading-snug text-[var(--app-ink)]"><FileText className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sg-vino)]" aria-hidden="true" /><span className="min-w-0 [overflow-wrap:anywhere]">{d.nombre}</span></h3>
+                  {/* 20/10/2026 (pedido del usuario): el nombre que se pide también se edita aquí. La clave interna no
+                      cambia: los archivos ya subidos están ligados a ella. */}
+                  <label className="flex items-start gap-2">
+                    <FileText className="mt-3 h-4 w-4 shrink-0 text-[var(--sg-vino)]" aria-hidden="true" />
+                    <span className="sr-only">Nombre del documento</span>
+                    <textarea rows={2} maxLength={255} value={d.nombre}
+                      className="auth-input auth-input-static !h-auto min-h-[52px] w-full resize-y py-2.5 pl-3 text-sm font-semibold leading-snug"
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+                      onChange={(e) => { const nombre = e.target.value.replace(/[\r\n\t]+/g, ' '); setDocs((ds) => ds.map((x) => (x.id === d.id ? { ...x, nombre, cambiado: true } : x))); }} />
+                  </label>
                   <p className="mt-1 text-xs text-[var(--app-ink-2)] [overflow-wrap:anywhere]">{etiquetas(d.lista)} · hasta {d.mb} MB · <code className="break-all font-mono">{d.clave}</code></p>
                   <p className="mt-1 flex flex-wrap gap-1">
                     {!d.activo && <span className="pill" data-tone="neutral">Oculto</span>}
@@ -131,16 +148,23 @@ export default function DocumentosPrograma({ programaId }: { programaId: string 
               <Button size="sm" onClick={() => guardar(d)} disabled={guardando === d.id || !d.cambiado}>
                 {guardando === d.id ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="h-4 w-4" aria-hidden="true" />}Guardar
               </Button>
+              {d.error && <p role="alert" className="text-sm font-medium" style={{ color: 'var(--auth-danger)' }}>{d.error}</p>}
+              {d.guardado && !d.cambiado && !d.error && <p role="status" className="text-sm font-medium" style={{ color: 'var(--tile-emerald-fg)' }}>Cambios guardados.</p>}
             </section>
           ))}
 
           <form onSubmit={crear} className="perfil-tarjeta space-y-4" aria-label="Agregar documento">
             <h3 className="perfil-tarjeta-titulo"><Plus aria-hidden="true" />Agregar documento</h3>
+            {/* 20/10/2026: los nombres largos (pegados de la convocatoria) se ven completos; los saltos de línea se quitan. */}
             <label className="perfil-campo"><span>Nombre</span>
-              <input className="auth-input auth-input-static pl-4" maxLength={255} value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} placeholder="Ej. Cotización del equipo" />
+              <textarea className="auth-input auth-input-static !h-auto min-h-[52px] resize-y py-3 pl-4 leading-snug" rows={2} maxLength={255} value={nuevo.nombre}
+                onChange={(e) => { setErrorNuevo(null); setNuevo({ ...nuevo, nombre: e.target.value.replace(/[\r\n\t]+/g, ' ') }); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} placeholder="Ej. Cotización del equipo" />
+              <span className="text-xs font-normal text-[var(--app-ink-2)]">{nuevo.nombre.length}/255</span>
             </label>
             <SelectorFormatos idBase="doc-nuevo" formatos={nuevo.lista} tamano={nuevo.mb} onChange={(lista, mb) => setNuevo({ ...nuevo, lista, mb })} />
             <label className="inline-flex items-center gap-2 text-sm text-[var(--app-ink)]"><input type="checkbox" checked={nuevo.obligatorio} onChange={(e) => setNuevo({ ...nuevo, obligatorio: e.target.checked })} />Obligatorio</label>
+            {errorNuevo && <p role="alert" className="text-sm font-medium" style={{ color: 'var(--auth-danger)' }}>{errorNuevo}</p>}
             <Button type="submit" disabled={guardando === 'nuevo'}>{guardando === 'nuevo' && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}Agregar</Button>
           </form>
         </div>
