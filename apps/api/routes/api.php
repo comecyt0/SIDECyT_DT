@@ -339,6 +339,7 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
 
             // Audit log
             Route::get('audit-logs', [AuditLogController::class, 'index']);
+        Route::get('audit-logs/exportar', [AuditLogController::class, 'exportar'])->middleware('throttle:20,1,bitacora-exportar'); // E82
 
             // Reverb health check
             Route::get('reverb/status', [ReverbStatusController::class, 'status']);

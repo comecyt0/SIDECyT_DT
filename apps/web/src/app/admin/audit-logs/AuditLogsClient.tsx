@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/ui/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Activity, Search, ChevronLeft, ChevronRight, RefreshCcw } from 'lucide-react';
+import { Activity, Search, ChevronLeft, ChevronRight, RefreshCcw, FileDown, FileSpreadsheet, Loader2 } from 'lucide-react';
+import api from '@/lib/api';
 
 const filterLabelCls = 'text-xs font-bold text-[var(--app-ink-2)] uppercase tracking-widest';
 const filterInputCls = 'auth-input auth-input-static pl-4 !h-11';
@@ -86,9 +87,50 @@ function shortSubject(row: AuditLogRow): string {
   return row.subject_id ? `${label} nº ${row.subject_id}` : label;
 }
 
+/** E82: hora del centro (como el resto del sistema). */
+const TZ = 'America/Mexico_City';
+function horaDe(v: string): string {
+  return new Date(v).toLocaleTimeString('es-MX', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
+}
+/** Agrupa por día (en hora del centro) conservando el orden: más reciente primero. */
+function agruparPorDia(filas: AuditLogRow[]): [string, AuditLogRow[]][] {
+  const m = new Map<string, AuditLogRow[]>();
+  for (const r of filas) {
+    const dia = new Date(r.created_at).toLocaleDateString('es-MX', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    m.set(dia, [...(m.get(dia) ?? []), r]);
+  }
+  return [...m.entries()];
+}
+
 export default function AuditLogsClient({ logs, initialFilters }: Props) {
   const router = useRouter();
   const [filters, setFilters] = useState<AuditLogsFiltersState>(initialFilters);
+  const [seleccion, setSeleccion] = useState<Set<number>>(new Set());
+  const [exportando, setExportando] = useState<string | null>(null);
+  const [errorExportar, setErrorExportar] = useState<string | null>(null);
+  const dias = agruparPorDia(logs.data);
+
+  // E82: exportación con los filtros aplicados (completo) o con lo marcado (parcial).
+  const exportar = async (formato: 'pdf' | 'xlsx', modo: 'completo' | 'parcial') => {
+    setExportando(`-${formato}`);
+    setErrorExportar(null);
+    try {
+      const params: Record<string, unknown> = { formato, modo };
+      if (modo === 'parcial') params.ids = [...seleccion];
+      else for (const k of ['action', 'user_id', 'from', 'to'] as const) if (initialFilters[k]) params[k] = initialFilters[k];
+      const r = await api.get('/admin/audit-logs/exportar', { params, responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([r.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `historial-${modo}-${new Date().toISOString().slice(0, 10)}.${formato}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setErrorExportar('No se pudo exportar. Revisa los filtros e inténtalo de nuevo.');
+    } finally {
+      setExportando(null);
+    }
+  };
 
   const apply = (next: Partial<AuditLogsFiltersState> & { page?: number }) => {
     const merged = { ...filters, ...next };
@@ -166,68 +208,107 @@ export default function AuditLogsClient({ logs, initialFilters }: Props) {
         </CardContent>
       </Card>
 
+      {/* E82 (20/10/2026, pedido del usuario): exportar completo (con los filtros) o parcial (lo marcado), en PDF o Excel. */}
+      <div className="flex flex-wrap items-center gap-2 rounded-[16px] border px-4 py-3" style={{ borderColor: 'var(--app-rule)', backgroundColor: 'var(--app-card-bg)' }} role="toolbar" aria-label="Exportar historial">
+        <span className="mr-1 text-sm font-semibold text-[var(--app-ink)]">Exportar</span>
+        {seleccion.size > 0 ? (
+          <>
+            <span className="pill" data-tone="sky">{seleccion.size} marcada{seleccion.size === 1 ? '' : 's'}</span>
+            <Button size="sm" variant="soft" disabled={exportando !== null} onClick={() => void exportar('pdf', 'parcial')}>
+              {exportando === 'parcial-pdf' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileDown className="h-4 w-4" aria-hidden="true" />}PDF de lo marcado
+            </Button>
+            <Button size="sm" variant="soft" disabled={exportando !== null} onClick={() => void exportar('xlsx', 'parcial')}>
+              {exportando === 'parcial-xlsx' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />}Excel de lo marcado
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setSeleccion(new Set())}>Quitar selección</Button>
+          </>
+        ) : (
+          <>
+            <Button size="sm" variant="soft" disabled={exportando !== null || logs.total === 0} onClick={() => void exportar('pdf', 'completo')}>
+              {exportando === 'completo-pdf' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileDown className="h-4 w-4" aria-hidden="true" />}PDF completo
+            </Button>
+            <Button size="sm" variant="soft" disabled={exportando !== null || logs.total === 0} onClick={() => void exportar('xlsx', 'completo')}>
+              {exportando === 'completo-xlsx' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />}Excel completo
+            </Button>
+            <span className="text-xs text-[var(--app-ink-2)]">Con los filtros de arriba (hasta 10 000 acciones). Marca días o acciones para exportar solo eso.</span>
+          </>
+        )}
+        {errorExportar && <p role="alert" className="w-full text-sm" style={{ color: 'var(--auth-danger)' }}>{errorExportar}</p>}
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>
             <Activity className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} />
             {logs.total.toLocaleString('es-MX')} {logs.total === 1 ? 'acción registrada' : 'acciones registradas'}
           </CardTitle>
-          <CardDescription>Página {logs.current_page} de {logs.last_page}. Las más recientes primero.</CardDescription>
+          <CardDescription>Página {logs.current_page} de {logs.last_page}, agrupada por día. Las más recientes primero.</CardDescription>
         </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-44">Cuándo</TableHead>
-                <TableHead>Qué se hizo</TableHead>
-                <TableHead>Quién</TableHead>
-                <TableHead>Sobre qué</TableHead>
-                <TableHead className="text-right w-36">Desde dónde</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {logs.data.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5}>
-                    <div className="empty-state">
-                      <span className="tone-chip" data-tone="sky"><Activity aria-hidden="true" /></span>
-                      <p className="font-bold text-[var(--app-ink)]">Sin eventos para los filtros actuales.</p>
-                      <p className="text-sm text-[var(--app-ink-2)]">Amplía las fechas o limpia los filtros para ver más.</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                logs.data.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="text-xs text-[var(--app-ink-2)]">
-                      {new Date(row.created_at).toLocaleString('es-MX', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm font-semibold text-[var(--app-ink)]">{actionLabel(row.action)}</span>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {row.user ? (
-                        <>
-                          <p className="font-semibold text-[var(--app-ink)]">{row.user.name}</p>
-                          <p className="text-[11px] text-[var(--app-ink-2)]">{row.user.email}</p>
-                        </>
-                      ) : (
-                        <span className="text-[var(--app-ink-2)]">El sistema</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs text-[var(--app-ink-2)]">{shortSubject(row)}</TableCell>
-                    <TableCell className="text-right text-xs text-[var(--app-ink-2)]">{row.ip || '—'}</TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="space-y-3">
+          {logs.data.length === 0 ? (
+            <div className="empty-state">
+              <span className="tone-chip" data-tone="sky"><Activity aria-hidden="true" /></span>
+              <p className="font-bold text-[var(--app-ink)]">Sin eventos para los filtros actuales.</p>
+              <p className="text-sm text-[var(--app-ink-2)]">Amplía las fechas o limpia los filtros para ver más.</p>
+            </div>
+          ) : (
+            dias.map(([dia, filas], n) => {
+              const todas = filas.every((r) => seleccion.has(r.id));
+              return (
+                // E82: lista desplegable por día (el más reciente abierto). <details> nativo: teclado y lector de pantalla.
+                <details key={dia} open={n === 0} className="group rounded-[14px] border" style={{ borderColor: 'var(--app-rule)' }}>
+                  <summary className="flex cursor-pointer list-none items-center gap-3 rounded-[14px] px-4 py-3 hover:bg-[var(--sg-canvas)] [&::-webkit-details-marker]:hidden">
+                    <ChevronRight className="h-4 w-4 shrink-0 text-[var(--app-ink-2)] transition-transform duration-150 group-open:rotate-90" aria-hidden="true" />
+                    <span className="flex-1 text-sm font-bold capitalize text-[var(--app-ink)]">{dia}</span>
+                    <span className="pill" data-tone="neutral">{filas.length} {filas.length === 1 ? 'acción' : 'acciones'}</span>
+                    <label className="inline-flex items-center gap-1.5 text-xs text-[var(--app-ink-2)]" onClick={(e) => e.stopPropagation()}>
+                      <input type="checkbox" className="h-4 w-4 accent-[var(--sg-vino)]" checked={todas}
+                        onChange={(e) => setSeleccion((s) => { const x = new Set(s); for (const r of filas) { if (e.target.checked) x.add(r.id); else x.delete(r.id); } return x; })}
+                        aria-label={`Marcar todas las acciones del ${dia}`} />
+                      Marcar día
+                    </label>
+                  </summary>
+                  <div className="overflow-x-auto border-t" style={{ borderColor: 'var(--app-rule)' }}>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10"><span className="sr-only">Marcar</span></TableHead>
+                          <TableHead className="w-20">Hora</TableHead>
+                          <TableHead>Qué se hizo</TableHead>
+                          <TableHead>Quién</TableHead>
+                          <TableHead>Sobre qué</TableHead>
+                          <TableHead className="w-36 text-right">Desde dónde</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filas.map((row) => (
+                          <TableRow key={row.id}>
+                            <TableCell>
+                              <input type="checkbox" className="h-4 w-4 accent-[var(--sg-vino)]" checked={seleccion.has(row.id)}
+                                onChange={() => setSeleccion((s) => { const x = new Set(s); if (x.has(row.id)) x.delete(row.id); else x.add(row.id); return x; })}
+                                aria-label={`Marcar: ${actionLabel(row.action)}`} />
+                            </TableCell>
+                            <TableCell className="text-xs text-[var(--app-ink-2)]">{horaDe(row.created_at)}</TableCell>
+                            <TableCell><span className="text-sm font-semibold text-[var(--app-ink)]">{actionLabel(row.action)}</span></TableCell>
+                            <TableCell className="text-sm">
+                              {row.user ? (
+                                <>
+                                  <p className="font-semibold text-[var(--app-ink)]">{row.user.name}</p>
+                                  <p className="text-[11px] text-[var(--app-ink-2)]">{row.user.email}</p>
+                                </>
+                              ) : <span className="text-[var(--app-ink-2)]">El sistema</span>}
+                            </TableCell>
+                            <TableCell className="text-xs text-[var(--app-ink-2)]">{shortSubject(row)}</TableCell>
+                            <TableCell className="text-right text-xs text-[var(--app-ink-2)]">{row.ip || '—'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </details>
+              );
+            })
+          )}
         </CardContent>
         <div className="px-4 py-3 border-t border-[var(--app-rule)] flex items-center justify-end gap-2">
           <Button variant="outline" size="sm" disabled={logs.current_page <= 1} onClick={() => goPage(logs.current_page - 1)}>
