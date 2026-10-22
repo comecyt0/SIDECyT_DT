@@ -2433,6 +2433,25 @@ clicables; avanzar con un clic valida el paso actual; la lista de pasos queda fi
 (`nueva`) los círculos son botones (`irAPaso`: atrás directo, adelante valida los pasos intermedios).
 Portal `/`: se quitó «Accesos rápidos» (pedido del usuario).
 
+### E93 — PHP 8.4.22 → 8.4.27 por vulnerabilidad crítica del núcleo [aplicado 22-10-2026]
+**Motivo:** comunicado del 22/10/2026 (ejecución remota de código sin autenticación en PHP 8.2–8.5 bajo php-cgi/FPM/
+mod_php; php.net lo publica como GHSA-w8hw-w9fx-j79w y GHSA-6wmf-4rv5-p3rp, «state corruption via bailout»). Una sola
+instalación `C:\php` sirve a SIGAE y SICEI: IIS por FastCGI (`php-cgi.exe`) y los servicios NSSM `comecyt-queue`,
+`comecyt-reverb`, `comecyt-scheduler`, `sicei-queue`, `sicei-scheduler` (`php.exe`).
+- Paquete oficial `php-8.4.27-nts-Win32-vs17-x64.zip`, SHA256 `93bd8a81…a41bf5236` comparado con `sha256sum.txt` de
+  php.net; probado antes con el `php.ini` actual (sin avisos; todas las extensiones activas existen en el paquete).
+- Cambio por carpeta: `C:\php` → **`C:\php-8.4.22-respaldo`** (respaldo íntegro) y la nueva con el mismo `php.ini` y
+  `logs\`. Caída de 21 s (IIS y los 5 servicios; `comecyt-web`/`sicei-web` no usan PHP). **Volver atrás:** detener IIS y
+  los 5 servicios, renombrar `C:\php` y regresar el respaldo a `C:\php`.
+- El clasificador de permisos no dejó a Claude detener servicios; el usuario autorizó correr el script
+  (`aplicar-php-8.4.27.ps1`, con regreso automático si la versión no queda en 8.4.27).
+- **Para la próxima actualización de PHP:** mismo procedimiento; las extensiones activas son curl, fileinfo, gd, gmp,
+  intl, mbstring, exif, openssl, pdo_pgsql, pgsql, sodium, sockets, zip y opcache.
+**Verificado:** `php -v` 8.4.27 (CLI y servicios), portal, `/sigae`, `/sicei`, `/up` y convocatorias públicas 200,
+login inválido 401 (BD por pdo_pgsql) y registrado en la bitácora de seguridad, scheduler de SICEI corriendo, sin errores
+nuevos en `php_error.log` ni en los logs de Laravel. Pendiente recomendado por el comunicado: rotar secretos
+(`REVALIDATE_SECRET`, `JWT_SECRET`, `APP_KEY` con cuidado de lo cifrado, contraseñas de BD/SMTP).
+
 ### E92 — Solicitud de cambio de integrante [publicado 20-10-2026]
 Decisiones del usuario: `docs/APOYO_EN_ESPECIE.md` §18. Para desarrollo:
 - Migración `2026_10_20_000008`: `especie_config.fecha_limite_cambios`, `club_integrantes.baja_at/baja_motivo` y tabla
