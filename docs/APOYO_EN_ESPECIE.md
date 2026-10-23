@@ -552,8 +552,8 @@ activas: 189 «Ya participó» y 61 «Nueva escuela»); NP 131 confirmada como e
 secundarias sin tipo se asignó por la clave CCT (letras 4-5: ES general, ST técnica, TV telesecundaria), regla que
 coincidía con los 110 tipos que sí traía el Excel. Respaldo previo: `backups\comecyt_antes-ajustes-escuelas_*.dump`.
 
-**Pendiente de datos:** los nombres de equipo de las 17 escuelas que no lo traen (el líder los escribe al registrar su club;
-el admin puede completarlos en Escuelas → Editar).
+**Cerrado (23/10/2026, decisión del usuario):** las 17 escuelas sin nombre de equipo se quedan así; el líder lo escribe al
+registrar su club y el admin puede completarlo en Escuelas → Editar. Esta carga no deja pendientes de datos.
 
 **Verificado:** servidor 56/56 (`e2e_escuelas_e94.php` en transacción: enlaces maliciosos, HTML y fórmulas en equipo y
 zona, coordenadas fuera de rango, matrícula negativa, importación con filas malas, qué ve el líder, escuela inactiva 404,
