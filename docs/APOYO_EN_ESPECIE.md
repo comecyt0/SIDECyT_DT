@@ -547,8 +547,13 @@ opcionales y plantilla ampliada); `GET club/escuelas/{escuela}/datos` (throttle 
 `RevisionClub::comite` (temporada al aceptar); `EscuelaPicker` (tarjeta con datos y `onDatos`), `CatalogoEscuelas` y
 `TemporadasInput` (siempre visible, obligatoria solo con «Ya participó»); comando `CargarEscuelasRobotica`.
 
-**Pendientes de datos:** CCT correcta de NP 141; tipo de las 16 secundarias sin tipo (la clave CCT lo sugiere: EES general,
-EST técnica, ETV telesecundaria, pero no se asumió); confirmar NP 131; equipos de las 16 escuelas sin nombre.
+**Ajustes del mismo día (confirmados por el usuario):** NP 141 cargada con su CCT completa `15EPR0390D` (ya son 250 escuelas
+activas: 189 «Ya participó» y 61 «Nueva escuela»); NP 131 confirmada como estatal (sin observación); el tipo de las 16
+secundarias sin tipo se asignó por la clave CCT (letras 4-5: ES general, ST técnica, TV telesecundaria), regla que
+coincidía con los 110 tipos que sí traía el Excel. Respaldo previo: `backups\comecyt_antes-ajustes-escuelas_*.dump`.
+
+**Pendiente de datos:** los nombres de equipo de las 17 escuelas que no lo traen (el líder los escribe al registrar su club;
+el admin puede completarlos en Escuelas → Editar).
 
 **Verificado:** servidor 56/56 (`e2e_escuelas_e94.php` en transacción: enlaces maliciosos, HTML y fórmulas en equipo y
 zona, coordenadas fuera de rango, matrícula negativa, importación con filas malas, qué ve el líder, escuela inactiva 404,
