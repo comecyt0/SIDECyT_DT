@@ -80,6 +80,26 @@ class ClubController extends Controller
             ->orderBy('nombre')->limit(20)->get(['id', 'cct', 'nombre', 'municipio', 'nivel', 'sistema', 'participo_antes']));
     }
 
+    /**
+     * E94 (pedido del usuario): lo que el líder ve de la escuela que elige —equipo con el que participa, domicilio,
+     * ubicación y matrícula— y de donde se sugiere el nombre del club. Solo escuelas activas; el resto de lo que sabe el
+     * COMECYT (zona, subsistema, observaciones, temporadas) lo ve únicamente el administrador.
+     */
+    public function datosEscuela(Escuela $escuela)
+    {
+        abort_unless($escuela->activo, 404);
+
+        return response()->json([
+            'id' => $escuela->id,
+            'equipo_nombre' => $escuela->equipo_nombre,
+            'domicilio' => $escuela->domicilio,
+            'ubicacion_url' => Escuela::urlMapaSegura($escuela->ubicacion_url),
+            'matricula_total' => $escuela->matricula_total,
+            'matricula_hombres' => $escuela->matricula_hombres,
+            'matricula_mujeres' => $escuela->matricula_mujeres,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $user = $request->user();

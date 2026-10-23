@@ -580,6 +580,33 @@ export const NIVEL_ESCUELA: Record<string, string> = {
   primaria: 'Primaria', secundaria: 'Secundaria', media_superior: 'Media superior', superior: 'Superior',
 };
 export const SISTEMA_ESCUELA: Record<string, string> = { estatal: 'Estatal', federal: 'Federal' };
+/** E94: tipo de secundaria (el nivel sigue siendo primaria o secundaria). */
+export const TIPO_SECUNDARIA: Record<string, string> = { general: 'General', tecnica: 'Técnica', telesecundaria: 'Telesecundaria' };
+
+/** E94: lo que el líder ve de la escuela que elige (GET /club/escuelas/{id}/datos). */
+export interface DatosEscuela {
+  id: number; equipo_nombre: string | null; domicilio: string | null; ubicacion_url: string | null;
+  matricula_total: number | null; matricula_hombres: number | null; matricula_mujeres: number | null;
+}
+
+const HOSTS_MAPA = ['maps.app.goo.gl', 'share.google', 'maps.apple', 'maps.apple.com', 'maps.google.com', 'maps.google.com.mx'];
+const HOSTS_MAPA_RUTA_MAPS = ['goo.gl', 'google.com', 'www.google.com', 'google.com.mx', 'www.google.com.mx'];
+/**
+ * E94: enlace de mapas seguro o null (mismas reglas que `Escuela::urlMapaSegura`). Se vuelve a validar al pintar el enlace:
+ * solo https de Google Maps o Apple Maps, sin usuario ni contraseña; nunca `javascript:` ni sitios ajenos.
+ */
+export function urlMapaSegura(u: unknown): string | null {
+  if (typeof u !== 'string') return null;
+  const t = u.trim();
+  if (!t || t.length > 1000 || /[\s<>"\\]/.test(t)) return null;
+  let url: URL;
+  try { url = new URL(t); } catch { return null; }
+  if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) return null;
+  const host = url.hostname.toLowerCase();
+  if (HOSTS_MAPA.includes(host)) return t;
+  if (HOSTS_MAPA_RUTA_MAPS.includes(host) && url.pathname.startsWith('/maps')) return t;
+  return null;
+}
 export const SEXO: Record<string, string> = { H: 'Hombre', M: 'Mujer', X: 'Prefiere no decir' };
 
 export interface EscuelaApi { id: number; cct: string; nombre: string; municipio: string; nivel: string; sistema: string; /** «Ya participó» / «Nueva escuela» (08/10/2026). */ participo_antes?: boolean }

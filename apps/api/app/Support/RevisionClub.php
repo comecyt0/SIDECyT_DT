@@ -271,6 +271,16 @@ class RevisionClub
             return $c;
         });
         Audit::log('club.comite_'.$resultado, $club, ['folio' => $club->folio]);
+        // E94: la temporada de la convocatoria entra sola al historial de la escuela. Si falla no se deshace la decisión del comité.
+        if ($resultado === 'aceptado' && $club->escuela_id) {
+            try {
+                $e = \App\Models\Escuela::find($club->escuela_id);
+                $t = \App\Models\Escuela::temporadaDeConvocatoria($club->convocatoria()->with('periodo')->first());
+                if ($e && $t) \App\Models\Escuela::registrarTemporada($e, $t);
+            } catch (\Throwable $ex) {
+                \Illuminate\Support\Facades\Log::warning('No se pudo registrar la temporada de la escuela', ['club' => $club->id, 'error' => $ex->getMessage()]);
+            }
+        }
         $resultado === 'aceptado'
             ? self::avisarLider($club->refresh(), 'aceptado')
             : self::avisarLider($club->refresh(), 'rechazado', ['motivo' => $motivo]);

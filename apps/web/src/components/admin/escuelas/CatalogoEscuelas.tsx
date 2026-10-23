@@ -1,18 +1,22 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { School, Loader2, Pencil, Plus, Upload, Download, Search, ChevronLeft, ChevronRight, FileSpreadsheet, History } from 'lucide-react';
+import { School, Loader2, Pencil, Plus, Upload, Download, Search, ChevronLeft, ChevronRight, FileSpreadsheet, History, MapPin, Users, Trophy, AlertTriangle } from 'lucide-react';
 import api from '@/lib/api';
 import { AlertBox } from '@/components/ui/alert-box';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { NIVEL_ESCUELA, SISTEMA_ESCUELA } from '@/lib/especie';
+import { NIVEL_ESCUELA, SISTEMA_ESCUELA, TIPO_SECUNDARIA, urlMapaSegura } from '@/lib/especie';
 import TemporadasInput, { normalizarTemporadas } from '@/components/admin/escuelas/TemporadasInput';
 
 interface Escuela {
   id: number; cct: string; nombre: string; municipio: string; nivel: string; sistema: string; activo: boolean;
   participo_antes: boolean; temporadas: string[];
+  /** E94: datos de la escuela y de su equipo (el admin ve todos). */
+  equipo_nombre: string | null; domicilio: string | null; ubicacion_url: string | null; latitud: number | null; longitud: number | null;
+  matricula_total: number | null; matricula_hombres: number | null; matricula_mujeres: number | null;
+  tipo_secundaria: string | null; zona: string | null; subsistema_detalle: string | null; observaciones: string | null;
   /** E84: folios de los clubes de la escuela con su estado. */
   clubes?: { id: number; folio: string; estado: string; estado_texto: string; grupo: string; convocatoria: string | null }[];
 }
@@ -20,7 +24,21 @@ const TONO_GRUPO: Record<string, string> = { aprobados: 'emerald', no_aprobados:
 interface Pagina { data: Escuela[]; current_page: number; last_page: number; total: number }
 interface ResultadoImportacion { creadas: number; actualizadas: number; errores: { fila: number; cct: string; problemas: string[] }[] }
 
-const VACIO = { cct: '', nombre: '', municipio: '', nivel: 'primaria', sistema: 'estatal', participo_antes: false, temporadas: [] as string[] };
+const VACIO = {
+  cct: '', nombre: '', municipio: '', nivel: 'primaria', sistema: 'estatal', participo_antes: false, temporadas: [] as string[],
+  // E94: se editan como texto y se convierten al guardar.
+  equipo_nombre: '', domicilio: '', ubicacion_url: '', latitud: '', longitud: '', matricula_total: '', matricula_hombres: '', matricula_mujeres: '',
+  tipo_secundaria: '', zona: '', subsistema_detalle: '', observaciones: '',
+};
+type FormEscuela = typeof VACIO;
+const aTexto = (v: unknown) => (v === null || v === undefined ? '' : String(v));
+const aNumero = (s: string) => (s.trim() === '' ? null : Number(s));
+const deEscuela = (x: Escuela): FormEscuela => ({
+  cct: x.cct, nombre: x.nombre, municipio: x.municipio, nivel: x.nivel, sistema: x.sistema, participo_antes: x.participo_antes, temporadas: x.temporadas,
+  equipo_nombre: aTexto(x.equipo_nombre), domicilio: aTexto(x.domicilio), ubicacion_url: aTexto(x.ubicacion_url), latitud: aTexto(x.latitud), longitud: aTexto(x.longitud),
+  matricula_total: aTexto(x.matricula_total), matricula_hombres: aTexto(x.matricula_hombres), matricula_mujeres: aTexto(x.matricula_mujeres),
+  tipo_secundaria: aTexto(x.tipo_secundaria), zona: aTexto(x.zona), subsistema_detalle: aTexto(x.subsistema_detalle), observaciones: aTexto(x.observaciones),
+});
 const PATRON_CCT = /^15[A-Z]{3}\d{4}[A-Z]$/;
 const inputCls = 'auth-input auth-input-static pl-4';
 
@@ -51,7 +69,7 @@ export default function CatalogoEscuelas() {
   const [filtros, setFiltros] = useState({ q: '', nivel: '', sistema: '', activo: '', participo: '' });
   const [busqueda, setBusqueda] = useState('');
   const [page, setPage] = useState(1);
-  const [form, setForm] = useState(VACIO);
+  const [form, setForm] = useState<FormEscuela>(VACIO);
   const [editando, setEditando] = useState<Escuela | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
@@ -91,10 +109,19 @@ export default function CatalogoEscuelas() {
     if (form.nombre.trim().length < 3) { setAviso({ tipo: 'error', texto: 'Escribe el nombre de la escuela.' }); return; }
     if (!form.municipio.trim()) { setAviso({ tipo: 'error', texto: 'Escribe el municipio.' }); return; }
     if (form.participo_antes && form.temporadas.length === 0) { setErrTemporadas('Escribe al menos una temporada en la que participó la escuela.'); return; }
+    // E94: mismas reglas que el servidor (que las vuelve a validar).
+    if (form.ubicacion_url.trim() && !urlMapaSegura(form.ubicacion_url)) { setAviso({ tipo: 'error', texto: 'La ubicación debe ser un enlace https de Google Maps o Apple Maps.' }); return; }
+    const lat = aNumero(form.latitud), lng = aNumero(form.longitud);
+    if ((lat === null) !== (lng === null)) { setAviso({ tipo: 'error', texto: 'Escribe latitud y longitud juntas, o ninguna.' }); return; }
+    if ((lat !== null && (!Number.isFinite(lat) || lat < 18.3 || lat > 20.4)) || (lng !== null && (!Number.isFinite(lng) || lng < -100.7 || lng > -98.5))) { setAviso({ tipo: 'error', texto: 'Las coordenadas no caen en el Estado de México (la longitud va con signo menos).' }); return; }
+    const mats = [form.matricula_total, form.matricula_hombres, form.matricula_mujeres].map(aNumero);
+    if (mats.some((n) => n !== null && (!Number.isInteger(n) || n < 0 || n > 100000))) { setAviso({ tipo: 'error', texto: 'La matrícula debe ser un número entero.' }); return; }
     setGuardando(true);
     try {
       const cuerpo = { ...form, cct, nombre: form.nombre.trim(), municipio: form.municipio.trim(), activo: editando ? editando.activo : true,
-        temporadas: form.participo_antes ? form.temporadas : [] };
+        // Una «Nueva escuela» conserva su temporada actual; solo «Ya participó» exige al menos una.
+        temporadas: form.temporadas, latitud: lat, longitud: lng, matricula_total: mats[0], matricula_hombres: mats[1], matricula_mujeres: mats[2],
+        tipo_secundaria: form.nivel === 'secundaria' && form.tipo_secundaria ? form.tipo_secundaria : null };
       if (editando) await api.put(`/admin/escuelas/${editando.id}`, cuerpo);
       else await api.post('/admin/escuelas', cuerpo);
       setAviso({ tipo: 'success', texto: editando ? 'Escuela actualizada.' : 'Escuela agregada al catálogo.' });
@@ -244,7 +271,60 @@ export default function CatalogoEscuelas() {
               <span><span className="block text-sm font-semibold text-[var(--app-ink)]">Ya ha participado anteriormente</span>
                 <span className="block text-xs text-[var(--app-ink-2)]">Queda como identificador de la escuela, con las temporadas en que participó.</span></span>
             </label>
-            {form.participo_antes && <TemporadasInput value={form.temporadas} onChange={(t) => { setErrTemporadas(null); setForm({ ...form, temporadas: t }); }} error={errTemporadas} />}
+            {/* E94: una «Nueva escuela» también guarda su temporada actual; solo «Ya participó» exige al menos una. */}
+            <TemporadasInput value={form.temporadas} onChange={(t) => { setErrTemporadas(null); setForm({ ...form, temporadas: t }); }} error={errTemporadas}
+              obligatorio={form.participo_antes} etiqueta={form.participo_antes ? 'Temporadas en que participó' : 'Temporadas registradas'} />
+            {form.nivel === 'secundaria' && (
+              <label className="perfil-campo"><span>Tipo de secundaria</span>
+                <select className={inputCls} value={form.tipo_secundaria} onChange={(e) => setForm({ ...form, tipo_secundaria: e.target.value })}>
+                  <option value="">Sin definir</option>
+                  {Object.entries(TIPO_SECUNDARIA).map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+                </select>
+              </label>
+            )}
+            {/* E94: equipo, domicilio, ubicación, matrícula y datos de origen de la base de robótica. */}
+            <fieldset className="space-y-3 rounded-[14px] border px-4 py-3" style={{ borderColor: 'var(--app-rule)' }}>
+              <legend className="px-1 text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Equipo y datos de la escuela</legend>
+              <label className="perfil-campo"><span>Nombre del equipo</span>
+                <input className={inputCls} maxLength={255} value={form.equipo_nombre} onChange={(e) => setForm({ ...form, equipo_nombre: e.target.value })} />
+              </label>
+              <label className="perfil-campo"><span>Domicilio</span>
+                <input className={inputCls} maxLength={400} value={form.domicilio} onChange={(e) => setForm({ ...form, domicilio: e.target.value })} />
+              </label>
+              <label className="perfil-campo"><span>Ubicación (enlace de Google Maps o Apple Maps)</span>
+                <input className={inputCls} type="url" maxLength={1000} value={form.ubicacion_url} placeholder="https://maps.app.goo.gl/…" onChange={(e) => setForm({ ...form, ubicacion_url: e.target.value })} />
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="perfil-campo"><span>Latitud</span>
+                  <input className={inputCls} inputMode="decimal" maxLength={12} value={form.latitud} placeholder="19.2826" onChange={(e) => setForm({ ...form, latitud: e.target.value })} />
+                </label>
+                <label className="perfil-campo"><span>Longitud</span>
+                  <input className={inputCls} inputMode="decimal" maxLength={13} value={form.longitud} placeholder="-99.6557" onChange={(e) => setForm({ ...form, longitud: e.target.value })} />
+                </label>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <label className="perfil-campo"><span>Matrícula</span>
+                  <input className={inputCls} inputMode="numeric" maxLength={6} value={form.matricula_total} onChange={(e) => setForm({ ...form, matricula_total: e.target.value.replace(/\D/g, '') })} />
+                </label>
+                <label className="perfil-campo"><span>Hombres</span>
+                  <input className={inputCls} inputMode="numeric" maxLength={6} value={form.matricula_hombres} onChange={(e) => setForm({ ...form, matricula_hombres: e.target.value.replace(/\D/g, '') })} />
+                </label>
+                <label className="perfil-campo"><span>Mujeres</span>
+                  <input className={inputCls} inputMode="numeric" maxLength={6} value={form.matricula_mujeres} onChange={(e) => setForm({ ...form, matricula_mujeres: e.target.value.replace(/\D/g, '') })} />
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="perfil-campo"><span>Zona</span>
+                  <input className={inputCls} maxLength={60} value={form.zona} placeholder="Indígena, Toluca…" onChange={(e) => setForm({ ...form, zona: e.target.value })} />
+                </label>
+                <label className="perfil-campo"><span>Subsistema (texto original)</span>
+                  <input className={inputCls} maxLength={60} value={form.subsistema_detalle} placeholder="ESTATAL (SEB)" onChange={(e) => setForm({ ...form, subsistema_detalle: e.target.value })} />
+                </label>
+              </div>
+              <label className="perfil-campo"><span>Observaciones para el administrador</span>
+                <textarea className={`${inputCls} !h-auto min-h-[72px] resize-y py-2`} maxLength={500} value={form.observaciones} onChange={(e) => setForm({ ...form, observaciones: e.target.value })} />
+              </label>
+            </fieldset>
             <div className="flex gap-2">
               <Button type="submit" disabled={guardando}>{guardando && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}{editando ? 'Guardar cambios' : 'Agregar escuela'}</Button>
               <Button type="button" variant="outline" onClick={cerrarModal}>Cancelar</Button>
@@ -259,7 +339,7 @@ export default function CatalogoEscuelas() {
             <label className="relative block sm:col-span-2 xl:col-span-1">
               <span className="sr-only">Buscar por nombre, CCT o municipio</span>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--app-ink-2)]" aria-hidden="true" />
-              <input className={`${inputCls} !pl-9`} value={busqueda} maxLength={120} placeholder="Nombre, CCT o municipio" onChange={(e) => setBusqueda(e.target.value)} />
+              <input className={`${inputCls} !pl-9`} value={busqueda} maxLength={120} placeholder="Nombre, CCT, municipio o equipo" onChange={(e) => setBusqueda(e.target.value)} />
             </label>
             <select aria-label="Nivel" className="h-11" value={filtros.nivel} onChange={(e) => { setPage(1); setFiltros({ ...filtros, nivel: e.target.value }); }}>
               <option value="">Todos los niveles</option>
@@ -301,11 +381,39 @@ export default function CatalogoEscuelas() {
                       <p className="text-xs text-[var(--app-ink-2)]">
                         <span className="font-mono">{x.cct}</span> · {x.municipio} · {NIVEL_ESCUELA[x.nivel] ?? x.nivel} · {SISTEMA_ESCUELA[x.sistema] ?? x.sistema}
                       </p>
-                      {x.participo_antes && (
+                      {/* E94: el admin ve todo lo que sabe el sistema de la escuela y de su equipo. */}
+                      {(x.tipo_secundaria || x.zona || x.subsistema_detalle) && (
                         <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
-                          <span className="inline-flex items-center gap-1 font-semibold text-[var(--app-ink)]"><History className="h-3.5 w-3.5" aria-hidden="true" />Ya participó:</span>
+                          {x.tipo_secundaria && <span className="pill" data-tone="violet">{TIPO_SECUNDARIA[x.tipo_secundaria] ?? x.tipo_secundaria}</span>}
+                          {x.subsistema_detalle && <span className="pill" data-tone="neutral" title="Subsistema según la base original">{x.subsistema_detalle}</span>}
+                          {x.zona && <span className="pill" data-tone="sky">Zona: {x.zona}</span>}
+                        </p>
+                      )}
+                      {x.equipo_nombre && (
+                        <p className="mt-1.5 flex items-start gap-1.5 text-xs text-[var(--app-ink-2)]"><Trophy className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          <span className="min-w-0 break-words">Equipo: <strong className="text-[var(--app-ink)]">{x.equipo_nombre}</strong></span></p>
+                      )}
+                      {(x.domicilio || urlMapaSegura(x.ubicacion_url) || x.latitud !== null) && (
+                        <p className="mt-1 flex items-start gap-1.5 text-xs text-[var(--app-ink-2)]"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          <span className="min-w-0 break-words">{x.domicilio}
+                            {urlMapaSegura(x.ubicacion_url) && (
+                              <>{x.domicilio ? ' · ' : ''}<a href={urlMapaSegura(x.ubicacion_url) ?? undefined} target="_blank" rel="noopener noreferrer" className="font-semibold text-[var(--sg-vino)] hover:underline">Ver en el mapa</a></>
+                            )}
+                            {x.latitud !== null && x.longitud !== null && <span className="font-mono"> · {x.latitud}, {x.longitud}</span>}</span></p>
+                      )}
+                      {x.matricula_total !== null && (
+                        <p className="mt-1 flex items-start gap-1.5 text-xs text-[var(--app-ink-2)]"><Users className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          <span>Matrícula: {x.matricula_total}{x.matricula_hombres !== null && x.matricula_mujeres !== null ? ` (${x.matricula_hombres} hombres · ${x.matricula_mujeres} mujeres)` : ''}</span></p>
+                      )}
+                      {x.temporadas.length > 0 && (
+                        <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                          <span className="inline-flex items-center gap-1 font-semibold text-[var(--app-ink)]"><History className="h-3.5 w-3.5" aria-hidden="true" />{x.participo_antes ? 'Ya participó:' : 'Temporada:'}</span>
                           {x.temporadas.map((t) => <span key={t} className="pill" data-tone="gold">{t}</span>)}
                         </p>
+                      )}
+                      {x.observaciones && (
+                        <p role="note" className="mt-1.5 flex items-start gap-1.5 rounded-[10px] px-2.5 py-1.5 text-xs text-[var(--app-ink)]" style={{ backgroundColor: 'var(--tile-gold-bg)' }}>
+                          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span className="min-w-0 break-words">{x.observaciones}</span></p>
                       )}
                       {/* E84 (pedido del usuario): folios de sus clubes con su estado; cada uno lleva a Folios. */}
                       {Array.isArray(x.clubes) && x.clubes.length > 0 && (
@@ -324,7 +432,7 @@ export default function CatalogoEscuelas() {
                       )}
                     </div>
                     <div className="flex gap-1.5">
-                      <Button size="sm" variant="soft" aria-label={`Editar ${x.nombre}`} onClick={() => { setEditando(x); setErrTemporadas(null); setForm({ cct: x.cct, nombre: x.nombre, municipio: x.municipio, nivel: x.nivel, sistema: x.sistema, participo_antes: x.participo_antes, temporadas: x.temporadas }); setAviso(null); setModal('agregar'); }}>
+                      <Button size="sm" variant="soft" aria-label={`Editar ${x.nombre}`} onClick={() => { setEditando(x); setErrTemporadas(null); setForm(deEscuela(x)); setAviso(null); setModal('agregar'); }}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => void alternarActiva(x)}>{x.activo ? 'Desactivar' : 'Activar'}</Button>

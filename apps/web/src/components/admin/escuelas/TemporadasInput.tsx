@@ -26,7 +26,9 @@ export function normalizarTemporadas(lista: unknown): string[] {
  * E55 — Temporadas en las que la escuela ya participó: el admin las escribe (p. ej. «2024», «Temporada 2025-2026») y
  * quedan como etiquetas. Enter o «Agregar» añade; la X quita.
  */
-export default function TemporadasInput({ value, onChange, error }: { value: string[]; onChange: (v: string[]) => void; error?: string | null }) {
+export default function TemporadasInput({ value, onChange, error, obligatorio = true, etiqueta = 'Temporadas en que participó' }: {
+  value: string[]; onChange: (v: string[]) => void; error?: string | null; obligatorio?: boolean; etiqueta?: string;
+}) {
   const [texto, setTexto] = useState('');
   const id = useId();
   const agregar = () => {
@@ -36,7 +38,7 @@ export default function TemporadasInput({ value, onChange, error }: { value: str
   };
   return (
     <div className="space-y-2">
-      <label htmlFor={id} className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Temporadas en que participó <Asterisco /></label>
+      <label htmlFor={id} className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">{etiqueta} {obligatorio && <Asterisco />}</label>
       <div className="flex gap-2">
         <input id={id} className="auth-input auth-input-static pl-4" maxLength={60} placeholder="Ej. Temporada 2025-2026" value={texto}
           onChange={(e) => setTexto(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); agregar(); } }}

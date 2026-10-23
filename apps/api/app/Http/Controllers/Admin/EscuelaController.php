@@ -37,7 +37,8 @@ class EscuelaController extends Controller
         ]);
         $q = Escuela::query();
         if ($t = trim((string) $request->input('q'))) {
-            $q->where(fn ($w) => $w->where('nombre', 'ilike', "%{$t}%")->orWhere('cct', 'ilike', "%{$t}%")->orWhere('municipio', 'ilike', "%{$t}%"));
+            // E94: también por nombre de equipo.
+            $q->where(fn ($w) => $w->where('nombre', 'ilike', "%{$t}%")->orWhere('cct', 'ilike', "%{$t}%")->orWhere('municipio', 'ilike', "%{$t}%")->orWhere('equipo_nombre', 'ilike', "%{$t}%"));
         }
         foreach (['nivel', 'sistema'] as $f) {
             if ($request->filled($f)) $q->where($f, $request->input($f));
@@ -98,7 +99,38 @@ class EscuelaController extends Controller
             'participo_antes' => 'sometimes|boolean',
             'temporadas' => 'sometimes|nullable|array|max:'.Escuela::MAX_TEMPORADAS,
             'temporadas.*' => 'nullable|string|max:60',
-        ], ['cct.regex' => 'La CCT debe ser del Estado de México (p. ej. 15EPR0001A).'], ['temporadas' => 'temporadas', 'temporadas.*' => 'temporada']);
+            // E94: datos de la escuela y de su equipo (opcionales; el admin los ve todos, el líder solo equipo, domicilio y matrícula).
+            'equipo_nombre' => 'sometimes|nullable|string|max:255',
+            'domicilio' => 'sometimes|nullable|string|max:400',
+            'ubicacion_url' => 'sometimes|nullable|string|max:1000',
+            'latitud' => 'sometimes|nullable|numeric|between:18.3,20.4',
+            'longitud' => 'sometimes|nullable|numeric|between:-100.7,-98.5',
+            'matricula_total' => 'sometimes|nullable|integer|min:0|max:100000',
+            'matricula_hombres' => 'sometimes|nullable|integer|min:0|max:100000',
+            'matricula_mujeres' => 'sometimes|nullable|integer|min:0|max:100000',
+            'tipo_secundaria' => ['sometimes', 'nullable', Rule::in(array_keys(Escuela::TIPOS_SECUNDARIA))],
+            'zona' => 'sometimes|nullable|string|max:60',
+            'subsistema_detalle' => 'sometimes|nullable|string|max:60',
+            'observaciones' => 'sometimes|nullable|string|max:500',
+        ], ['cct.regex' => 'La CCT debe ser del Estado de México (p. ej. 15EPR0001A).', 'latitud.between' => 'La latitud no cae en el Estado de México.', 'longitud.between' => 'La longitud no cae en el Estado de México.'],
+            ['temporadas' => 'temporadas', 'temporadas.*' => 'temporada']);
+        foreach (['equipo_nombre', 'domicilio', 'zona', 'subsistema_detalle', 'observaciones'] as $c) {
+            if (array_key_exists($c, $datos)) {
+                $t = $datos[$c] === null ? '' : preg_replace('/\s+/', ' ', Escuela::textoSeguro((string) $datos[$c]));
+                $datos[$c] = $t === '' ? null : $t;
+            }
+        }
+        if (array_key_exists('ubicacion_url', $datos)) {
+            $u = trim((string) $datos['ubicacion_url']);
+            if ($u !== '' && ! Escuela::urlMapaSegura($u)) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['ubicacion_url' => 'Escribe un enlace https de Google Maps o Apple Maps.']);
+            }
+            $datos['ubicacion_url'] = $u === '' ? null : $u;
+        }
+        if (isset($datos['latitud']) xor isset($datos['longitud'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['latitud' => 'Escribe latitud y longitud juntas, o ninguna.']);
+        }
+        if (($datos['nivel'] ?? null) !== 'secundaria') $datos['tipo_secundaria'] = null;
         $mun = Escuela::municipioCanonico($datos['municipio']);
         if (! $mun) {
             throw \Illuminate\Validation\ValidationException::withMessages(['municipio' => 'Ese municipio no existe en el Estado de México.']);
@@ -112,7 +144,8 @@ class EscuelaController extends Controller
                 throw \Illuminate\Validation\ValidationException::withMessages(['temporadas' => 'Escribe al menos una temporada en la que participó la escuela.']);
             }
             $datos['participo_antes'] = $participo;
-            $datos['temporadas'] = $participo ? $temporadas : [];
+            // E94: una «Nueva escuela» conserva su temporada actual (p. ej. 2026-2027); solo «Ya participó» exige al menos una.
+            $datos['temporadas'] = $temporadas;
         }
 
         return $datos;
@@ -156,11 +189,16 @@ class EscuelaController extends Controller
             }
             $pos[$c] = $i;
         }
+        // E94: columnas opcionales (si no vienen, la escuela conserva lo que ya tiene).
+        $opc = [];
+        foreach (self::COLUMNAS_OPCIONALES as $campo => $alias) {
+            foreach ($alias as $a) { if (($i = array_search($a, $enc, true)) !== false) { $opc[$campo] = $i; break; } }
+        }
         $nivelPorEtiqueta = [];
         foreach (self::ETIQUETA_NIVEL as $k => $v) { $nivelPorEtiqueta[self::clave($v)] = $k; $nivelPorEtiqueta[$k] = $k; }
 
         $creadas = 0; $actualizadas = 0; $errores = [];
-        DB::transaction(function () use ($filas, $pos, $nivelPorEtiqueta, &$creadas, &$actualizadas, &$errores) {
+        DB::transaction(function () use ($filas, $pos, $opc, $nivelPorEtiqueta, &$creadas, &$actualizadas, &$errores) {
             foreach (array_slice($filas, 1) as $n => $f) {
                 $fila = $n + 2;
                 $cct = mb_strtoupper(trim((string) ($f[$pos['cct']] ?? '')));
@@ -175,13 +213,15 @@ class EscuelaController extends Controller
                 if (! $mun) $prob[] = 'municipio no reconocido';
                 if (! $nivel) $prob[] = 'nivel inválido';
                 if (! in_array($sistema, Escuela::SISTEMAS, true)) $prob[] = 'sistema debe ser Estatal o Federal';
+                [$extra, $probExtra] = $this->extrasDeFila($f, $opc, $nivel);
+                $prob = array_merge($prob, $probExtra);
                 if ($prob) {
                     if (count($errores) < 200) $errores[] = ['fila' => $fila, 'cct' => mb_substr($cct, 0, 12), 'problemas' => $prob];
                     continue;
                 }
                 $e = Escuela::firstOrNew(['cct' => $cct]);
                 $nuevo = ! $e->exists;
-                $e->fill(['nombre' => $nombre, 'municipio' => $mun, 'nivel' => $nivel, 'sistema' => $sistema, 'activo' => true])->save();
+                $e->fill(['nombre' => $nombre, 'municipio' => $mun, 'nivel' => $nivel, 'sistema' => $sistema, 'activo' => true] + $extra)->save();
                 $nuevo ? $creadas++ : $actualizadas++;
             }
         });
@@ -190,14 +230,82 @@ class EscuelaController extends Controller
         return response()->json(['creadas' => $creadas, 'actualizadas' => $actualizadas, 'errores' => $errores]);
     }
 
+    /** E94: columnas opcionales del Excel → campo (encabezados normalizados con `clave()`). */
+    public const COLUMNAS_OPCIONALES = [
+        'equipo_nombre' => ['equipo', 'nombre de equipo', 'nombre del equipo'],
+        'domicilio' => ['domicilio'],
+        'ubicacion_url' => ['ubicacion', 'ubicacion en maps', 'ubicacion url'],
+        'matricula_total' => ['matricula', 'matricula gral.', 'matricula general'],
+        'matricula_hombres' => ['hombres', 'matricula hombres'],
+        'matricula_mujeres' => ['mujeres', 'matricula mujeres'],
+        'tipo_secundaria' => ['tipo de secundaria', 'tipo secundaria'],
+        'zona' => ['zona'],
+        'subsistema_detalle' => ['subsistema'],
+        'temporadas' => ['temporadas'],
+        'participo_antes' => ['ya participo', 'participo antes'],
+    ];
+
+    /**
+     * E94: valores opcionales de una fila → [campos a guardar, problemas]. Solo trae las columnas que el Excel incluye;
+     * mismos candados que el formulario (texto sin HTML ni fórmulas, mapas https conocidos, números acotados).
+     */
+    private function extrasDeFila(array $f, array $opc, ?string $nivel): array
+    {
+        $out = []; $prob = [];
+        $txt = fn (string $c) => preg_replace('/\s+/', ' ', Escuela::textoSeguro((string) ($f[$opc[$c]] ?? '')));
+        foreach (['equipo_nombre' => 255, 'domicilio' => 400, 'zona' => 60, 'subsistema_detalle' => 60] as $c => $max) {
+            if (! isset($opc[$c])) continue;
+            $t = $txt($c);
+            if (mb_strlen($t) > $max) { $prob[] = "{$c} muy largo"; continue; }
+            $out[$c] = $t === '' ? null : $t;
+        }
+        if (isset($opc['ubicacion_url'])) {
+            $u = trim((string) ($f[$opc['ubicacion_url']] ?? ''));
+            if ($u !== '' && ! Escuela::urlMapaSegura($u)) $prob[] = 'ubicación: solo enlaces https de Google Maps o Apple Maps';
+            else $out['ubicacion_url'] = $u === '' ? null : $u;
+        }
+        foreach (['matricula_total', 'matricula_hombres', 'matricula_mujeres'] as $c) {
+            if (! isset($opc[$c])) continue;
+            $v = $f[$opc[$c]] ?? null;
+            if ($v === null || trim((string) $v) === '') { $out[$c] = null; continue; }
+            if (! is_numeric($v) || (float) $v < 0 || (float) $v > 100000 || (float) $v != (int) $v) { $prob[] = "{$c} no es un número válido"; continue; }
+            $out[$c] = (int) $v;
+        }
+        if (isset($opc['tipo_secundaria'])) {
+            $t = self::clave((string) ($f[$opc['tipo_secundaria']] ?? ''));
+            $mapa = ['general' => 'general', 'tecnica' => 'tecnica', 'telesecundaria' => 'telesecundaria'];
+            if ($t === '' || $nivel !== 'secundaria') $out['tipo_secundaria'] = null;
+            elseif (isset($mapa[$t])) $out['tipo_secundaria'] = $mapa[$t];
+            else $prob[] = 'tipo de secundaria: General, Técnica o Telesecundaria';
+        }
+        if (isset($opc['temporadas'])) {
+            $lista = Escuela::normalizarTemporadas(preg_split('/[,;]+/', (string) ($f[$opc['temporadas']] ?? '')) ?: []);
+            rsort($lista); // de la más reciente a la más antigua, como el resto del sistema
+            $out['temporadas'] = $lista;
+            $out['participo_antes'] = $lista !== [];
+        }
+        if (isset($opc['participo_antes'])) {
+            $p = self::clave((string) ($f[$opc['participo_antes']] ?? ''));
+            if (in_array($p, ['si', 'sí', '1', 'true'], true)) $out['participo_antes'] = true;
+            elseif (in_array($p, ['no', '0', 'false', ''], true)) $out['participo_antes'] = false;
+            else $prob[] = '«Ya participó» debe ser Sí o No';
+            if (($out['participo_antes'] ?? false) && empty($out['temporadas'] ?? [])) $prob[] = 'si ya participó, escribe sus temporadas';
+        }
+
+        return [$out, $prob];
+    }
+
     /** Plantilla .xlsx con el formato y una hoja de instrucciones (valores permitidos y municipios). */
     public function plantilla()
     {
         $libro = new Spreadsheet();
         $hoja = $libro->getActiveSheet()->setTitle('Escuelas');
-        $hoja->fromArray([['CCT', 'NOMBRE', 'MUNICIPIO', 'NIVEL', 'SISTEMA'], ['15EPR0001A', 'Escuela Primaria Ejemplo', 'Toluca', 'Primaria', 'Estatal']]);
-        foreach (['A' => 14, 'B' => 48, 'C' => 28, 'D' => 18, 'E' => 12] as $col => $w) $hoja->getColumnDimension($col)->setWidth($w);
-        $hoja->getStyle('A1:E1')->getFont()->setBold(true);
+        $hoja->fromArray([
+            ['CCT', 'NOMBRE', 'MUNICIPIO', 'NIVEL', 'SISTEMA', 'EQUIPO', 'DOMICILIO', 'UBICACION', 'MATRICULA', 'HOMBRES', 'MUJERES', 'TIPO DE SECUNDARIA', 'ZONA', 'SUBSISTEMA', 'TEMPORADAS', 'YA PARTICIPO'],
+            ['15EPR0001A', 'Escuela Primaria Ejemplo', 'Toluca', 'Primaria', 'Estatal', 'Los Ejemplares', 'Calle Reforma 1, Centro, Toluca', 'https://maps.app.goo.gl/XXXX', 120, 60, 60, '', '', 'ESTATAL (SEB)', '2025-2026, 2026-2027', 'Sí'],
+        ]);
+        foreach (['A' => 14, 'B' => 48, 'C' => 28, 'D' => 18, 'E' => 12, 'F' => 28, 'G' => 48, 'H' => 36, 'I' => 11, 'J' => 10, 'K' => 10, 'L' => 20, 'M' => 16, 'N' => 18, 'O' => 24, 'P' => 14] as $col => $w) $hoja->getColumnDimension($col)->setWidth($w);
+        $hoja->getStyle('A1:P1')->getFont()->setBold(true);
         $ins = $libro->createSheet()->setTitle('Instrucciones');
         $lineas = [
             ['Llena la hoja «Escuelas» (borra la fila de ejemplo). Una escuela por fila; la CCT no se repite.'],
@@ -205,6 +313,10 @@ class EscuelaController extends Controller
             ['NIVEL: Primaria, Secundaria, Media superior o Superior.'],
             ['SISTEMA: Estatal o Federal (define si aplica transporte y box lunch).'],
             ['MUNICIPIO: uno de los 125 municipios del Estado de México (lista abajo).'],
+            ['Las demás columnas son opcionales: si las quitas, la escuela conserva lo que ya tiene. Una columna que dejes vacía borra ese dato.'],
+            ['UBICACION: solo enlaces https de Google Maps o Apple Maps. MATRICULA, HOMBRES y MUJERES: números enteros.'],
+            ['TIPO DE SECUNDARIA: General, Técnica o Telesecundaria (solo si el nivel es Secundaria).'],
+            ['TEMPORADAS: periodos escolares separados por coma (p. ej. 2025-2026, 2026-2027). YA PARTICIPO: Sí o No (si es Sí, escribe sus temporadas).'],
             [''],
             ['Municipios válidos:'],
         ];

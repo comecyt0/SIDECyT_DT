@@ -376,6 +376,8 @@ Route::get('codigos-postales/{cp}', [\App\Http\Controllers\CodigoPostalControlle
             Route::post('clubes/{club}/ceder', [$ac, 'ceder'])->middleware('throttle:10,10,club-ceder');
             Route::get('convocatorias', [$c, 'convocatorias']);
             Route::get('escuelas', [$c, 'escuelas'])->middleware('throttle:60,1,escuelas-buscar');
+            // E94 — datos de la escuela elegida (equipo, domicilio, ubicación y matrícula); no van en la lista de búsqueda.
+            Route::get('escuelas/{escuela}/datos', [$c, 'datosEscuela'])->whereNumber('escuela')->middleware('throttle:60,1,escuelas-datos');
             // E55 — solicitar el registro de una escuela que no está en el catálogo
             Route::get('escuelas/solicitudes', [\App\Http\Controllers\Club\EscuelaSolicitudController::class, 'misSolicitudes']);
             Route::post('escuelas/solicitudes', [\App\Http\Controllers\Club\EscuelaSolicitudController::class, 'store'])->middleware('throttle:5,10,escuela-solicitud');

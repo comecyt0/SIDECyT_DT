@@ -22,7 +22,7 @@ const PAPEL: Record<string, string> = {
   // 08/10/2026: con el permiso compartido operan el club.
   lider_a_colider: 'Líder A con permiso', lider_b_colider: 'Líder B con permiso', director_colider: 'Director(a) con permiso',
 };
-import { ESTADO_CLUB } from '@/lib/especie';
+import { ESTADO_CLUB, type DatosEscuela } from '@/lib/especie';
 import { formatDate } from '@/lib/format';
 
 interface ConvClub {
@@ -62,6 +62,14 @@ export default function ClubDashboardPage() {
   const [registro, setRegistro] = useState<ConvClub | null>(null);
   const [nombre, setNombre] = useState('');
   const [escuela, setEscuela] = useState<EscuelaElegida | null>(null);
+  // E94: nombre sugerido con el equipo de la escuela; solo se reemplaza si la persona no lo ha cambiado.
+  const [sugerido, setSugerido] = useState<string | null>(null);
+  const sugerirNombre = (d: DatosEscuela) => {
+    const eq = d.equipo_nombre;
+    if (!eq) return;
+    setNombre((actual) => (actual.trim() === '' || actual === sugerido ? eq : actual));
+    setSugerido(eq);
+  };
   const [creando, setCreando] = useState(false);
   const [errorRegistro, setErrorRegistro] = useState<string | null>(null);
 
@@ -183,7 +191,7 @@ export default function ClubDashboardPage() {
                       {c.fecha_limite && <span className="inline-flex items-center gap-1.5"><CalendarClock className="h-4 w-4" style={{ color: 'var(--auth-vino)' }} aria-hidden="true" />Registro hasta el {formatDate(c.fecha_limite)}</span>}
                     </div>
                     <div className="mt-auto pt-1">
-                      <Button onClick={() => { setRegistro(c); setNombre(''); setEscuela(null); setErrorRegistro(null); }}>
+                      <Button onClick={() => { setRegistro(c); setNombre(''); setSugerido(null); setEscuela(null); setErrorRegistro(null); }}>
                         <Plus className="h-4 w-4" aria-hidden="true" /> Registrar mi club
                       </Button>
                     </div>
@@ -210,18 +218,20 @@ export default function ClubDashboardPage() {
           {
             key: 'club',
             label: 'Tu club',
-            question: '¿Cómo se llama tu club y de qué escuela es?',
-            validate: () => (nombre.trim().length < 3 ? 'Escribe el nombre del club (al menos 3 letras).' : !escuela ? 'Elige la escuela del catálogo o solicita su registro.' : null),
+            question: '¿De qué escuela es tu club y cómo se llama?',
+            validate: () => (!escuela ? 'Elige la escuela del catálogo o solicita su registro.' : nombre.trim().length < 3 ? 'Escribe el nombre del club (al menos 3 letras).' : null),
             content: (
               <div className="space-y-4">
+                {/* E94: la escuela va primero para sugerir el nombre con el equipo con el que ya participa. */}
+                <div className="space-y-1.5">
+                  <label htmlFor="club-escuela" className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Escuela <Asterisco /></label>
+                  <EscuelaPicker id="club-escuela" value={escuela} onChange={setEscuela} convocatoriaId={registro?.id} onDatos={sugerirNombre} />
+                </div>
                 <div className="space-y-1.5">
                   <label htmlFor="club-nombre" className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Nombre del club <Asterisco /></label>
                   <input id="club-nombre" className="auth-input auth-input-static pl-4" maxLength={255} value={nombre} placeholder="Ej. Club de Robótica Los Volcanes"
                     onChange={(e) => setNombre(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="club-escuela" className="text-xs font-bold uppercase tracking-widest text-[var(--app-ink-2)]">Escuela <Asterisco /></label>
-                  <EscuelaPicker id="club-escuela" value={escuela} onChange={setEscuela} convocatoriaId={registro?.id} />
+                  {sugerido && nombre === sugerido && <p className="text-xs text-[var(--app-ink-2)]">Sugerido con el equipo registrado de tu escuela. Puedes cambiarlo.</p>}
                 </div>
               </div>
             ),

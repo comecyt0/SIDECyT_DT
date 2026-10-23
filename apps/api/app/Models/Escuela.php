@@ -16,9 +16,62 @@ class Escuela extends Model
     public const PATRON_CCT = '/^15[A-Z]{3}\d{4}[A-Z]$/';
     public const MAX_TEMPORADAS = 20;
 
-    protected $fillable = ['cct', 'nombre', 'municipio', 'nivel', 'sistema', 'activo', 'participo_antes', 'temporadas'];
+    /** E94: tipo de secundaria (el nivel sigue siendo primaria o secundaria). */
+    public const TIPOS_SECUNDARIA = ['general' => 'General', 'tecnica' => 'Técnica', 'telesecundaria' => 'Telesecundaria'];
+    /** E94: lo único que se acepta como «ubicación»: enlaces https de mapas (el campo se pinta como enlace). */
+    private const HOSTS_MAPA = ['maps.app.goo.gl', 'share.google', 'maps.apple', 'maps.apple.com', 'maps.google.com', 'maps.google.com.mx'];
+    private const HOSTS_MAPA_RUTA_MAPS = ['goo.gl', 'google.com', 'www.google.com', 'google.com.mx', 'www.google.com.mx'];
 
-    protected $casts = ['activo' => 'boolean', 'participo_antes' => 'boolean', 'temporadas' => 'array'];
+    protected $fillable = [
+        'cct', 'nombre', 'municipio', 'nivel', 'sistema', 'activo', 'participo_antes', 'temporadas',
+        'equipo_nombre', 'domicilio', 'ubicacion_url', 'latitud', 'longitud', 'matricula_total', 'matricula_hombres',
+        'matricula_mujeres', 'tipo_secundaria', 'zona', 'subsistema_detalle', 'observaciones',
+    ];
+
+    protected $casts = [
+        'activo' => 'boolean', 'participo_antes' => 'boolean', 'temporadas' => 'array',
+        'latitud' => 'float', 'longitud' => 'float', 'matricula_total' => 'integer', 'matricula_hombres' => 'integer', 'matricula_mujeres' => 'integer',
+    ];
+
+    /**
+     * E94: enlace de mapas seguro o null. Solo https, sin usuario/contraseña ni puerto raro y de un buscador de mapas
+     * conocido (los acortadores genéricos y sitios ajenos se descartan). Se vuelve a validar al mostrarlo.
+     */
+    public static function urlMapaSegura(?string $u): ?string
+    {
+        $u = trim((string) $u);
+        if ($u === '' || mb_strlen($u) > 1000 || preg_match('/[\s<>"\\\\]/u', $u)) return null;
+        $p = parse_url($u);
+        if (! $p || ($p['scheme'] ?? '') !== 'https' || isset($p['user']) || isset($p['pass']) || (isset($p['port']) && $p['port'] !== 443)) return null;
+        $host = mb_strtolower($p['host'] ?? '');
+        $ruta = $p['path'] ?? '/';
+        if (in_array($host, self::HOSTS_MAPA, true)) return $u;
+        if (in_array($host, self::HOSTS_MAPA_RUTA_MAPS, true) && str_starts_with($ruta, '/maps')) return $u;
+
+        return null;
+    }
+
+    /** E94: periodo escolar «2026-2027» de una convocatoria (su periodo), o null si no tiene ese formato. */
+    public static function temporadaDeConvocatoria(?Convocatoria $c): ?string
+    {
+        $n = trim((string) $c?->periodo?->nombre);
+
+        return preg_match('/^(\d{4})-(\d{4})$/', $n, $m) && (int) $m[2] === (int) $m[1] + 1 ? $n : null;
+    }
+
+    /**
+     * E94 (pedido del usuario): al aceptar un club, la temporada de su convocatoria entra sola al historial de la escuela
+     * (más reciente primero). «Ya participó» solo se enciende si la escuela ya tenía OTRA temporada: una escuela nueva que
+     * acaba de ser aceptada sigue siendo «Nueva escuela» durante su primera temporada.
+     */
+    public static function registrarTemporada(Escuela $e, string $temporada): void
+    {
+        $lista = self::normalizarTemporadas(array_merge([$temporada], $e->temporadas ?? []));
+        usort($lista, fn ($a, $b) => strcmp($b, $a));
+        $e->temporadas = array_slice($lista, 0, self::MAX_TEMPORADAS);
+        if (count(array_filter($lista, fn ($t) => mb_strtolower($t) !== mb_strtolower($temporada))) > 0) $e->participo_antes = true;
+        $e->save();
+    }
 
     /** Municipio oficial del catálogo SEPOMEX (125 del Estado de México), comparando sin acentos ni mayúsculas; null si no existe. */
     public static function municipioCanonico(string $texto): ?string

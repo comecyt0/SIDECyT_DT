@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
-import { Search, Loader2, School, X, Hourglass, FilePlus2 } from 'lucide-react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { Search, Loader2, School, X, Hourglass, FilePlus2, MapPin, Users, Trophy } from 'lucide-react';
 import api from '@/lib/api';
-import { NIVEL_ESCUELA, SISTEMA_ESCUELA, type EscuelaApi } from '@/lib/especie';
+import { NIVEL_ESCUELA, SISTEMA_ESCUELA, urlMapaSegura, type DatosEscuela, type EscuelaApi } from '@/lib/especie';
 import SolicitarEscuela, { type SolicitudEscuela } from '@/components/especie/SolicitarEscuela';
 import EtiquetaEscuela from '@/components/especie/EtiquetaEscuela';
 
@@ -19,8 +19,24 @@ export const escuelaDeSolicitud = (s: SolicitudEscuela): EscuelaElegida => ({ id
  * E55: con `convocatoriaId`, si la escuela no aparece se puede «Solicitar registro de escuela» ahí mismo, o usar una
  * solicitud propia que siga en revisión.
  */
-export default function EscuelaPicker({ value, onChange, invalido, id, convocatoriaId }: {
+/** E94: respuesta de /club/escuelas/{id}/datos validada (números y textos, el enlace solo si es de mapas). */
+function leerDatos(d: unknown): DatosEscuela | null {
+  const o = (d && typeof d === 'object' ? d : null) as Record<string, unknown> | null;
+  if (!o || typeof o.id !== 'number') return null;
+  const t = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null);
+  return { id: o.id, equipo_nombre: t(o.equipo_nombre), domicilio: t(o.domicilio), ubicacion_url: urlMapaSegura(o.ubicacion_url),
+    matricula_total: n(o.matricula_total), matricula_hombres: n(o.matricula_hombres), matricula_mujeres: n(o.matricula_mujeres) };
+}
+
+/**
+ * E94 (pedido del usuario): al elegir una escuela del catálogo se recuperan sus datos (equipo con el que participa,
+ * domicilio, ubicación y matrícula) y se muestran en la tarjeta. `onDatos` se llama solo cuando la persona la elige aquí,
+ * para sugerir el nombre del club; no se llama al mostrar una escuela ya guardada.
+ */
+export default function EscuelaPicker({ value, onChange, invalido, id, convocatoriaId, onDatos }: {
   value: EscuelaElegida | null; onChange: (e: EscuelaElegida | null) => void; invalido?: boolean; id?: string; convocatoriaId?: number;
+  onDatos?: (d: DatosEscuela) => void;
 }) {
   const auto = useId();
   const inputId = id ?? `esc-${auto}`;
@@ -33,6 +49,24 @@ export default function EscuelaPicker({ value, onChange, invalido, id, convocato
   const [solicitando, setSolicitando] = useState(false);
   const [pendientes, setPendientes] = useState<SolicitudEscuela[]>([]);
   const peticion = useRef(0);
+  const [datos, setDatos] = useState<DatosEscuela | null>(null);
+  const cache = useRef(new Map<number, DatosEscuela | null>());
+
+  const cargarDatos = useCallback((escuelaId: number): Promise<DatosEscuela | null> => {
+    if (cache.current.has(escuelaId)) return Promise.resolve(cache.current.get(escuelaId) ?? null);
+    return api.get(`/club/escuelas/${escuelaId}/datos`).then(({ data }) => leerDatos(data)).catch(() => null)
+      .then((d) => { cache.current.set(escuelaId, d); return d; });
+  }, []);
+
+  // Tarjeta de la escuela elegida (también la de un club ya guardado): trae sus datos sin pisar nada del formulario.
+  const escuelaId = value && !value.solicitud && value.id > 0 ? value.id : null;
+  useEffect(() => {
+    if (!escuelaId) return;
+    let vigente = true;
+    void cargarDatos(escuelaId).then((d) => { if (vigente) setDatos(d); });
+    return () => { vigente = false; };
+  }, [escuelaId, cargarDatos]);
+  const datosActuales = escuelaId && datos?.id === escuelaId ? datos : null;
 
   // E55: solicitudes propias en revisión para esta convocatoria (se pueden reutilizar).
   useEffect(() => {
@@ -58,7 +92,10 @@ export default function EscuelaPicker({ value, onChange, invalido, id, convocato
     return () => window.clearTimeout(h);
   }, [q]);
 
-  const elegir = (e: EscuelaApi) => { onChange(e); setQ(''); setAbierto(false); setResultados([]); };
+  const elegir = (e: EscuelaApi) => {
+    onChange(e); setQ(''); setAbierto(false); setResultados([]);
+    if (onDatos) void cargarDatos(e.id).then((d) => { if (d) onDatos(d); });
+  };
 
   if (value) {
     const pendiente = Boolean(value.solicitud);
@@ -70,6 +107,26 @@ export default function EscuelaPicker({ value, onChange, invalido, id, convocato
           <span className="block text-xs text-[var(--app-ink-2)]">
             <span className="font-mono">{value.cct}</span> · {value.municipio} · {NIVEL_ESCUELA[value.nivel] ?? value.nivel} · {SISTEMA_ESCUELA[value.sistema] ?? value.sistema}
           </span>
+          {datosActuales && (datosActuales.equipo_nombre || datosActuales.domicilio || datosActuales.ubicacion_url || datosActuales.matricula_total !== null) && (
+            <span className="mt-2 block space-y-1 border-t pt-2 text-xs text-[var(--app-ink-2)]" style={{ borderColor: 'var(--app-rule)' }}>
+              {datosActuales.equipo_nombre && (
+                <span className="flex items-start gap-1.5"><Trophy className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span className="min-w-0 break-words">Equipo registrado: <strong className="text-[var(--app-ink)]">{datosActuales.equipo_nombre}</strong></span></span>
+              )}
+              {(datosActuales.domicilio || datosActuales.ubicacion_url) && (
+                <span className="flex items-start gap-1.5"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span className="min-w-0 break-words">{datosActuales.domicilio}{datosActuales.domicilio && datosActuales.ubicacion_url ? ' · ' : ''}
+                    {datosActuales.ubicacion_url && (
+                      <a href={datosActuales.ubicacion_url} target="_blank" rel="noopener noreferrer" className="font-semibold text-[var(--app-ink)] underline-offset-2 hover:underline">Ver en el mapa</a>
+                    )}</span></span>
+              )}
+              {datosActuales.matricula_total !== null && (
+                <span className="flex items-start gap-1.5"><Users className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span className="min-w-0">Matrícula: {datosActuales.matricula_total}
+                    {datosActuales.matricula_hombres !== null && datosActuales.matricula_mujeres !== null ? ` (${datosActuales.matricula_hombres} hombres · ${datosActuales.matricula_mujeres} mujeres)` : ''}</span></span>
+              )}
+            </span>
+          )}
           {pendiente && <span className="mt-1 block text-xs font-semibold text-[var(--app-ink)]">En revisión por el COMECYT: podrás enviar tu club cuando la den de alta.</span>}
         </span>
         <button type="button" className="rounded-full p-1 text-[var(--app-ink-2)] hover:bg-[var(--app-rule)]" onClick={() => onChange(null)} aria-label="Cambiar de escuela">

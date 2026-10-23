@@ -503,6 +503,57 @@ Decisiones del usuario de esta jornada (detalle técnico en `CLAUDE.md`, entrada
 - Al aprobar, el nuevo integrante entra con su permiso ya aprobado y los formatos que listan integrantes (carta, A, B, C)
   quedan desactualizados para volver a firmarlos.
 
+## 19. E94 — Base de escuelas de robótica 2026-2027 (23/10/2026)
+
+**Pedido:** cargar el Excel «BASE DE DATOS ROBÓTICA 2026-2027» (250 escuelas con su equipo) al catálogo, con el
+identificador de participación y las temporadas, y que al elegir la escuela se recuperen sus datos para registrar el club.
+
+**Decisiones del usuario (cuestionario):**
+- **Temporadas:** Primera = 2022-2023, Segunda = 2023-2024, Tercera = 2024-2025, Cuarta = 2025-2026, Quinta = 2026-2027. Una
+  escuela participó en **todas** las temporadas desde la suya hasta la actual (nunca dejó de participar).
+- **Quinta = «Nueva escuela»** (60): conserva 2026-2027 en su historial pero no lleva «Ya participó». Primera a Cuarta (189)
+  llevan «Ya participó».
+- **Subsistema:** ESTATAL y SEB → estatal; Federalizado y SEIEM → federal. El texto original queda en un campo propio.
+- **Campos nuevos** en `escuelas`: tipo de secundaria (general, técnica, telesecundaria) y zona (Indígena, Toluca,
+  Ecatepec, Atlacomulco… de las 49 filas con columna extra), además de equipo, domicilio, ubicación (enlace y
+  coordenadas), matrícula (total, hombres, mujeres), subsistema original y observaciones.
+- **El admin ve todo** en Escuelas (tarjeta y formulario). **El líder** solo ve equipo, domicilio, ubicación y matrícula, y
+  **solo después de elegir la escuela** (la lista de búsqueda no los trae).
+- **Nombre del club:** se sugiere con el equipo de la escuela y el líder puede cambiarlo; la escuela va antes que el nombre
+  en el registro y lo ya escrito por la persona nunca se pisa.
+- **Temporadas al día:** cuando el comité acepta un club, la temporada de su convocatoria (su periodo `AAAA-AAAA`) entra sola
+  al historial de la escuela. «Ya participó» se enciende solo si la escuela ya tenía otra temporada.
+- Las 4 escuelas de prueba del catálogo se **desactivaron** (no se borraron: los 4 clubes existentes las usan).
+
+**Cómo quedó la carga** (`php artisan escuelas:cargar-robotica "archivo.xlsx"` prueba sin guardar; con `--aplicar` guarda en una
+sola transacción): 249 escuelas cargadas (189 «Ya participó», 60 «Nueva escuela»), 233 con equipo, 224 con enlace de mapa y
+43 con coordenadas. Antes se sacó un respaldo de la BD (`backups\comecyt_antes-carga-escuelas_*.dump`).
+- **No se cargó 1:** NP 141 (`15EPR0390`: a la CCT le falta un carácter). Hay que pedir la clave correcta.
+- **Con observación visible al admin (46):** 16 sin equipo, 16 secundarias sin tipo, 8 con hombres + mujeres distinto de la
+  matrícula general, 1 sin matrícula, 3 enlaces que no eran de mapas (acortar.link, escuelasmex.com, desysa.net, se
+  descartaron), 1 coordenada sin signo menos (NP 103, descartada) y NP 131 con subsistema «BASICO» (se asignó estatal por la
+  clave CCT `15EPR`; revisar).
+- Municipios corregidos al nombre oficial: ACAMBAY → Acambay de Ruíz Castañeda, TUTLTITLÁN → Tultitlán, SANTO TOMÁS DE LOS
+  PLATANOS → Santo Tomás, SANTA MARÍA RAYÓN → Rayón.
+
+**Seguridad:** `ubicacion_url` solo acepta https de Google Maps o Apple Maps (`Escuela::urlMapaSegura`, espejo en
+`urlMapaSegura` del front); se valida al guardar, al importar, al entregar al líder y al pintar el enlace
+(`target="_blank"` con `rel="noopener noreferrer"`). Textos sin HTML ni arranque de fórmula (`Escuela::textoSeguro`);
+coordenadas acotadas al Estado de México; matrícula entera 0–100 000.
+
+**Piezas:** migración `2026_10_23_000001_escuelas_datos_carga`; `Escuela` (`urlMapaSegura`, `temporadaDeConvocatoria`,
+`registrarTemporada`); `Admin\EscuelaController` (campos nuevos, búsqueda por equipo, importación con columnas
+opcionales y plantilla ampliada); `GET club/escuelas/{escuela}/datos` (throttle 60/min, solo escuelas activas);
+`RevisionClub::comite` (temporada al aceptar); `EscuelaPicker` (tarjeta con datos y `onDatos`), `CatalogoEscuelas` y
+`TemporadasInput` (siempre visible, obligatoria solo con «Ya participó»); comando `CargarEscuelasRobotica`.
+
+**Pendientes de datos:** CCT correcta de NP 141; tipo de las 16 secundarias sin tipo (la clave CCT lo sugiere: EES general,
+EST técnica, ETV telesecundaria, pero no se asumió); confirmar NP 131; equipos de las 16 escuelas sin nombre.
+
+**Verificado:** servidor 56/56 (`e2e_escuelas_e94.php` en transacción: enlaces maliciosos, HTML y fórmulas en equipo y
+zona, coordenadas fuera de rango, matrícula negativa, importación con filas malas, qué ve el líder, escuela inactiva 404,
+temporada al aceptar un club); navegador 60/60 a 1440 y 390 px (admin y líder, datos de prueba borrados); vitest 196/196.
+
 ## 8. Modelo de datos (borrador técnico, a validar en F1)
 
 - `escuelas` (cct único, nombre, municipio, nivel, sistema `estatal|federal`, activo).

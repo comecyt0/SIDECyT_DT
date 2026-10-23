@@ -2433,6 +2433,29 @@ clicables; avanzar con un clic valida el paso actual; la lista de pasos queda fi
 (`nueva`) los círculos son botones (`irAPaso`: atrás directo, adelante valida los pasos intermedios).
 Portal `/`: se quitó «Accesos rápidos» (pedido del usuario).
 
+### E94 — Base de escuelas de robótica 2026-2027 [publicado 23-10-2026]
+Detalle y decisiones del usuario: `docs/APOYO_EN_ESPECIE.md` §19. Para desarrollo:
+- Migración `2026_10_23_000001_escuelas_datos_carga`: `escuelas` gana `equipo_nombre`, `domicilio`, `ubicacion_url`,
+  `latitud`, `longitud`, `matricula_total/hombres/mujeres`, `tipo_secundaria`, `zona`, `subsistema_detalle`,
+  `observaciones` (todo opcional). Carga única: `php artisan escuelas:cargar-robotica "<xlsx>" [--aplicar]` (sin
+  `--aplicar` solo informa y revierte). PRIMERA…QUINTA = 2022-2023…2026-2027; QUINTA = «Nueva escuela».
+- **`Escuela::urlMapaSegura()`** es la única puerta de `ubicacion_url` (https de Google/Apple Maps); el front tiene su
+  espejo `urlMapaSegura` en `lib/especie.ts` y el enlace siempre lleva `rel="noopener noreferrer"`.
+- **Temporadas:** `Escuela::registrarTemporada()` (al aceptar un club en `RevisionClub::comite`, con la temporada del
+  periodo de su convocatoria). «Ya participó» solo se enciende si ya había OTRA temporada. `temporadas` se guarda de la
+  más reciente a la más antigua y **ya no se borra cuando `participo_antes` es falso** (una «Nueva escuela» conserva la
+  actual); solo «Ya participó» exige al menos una.
+- **Líder:** `GET club/escuelas/{escuela}/datos` (equipo, domicilio, ubicación, matrícula; escuela activa; nada de
+  zona, subsistema, observaciones ni temporadas). La lista `GET club/escuelas` NO trae esos datos. Registro de club:
+  escuela primero y nombre sugerido (`EscuelaPicker onDatos`; no pisa lo que la persona escribió).
+- Importación por Excel del admin: columnas opcionales (EQUIPO, DOMICILIO, UBICACION, MATRICULA, HOMBRES, MUJERES, TIPO DE
+  SECUNDARIA, ZONA, SUBSISTEMA, TEMPORADAS, YA PARTICIPO); una columna vacía borra ese dato, una ausente lo conserva.
+- Las 4 escuelas de prueba quedaron **inactivas** (no borradas). Respaldo previo en `backups\comecyt_antes-carga-escuelas_*.dump`.
+- **Lección de despliegue:** el `-Motivo` de `deploy-web.ps1` forma parte del nombre del log y de la carpeta de respaldo:
+  una sola palabra sin espacios ni «:» (con texto largo falla al escribir el log y el sitio queda con la versión anterior).
+**Verificado:** servidor 56/56 (`e2e_escuelas_e94.php`), navegador 60/60 (`verif_e94.mjs`, admin y líder a 1440 y 390 px, con
+cuentas temporales borradas al final), vitest 196/196, `tsc` y ESLint limpios.
+
 ### E93 — PHP 8.4.22 → 8.4.27 por vulnerabilidad crítica del núcleo [aplicado 22-10-2026]
 **Motivo:** comunicado del 22/10/2026 (ejecución remota de código sin autenticación en PHP 8.2–8.5 bajo php-cgi/FPM/
 mod_php; php.net lo publica como GHSA-w8hw-w9fx-j79w y GHSA-6wmf-4rv5-p3rp, «state corruption via bailout»). Una sola
