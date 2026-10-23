@@ -37,8 +37,8 @@ class EscuelaController extends Controller
         ]);
         $q = Escuela::query();
         if ($t = trim((string) $request->input('q'))) {
-            // E94: también por nombre de equipo.
-            $q->where(fn ($w) => $w->where('nombre', 'ilike', "%{$t}%")->orWhere('cct', 'ilike', "%{$t}%")->orWhere('municipio', 'ilike', "%{$t}%")->orWhere('equipo_nombre', 'ilike', "%{$t}%"));
+            // E94: por palabras, sin acentos y también por nombre de equipo.
+            $q->buscar($t);
         }
         foreach (['nivel', 'sistema'] as $f) {
             if ($request->filled($f)) $q->where($f, $request->input($f));

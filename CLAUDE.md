@@ -2450,6 +2450,11 @@ Detalle y decisiones del usuario: `docs/APOYO_EN_ESPECIE.md` §19. Para desarrol
   escuela primero y nombre sugerido (`EscuelaPicker onDatos`; no pisa lo que la persona escribió).
 - Importación por Excel del admin: columnas opcionales (EQUIPO, DOMICILIO, UBICACION, MATRICULA, HOMBRES, MUJERES, TIPO DE
   SECUNDARIA, ZONA, SUBSISTEMA, TEMPORADAS, YA PARTICIPO); una columna vacía borra ese dato, una ausente lo conserva.
+- **Búsqueda (23-10-2026, tras un caso real: un líder escribió «HIDALGO BOTS» y le salió «No encontramos esa escuela»):**
+  `Escuela::scopeBuscar()` busca por palabras, sin acentos ni mayúsculas, en nombre, CCT, municipio **y equipo** (lo usan
+  la lista del líder y el catálogo del admin); `municipioCanonico()` completa un nombre corto si es el comienzo de UN
+  solo municipio oficial («Acambay» → «Acambay de Ruíz Castañeda»; «San» no se adivina). Antes «ACAMBAY» daba «Ese
+  municipio no existe» en «Solicitar registro de escuela». La lista del líder sigue sin devolver el equipo.
 - Las 4 escuelas de prueba quedaron **inactivas** (no borradas). Respaldo previo en `backups\comecyt_antes-carga-escuelas_*.dump`.
 - **Lección de despliegue:** el `-Motivo` de `deploy-web.ps1` forma parte del nombre del log y de la carpeta de respaldo:
   una sola palabra sin espacios ni «:» (con texto largo falla al escribir el log y el sitio queda con la versión anterior).

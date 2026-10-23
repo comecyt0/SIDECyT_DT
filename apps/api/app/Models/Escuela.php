@@ -84,7 +84,36 @@ class Escuela extends Model
             }
         }
 
-        return $mapa[self::clave($texto)] ?? null;
+        $c = self::clave($texto);
+        if (isset($mapa[$c])) return $mapa[$c];
+        // E94: nombre corto de un municipio oficial largo («Acambay» → «Acambay de Ruíz Castañeda»): solo si es el
+        // comienzo de UN único municipio (con «san» o «santa» hay varios y no se adivina).
+        if (mb_strlen($c) >= 4) {
+            $c = $c.' ';
+            $coinc = array_values(array_filter($mapa, fn ($oficial, $k) => str_starts_with($k.' ', $c), ARRAY_FILTER_USE_BOTH));
+            if (count($coinc) === 1) return $coinc[0];
+        }
+
+        return null;
+    }
+
+    /**
+     * E94: búsqueda por palabras, sin importar mayúsculas ni acentos: cada palabra debe aparecer en el nombre, la CCT, el
+     * municipio o el equipo de la escuela («hidalgo bots», «Acámbay», «primaria miguel hidalgo»).
+     */
+    public function scopeBuscar($q, string $texto)
+    {
+        $palabras = array_slice(array_filter(explode(' ', self::clave($texto))), 0, 8);
+        foreach ($palabras as $p) {
+            $like = '%'.addcslashes($p, '\\%_').'%';
+            $q->where(fn ($w) => $w
+                ->whereRaw("translate(lower(nombre), 'áéíóúüñ', 'aeiouun') like ?", [$like])
+                ->orWhereRaw("translate(lower(municipio), 'áéíóúüñ', 'aeiouun') like ?", [$like])
+                ->orWhereRaw("translate(lower(coalesce(equipo_nombre, '')), 'áéíóúüñ', 'aeiouun') like ?", [$like])
+                ->orWhere('cct', 'ilike', $like));
+        }
+
+        return $q;
     }
 
     public static function clave(string $s): string

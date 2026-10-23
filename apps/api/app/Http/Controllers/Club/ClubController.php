@@ -75,8 +75,8 @@ class ClubController extends Controller
         $request->validate(['q' => 'required|string|min:3|max:120']);
         $t = trim((string) $request->input('q'));
 
-        return response()->json(Escuela::where('activo', true)
-            ->where(fn ($w) => $w->where('nombre', 'ilike', "%{$t}%")->orWhere('cct', 'ilike', "%{$t}%")->orWhere('municipio', 'ilike', "%{$t}%"))
+        // E94: por palabras y sin acentos; también encuentra por nombre de equipo (que la lista no devuelve).
+        return response()->json(Escuela::where('activo', true)->buscar($t)
             ->orderBy('nombre')->limit(20)->get(['id', 'cct', 'nombre', 'municipio', 'nivel', 'sistema', 'participo_antes']));
     }
 
